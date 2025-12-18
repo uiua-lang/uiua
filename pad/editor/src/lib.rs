@@ -60,6 +60,7 @@ static START_TIME: OnceLock<f64> = OnceLock::new();
 #[component]
 pub fn Editor<'a>(
     #[prop(optional)] example: &'a str,
+    #[prop(optional)] hidden: &'a str,
     #[prop(optional)] mode: EditorMode,
     #[prop(optional)] help: &'a [&'a str],
     #[prop(optional)] no_run: bool,
@@ -154,6 +155,8 @@ pub fn Editor<'a>(
     let get_code = move || get_code(&code_id());
     let (overlay, set_overlay) = create_signal(String::new());
 
+    let hidden = hidden.to_string();
+
     // Initialize the state
     let state = State {
         code_id: code_id(),
@@ -168,6 +171,7 @@ pub fn Editor<'a>(
         future: Vec::new(),
         challenge,
         loading_module: false,
+        hidden: hidden.clone(),
         curr: {
             let code = initial_code.get_untracked().unwrap();
             let len = code.chars().count() as u32;
@@ -182,7 +186,11 @@ pub fn Editor<'a>(
 
     // Get the code with output comments cleaned up
     let clean_code = move || {
-        let code = get_code();
+        let code = format!(
+            "{}\n\n# ^^^ HIDDEN ^^^\n\n{}",
+            get_state.get().hidden,
+            get_code()
+        );
         let mut cleaned = String::new();
         let mut in_output_comment = false;
         for line in code.lines() {
@@ -1607,13 +1615,19 @@ pub fn Editor<'a>(
         handle_load_files(files);
     });
 
+    let h = &get_state.get().hidden;
+    let hidden_lines = if h.is_empty() {
+        0
+    } else {
+        h.split('\n').count()
+    };
     // Line numbers
     let line_numbers = move || {
         (0..line_count.get().max(1))
             .map(|i| {
                 view! {
                     <div class="code-line">
-                        <span class="code-span">{i + 1}</span>
+                        <span class="code-span">{i + 1 + hidden_lines}</span>
                     </div>
                 }
             })
@@ -2209,7 +2223,7 @@ pub fn Editor<'a>(
                                 ></textarea>
                                 // ///////////////////////
                                 <div id=overlay_id class="code-overlay">
-                                    {move || gen_code_view(&code_id(), &overlay.get())}
+                                    {move || gen_code_view(&code_id(), &overlay.get(), &hidden)}
                                 </div>
                             </div>
                         </div>

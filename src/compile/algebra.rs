@@ -704,6 +704,7 @@ fn get_ops<const N: usize>(ops: &[SigNode]) -> AlgebraResult<[&SigNode; N]> {
 
 pub type AlgebraResult<T = ()> = Result<T, AlgebraError>;
 
+#[allow(clippy::derive_ord_xor_partial_ord)]
 #[derive(Clone, PartialEq, PartialOrd)]
 enum Term {
     X(f64),
@@ -758,7 +759,6 @@ impl Term {
 
 impl std::cmp::Eq for Term {}
 
-#[allow(clippy::derive_ord_xor_partial_ord)]
 impl Ord for Term {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {

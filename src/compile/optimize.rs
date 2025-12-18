@@ -13,6 +13,7 @@ macro_rules! dbgln {
         }
     }
 }
+#[allow(unused_imports)]
 use dbgln;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

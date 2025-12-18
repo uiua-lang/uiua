@@ -1378,8 +1378,7 @@ impl Formatter<'_> {
             return;
         }
         let prevent_compact = (items.iter())
-            .filter(|item| !item.is_empty_line())
-            .next_back()
+            .rfind(|item| !item.is_empty_line())
             .is_some_and(item_is_end_of_line);
         if items.len() == 1 && !prevent_compact && !item_is_multiline(&items[0]) {
             self.format_item(&items[0], 0, depth);
@@ -1671,7 +1670,7 @@ fn words_are_multiline(words: &[Sp<Word>]) -> bool {
 
 fn item_is_end_of_line(item: &Item) -> bool {
     item.words_or(true, |words| {
-        (words.iter().filter(|word| word.value.is_code()).next_back())
+        (words.iter().rfind(|word| word.value.is_code()))
             .is_some_and(|word| word.value.is_end_of_line())
     })
 }

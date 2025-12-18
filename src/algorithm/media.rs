@@ -746,16 +746,7 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
 
     // Encode frames from rows
     let mut rows = value.rows();
-    encode_gif_impl(
-        frame_rate,
-        &mut (),
-        |_| {
-            rows.next()
-                .map(|row| value_to_image(&row).map(|im| im.into_rgba8()))
-                .transpose()
-        },
-        |_, e| e,
-    )
+    encode_gif_impl(frame_rate, &mut (), |_| Ok(rows.next()), |_, e| e)
 }
 
 #[cfg(feature = "gif")]
@@ -902,10 +893,7 @@ pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
                 }
             }
             env.exec(f.clone())?;
-            let frame = value_to_image(&env.pop("frame")?)
-                .map_err(|e| env.error(e))?
-                .into_rgba8();
-            Ok(Some(frame))
+            Ok(Some(env.pop("frame")?))
         },
         |env, e| env.error(e),
     )
@@ -916,62 +904,109 @@ pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
 fn encode_gif_impl<C, E>(
     mut frame_rate: f64,
     ctx: &mut C,
-    mut next_frame: impl FnMut(&mut C) -> Result<Option<image::RgbaImage>, E>,
+    mut next_frame: impl FnMut(&mut C) -> Result<Option<Value>, E>,
     error: impl Fn(&C, String) -> E,
 ) -> Result<Vec<u8>, E> {
     use gif::{DisposalMethod, Encoder, Frame};
+    use image::GrayImage;
 
     let first_frame =
         next_frame(ctx)?.ok_or_else(|| error(ctx, "Cannot encode empty GIF".into()))?;
-    let (width, height) = first_frame.dimensions();
+    let (width, height) = (
+        first_frame.shape.get(1).copied().unwrap_or(0) as u32,
+        first_frame.shape.first().copied().unwrap_or(0) as u32,
+    );
     if width > u16::MAX as u32 || height > u16::MAX as u32 {
         let message = format!(
-            "GIF dimensions must be at most {}x{}, but the frames are {}x{}",
+            "GIF dimensions must be at most {}x{}, but the frames are {width}x{height}",
             u16::MAX,
             u16::MAX,
-            width,
-            height
         );
         return Err(error(ctx, message));
     }
+
     let mut bytes = std::io::Cursor::new(Vec::new());
-    let mut encoder = Encoder::new(&mut bytes, width as u16, height as u16, &GIF_PALETTE)
-        .map_err(|e| error(ctx, e.to_string()))?;
-    (encoder.set_repeat(gif::Repeat::Infinite)).map_err(|e| error(ctx, e.to_string()))?;
     const MIN_FRAME_RATE: f64 = 1.0 / 60.0;
     frame_rate = frame_rate.max(MIN_FRAME_RATE).abs();
     let mut t = 0;
-    let mut write_frame = |i: usize, frame, ctx: &mut C| -> Result<(), E> {
-        let (indices, has_transparent) = dither(frame, width, height);
-        let mut frame = Frame::from_indexed_pixels(width as u16, height as u16, indices, Some(0));
-        frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
-        frame.dispose = if has_transparent {
-            DisposalMethod::Background
-        } else {
-            DisposalMethod::Any
-        };
-        t += frame.delay;
-        encoder
-            .write_frame(&frame)
+
+    let mut encoder = if first_frame.rank() == 2 {
+        let first_frame = value_to_image(&first_frame)
+            .map_err(|e| error(ctx, e))?
+            .to_luma8();
+        let pallete: Vec<u8> = (0..=255).flat_map(|c| [c, c, c]).collect();
+        let mut encoder = Encoder::new(&mut bytes, width as u16, height as u16, &pallete)
             .map_err(|e| error(ctx, e.to_string()))?;
-        Ok(())
-    };
-    write_frame(0, first_frame, ctx)?;
-    let mut i = 1;
-    while let Some(frame) = next_frame(ctx)? {
-        let (this_width, this_height) = frame.dimensions();
-        if this_width != width || this_height != height {
-            return Err(error(
-                ctx,
-                format!(
-                    "First frame was [{width} × {height}], \
-                    but frame {i} is [{this_width} × {this_height}]"
-                ),
-            ));
+        let mut write_frame = |i: usize, frame: GrayImage, ctx: &mut C| -> Result<(), E> {
+            let mut frame =
+                Frame::from_indexed_pixels(width as u16, height as u16, frame.into_raw(), None);
+            frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
+            t += frame.delay;
+            (encoder.write_frame(&frame)).map_err(|e| error(ctx, e.to_string()))?;
+            Ok(())
+        };
+        write_frame(0, first_frame, ctx)?;
+        let mut i = 1;
+        while let Some(frame) = next_frame(ctx)? {
+            let frame = value_to_image(&frame)
+                .map_err(|e| error(ctx, e))?
+                .to_luma8();
+            let (this_width, this_height) = frame.dimensions();
+            if this_width != width || this_height != height {
+                return Err(error(
+                    ctx,
+                    format!(
+                        "First frame was [{width} × {height}], \
+                        but frame {i} is [{this_width} × {this_height}]"
+                    ),
+                ));
+            }
+            write_frame(i, frame, ctx)?;
+            i += 1;
         }
-        write_frame(i, frame, ctx)?;
-        i += 1;
-    }
+        encoder
+    } else {
+        let first_frame = value_to_image(&first_frame)
+            .map_err(|e| error(ctx, e))?
+            .to_rgba8();
+        let mut encoder = Encoder::new(&mut bytes, width as u16, height as u16, &GIF_PALETTE)
+            .map_err(|e| error(ctx, e.to_string()))?;
+        let mut write_frame = |i: usize, frame, ctx: &mut C| -> Result<(), E> {
+            let (indices, has_transparent) = dither(frame, width, height);
+            let mut frame =
+                Frame::from_indexed_pixels(width as u16, height as u16, indices, Some(0));
+            frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
+            frame.dispose = if has_transparent {
+                DisposalMethod::Background
+            } else {
+                DisposalMethod::Any
+            };
+            t += frame.delay;
+            (encoder.write_frame(&frame)).map_err(|e| error(ctx, e.to_string()))?;
+            Ok(())
+        };
+        write_frame(0, first_frame, ctx)?;
+        let mut i = 1;
+        while let Some(frame) = next_frame(ctx)? {
+            let frame = value_to_image(&frame)
+                .map_err(|e| error(ctx, e))?
+                .to_rgba8();
+            let (this_width, this_height) = frame.dimensions();
+            if this_width != width || this_height != height {
+                return Err(error(
+                    ctx,
+                    format!(
+                        "First frame was [{width} × {height}], \
+                        but frame {i} is [{this_width} × {this_height}]"
+                    ),
+                ));
+            }
+            write_frame(i, frame, ctx)?;
+            i += 1;
+        }
+        encoder
+    };
+    (encoder.set_repeat(gif::Repeat::Infinite)).map_err(|e| error(ctx, e.to_string()))?;
     encoder
         .into_inner()
         .map_err(|e| error(ctx, e.to_string()))?;

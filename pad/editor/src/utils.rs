@@ -59,6 +59,7 @@ pub struct State {
     pub set_copied_link: WriteSignal<bool>,
     pub past: Vec<Record>,
     pub future: Vec<Record>,
+    pub hidden: String,
     pub curr: Record,
     pub challenge: Option<ChallengeDef>,
     pub loading_module: bool,
@@ -409,12 +410,17 @@ pub fn update_ctrl(event: &Event) {
         .set_class_name(if os_ctrl(event) { "ctrl-pressed" } else { "" });
 }
 
-fn build_code_lines(id: &str, code: &str) -> CodeLines {
+fn build_code_lines(id: &str, code: &str, hidden: &str) -> CodeLines {
     let mut lines = CodeLines {
         frags: vec![Vec::new()],
     };
 
-    let chars: Vec<&str> = code.graphemes(true).collect();
+    let full_code = if hidden.is_empty() {
+        code.into()
+    } else {
+        format!("{hidden}\n{code}")
+    };
+    let chars: Vec<&str> = full_code.graphemes(true).collect();
 
     let push_unspanned = |lines: &mut CodeLines, mut target: usize, curr: &mut usize| {
         target = target.min(chars.len());
@@ -451,7 +457,7 @@ fn build_code_lines(id: &str, code: &str) -> CodeLines {
     };
 
     let mut end = 0;
-    let spans = Spans::with_backend(code, WebBackend::new(id, code));
+    let spans = Spans::with_backend(&full_code, WebBackend::new(id, &full_code));
     for span in spans.spans {
         let kind = span.value;
         let span = span.span;
@@ -537,10 +543,16 @@ fn build_code_lines(id: &str, code: &str) -> CodeLines {
         }
     }
 
+    let hidden_lines = if hidden.is_empty() {
+        0
+    } else {
+        hidden.split('\n').count()
+    };
+    lines.frags.drain(0..hidden_lines);
     lines
 }
 
-pub fn gen_code_view(id: &str, code: &str) -> View {
+pub fn gen_code_view(id: &str, code: &str, hidden: &str) -> View {
     fn pair_aliases() -> HashMap<(Primitive, Primitive), &'static str> {
         use Primitive::*;
         [
@@ -649,7 +661,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
     }
 
     // logging::log!("gen_code_view({code:?})");
-    let CodeLines { frags } = build_code_lines(id, code);
+    let CodeLines { frags } = build_code_lines(id, code, hidden);
     let mut line_views = Vec::new();
     let gayness = get_gayness();
     for line in frags {
@@ -1078,6 +1090,11 @@ fn challenge_code(input: &str, test: &str, flip: bool) -> String {
 impl State {
     /// Run code and return the output
     pub fn run_code(&mut self, code: &str) -> Vec<Vec<OutputItem>> {
+        let full_code = if self.hidden.is_empty() {
+            code.into()
+        } else {
+            format!("{}\n{code}", self.hidden)
+        };
         if let Some(chal) = &self.challenge {
             let mut example = run_code_single(
                 &self.code_id,
@@ -1097,7 +1114,7 @@ impl State {
                         &challenge_code(&chal.intended_answer, test, chal.flip),
                     )
                 };
-                let user_input = challenge_code(code, test, chal.flip);
+                let user_input = challenge_code(&full_code, test, chal.flip);
                 let user_output = || just_values(&self.code_id, &user_input);
                 correct = correct
                     && match (answer(), user_output()) {
@@ -1128,7 +1145,7 @@ impl State {
             }
             output
         } else {
-            let (output, error) = run_code_single(&self.code_id, code);
+            let (output, error) = run_code_single(&self.code_id, &full_code);
             self.loading_module = false;
             if let Some(error) = error {
                 if error.to_string().contains("Waiting for module") {

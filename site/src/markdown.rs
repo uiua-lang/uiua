@@ -352,12 +352,14 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                     .skip_while(|&w| w != "kala")
                     .nth(1)
                     .unwrap_or_default();
+                let no_run = (block.info.split_whitespace()).any(|w| w == "norun");
                 let (code, hidden) =
                     match block.literal.trim_end().split_once("\n# ^^^ HIDDEN ^^^\n") {
                         Some((h, c)) => (c.strip_prefix('\n').unwrap_or(c), h.trim_end()),
                         None => (&*block.literal, ""),
                     };
-                view!(<Editor example={code} hidden={hidden} help=help kala=kala/>).into_view()
+                view!(<Editor example=code hidden=hidden help=help kala=kala no_run=no_run/>)
+                    .into_view()
             } else if block.info.starts_with("challenge") {
                 let mut lines = block.literal.lines().map(|s| s.to_string());
                 let prompt = markdown_view_impl(&lines.next().unwrap_or_default(), false);

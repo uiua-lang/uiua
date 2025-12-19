@@ -1796,8 +1796,10 @@ where
         // LSB first
         for (i, bits) in self.data.chunks_exact(bits_slice_len).enumerate() {
             let mut n = 0.0;
-            for (j, bit) in bits.iter().enumerate() {
-                n += bit.to_f64() * 2.0f64.powi(j as i32);
+            let mut coeff = 1.0f64;
+            for bit in bits.iter() {
+                n += bit.to_f64() * coeff;
+                coeff *= 2.0f64;
             }
             new_data_slice[i] = n;
         }

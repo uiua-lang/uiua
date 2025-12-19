@@ -186,11 +186,16 @@ pub fn Editor<'a>(
 
     // Get the code with output comments cleaned up
     let clean_code = move || {
-        let code = format!(
-            "{}\n\n# ^^^ HIDDEN ^^^\n\n{}",
-            get_state.get().hidden,
+        let hidden = get_state.get().hidden;
+        let code = if hidden.is_empty() {
             get_code()
-        );
+        } else {
+            format!(
+                "{}\n\n# ^^^ HIDDEN ^^^\n\n{}",
+                get_state.get().hidden,
+                get_code()
+            )
+        };
         let mut cleaned = String::new();
         let mut in_output_comment = false;
         for line in code.lines() {

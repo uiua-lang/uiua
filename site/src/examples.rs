@@ -22,11 +22,11 @@ range,2 40          # Range 2 to 40
 deshapebyselftable* # List of products
 keepnotbymember     # Keep not in list";
 pub const LOGO: &str = "\
-U ← =∩⌟<0.2 0.7 /+×⟜ⁿ1_2
+U ← /=⊞<0.2_0.7 /+×⟜ⁿ1_2
 I ← <⊙(⌵/ℂ) # Circle
-u ← +0.1↧¤ ⊃(I0.95|⊂⊙0.5⇌˙×)
+u ← +0.1⧋↧ ⊃(I0.95|⊂⊙0.5⇌˙×)
 A ← ×⊃U(I1) # Alpha
-⍜°⍉(⊂⊃u A) ˙⊞⊟-⊸¬÷⟜⇡200";
+⧋(⊂⊃u A) ˙⊞⊟-⊸¬÷⟜⇡200";
 pub const WEEWUH_LOGO: &str = "\
 Wee ← =∩⌟<¯0.5¯0.1 /+⍜⊣(+⊃(×4ⁿ4|×¯3ⁿ2))
 w   ← <⊙(⌵/ℂ) # Circle

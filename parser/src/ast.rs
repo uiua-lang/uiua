@@ -158,6 +158,8 @@ pub struct Import {
 pub struct ImportLine {
     /// The span of the ~
     pub tilde_span: CodeSpan,
+    /// Whether the imports are public
+    pub public: bool,
     /// The imported items
     pub items: Vec<Sp<Ident>>,
 }
@@ -169,13 +171,14 @@ impl Import {
             .map(|n| n.span.clone())
             .unwrap_or_else(|| self.path.span.clone());
         let last = (self.items().last())
-            .map(|i| i.span.clone())
+            .map(|(i, _)| i.span.clone())
             .unwrap_or_else(|| self.path.span.clone());
         first.merge(last)
     }
     /// The imported items
-    pub fn items(&self) -> impl Iterator<Item = &Sp<Ident>> {
-        self.lines.iter().flatten().flat_map(|line| &line.items)
+    pub fn items(&self) -> impl Iterator<Item = (&Sp<Ident>, bool)> {
+        (self.lines.iter().flatten())
+            .flat_map(|line| line.items.iter().map(|item| (item, line.public)))
     }
 }
 

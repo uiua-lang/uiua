@@ -381,7 +381,7 @@ impl Parser<'_> {
         };
         // Imports
         while self.exact(Spaces).is_some() {}
-        let imports = if let Some(tilde_span) = self.exact(Tilde.into()) {
+        let imports = if let Some((tilde_span, public)) = self.tilde() {
             let mut items = Vec::new();
             loop {
                 if let Some(ident) = self.ident() {
@@ -395,7 +395,11 @@ impl Parser<'_> {
             if items.is_empty() {
                 None
             } else {
-                Some(ImportLine { tilde_span, items })
+                Some(ImportLine {
+                    tilde_span,
+                    public,
+                    items,
+                })
             }
         } else {
             None
@@ -770,19 +774,20 @@ impl Parser<'_> {
             ));
         }
     }
+    fn tilde(&mut self) -> Option<(CodeSpan, bool)> {
+        (self.exact(Tilde.into()).map(|s| (s, true))).or_else(|| {
+            self.exact(TildeStroke)
+                .or_else(|| self.exact(DoubleTilde.into()))
+                .map(|s| (s, false))
+        })
+    }
     fn import(&mut self) -> Option<Import> {
         let reset = self.index;
         // Name
         let name = self.ident();
         self.spaces();
         // Tilde
-        let Some((tilde_span, public)) =
-            (self.exact(Tilde.into()).map(|s| (s, true))).or_else(|| {
-                self.exact(TildeStroke)
-                    .or_else(|| self.exact(DoubleTilde.into()))
-                    .map(|s| (s, false))
-            })
-        else {
+        let Some((tilde_span, public)) = self.tilde() else {
             self.index = reset;
             return None;
         };
@@ -822,6 +827,15 @@ impl Parser<'_> {
                     last_tilde_index = self.index;
                     line = Some(ImportLine {
                         tilde_span: span.clone(),
+                        public: true,
+                        items: Vec::new(),
+                    })
+                }
+                TildeStroke | Simple(DoubleTilde) if line.is_none() => {
+                    last_tilde_index = self.index;
+                    line = Some(ImportLine {
+                        tilde_span: span.clone(),
+                        public: false,
                         items: Vec::new(),
                     })
                 }

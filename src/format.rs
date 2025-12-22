@@ -658,7 +658,7 @@ impl Formatter<'_> {
                 }
                 if let Some(line) = &m.value.imports {
                     self.output.push(' ');
-                    self.push(&line.tilde_span, "~");
+                    self.push(&line.tilde_span, if line.public { "~" } else { "≁" });
                     let mut items = line.items.clone();
                     items.sort_by_key(|item| item.value.clone());
                     for item in items {
@@ -939,7 +939,7 @@ impl Formatter<'_> {
                                 self.output.push(' ');
                             }
                         }
-                        self.push(&line.tilde_span, "~");
+                        self.push(&line.tilde_span, if line.public { "~" } else { "≁" });
                         for item in &line.items {
                             self.output.push(' ');
                             self.push(&item.span, &item.value);

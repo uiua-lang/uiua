@@ -529,7 +529,7 @@ impl Compiler {
             if let Some(line) = m.imports {
                 for item in line.items {
                     if let Some(mut local) = module.names.get_last(&item.value) {
-                        local.public = false;
+                        local.public = line.public;
                         (self.code_meta.global_references).insert(item.span.clone(), local.index);
                         self.scope.names.insert(item.value, local);
                     } else {
@@ -583,7 +583,7 @@ impl Compiler {
             self.scope.add_module_name(name.value.clone(), local);
         }
         // Bind items
-        for item in import.items() {
+        for (item, public) in import.items() {
             if let Some(local) =
                 (self.imports.get(&module_path)).and_then(|i| i.names.get_last(item.value.as_str()))
             {
@@ -593,7 +593,7 @@ impl Compiler {
                     item.value.clone(),
                     LocalIndex {
                         index: local.index,
-                        public: true,
+                        public,
                     },
                 );
             } else {

@@ -45,9 +45,9 @@ Names from inside the module can be *made* visible by following the module name 
 G A
 ```
 
-Note that these names are brought into the module's parent scope as private bindings, so they cannot be referenced from outside the parent.
+With a normal `~`, these names are brought into the module's parent's scope as public bindings.
 
-```uiua should fail
+```uiua
 ┌─╴Mod
   ┌─╴SubMod ~ X
     X ← 5
@@ -56,14 +56,13 @@ Note that these names are brought into the module's parent scope as private bind
 Mod~X
 ```
 
-Names must be re-bound in the parent to be made visible.
+You can use a `≁`, which formats from `~~` to make them private instead.
 
-```uiua
+```uiua should fail
 ┌─╴Mod
-  ┌─╴SubMod
+  ┌─╴SubMod ≁ X
     X ← 5
   └─╴
-  X ← SubMod~X
 └─╴
 Mod~X
 ```
@@ -210,6 +209,15 @@ Imports can be made private by using a `≁` instead of the first `~`. `≁` for
   Ex ~~ "example"
 └─╴
 M~Ex~Foo
+```
+
+`≁` can also be used to make imported items private to the importing module.
+
+```uiua should fail
+┌─╴M
+  ~ "example" ≁ Square
+└─╴
+M~Square 5
 ```
 
 ### Private Scoped Modules

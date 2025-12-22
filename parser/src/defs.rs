@@ -966,8 +966,13 @@ primitive!(
     /// ex: ¤¤5
     /// ex: ¤[1 2 3]
     /// ex: ¤¤[1 2 3]
-    /// This is useful when combine with [rows] or [table] to re-use an entire array for each row of others.
+    /// This is useful when combined with [rows] or [table] to re-use an entire array for each row of others.
     /// ex: ≡⊂ ¤ 1_2_3 4_5_6
+    /// In the [rows] case, sided subscripts are preferred when applicable.
+    /// ex: ≡⊂ ¤ 1_2 3_4
+    ///   : ≡⊂⊙¤ 1_2 3_4
+    ///   : ≡⌞⊂  1_2 3_4
+    ///   : ≡⌟⊂  1_2 3_4
     /// [fix] can also be used with pervasive dyadic functions.
     /// ex: -  [1 2 3]  [4 5 6]
     ///   : - ¤[1 2 3]  [4 5 6]

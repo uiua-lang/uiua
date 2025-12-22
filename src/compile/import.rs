@@ -9,7 +9,7 @@ impl Compiler {
         // Import module
         let module = self.import_module_from_path(&import.path.value, &import.path.span)?;
         // Bind items
-        for item in import.items() {
+        for (item, public) in import.items() {
             if let Some(local) = module.names.get_last(item.value.as_str()) {
                 self.validate_local(&item.value, local, &item.span);
                 (self.code_meta.global_references).insert(item.span.clone(), local.index);
@@ -17,7 +17,7 @@ impl Compiler {
                     item.value.clone(),
                     LocalIndex {
                         index: local.index,
-                        public: true,
+                        public,
                     },
                 );
             } else {

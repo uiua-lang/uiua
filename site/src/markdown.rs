@@ -236,6 +236,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                     </div>)
                     .into_view();
                 }
+                "<dropdown>" => return view!(<code>"⌵"</code>).into_view(),
                 "\\" => return view!(<code>"\\"</code>).into_view(),
                 lit => {
                     if let Some(mut kala) = lit.strip_prefix("kala ") {

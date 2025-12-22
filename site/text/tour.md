@@ -42,7 +42,7 @@ If you're ever not sure what a glyph is called, you can hold ctrl/⌘ and hover 
 
 You can ctrl/⌘-click any glyph in the editor to see its documentation.
 
-Click the `↧` on the right of the editor to see a list of all the built-in functions.
+Click the `<dropdown>` on the right of the editor to see a list of all the built-in functions.
 
 ## Arguments
 

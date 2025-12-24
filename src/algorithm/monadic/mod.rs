@@ -1738,12 +1738,14 @@ impl<T: RealArrayValue> Array<T> {
             let new_data_slice = new_data.make_mut();
             // LSB first
             for (i, (n, is_neg)) in nats.into_iter().zip(negatives).enumerate() {
+                let mut n = n;
                 for j in 0..bit_count.min(127) {
                     let index = i * bit_count + j;
-                    new_data_slice[index] = u8::from(n & (1 << j) != 0) as f64;
+                    new_data_slice[index] = u8::from(n & 1 != 0) as f64;
                     if is_neg {
                         new_data_slice[index] = -new_data_slice[index];
                     }
+                    n >>= 1;
                 }
             }
             Array::new(shape, new_data).into()
@@ -1753,9 +1755,11 @@ impl<T: RealArrayValue> Array<T> {
             let new_data_slice = new_data.make_mut();
             // LSB first
             for (i, n) in nats.into_iter().enumerate() {
+                let mut n = n;
                 for j in 0..bit_count.min(127) {
                     let index = i * bit_count + j;
-                    new_data_slice[index] = u8::from(n & (1 << j) != 0);
+                    new_data_slice[index] = u8::from(n & 1 != 0);
+                    n >>= 1;
                 }
             }
             let mut arr = Array::new(shape, new_data);

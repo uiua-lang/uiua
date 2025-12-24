@@ -557,6 +557,9 @@ inverse!(AntiByPat, input, asm, By, span, [f], {
         return generic();
     }
     let (before, after) = f.node.under_inverse(Signature::new(1, 1), false, asm)?;
+    if after.sig().ok().is_none_or(|sig| sig != (1, 1)) {
+        return generic();
+    }
     let mut inv = before;
     (0..f.sig.outputs()).for_each(|_| inv.push(Prim(Pop, span)));
     inv = inv.sig_node()?.dipped(f.sig.outputs(), span).node;

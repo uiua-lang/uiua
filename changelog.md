@@ -53,6 +53,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Remove previously deprecated `progressive indexof ⊘` function
 - Remove previously deprecated `tag` function
 ### Interpreter
+- Compiled dependecies are now cached, increasing performance with large dependencies in the online pad and local LSP
 - Gifs now use Floyd-Steinberg dithering rather than color quantization
   - It's both faster and looks better
 - Add option to provide folder as test cases destination

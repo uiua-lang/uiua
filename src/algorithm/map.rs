@@ -616,9 +616,14 @@ impl MapKeys {
         if self.len == 0 {
             return self.keys.first_dim_zero();
         }
-        let mut key_pairs: Vec<_> = self.keys.into_rows().zip(&self.indices).collect();
-        key_pairs.sort_unstable_by_key(|(_, i)| *i);
-        let mut keys = remove_empty_rows(key_pairs.into_iter().map(|(k, _)| k));
+        let mut keys = if self.keys.shape.iter().skip(1).any(|&d| d == 0) {
+            *self.keys.shape.row_count_mut() = self.len;
+            self.keys
+        } else {
+            let mut key_pairs: Vec<_> = self.keys.into_rows().zip(&self.indices).collect();
+            key_pairs.sort_unstable_by_key(|(_, i)| *i);
+            remove_empty_rows(key_pairs.into_iter().map(|(k, _)| k))
+        };
         for _ in 0..fix_count {
             keys.fix();
         }

@@ -323,7 +323,7 @@ impl Compiler {
             m => {
                 if let Modifier::Ref(name) = m {
                     if let Ok(Some((_, local))) = self.ref_local(name) {
-                        if self.code_macros.contains_key(&local.index) {
+                        if self.asm.code_macros.contains_key(&local.index) {
                             return Ok(None);
                         }
                     } else {
@@ -427,7 +427,7 @@ impl Compiler {
                 Modifier::Macro(..) => false,
                 Modifier::Ref(name) => self
                     .ref_local(name)?
-                    .is_some_and(|(_, local)| self.index_macros.contains_key(&local.index)),
+                    .is_some_and(|(_, local)| self.asm.index_macros.contains_key(&local.index)),
             };
             if strict_args {
                 // Validate operand count
@@ -1740,28 +1740,21 @@ impl Compiler {
                 "Macro makes compilation recur too deep",
             ));
         }
-        let node = if let Some(mac) = self.index_macros.get(&local.index).cloned() {
+        let node = if let Some(mac) = self.asm.index_macros.get(&local.index).cloned() {
             // Index macros
             self.index_macro(mac, operands, r.name, local, modifier_span)?
-        } else if let Some(mac) = self.code_macros.get(&local.index).cloned() {
+        } else if let Some(mac) = self.asm.code_macros.get(&local.index).cloned() {
             // Code macros
             self.code_macro(Some(r.name.value), modifier_span, operands, mac)?
         } else if let Some((names, data_func)) =
-            self.asm
-                .bindings
-                .get(local.index)
-                .and_then(|binfo| match &binfo.kind {
-                    BindingKind::Module(m) => Some((m.names.clone(), m.data_func)),
-                    BindingKind::Import(path) => {
-                        let m = self.imports.get(path)?;
-                        Some((m.names.clone(), m.data_func))
-                    }
-                    BindingKind::Scope(i) => {
-                        let scope = self.higher_scopes.get(*i).unwrap_or(&self.scope);
-                        Some((scope.names.clone(), scope.is_data_func))
-                    }
-                    _ => None,
-                })
+            (self.asm.bindings.get(local.index)).and_then(|binfo| match &binfo.kind {
+                BindingKind::Module(m) => Some((m.names.clone(), m.data_func)),
+                BindingKind::Scope(i) => {
+                    let scope = self.higher_scopes.get(*i).unwrap_or(&self.scope);
+                    Some((scope.names.clone(), scope.is_data_func))
+                }
+                _ => None,
+            })
         {
             // Module import macro
             let call = names.get_last("Call");
@@ -2084,7 +2077,7 @@ impl Compiler {
                 .macro_expansions
                 .insert(full_span, (mac_name.clone(), code.clone()));
             self.suppress_diagnostics(|comp| {
-                comp.macro_scope(mac.names, None, |comp| {
+                comp.macro_scope((*mac.names).clone(), None, |comp| {
                     comp.quote(&code, mac_name, &modifier_span)
                 })
             })

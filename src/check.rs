@@ -582,7 +582,6 @@ impl VirtualEnv {
                 }
             },
             Node::SetOutputComment { .. } => {}
-            Node::ValidateType { .. } => self.handle_args_outputs(1, 1),
             Node::PushUnder(n, _) => {
                 for _ in 0..*n {
                     self.stack.pop();

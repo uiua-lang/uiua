@@ -11,7 +11,7 @@ use crate::{
 };
 
 /// A top-level item
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value")]
 pub enum Item {
     /// Just some code
@@ -83,7 +83,7 @@ impl Item {
 }
 
 /// A binding
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Binding {
     /// The name of the binding
     pub name: Sp<Ident>,
@@ -113,7 +113,7 @@ impl Binding {
 }
 
 /// A scoped module
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScopedModule {
     /// The span of the opening delimiter
     pub open_span: CodeSpan,
@@ -130,7 +130,7 @@ pub struct ScopedModule {
 }
 
 /// The kind of a module
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ModuleKind {
     /// A named module
     Named(Sp<Ident>),
@@ -139,7 +139,7 @@ pub enum ModuleKind {
 }
 
 /// An import
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Import {
     /// The name given to the imported module
     pub name: Option<Sp<Ident>>,
@@ -154,7 +154,7 @@ pub struct Import {
 }
 
 /// A line of imported items
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ImportLine {
     /// The span of the ~
     pub tilde_span: CodeSpan,
@@ -183,7 +183,7 @@ impl Import {
 }
 
 /// A data definition
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DataDef {
     /// The span of the ~ or |
     pub init_span: CodeSpan,
@@ -200,7 +200,7 @@ pub struct DataDef {
 }
 
 /// The fields of a data definition
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DataFields {
     /// Whether the array is boxed
     pub boxed: bool,
@@ -217,7 +217,7 @@ pub struct DataFields {
 }
 
 /// A data field
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DataField {
     /// Leading comments
     pub comments: Option<Comments>,
@@ -234,7 +234,7 @@ pub struct DataField {
 }
 
 /// A data field validator
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FieldValidator {
     /// The span of the colon (may be an open paren)
     pub open_span: CodeSpan,
@@ -245,7 +245,7 @@ pub struct FieldValidator {
 }
 
 /// A data field initializer
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FieldInit {
     /// The span of the assignment arrow
     pub arrow_span: CodeSpan,
@@ -313,7 +313,7 @@ impl DataField {
 }
 
 /// A cluster of comments
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Comments {
     /// The normal comment lines
     pub lines: Vec<Sp<EcoString>>,
@@ -322,7 +322,7 @@ pub struct Comments {
 }
 
 /// An inline macro
-#[derive(Clone, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct InlineMacro {
     /// The function
     pub func: Sp<Func>,
@@ -333,7 +333,7 @@ pub struct InlineMacro {
 }
 
 /// A word
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[allow(missing_docs)]
 #[serde(tag = "type", content = "value")]
 pub enum Word {
@@ -490,7 +490,7 @@ impl fmt::Debug for Word {
 }
 
 /// A refered-to item
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Ref {
     /// The module path of the item
     pub path: Vec<RefComponent>,
@@ -499,7 +499,7 @@ pub struct Ref {
 }
 
 /// A component of a reference
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RefComponent {
     /// The name of the module
     pub module: Sp<Ident>,
@@ -508,7 +508,7 @@ pub struct RefComponent {
 }
 
 /// A component of a reference
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChainComponent {
     /// The span of the ≈
     pub tilde_span: CodeSpan,
@@ -586,7 +586,7 @@ impl fmt::Display for Ref {
 }
 
 /// A stack array notation term
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Arr {
     /// The span of preceding `↓`
     pub down_span: Option<CodeSpan>,
@@ -641,7 +641,7 @@ impl fmt::Debug for Arr {
 }
 
 /// An inline function
-#[derive(Clone, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Func {
     /// The function's signature
     pub signature: Option<Sp<Signature>>,
@@ -710,7 +710,7 @@ impl fmt::Debug for Func {
 }
 
 /// A function pack
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FunctionPack {
     /// The span of preceding `↓`
     pub down_span: Option<CodeSpan>,
@@ -748,7 +748,7 @@ impl FunctionPack {
 }
 
 /// A modifier with operands
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Modified {
     /// The modifier itself
     pub modifier: Sp<Modifier>,
@@ -776,7 +776,7 @@ impl fmt::Debug for Modified {
 }
 
 /// A modifier
-#[derive(Clone, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value")]
 pub enum Modifier {
     /// A primitive modifier
@@ -832,7 +832,7 @@ impl Modifier {
 }
 
 /// An argument setter
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ArgSetter {
     /// The name of the field
     pub ident: Sp<Ident>,
@@ -854,7 +854,7 @@ impl ArgSetter {
 }
 
 /// A subscripted word
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Subscripted {
     /// The subscript
     pub script: Sp<Subscript>,
@@ -870,17 +870,18 @@ impl fmt::Debug for Subscripted {
 }
 
 /// A number word
-#[derive(Clone, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub enum NumWord {
     Real(f64),
+    Infinity(bool),
     Complex(Complex),
     Err(String),
 }
 
 impl From<f64> for NumWord {
     fn from(value: f64) -> Self {
-        Self::Real(value)
+        Self::Real(value).normalize()
     }
 }
 
@@ -893,7 +894,7 @@ impl From<Complex> for NumWord {
 impl From<Result<f64, String>> for NumWord {
     fn from(value: Result<f64, String>) -> Self {
         match value {
-            Ok(v) => Self::Real(v),
+            Ok(v) => v.into(),
             Err(e) => Self::Err(e),
         }
     }
@@ -909,6 +910,13 @@ impl From<Result<Complex, String>> for NumWord {
 }
 
 impl NumWord {
+    fn normalize(self) -> Self {
+        match self {
+            Self::Real(f64::INFINITY) => Self::Infinity(false),
+            Self::Real(f64::NEG_INFINITY) => Self::Infinity(true),
+            _ => self,
+        }
+    }
     /// Map the number
     pub fn map<R, C>(self, real: impl FnOnce(f64) -> R, complex: impl FnOnce(Complex) -> C) -> Self
     where
@@ -917,9 +925,12 @@ impl NumWord {
     {
         match self {
             Self::Real(r) => real(r).into(),
+            Self::Infinity(false) => real(f64::INFINITY).into(),
+            Self::Infinity(true) => real(f64::NEG_INFINITY).into(),
             Self::Complex(c) => complex(c).into(),
             Self::Err(e) => Self::Err(e),
         }
+        .normalize()
     }
     /// Map the number with another
     pub fn map_with<R, C>(
@@ -934,11 +945,16 @@ impl NumWord {
     {
         match (self, other) {
             (Self::Real(a), Self::Real(b)) => real(a, b).into(),
+            (Self::Infinity(false), b) => Self::Real(f64::INFINITY).map_with(b, real, complex),
+            (Self::Infinity(true), b) => Self::Real(f64::NEG_INFINITY).map_with(b, real, complex),
+            (a, Self::Infinity(false)) => a.map_with(Self::Real(f64::INFINITY), real, complex),
+            (a, Self::Infinity(true)) => a.map_with(Self::Real(f64::NEG_INFINITY), real, complex),
             (Self::Complex(a), Self::Complex(b)) => complex(a, b).into(),
             (Self::Real(a), Self::Complex(b)) => complex(a.into(), b).into(),
             (Self::Complex(a), Self::Real(b)) => complex(a, b.into()).into(),
             (Self::Err(e), _) | (_, Self::Err(e)) => Self::Err(e),
         }
+        .normalize()
     }
 }
 
@@ -952,6 +968,8 @@ impl fmt::Display for NumWord {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             NumWord::Real(r) => write!(f, "{r}"),
+            NumWord::Infinity(false) => write!(f, "∞"),
+            NumWord::Infinity(true) => write!(f, "-∞"),
             NumWord::Complex(c) => write!(f, "{c}"),
             NumWord::Err(e) => write!(f, "error({e})"),
         }

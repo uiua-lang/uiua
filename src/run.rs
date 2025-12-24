@@ -539,12 +539,10 @@ impl Uiua {
                     BindingKind::Func(f) => {
                         self.respect_recursion_limit().and_then(|_| self.call(&f))
                     }
-                    BindingKind::Import { .. } | BindingKind::Module(_) | BindingKind::Scope(_) => {
-                        Err(self.error(
-                            "Called module global. \
+                    BindingKind::Module(_) | BindingKind::Scope(_) => Err(self.error(
+                        "Called module global. \
                         This is a bug in the interpreter.",
-                        ))
-                    }
+                    )),
                     BindingKind::IndexMacro(_) => Err(self.error(
                         "Called index macro global. \
                         This is a bug in the interpreter.",
@@ -627,41 +625,6 @@ impl Uiua {
             }),
             Node::RemoveLabel(_, span) => {
                 self.with_span(span, |env| env.monadic_mut(|val| val.meta.set_label(None)))
-            }
-            Node::ValidateType {
-                index,
-                name,
-                type_num,
-                span,
-            } => {
-                let name = name.clone();
-                self.with_span(span, |env| {
-                    let val = env.pop(index)?;
-                    if val.type_id() != type_num {
-                        let found = if val.shape.elements() == 1 {
-                            val.type_name()
-                        } else {
-                            val.type_name_plural()
-                        };
-                        let expected = match type_num {
-                            0 => "numbers",
-                            1 => "complex numbers",
-                            2 => "characters",
-                            3 => "boxes",
-                            _ => {
-                                return Err(env.error(format!(
-                                    "Invalid type number {type_num}. \
-                                        This is a bug in the interpreter."
-                                )));
-                            }
-                        };
-                        return Err(env.error(format!(
-                            "Field `{name}` should be {expected} but found {found}"
-                        )));
-                    }
-                    env.push(val);
-                    Ok(())
-                })
             }
             Node::Dynamic(df) => (|| {
                 self.asm

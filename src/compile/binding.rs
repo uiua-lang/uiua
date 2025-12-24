@@ -1,7 +1,5 @@
 //! Compiler code for bindings
 
-use crate::BindingMeta;
-
 use super::*;
 
 impl Compiler {
@@ -161,9 +159,9 @@ impl Compiler {
             );
             let mac = CodeMacro {
                 root: SigNode::new(sig, node),
-                names: self.scope.names.clone(),
+                names: self.scope.names.clone().into(),
             };
-            self.code_macros.insert(local.index, mac);
+            Arc::make_mut(&mut self.asm.code_macros).insert(local.index, mac);
             return Ok(());
         }
         // Index macro
@@ -227,7 +225,7 @@ impl Compiler {
             );
             let words = binding.words.clone();
             let mut recursive = false;
-            let mut locals = HashMap::new();
+            let mut locals = EcoVec::new();
             self.analyze_macro_body(&name, &words, false, &mut recursive, &mut locals);
             if recursive {
                 self.experimental_error(span, || {
@@ -248,7 +246,7 @@ impl Compiler {
                 sig: binding.signature.map(|s| s.value),
                 recursive,
             };
-            self.index_macros.insert(local.index, mac);
+            Arc::make_mut(&mut self.asm.index_macros).insert(local.index, mac);
             return Ok(());
         }
 
@@ -553,69 +551,13 @@ impl Compiler {
         }
         Ok(())
     }
-    pub(super) fn import(
-        &mut self,
-        import: crate::ast::Import,
-        prev_com: Option<EcoString>,
-    ) -> UiuaResult {
-        // Import module
-        let module_path = self.import_module(&import.path.value, &import.path.span)?;
-        // Bind name
-        if let Some(name) = &import.name {
-            let imported = self.imports.get(&module_path).unwrap();
-            let global_index = self.next_global;
-            self.next_global += 1;
-            let local = LocalIndex {
-                index: global_index,
-                public: import.public,
-            };
-            self.asm.add_binding_at(
-                local,
-                BindingKind::Import(module_path.clone()),
-                Some(name.span.clone()),
-                BindingMeta {
-                    comment: prev_com
-                        .or_else(|| imported.comment.clone())
-                        .map(|text| DocComment::from(text.as_str())),
-                    ..Default::default()
-                },
-            );
-            self.scope.add_module_name(name.value.clone(), local);
-        }
-        // Bind items
-        for (item, public) in import.items() {
-            if let Some(local) =
-                (self.imports.get(&module_path)).and_then(|i| i.names.get_last(item.value.as_str()))
-            {
-                self.validate_local(&item.value, local, &item.span);
-                (self.code_meta.global_references).insert(item.span.clone(), local.index);
-                self.scope.names.insert(
-                    item.value.clone(),
-                    LocalIndex {
-                        index: local.index,
-                        public,
-                    },
-                );
-            } else {
-                self.add_error(
-                    item.span.clone(),
-                    format!(
-                        "`{}` not found in module {}",
-                        item.value,
-                        module_path.display()
-                    ),
-                );
-            }
-        }
-        Ok(())
-    }
     fn analyze_macro_body(
         &mut self,
         mac_name: &str,
         words: &[Sp<Word>],
         mut code_macro: bool,
         recursive: &mut bool,
-        mod_locals: &mut HashMap<CodeSpan, usize>,
+        mod_locals: &mut EcoVec<(CodeSpan, usize)>,
     ) {
         for word in words {
             let loc = &mut *mod_locals;
@@ -675,7 +617,7 @@ impl Compiler {
                             Ok(Some((pl, l))) => {
                                 path_locals = Some((&r.path, pl));
                                 name_local = Some((&r.name, &m.modifier.span, l));
-                                code_macro |= self.code_macros.contains_key(&l.index);
+                                code_macro |= self.asm.code_macros.contains_key(&l.index);
                             }
                             Ok(None) => {}
                             Err(e) => self.errors.push(e),
@@ -732,13 +674,13 @@ impl Compiler {
                 {
                     *recursive = true;
                 }
-                mod_locals.insert(name_span.clone(), local.index);
+                mod_locals.push((name_span.clone(), local.index));
                 self.validate_local(&nm.value, local, &nm.span);
                 (self.code_meta.global_references).insert(nm.span.clone(), local.index);
             }
             if let Some((path, locals)) = path_locals {
                 for (local, comp) in locals.into_iter().zip(path) {
-                    mod_locals.insert(comp.module.span.clone(), local.index);
+                    mod_locals.push((comp.module.span.clone(), local.index));
                     (self.code_meta.global_references)
                         .insert(comp.module.span.clone(), local.index);
                 }
@@ -752,7 +694,7 @@ impl Compiler {
         items: &[Item],
         code_macro: bool,
         recursive: &mut bool,
-        locals: &mut HashMap<CodeSpan, usize>,
+        locals: &mut EcoVec<(CodeSpan, usize)>,
     ) -> bool {
         for item in items {
             match item {

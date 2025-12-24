@@ -1,6 +1,7 @@
 pub(crate) mod algebra;
 mod binding;
 mod data;
+mod import;
 pub(crate) mod invert;
 mod modifier;
 pub(crate) mod optimize;
@@ -12,6 +13,7 @@ use std::{
     collections::{BTreeSet, HashMap, HashSet, VecDeque},
     env::current_dir,
     fmt, fs,
+    hash::{DefaultHasher, Hash, Hasher},
     iter::{once, repeat_n},
     mem::{replace, swap, take},
     panic::{AssertUnwindSafe, catch_unwind},
@@ -25,12 +27,12 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeSpan, CustomInverse,
-    Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA, ExactDoubleIterator,
-    Function, FunctionId, GitTarget, Ident, ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend,
-    Node, NumericSubscript, PrimClass, Primitive, Purity, RunMode, SUBSCRIPT_DIGITS,
-    SemanticComment, SigNode, Signature, Sp, Span, SubSide, Subscript, SysBackend, Uiua, UiuaError,
-    UiuaErrorKind, UiuaResult, VERSION, Value,
+    Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan,
+    CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
+    ExactDoubleIterator, Function, FunctionId, GitTarget, Ident, ImplPrimitive, IndexMacro,
+    InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass, Primitive, Purity,
+    RunMode, SUBSCRIPT_DIGITS, SemanticComment, SigNode, Signature, Sp, Span, SubSide, Subscript,
+    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
     algorithm::ga::{self, Spec},
     ast::*,
     check::nodes_sig,
@@ -61,13 +63,7 @@ pub struct Compiler {
     /// Determines which How test scopes are run
     mode: RunMode,
     /// The paths of files currently being imported (used to detect import cycles)
-    current_imports: Vec<PathBuf>,
-    /// The bindings of imported files
-    imports: HashMap<PathBuf, Module>,
-    /// Unexpanded index macros
-    index_macros: HashMap<usize, IndexMacro>,
-    /// Unexpanded code macros
-    code_macros: HashMap<usize, CodeMacro>,
+    current_imports: EcoVec<PathBuf>,
     /// Indices of named external functions
     externals: HashMap<Ident, usize>,
     /// The depth of compile-time evaluation
@@ -108,10 +104,7 @@ impl Default for Compiler {
             scope: Scope::default(),
             higher_scopes: Vec::new(),
             mode: RunMode::All,
-            current_imports: Vec::new(),
-            imports: HashMap::new(),
-            index_macros: HashMap::new(),
-            code_macros: HashMap::new(),
+            current_imports: EcoVec::new(),
             externals: HashMap::new(),
             comptime_depth: 0,
             in_try: false,
@@ -205,35 +198,20 @@ impl Extend<(Ident, LocalIndex)> for LocalNames {
 /// A Uiua module
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Module {
+    /// The path this module was imported from
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<PathBuf>,
     /// The top level comment
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub comment: Option<EcoString>,
     /// Map module-local names to global indices
     pub names: LocalNames,
-    /// Whether the mode is a data function
+    /// Whether the module is a data function
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     data_func: bool,
     /// Whether the module uses experimental features
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     experimental: bool,
-}
-
-/// An index macro
-#[derive(Clone)]
-struct IndexMacro {
-    words: Vec<Sp<Word>>,
-    /// Map of spans of identifiers used in the macro that were in scope
-    /// when the macro was declared to their local indices. This is used
-    /// for name resolution. It is keyed by span rather than by name so
-    /// that names in both the declaration and invocation's scope can
-    /// be disambiguated.
-    locals: HashMap<CodeSpan, usize>,
-    sig: Option<Signature>,
-    recursive: bool,
-}
-
-/// A code macro
-#[derive(Clone)]
-struct CodeMacro {
-    root: SigNode,
-    names: LocalNames,
 }
 
 impl AsRef<Assembly> for Compiler {
@@ -338,7 +316,11 @@ pub struct LocalIndex {
     /// The index of the binding in assembly's bindings
     pub index: usize,
     /// Whether the binding is public
+    #[serde(default = "tru", skip_serializing_if = "std::ops::Not::not")]
     pub public: bool,
+}
+fn tru() -> bool {
+    true
 }
 
 impl Compiler {
@@ -492,6 +474,7 @@ impl Compiler {
 
         let res = res?;
         let module = Module {
+            path: None,
             comment: scope.comment,
             names: scope.names,
             data_func: scope.is_data_func,
@@ -553,6 +536,10 @@ impl Compiler {
         }
 
         // Update top-level bindings
+        let exports = Arc::make_mut(&mut self.asm.exports);
+        for (name, locals) in &self.scope.names.0 {
+            exports.insert(name.clone(), locals.last().unwrap().index);
+        }
         self.code_meta.top_level_names = (self.scope.names.all_iter())
             .map(|(name, local)| (name.clone(), local))
             .collect();
@@ -890,133 +877,6 @@ impl Compiler {
             .add_binding_at(local, BindingKind::Const(value), span, meta);
         self.scope.names.insert(name, local);
     }
-    /// Import a module
-    pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
-        // Resolve path
-        let (path, file_kind) = if let Some(url) =
-            (path_str.trim().strip_prefix("git:").map(Into::into)).or_else(|| {
-                (path_str.trim().strip_prefix("gh:")).map(|s| format!("github.com/{}", s.trim()))
-            }) {
-            let mut url = url.as_str();
-            if url.contains("branch:") && url.contains("commit:") {
-                return Err(self.error(
-                    span.clone(),
-                    "Cannot specify both branch and commit in git import",
-                ));
-            }
-            let target = if let Some((a, b)) = url.split_once("branch:") {
-                url = a;
-                GitTarget::Branch(b.trim().into())
-            } else if let Some((a, b)) = url.split_once("commit:") {
-                url = a;
-                GitTarget::Commit(b.trim().into())
-            } else {
-                GitTarget::Default
-            };
-            // Git import
-            let mut url = url.trim().trim_end_matches(".git").to_string();
-            if url.ends_with("/uiua") {
-                return Err(self.error(span.clone(), "Cannot import what looks like a Uiua fork"));
-            }
-            if !(url.starts_with("https://") || url.starts_with("http://")) {
-                url = format!("https://{url}");
-            }
-            self.code_meta
-                .import_srcs
-                .insert(span.clone(), ImportSrc::Git(url.clone()));
-            let path = self
-                .backend()
-                .load_git_module(&url, target)
-                .map_err(|e| self.error(span.clone(), e))?;
-            (path, FileScopeKind::Git)
-        } else {
-            // Normal import
-            let path = self.resolve_import_path(Path::new(path_str));
-            self.code_meta
-                .import_srcs
-                .insert(span.clone(), ImportSrc::File(path.clone()));
-            (path, FileScopeKind::Source)
-        };
-        if !self.imports.contains_key(&path) {
-            // We cache Git modules on WASM so that the pad doesn't have to recompile big modules constantly
-            thread_local! {
-                static GIT_CACHE: RefCell<HashMap<PathBuf, Compiler>> = RefCell::new(HashMap::new());
-            }
-            let bytes = self
-                .backend()
-                .file_read_all(&path)
-                .or_else(|e| {
-                    if path.ends_with(Path::new("example.ua")) {
-                        Ok(EXAMPLE_UA.as_bytes().to_vec())
-                    } else {
-                        Err(e)
-                    }
-                })
-                .map_err(|e| self.error(span.clone(), e))?;
-            if let Some(mut comp) = (bytes.len() > 1000)
-                .then(|| GIT_CACHE.with(|cache| cache.borrow().get(&path).cloned()))
-                .flatten()
-            {
-                swap(self, &mut comp);
-                self.macro_env.rt.backend = comp.macro_env.rt.backend;
-                self.asm.inputs.strings = comp.asm.inputs.strings;
-                self.asm.inputs.files.extend(comp.asm.inputs.files);
-                self.scope.experimental = comp.scope.experimental;
-                self.higher_scopes = comp.higher_scopes;
-                self.diagnostics.extend(comp.diagnostics);
-            } else {
-                let input: EcoString = String::from_utf8(bytes)
-                    .map_err(|e| self.error(span.clone(), format!("Failed to read file: {e}")))?
-                    .into();
-                if self.current_imports.iter().any(|p| p == &path) {
-                    return Err(self.error(
-                        span.clone(),
-                        format!("Cycle detected importing {}", path.to_string_lossy()),
-                    ));
-                }
-                let (module, ()) = self.in_scope(ScopeKind::File(file_kind), |comp| {
-                    comp.load_str_src(&input, &path).map(drop)
-                })?;
-                self.imports.insert(path.clone(), module);
-                #[cfg(target_arch = "wasm32")]
-                if file_kind == FileScopeKind::Git {
-                    GIT_CACHE.with(|cache| {
-                        let mut clone = self.clone();
-                        clone.macro_env.rt.backend = Arc::new(crate::SafeSys::default());
-                        cache.borrow_mut().insert(path.clone(), clone);
-                    });
-                }
-            };
-        }
-        let module = self.imports.get(&path).unwrap();
-        if module.experimental {
-            self.experimental_error(span, || {
-                format!(
-                    "Module `{path_str}` is experimental. \
-                    To use it, add `# Experimental!` to the top of this file."
-                )
-            });
-        }
-        Ok(path)
-    }
-    /// Resolve a declared import path relative to the path of the file that is being executed
-    pub(crate) fn resolve_import_path(&self, path: &Path) -> PathBuf {
-        let mut target = if let Some(parent) = self.current_imports.last().and_then(|p| p.parent())
-        {
-            parent.join(path)
-        } else {
-            path.to_path_buf()
-        };
-        if !target.exists() && target.extension().is_none() {
-            target = target.with_extension("ua");
-        }
-        let base = Path::new(".");
-        if let (Ok(canon_target), Ok(canon_base)) = (target.canonicalize(), base.canonicalize()) {
-            pathdiff::diff_paths(canon_target, canon_base).unwrap_or(target)
-        } else {
-            pathdiff::diff_paths(&target, base).unwrap_or(target)
-        }
-    }
     // Compile a line, checking an end-of-line signature comment
     fn line(&mut self, mut line: Vec<Sp<Word>>) -> UiuaResult<Node> {
         let comment_sig = line_sig(&line);
@@ -1278,6 +1138,8 @@ impl Compiler {
         self.check_depth(&word.span)?;
         Ok(match word.value {
             Word::Number(NumWord::Real(n), _) => Node::new_push(n),
+            Word::Number(NumWord::Infinity(false), _) => Node::new_push(f64::INFINITY),
+            Word::Number(NumWord::Infinity(true), _) => Node::new_push(f64::NEG_INFINITY),
             Word::Number(NumWord::Complex(c), _) => Node::new_push(c),
             Word::Number(NumWord::Err(s), _) => {
                 self.add_error(word.span.clone(), format!("Invalid number `{s}`"));
@@ -1341,7 +1203,6 @@ impl Compiler {
                     }
                     let index = locals.last().unwrap().index;
                     let names = match &self.asm.bindings[index].kind {
-                        BindingKind::Import(path) => &self.imports[path].names,
                         BindingKind::Module(module) => &module.names,
                         _ => break 'blk Node::empty(),
                     };
@@ -1777,8 +1638,11 @@ impl Compiler {
                 // name to disambiguate the macro declaration's locals from
                 // the current ones.
                 if let ScopeKind::Macro(Some(mac_local)) = &scope.kind {
-                    let mac = &self.index_macros[&mac_local.macro_index];
-                    if let Some(index) = mac.locals.get(span).copied() {
+                    let mac = &self.asm.index_macros[&mac_local.macro_index];
+                    if let Some(index) = (mac.locals.iter())
+                        .find(|(sp, _)| sp == span)
+                        .map(|(_, i)| *i)
+                    {
                         return Some(LocalIndex {
                             index,
                             public: true,
@@ -1790,7 +1654,7 @@ impl Compiler {
         // Attempt to look up the identifier as a non-macro
         let as_non_macro =
             self.find_name_impl(name.strip_suffix('!')?, span, true, stop_at_binding)?;
-        if let BindingKind::Module(_) | BindingKind::Scope(_) | BindingKind::Import(_) =
+        if let BindingKind::Module(_) | BindingKind::Scope(_) =
             self.asm.bindings[as_non_macro.index].kind
         {
             // Only allow it if it is a module
@@ -1818,7 +1682,6 @@ impl Compiler {
         path_locals.push(module_local);
         let bkind = &self.asm.bindings[module_local.index].kind;
         let mut names = match bkind {
-            BindingKind::Import(path) => &self.imports[path].names,
             BindingKind::Module(module) => &module.names,
             BindingKind::Scope(i) => &self.higher_scopes.get(*i).unwrap_or(&self.scope).names,
             BindingKind::Func(_) => {
@@ -1859,7 +1722,6 @@ impl Compiler {
             path_locals.push(submod_local);
             let global = &self.asm.bindings[submod_local.index].kind;
             names = match global {
-                BindingKind::Import(path) => &self.imports[path].names,
                 BindingKind::Module(module) => &module.names,
                 BindingKind::Scope(i) => &self.higher_scopes.get(*i).unwrap_or(&self.scope).names,
                 BindingKind::Func(_) => {
@@ -1918,6 +1780,7 @@ impl Compiler {
         }
     }
     fn completions(&self, prefix: &str, names: &LocalNames, public_only: bool) -> Vec<Completion> {
+        // println!("prefix: {prefix:?}, names: {names:?}");
         let mut completions = Vec::new();
         for (name, local) in names.visible_iter() {
             if public_only && !local.public {
@@ -1932,7 +1795,6 @@ impl Compiler {
             }
             let subnames = match &self.asm.bindings[local.index].kind {
                 BindingKind::Module(m) => &m.names,
-                BindingKind::Import(path) => &self.imports[path].names,
                 _ => continue,
             };
             let subcompletions = self.completions(prefix, subnames, true);
@@ -2019,22 +1881,6 @@ impl Compiler {
             BindingKind::Const(Some(val)) => Node::new_push(val),
             BindingKind::Const(None) => Node::CallGlobal(index, Signature::new(0, 1)),
             BindingKind::Func(f) => Node::Call(f, self.add_span(span.clone())),
-            BindingKind::Import(path) => {
-                if let Some(local) = (self.imports.get(&path))
-                    .and_then(|m| m.names.get_prefer_function("Call", &self.asm))
-                {
-                    self.code_meta.global_references.remove(&span);
-                    (self.code_meta.global_references).insert(span.clone(), local.index);
-                    self.global_index(local.index, span)
-                } else {
-                    self.add_error(
-                        span,
-                        "Module cannot be called here as \
-                        it has no `Call` function.",
-                    );
-                    Node::empty()
-                }
-            }
             global @ (BindingKind::Module(_) | BindingKind::Scope(_)) => {
                 // Handle called modules
                 let names = match &global {

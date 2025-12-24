@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     fmt,
     hash::{DefaultHasher, Hash, Hasher},
     ops::{Index, IndexMut},
@@ -10,12 +10,13 @@ use std::{
 
 use dashmap::DashMap;
 use ecow::{EcoString, EcoVec, eco_vec};
+use indexmap::IndexMap;
 use serde::*;
-use uiua_parser::SUBSCRIPT_DIGITS;
 
 use crate::{
-    BindingCounts, CodeSpan, FunctionId, Inputs, Node, SigNode, Signature, Span, Uiua, UiuaResult,
-    Value,
+    BindingCounts, CodeSpan, FunctionId, Ident, InputSrc, Inputs, LocalNames, Node,
+    SUBSCRIPT_DIGITS, SigNode, Signature, Sp, Span, Uiua, UiuaResult, Value,
+    ast::Word,
     compile::{LocalIndex, Module},
     is_ident_char,
 };
@@ -25,8 +26,16 @@ use crate::{
 pub struct Assembly {
     /// The top-level node
     pub root: Node,
+    /// A list of dependency paths and their hashes
+    pub dependencies: EcoVec<(PathBuf, u64)>,
+    /// A list of top-level names
+    pub exports: Arc<IndexMap<Ident, usize>>,
     /// Functions
     pub(crate) functions: EcoVec<Node>,
+    /// Unexpanded index macros
+    pub(crate) index_macros: Arc<IndexMap<usize, IndexMacro>>,
+    /// Unexpanded code macros
+    pub(crate) code_macros: Arc<IndexMap<usize, CodeMacro>>,
     /// A list of global bindings
     pub bindings: EcoVec<BindingInfo>,
     pub(crate) spans: EcoVec<Span>,
@@ -99,6 +108,27 @@ impl<'de> Deserialize<'de> for Function {
     }
 }
 
+/// An index macro
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct IndexMacro {
+    pub(crate) words: Vec<Sp<Word>>,
+    /// Map of spans of identifiers used in the macro that were in scope
+    /// when the macro was declared to their local indices. This is used
+    /// for name resolution. It is keyed by span rather than by name so
+    /// that names in both the declaration and invocation's scope can
+    /// be disambiguated.
+    pub(crate) locals: EcoVec<(CodeSpan, usize)>,
+    pub(crate) sig: Option<Signature>,
+    pub(crate) recursive: bool,
+}
+
+/// A code macro
+#[derive(Clone, Serialize, Deserialize)]
+pub(crate) struct CodeMacro {
+    pub(crate) root: SigNode,
+    pub(crate) names: Arc<LocalNames>,
+}
+
 impl Assembly {
     /// Get the [`SigNode`] for a function
     pub fn sig_node(&self, f: &Function) -> SigNode {
@@ -158,12 +188,28 @@ impl Assembly {
         let span = self.spans[span].clone();
         self.add_binding_at(local, BindingKind::Const(value), span.code(), meta);
     }
+    pub(crate) fn module(&self) -> Module {
+        let mut module = Module::default();
+        for (name, &index) in &*self.exports {
+            let public = self.bindings[index].public;
+            (module.names).insert(name.clone(), LocalIndex { index, public });
+        }
+        module
+    }
     /// Parse a `.uasm` file into an assembly
     pub fn from_uasm(src: &str) -> Result<Self, String> {
         let rest = src;
-        let (root_src, rest) = rest.split_once("BINDINGS").ok_or("No bindings")?;
+        let (root_src, rest) = rest.split_once("DEPENDENCIES").ok_or("No dependencies")?;
+        let (dependencies_src, rest) = rest.split_once("EXPORTS").ok_or("No exports")?;
+        let (exports_src, rest) = rest.split_once("BINDINGS").ok_or("No bindings")?;
         let (bindings_src, rest) = rest.trim().split_once("FUNCTIONS").ok_or("No functions")?;
-        let (functions_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
+        let (functions_src, rest) = (rest.trim())
+            .split_once("INDEX MACROS")
+            .ok_or("No index macros")?;
+        let (index_macros_src, rest) = (rest.trim())
+            .split_once("CODE MACROS")
+            .ok_or("No code macros")?;
+        let (code_macros_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
         let (spans_src, rest) = rest.trim().split_once("FILES").ok_or("No files")?;
         let (files_src, rest) = rest
             .trim()
@@ -171,19 +217,92 @@ impl Assembly {
             .unwrap_or((rest, ""));
         let strings_src = rest.trim();
 
+        // Root node
         let mut root = Node::empty();
         for line in root_src.lines().filter(|line| !line.trim().is_empty()) {
             let node: Node = serde_json::from_str(line).unwrap();
             root.push(node);
         }
 
+        // Dependencies
+        let mut dependencies = EcoVec::new();
+        for line in dependencies_src
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+        {
+            let (path, hash) = line.rsplit_once(' ').ok_or("Missing dependency hash")?;
+            dependencies.push((
+                PathBuf::from(path),
+                hash.parse::<u64>().map_err(|_| "Invalid dependency hash")?,
+            ));
+        }
+
+        // Exports
+        let mut exports = IndexMap::new();
+        for line in exports_src.lines().filter(|line| !line.trim().is_empty()) {
+            let mut words = line.split_whitespace();
+            let name = words.next().ok_or("Missing export name")?;
+            let index = words
+                .next()
+                .ok_or("Missing export index")?
+                .parse::<usize>()
+                .map_err(|e| format!("Invalid export index: {e}"))?;
+            exports.insert(name.into(), index);
+        }
+        let exports = Arc::new(exports);
+
+        // Files
+        let files = DashMap::new();
+        let mut file_paths = Vec::new();
+        for line in files_src.lines().filter(|line| !line.trim().is_empty()) {
+            let (path, src) = line.split_once(": ").ok_or("No path")?;
+            file_paths.push(path);
+            let path = PathBuf::from(path);
+            let src: EcoString = serde_json::from_str(src).map_err(|e| e.to_string())?;
+            files.insert(path, src);
+        }
+
+        // Spans
+        let mut spans = EcoVec::new();
+        spans.push(Span::Builtin);
+        for line in spans_src.lines() {
+            if line.trim().is_empty() {
+                spans.push(Span::Builtin);
+            } else {
+                let (src_start, end) = line.trim().rsplit_once(' ').ok_or("invalid span")?;
+                let (src, start) = src_start.split_once(' ').ok_or("invalid span")?;
+                let src = if let Some(i) = src
+                    .strip_prefix("file")
+                    .and_then(|s| s.parse::<usize>().ok())
+                {
+                    InputSrc::File(PathBuf::from(&file_paths[i]).into())
+                } else {
+                    serde_json::from_str(src).map_err(|e| e.to_string())?
+                };
+                let start = serde_json::from_str(start).map_err(|e| e.to_string())?;
+                let end = serde_json::from_str(end).map_err(|e| e.to_string())?;
+                spans.push(Span::Code(CodeSpan { src, start, end }));
+            }
+        }
+
+        // Bindings
         let mut bindings = EcoVec::new();
-        for line in bindings_src.lines().filter(|line| !line.trim().is_empty()) {
+        let mut lines = bindings_src
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .peekable();
+        while let Some(line) = lines.next() {
             let (public, line) = if let Some(line) = line.strip_prefix("private ") {
                 (false, line)
             } else {
                 (true, line)
             };
+            let (external, line) = if let Some(line) = line.strip_prefix("external ") {
+                (true, line)
+            } else {
+                (false, line)
+            };
+            let (line, span) = line.rsplit_once(' ').ok_or("Missing binding span")?;
             let kind: BindingKind = serde_json::from_str(line).or_else(|e| {
                 if let Some((key, val)) = line.split_once(' ') {
                     let json = format!("{{{key:?}: {val}}}");
@@ -192,44 +311,77 @@ impl Assembly {
                     Err("No key".into())
                 }
             })?;
+            let span: usize = span.parse().map_err(|_| "Invalid binding span")?;
+            let span = (spans.get(span + 1).cloned())
+                .unwrap_or_else(|| panic!("Invalid span for binding {kind:?}"))
+                .code()
+                .unwrap_or_else(CodeSpan::dummy);
+            let comment = (lines.peek())
+                .and_then(|line| line.strip_prefix("  comment: "))
+                .and_then(|s| {
+                    lines.next();
+                    serde_json::from_str::<DocComment>(s).ok()
+                });
+            let deprecation = (lines.peek())
+                .and_then(|line| line.strip_prefix("  deprecation: "))
+                .and_then(|s| {
+                    lines.next();
+                    serde_json::from_str::<EcoString>(s).ok()
+                });
             bindings.push(BindingInfo {
                 kind,
                 public,
-                span: CodeSpan::dummy(),
-                meta: BindingMeta::default(),
+                span,
+                meta: BindingMeta {
+                    comment,
+                    deprecation,
+                    external,
+                    ..Default::default()
+                },
                 used: true,
             });
         }
 
+        // Functions
         let mut functions = EcoVec::new();
         for line in functions_src.lines().filter(|line| !line.trim().is_empty()) {
             let func: Node = serde_json::from_str(line).unwrap();
             functions.push(func);
         }
 
-        let mut spans = EcoVec::new();
-        spans.push(Span::Builtin);
-        for line in spans_src.lines().filter(|line| !line.trim().is_empty()) {
-            if line.trim().is_empty() {
-                spans.push(Span::Builtin);
-            } else {
-                let (src_start, end) = line.trim().rsplit_once(' ').ok_or("invalid span")?;
-                let (src, start) = src_start.split_once(' ').ok_or("invalid span")?;
-                let src = serde_json::from_str(src).map_err(|e| e.to_string())?;
-                let start = serde_json::from_str(start).map_err(|e| e.to_string())?;
-                let end = serde_json::from_str(end).map_err(|e| e.to_string())?;
-                spans.push(Span::Code(CodeSpan { src, start, end }));
-            }
+        // Index macros
+        let mut index_macros = IndexMap::new();
+        for line in index_macros_src
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+        {
+            let (first, rest) = line.split_once(' ').ok_or("invalid index macro line")?;
+            let i: usize = first
+                .parse()
+                .map_err(|_| format!("invalid index macro index {first:?}"))?;
+            let index_macro: IndexMacro =
+                serde_json::from_str(rest).map_err(|e| format!("invalid index macro #{i}: {e}"))?;
+            index_macros.insert(i, index_macro);
         }
+        let index_macros = Arc::new(index_macros);
 
-        let files = DashMap::new();
-        for line in files_src.lines().filter(|line| !line.trim().is_empty()) {
-            let (path, src) = line.split_once(": ").ok_or("No path")?;
-            let path = PathBuf::from(path);
-            let src: EcoString = serde_json::from_str(src).map_err(|e| e.to_string())?;
-            files.insert(path, src);
+        // Code macros
+        let mut code_macros = IndexMap::new();
+        for line in code_macros_src
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+        {
+            let (first, rest) = line.split_once(' ').ok_or("invalid code macro line")?;
+            let i: usize = first
+                .parse()
+                .map_err(|_| format!("invalid code macro code {first:?}"))?;
+            let code_macro: CodeMacro =
+                serde_json::from_str(rest).map_err(|e| format!("invalid code macro: {e}"))?;
+            code_macros.insert(i, code_macro);
         }
+        let code_macros = Arc::new(code_macros);
 
+        // Strings
         let mut strings = EcoVec::new();
         for line in strings_src.lines() {
             let src: EcoString = serde_json::from_str(line).map_err(|e| e.to_string())?;
@@ -238,8 +390,12 @@ impl Assembly {
 
         Ok(Self {
             root,
+            dependencies,
+            exports,
             bindings,
             functions,
+            index_macros,
+            code_macros,
             spans,
             inputs: Inputs {
                 files,
@@ -259,21 +415,53 @@ impl Assembly {
             uasm.push('\n');
         }
 
+        uasm.push_str("\nDEPENDENCIES\n");
+        for (path, hash) in &self.dependencies {
+            uasm.push_str(&format!("{} {hash}\n", path.display()));
+        }
+
+        uasm.push_str("\nEXPORTS\n");
+        for (name, index) in &*self.exports {
+            uasm.push_str(&format!("{name} {index}\n"));
+        }
+
         uasm.push_str("\nBINDINGS\n");
+        let span_indices: HashMap<&CodeSpan, usize> = (self.spans.iter().skip(1).enumerate())
+            .filter_map(|(i, span)| span.code_ref().map(|s| (s, i)))
+            .collect();
         for binding in &self.bindings {
             if !binding.public {
                 uasm.push_str("private ");
             }
-            if let serde_json::Value::Object(map) = serde_json::to_value(&binding.kind).unwrap() {
-                if map.len() == 1 {
-                    let key = map.keys().next().unwrap();
-                    let value = map.values().next().unwrap();
-                    uasm.push_str(&format!("{key} {value}\n"));
-                    continue;
-                }
+            if binding.meta.external {
+                uasm.push_str("external ");
             }
-            uasm.push_str(&serde_json::to_string(&binding.kind).unwrap());
+            if let serde_json::Value::Object(map) = serde_json::to_value(&binding.kind).unwrap()
+                && map.len() == 1
+            {
+                let key = map.keys().next().unwrap();
+                let value = map.values().next().unwrap();
+                uasm.push_str(&format!("{key} {value}"));
+            } else {
+                uasm.push_str(&serde_json::to_string(&binding.kind).unwrap());
+            }
+            uasm.push(' ');
+            uasm.push_str(
+                &(span_indices.get(&binding.span).copied())
+                    .unwrap_or(0)
+                    .to_string(),
+            );
             uasm.push('\n');
+            if let Some(com) = &binding.meta.comment {
+                uasm.push_str("  comment: ");
+                uasm.push_str(&serde_json::to_string(com).unwrap());
+                uasm.push('\n');
+            }
+            if let Some(deprecation) = &binding.meta.deprecation {
+                uasm.push_str("  deprecation: ");
+                uasm.push_str(&serde_json::to_string(deprecation).unwrap());
+                uasm.push('\n');
+            }
         }
 
         uasm.push_str("\nFUNCTIONS\n");
@@ -282,10 +470,29 @@ impl Assembly {
             uasm.push('\n');
         }
 
+        uasm.push_str("\nINDEX MACROS\n");
+        for (i, mac) in &*self.index_macros {
+            uasm.push_str(&format!("{i} {}", serde_json::to_string(mac).unwrap()));
+            uasm.push('\n');
+        }
+
+        uasm.push_str("\nCODE MACROS\n");
+        for (i, mac) in &*self.code_macros {
+            uasm.push_str(&format!("{i} {}", serde_json::to_string(mac).unwrap()));
+            uasm.push('\n');
+        }
+
         uasm.push_str("\nSPANS\n");
+        let file_indices: HashMap<PathBuf, usize> = (self.inputs.files.iter().enumerate())
+            .map(|(i, entry)| (entry.key().into(), i))
+            .collect();
         for span in self.spans.iter().skip(1) {
             if let Span::Code(span) = span {
-                uasm.push_str(&serde_json::to_string(&span.src).unwrap());
+                let src = match &span.src {
+                    InputSrc::File(path) => format!("file{}", file_indices[&**path]),
+                    src => serde_json::to_string(src).unwrap(),
+                };
+                uasm.push_str(&src);
                 uasm.push(' ');
                 uasm.push_str(&serde_json::to_string(&span.start).unwrap());
                 uasm.push(' ');
@@ -343,7 +550,11 @@ impl Default for Assembly {
     fn default() -> Self {
         Self {
             root: Node::default(),
+            dependencies: EcoVec::new(),
+            exports: Arc::new(IndexMap::new()),
             functions: EcoVec::new(),
+            index_macros: Arc::new(IndexMap::new()),
+            code_macros: Arc::new(IndexMap::new()),
             spans: eco_vec![Span::Builtin],
             bindings: EcoVec::new(),
             dynamic_functions: EcoVec::new(),
@@ -376,15 +587,19 @@ pub struct BindingInfo {
 }
 
 /// Metadata about a binding
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct BindingMeta {
     /// The comment preceding the binding
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub comment: Option<DocComment>,
     /// The character counts for golfing
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub counts: Option<BindingCounts>,
     /// The deprecation message
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deprecation: Option<EcoString>,
     /// Whether this binding's code was externally provided
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub external: bool,
 }
 
@@ -396,9 +611,7 @@ pub enum BindingKind {
     Const(Option<Value>),
     /// A function
     Func(Function),
-    /// An imported module
-    Import(PathBuf),
-    /// A scoped module
+    /// A module
     Module(Module),
     /// A scope being compiled
     Scope(usize),
@@ -418,7 +631,6 @@ impl BindingKind {
         match self {
             Self::Const(_) => Some(Signature::new(0, 1)),
             Self::Func(func) => Some(func.sig),
-            Self::Import { .. } => None,
             Self::Module(_) => None,
             Self::Scope(_) => None,
             Self::IndexMacro(_) => None,
@@ -432,7 +644,14 @@ impl BindingKind {
     }
     /// Check if the binding is a module
     pub fn is_module(&self) -> bool {
-        matches!(self, Self::Import(_) | Self::Module(_))
+        self.as_module().is_some()
+    }
+    /// Get the binding as a module
+    pub fn as_module(&self) -> Option<&Module> {
+        match self {
+            BindingKind::Module(m) => Some(m),
+            _ => None,
+        }
     }
     /// Check if the binding is a constant or function
     pub fn has_sig(&self) -> bool {
@@ -448,8 +667,10 @@ impl BindingKind {
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct DocComment {
     /// The comment text
+    #[serde(default, skip_serializing_if = "str::is_empty")]
     pub text: EcoString,
     /// The signature of the binding
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sig: Option<DocCommentSig>,
 }
 

@@ -12,3 +12,5 @@ F ← ≡⍣⋕()
 
 C ← ℂ3 4
 ⍤⤙≍ ℂ3 4 C # No inline!
+
+°[W] [5] # No inline!

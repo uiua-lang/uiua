@@ -1507,6 +1507,8 @@ impl ArrayValueSer for char {
 enum F64Rep {
     #[serde(rename = "NaN")]
     NaN,
+    #[serde(rename = "W")]
+    Wildcard,
     #[serde(rename = "empty")]
     MapEmpty,
     #[serde(rename = "tomb")]
@@ -1522,7 +1524,9 @@ enum F64Rep {
 impl From<f64> for F64Rep {
     fn from(n: f64) -> Self {
         if n.is_nan() {
-            if n.to_bits() == EMPTY_NAN.to_bits() {
+            if n.to_bits() == WILDCARD_NAN.to_bits() {
+                Self::Wildcard
+            } else if n.to_bits() == EMPTY_NAN.to_bits() {
                 Self::MapEmpty
             } else if n.to_bits() == TOMBSTONE_NAN.to_bits() {
                 Self::MapTombstone
@@ -1545,6 +1549,7 @@ impl From<F64Rep> for f64 {
     fn from(rep: F64Rep) -> Self {
         match rep {
             F64Rep::NaN => f64::NAN,
+            F64Rep::Wildcard => WILDCARD_NAN,
             F64Rep::MapEmpty => EMPTY_NAN,
             F64Rep::MapTombstone => TOMBSTONE_NAN,
             F64Rep::Infinity => f64::INFINITY,

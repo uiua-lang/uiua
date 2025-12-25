@@ -1,11 +1,13 @@
 use std::fmt;
 
 use colored::{Color, Colorize};
+use serde::{Deserialize, Serialize};
 
 use crate::{InputSrc, Inputs, Span};
 
 /// A message to be displayed to the user that is not an error
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub struct Diagnostic {
     /// The span of the message
     pub span: Span,
@@ -38,7 +40,8 @@ impl Ord for Diagnostic {
 }
 
 /// Kinds of non-error diagnostics
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum DiagnosticKind {
     /// Informational message
     Info,
@@ -82,7 +85,8 @@ impl Diagnostic {
 }
 
 /// Kinds of reports
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum ReportKind {
     /// An error
     Error,
@@ -110,12 +114,16 @@ impl ReportKind {
 }
 
 /// A text fragment of a report
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum ReportFragment {
     /// Just plain text
     Plain(String),
     /// Text colored according to the report kind
-    Colored(String, ReportKind),
+    Colored {
+        text: String,
+        kind: ReportKind,
+    },
     /// Faint text
     Faint(String),
     /// Even fainter text
@@ -124,8 +132,19 @@ pub enum ReportFragment {
     Newline,
 }
 
+impl ReportFragment {
+    /// Create a colored report fragment
+    pub fn colored(text: impl Into<String>, kind: ReportKind) -> Self {
+        Self::Colored {
+            text: text.into(),
+            kind,
+        }
+    }
+}
+
 /// A rich-text error/diagnostic report
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub struct Report {
     /// The rich-text fragments of the report
     pub fragments: Vec<ReportFragment>,
@@ -147,7 +166,7 @@ impl Report {
     pub fn new(kind: ReportKind, message: impl Into<String>) -> Self {
         let message = message.into();
         let mut fragments = vec![
-            ReportFragment::Colored(kind.str().into(), kind),
+            ReportFragment::colored(kind.str(), kind),
             ReportFragment::Plain(": ".into()),
         ];
         if message.lines().count() > 1 {
@@ -170,7 +189,7 @@ impl Report {
             if i > 0 {
                 fragments.push(ReportFragment::Newline);
             }
-            fragments.push(ReportFragment::Colored(kind.str().into(), kind));
+            fragments.push(ReportFragment::colored(kind.str(), kind));
             fragments.push(ReportFragment::Plain(": ".into()));
             let message = message.to_string();
             for (i, line) in message.lines().enumerate() {
@@ -215,14 +234,14 @@ impl Report {
                     .collect();
                 let post_color: String = line.chars().skip(end_char_pos as usize).collect();
                 fragments.push(ReportFragment::Faint(pre_color));
-                fragments.push(ReportFragment::Colored(color, kind));
+                fragments.push(ReportFragment::colored(color, kind));
                 fragments.push(ReportFragment::Faint(post_color));
                 fragments.push(ReportFragment::Newline);
                 fragments.push(ReportFragment::Plain(
                     " ".repeat(line_prefix.chars().count()),
                 ));
                 fragments.push(ReportFragment::Plain(" ".repeat(start_char_pos as usize)));
-                fragments.push(ReportFragment::Colored(
+                fragments.push(ReportFragment::colored(
                     "─".repeat(end_char_pos.saturating_sub(start_char_pos).max(1) as usize),
                     kind,
                 ));
@@ -239,7 +258,7 @@ impl Report {
             if failures == 0 {
                 vec![]
             } else {
-                vec![ReportFragment::Colored(
+                vec![ReportFragment::colored(
                     match failures {
                         1 => "Test failed".into(),
                         2 => "Both tests failed".into(),
@@ -249,7 +268,7 @@ impl Report {
                 )]
             }
         } else {
-            let mut fragments = vec![ReportFragment::Colored(
+            let mut fragments = vec![ReportFragment::colored(
                 match (successes, failures) {
                     (1, 0) if not_run == 0 => "Test passed".into(),
                     (2, 0) if not_run == 0 => "Both tests passed".into(),
@@ -263,20 +282,20 @@ impl Report {
             if failures > 0 {
                 fragments.extend([
                     ReportFragment::Plain(", ".into()),
-                    ReportFragment::Colored(format!("{failures} failed"), ReportKind::Error),
+                    ReportFragment::colored(format!("{failures} failed"), ReportKind::Error),
                 ])
             }
             fragments
         };
         if not_run > 0 {
             if fragments.is_empty() {
-                fragments.push(ReportFragment::Colored(
+                fragments.push(ReportFragment::colored(
                     format!("0 of {not_run} tests ran"),
                     ReportKind::Error,
                 ));
             } else {
                 fragments.push(ReportFragment::Plain(", ".into()));
-                fragments.push(ReportFragment::Colored(
+                fragments.push(ReportFragment::colored(
                     format!("{not_run} didn't run"),
                     DiagnosticKind::Warning.into(),
                 ));
@@ -296,7 +315,7 @@ impl fmt::Display for Report {
                 ReportFragment::Plain(s)
                 | ReportFragment::Faint(s)
                 | ReportFragment::Fainter(s) => write!(f, "{s}")?,
-                ReportFragment::Colored(s, kind) => {
+                ReportFragment::Colored { text: s, kind } => {
                     if self.color {
                         let s = s.color(match kind {
                             ReportKind::Error => Color::Red,

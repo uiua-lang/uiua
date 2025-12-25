@@ -336,10 +336,7 @@ impl UiuaError {
                         .fragments,
                 );
             } else {
-                report.fragments.push(ReportFragment::Colored(
-                    "Info".into(),
-                    DiagnosticKind::Info.into(),
-                ));
+                report.fragments.push(ReportFragment::colored("Info", DiagnosticKind::Info.into()));
                 report.fragments.push(ReportFragment::Plain(": ".into()));
                 report.fragments.push(ReportFragment::Plain(info.into()));
             }

@@ -1,5 +1,12 @@
 [workspace]
-members = ["site", "tests_ffi", "pad/editor", "parser"]
+members = [
+  "site",
+  "tests_ffi",
+  "pad/editor",
+  "pad/worker",
+  "pad/shared",
+  "parser",
+]
 
 [workspace.package]
 categories = ["compilers", "algorithms", "multimedia", "parser-implementations"]

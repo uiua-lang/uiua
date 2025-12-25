@@ -6670,10 +6670,40 @@ dependencies = [
  "leptos",
  "leptos-use",
  "leptos_router",
+ "serde",
+ "serde-wasm-bindgen",
  "serde_json",
  "uiua",
+ "uiua-pad-shared",
+ "uiua-pad-worker",
  "unicode-segmentation",
  "urlencoding",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "uiua-pad-shared"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "uiua",
+]
+
+[[package]]
+name = "uiua-pad-worker"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "hound",
+ "image",
+ "js-sys",
+ "serde",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "uiua",
+ "uiua-pad-shared",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

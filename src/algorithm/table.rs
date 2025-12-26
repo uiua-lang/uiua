@@ -156,7 +156,9 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
             )?;
             let mut new_shape = Shape::with_capacity(n);
             for arg in [&xs, &ys, &zs].into_iter().chain(&others) {
-                new_shape.push(arg.row_count());
+                if arg.rank() > 0 {
+                    new_shape.push(arg.row_count());
+                }
             }
             let outputs = sig.outputs();
             let other_rows_product = others.iter().map(|a| a.row_count()).product::<usize>();

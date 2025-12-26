@@ -1226,12 +1226,18 @@ impl Compiler {
                 Node::empty()
             }
             Word::Strand(items) => {
+                // Diagnostic for strand of characters
+                if (items.iter()).all(|w| !w.value.is_code() || matches!(w.value, Word::Char(_))) {
+                    self.emit_diagnostic(
+                        "Stranded characters should instead be written as a string",
+                        DiagnosticKind::Advice,
+                        word.span.clone(),
+                    );
+                }
                 // Track span for LSP
                 let just_spans: Vec<_> = items.iter().map(|w| w.span.clone()).collect();
                 // Compile individual items
-                let op_nodes = items
-                    .into_iter()
-                    .rev()
+                let op_nodes = (items.into_iter().rev())
                     .map(|word| self.word_sig(word))
                     .collect::<UiuaResult<Vec<_>>>()?;
                 // Check item sigs
@@ -1244,21 +1250,6 @@ impl Compiler {
                 self.code_meta.strands.insert(word.span.clone(), just_spans);
                 // Flatten instrs
                 let inner = Node::from_iter(op_nodes.into_iter().map(|sn| sn.node));
-
-                // Normal strand
-
-                // Diagnostic for strand of characters
-                if !inner.is_empty()
-                    && inner.iter().all(
-                        |instr| matches!(instr, Node::Push(Value::Char(arr)) if arr.rank() == 0),
-                    )
-                {
-                    self.emit_diagnostic(
-                        "Stranded characters should instead be written as a string",
-                        DiagnosticKind::Advice,
-                        word.span.clone(),
-                    );
-                }
 
                 let span = self.add_span(word.span.clone());
                 // Inline constant arrays

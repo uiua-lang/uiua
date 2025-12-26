@@ -1146,18 +1146,35 @@ inverse!(AntiMultiKeepPat, input, _, ImplPrim(MultiKeep(n), span), {
     Ok((input, node))
 });
 
-inverse!(
-    (FixMatchRanksPat, input, asm),
-    ref,
-    ImplMod(FixMatchRanks, args, span),
-    {
-        let [f] = args.as_slice() else {
-            return generic();
-        };
-        let inv = f.un_inverse(asm)?;
-        Ok((input, ImplMod(FixMatchRanks, eco_vec![inv], *span)))
-    }
-);
+inverse!(FixMatchRanksPat, input, asm, {
+    let (input, val) = if let Ok((input, val)) = Val.invert_extract(input, asm) {
+        (input, Some(val))
+    } else {
+        (input, None)
+    };
+    let [ImplMod(FixMatchRanks, args, span), input @ ..] = input else {
+        return generic();
+    };
+    let [f] = args.as_slice() else {
+        return generic();
+    };
+    let inv = if let Some(val) = val {
+        let mut sig = f.sig;
+        sig.update_args(|a| a.saturating_sub(1));
+        let inv = SigNode::new(sig, Node::from([val, f.node.clone()])).un_inverse(asm)?;
+        if let Ok((rest, val)) = Val.invert_extract(inv.node.as_slice(), asm) {
+            Node::from([
+                val,
+                ImplMod(FixMatchRanks, eco_vec![Node::from(rest).sig_node()?], *span),
+            ])
+        } else {
+            ImplMod(FixMatchRanks, eco_vec![inv], *span)
+        }
+    } else {
+        ImplMod(FixMatchRanks, eco_vec![f.un_inverse(asm)?], *span)
+    };
+    Ok((input, inv))
+});
 
 inverse!(DumpPat, input, _, ref, Mod(Dump, args, span), {
     Ok((input, ImplMod(UnDump, args.clone(), *span)))

@@ -289,12 +289,12 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
             }
             let sub_name = &name[start_index..end_index];
             // Normal primitive matching
-            if let Some(p) = PrimComponent::from_format_name(sub_name) {
-                if sub_name.len() > 1 || p.name().len() == 1 {
-                    prims.push((p, sub_name));
-                    start += len;
-                    continue 'outer;
-                }
+            if let Some(p) = PrimComponent::from_format_name(sub_name)
+                && (sub_name.len() > 1 || p.name().len() == 1)
+            {
+                prims.push((p, sub_name));
+                start += len;
+                continue 'outer;
             }
             // Greek
             if sub_name.chars().count() == 1 {
@@ -354,12 +354,12 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
             let start_index = indices.get(end - len).copied().unwrap_or(0);
             let sub_name = &name[start_index..end_index];
             // Normal primitive matching
-            if let Some(p) = Primitive::from_format_name(sub_name) {
-                if sub_name.len() > 1 || p.name().len() == 1 {
-                    prims.push((p.into(), sub_name));
-                    end -= len;
-                    continue 'outer;
-                }
+            if let Some(p) = Primitive::from_format_name(sub_name)
+                && (sub_name.len() > 1 || p.name().len() == 1)
+            {
+                prims.push((p.into(), sub_name));
+                end -= len;
+                continue 'outer;
             }
             // Greek
             if sub_name.chars().count() == 1 {

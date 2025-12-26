@@ -123,10 +123,8 @@ impl Compiler {
                             errors.push(e)
                         }
                     }
-                    if !success {
-                        if let Some(new) = &mut new {
-                            new.extend(section.iter().cloned());
-                        }
+                    if !success && let Some(new) = &mut new {
+                        new.extend(section.iter().cloned());
                     }
                     start = end;
                     continue 'start;

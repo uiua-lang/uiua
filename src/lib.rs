@@ -473,10 +473,10 @@ mod tests {
                             let args = &args[arg_count];
                             let code = format!("{a}{b}{c} {args}");
                             eprintln!("{code}");
-                            if let Err(e) = Uiua::with_safe_sys().run_str(&code) {
-                                if e.to_string().contains("The interpreter has crashed!") {
-                                    exit(1);
-                                }
+                            if let Err(e) = Uiua::with_safe_sys().run_str(&code)
+                                && e.to_string().contains("The interpreter has crashed!")
+                            {
+                                exit(1);
                             }
                         }
                     }

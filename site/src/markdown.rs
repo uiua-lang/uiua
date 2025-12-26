@@ -109,10 +109,9 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
             if let Some(text) = text
                 .strip_prefix('[')
                 .and_then(|text| text.strip_suffix(']'))
+                && let Some(prim) = Primitive::from_name(text)
             {
-                if let Some(prim) = Primitive::from_name(text) {
-                    return view!(<Prim prim=prim/>).into_view();
-                }
+                return view!(<Prim prim=prim/>).into_view();
             }
             let mut text = Cow::Borrowed(text.as_str());
             if replace_lang_name() && text.contains("Uiua") {
@@ -321,10 +320,10 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
             if let Some(prim) = Primitive::from_name(name).or_else(|| Primitive::from_name(&text)) {
                 view!(<Prim prim=prim/>).into_view()
             } else {
-                if name.chars().count() == 1 {
-                    if let Some(prim) = Primitive::from_glyph(name.chars().next().unwrap()) {
-                        return view!(<Prim prim=prim glyph_only=true/>).into_view();
-                    }
+                if name.chars().count() == 1
+                    && let Some(prim) = Primitive::from_glyph(name.chars().next().unwrap())
+                {
+                    return view!(<Prim prim=prim glyph_only=true/>).into_view();
                 }
                 view!(<a href={&link.url} title={&link.title}>{children}</a>).into_view()
             }
@@ -406,13 +405,13 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
             }
             let class = format!("{class} markdown-image");
             let mut size = String::new();
-            if let Some(a) = alt.strip_suffix('%') {
-                if let Some((a, last)) = a.rsplit_once(' ') {
-                    if let Ok(s) = last.parse::<u16>() {
-                        size = format!("max-width: {s}%");
-                    }
-                    alt = a.into();
+            if let Some(a) = alt.strip_suffix('%')
+                && let Some((a, last)) = a.rsplit_once(' ')
+            {
+                if let Ok(s) = last.parse::<u16>() {
+                    size = format!("max-width: {s}%");
                 }
+                alt = a.into();
             }
             view!(<img src={&image.url} alt={alt.clone()} title=alt class=class style=size/>)
                 .into_view()
@@ -445,19 +444,17 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
             if let Some(text) = text
                 .strip_prefix('[')
                 .and_then(|text| text.strip_suffix(']'))
+                && let Some(prim) = Primitive::from_name(text)
             {
-                if let Some(prim) = Primitive::from_name(text) {
-                    return format!("{prim:?}");
-                }
+                return format!("{prim:?}");
             }
             text.clone()
         }
         NodeValue::Heading(heading) => {
             let id = all_text(node).to_lowercase().replace(' ', "-");
             format!(
-                "<h{} id={:?}>{}</h{}>",
+                "<h{} id={id:?}>{}</h{}>",
                 heading.level,
-                id,
                 children(),
                 heading.level
             )

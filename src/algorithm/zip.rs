@@ -756,16 +756,16 @@ fn rows2(
         }
         return Ok(());
     }
-    if !inv {
-        if let Some((f, f_depth)) = f_dy_fast_fn(
+    if !inv
+        && let Some((f, f_depth)) = f_dy_fast_fn(
             f.node.as_slice(),
             env.fill().value_for(&xs).is_some(),
             env.fill().value_for(&ys).is_some(),
-        ) {
-            let val = f(xs, ys, f_depth + depth + 1, env)?;
-            env.push(val);
-            return Ok(());
-        }
+        )
+    {
+        let val = f(xs, ys, f_depth + depth + 1, env)?;
+        env.push(val);
+        return Ok(());
     }
     match (xs.row_count(), ys.row_count()) {
         (_, 1) => {

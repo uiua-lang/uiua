@@ -1147,10 +1147,10 @@ impl State {
         } else {
             let (output, error) = run_code_single(&self.code_id, &full_code);
             self.loading_module = false;
-            if let Some(error) = error {
-                if error.to_string().contains("Waiting for module") {
-                    self.loading_module = true;
-                }
+            if let Some(error) = error
+                && error.to_string().contains("Waiting for module")
+            {
+                self.loading_module = true;
             }
             output
         }
@@ -1336,17 +1336,17 @@ pub fn report_view(report: &Report) -> impl IntoView {
     let mut frag_lines = vec![(Vec::new(), false)];
     for (i, frag) in report.fragments.iter().enumerate() {
         let (frags, wrap) = frag_lines.last_mut().unwrap();
-        if let Some(range) = &snip_range {
-            if range.contains(&i) {
-                if range.start == i {
-                    let omitted_count = newline_indices.len() - 20;
-                    frags.push(view! { <br /> }.into_view());
-                    frags.push(view! { <br /> }.into_view());
-                    frags.push(view! { <span class="output-report">{format!("     ...{omitted_count} omitted...")}</span> }.into_view());
-                    frags.push(view! { <br /> }.into_view());
-                }
-                continue;
+        if let Some(range) = &snip_range
+            && range.contains(&i)
+        {
+            if range.start == i {
+                let omitted_count = newline_indices.len() - 20;
+                frags.push(view! { <br /> }.into_view());
+                frags.push(view! { <br /> }.into_view());
+                frags.push(view! { <span class="output-report">{format!("     ...{omitted_count} omitted...")}</span> }.into_view());
+                frags.push(view! { <br /> }.into_view());
             }
+            continue;
         }
         frags.push(match frag {
             ReportFragment::Plain(s) => {

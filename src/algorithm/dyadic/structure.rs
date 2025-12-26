@@ -281,11 +281,11 @@ impl<T: ArrayValue> Array<T> {
                         return Err(env.error(message).fill());
                     }
                 }
-            } else if i < 0 {
-                if let Ok(fill) = &fill {
-                    picked = cowslice![fill.clone(); row_len];
-                    continue;
-                }
+            } else if i < 0
+                && let Ok(fill) = &fill
+            {
+                picked = cowslice![fill.clone(); row_len];
+                continue;
             }
             let i = if i >= 0 { i as usize } else { (s + i) as usize };
             let start = i * row_len;
@@ -500,17 +500,17 @@ impl<T: ArrayValue> Array<T> {
         }
 
         let mut fill = env.array_fill::<T>().map_err(Cow::Borrowed);
-        if let Ok(fill_val) = &fill {
-            if !self.shape[index.len()..].ends_with(&fill_val.value.shape) {
-                fill = Err(Cow::Owned(format!(
-                    ". A fill is set, but its shape {} \
+        if let Ok(fill_val) = &fill
+            && !self.shape[index.len()..].ends_with(&fill_val.value.shape)
+        {
+            fill = Err(Cow::Owned(format!(
+                ". A fill is set, but its shape {} \
                     is not compatible with the array's shape {} \
                     when doing a {}-axis take",
-                    fill_val.value.shape,
-                    self.shape,
-                    index.len()
-                )))
-            }
+                fill_val.value.shape,
+                self.shape,
+                index.len()
+            )))
         }
 
         let map_keys = self.meta.take_map_keys();

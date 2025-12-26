@@ -267,10 +267,10 @@ impl DataDef {
                     .unwrap_or_else(|| self.init_span.clone())
             });
         let mut span = (self.init_span.clone()).merge(end);
-        if let Some(words) = &self.func {
-            if let Some(word) = words.last() {
-                span = span.merge(word.span.clone());
-            }
+        if let Some(words) = &self.func
+            && let Some(word) = words.last()
+        {
+            span = span.merge(word.span.clone());
         }
         span
     }

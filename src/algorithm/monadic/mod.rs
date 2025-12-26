@@ -397,10 +397,9 @@ impl Value {
                 // Happy path for base 10
                 if s.chars()
                     .all(|c| c.is_ascii_digit() || c == '-' || c == '.')
+                    && let Ok(num) = s.parse::<f64>()
                 {
-                    if let Ok(num) = s.parse::<f64>() {
-                        return Ok(num.into());
-                    }
+                    return Ok(num.into());
                 }
                 // Fall through
             }
@@ -703,10 +702,10 @@ impl<T: ArrayValue> Array<T> {
     }
     pub(crate) fn fix_depth(&mut self, depth: usize) {
         let depth = self.shape.fix_depth(depth);
-        if depth == 0 {
-            if let Some(keys) = self.meta.map_keys_mut() {
-                keys.fix();
-            }
+        if depth == 0
+            && let Some(keys) = self.meta.map_keys_mut()
+        {
+            keys.fix();
         }
     }
     /// Remove a 1-length dimension from the front of the array's shape
@@ -1168,10 +1167,10 @@ impl<T: ArrayValue> Array<T> {
 
         // Reverse map keys
         if depth == 0 {
-            if let Some(meta) = self.meta.get_mut() {
-                if let Some(keys) = &mut meta.map_keys {
-                    keys.reverse();
-                }
+            if let Some(meta) = self.meta.get_mut()
+                && let Some(keys) = &mut meta.map_keys
+            {
+                keys.reverse();
             }
             self.meta.mark_sorted_up(sorted_down);
             self.meta.mark_sorted_down(sorted_up);
@@ -2273,7 +2272,7 @@ impl Array<f64> {
             let mut n = self.data[0] as usize;
             let mut primes = EcoVec::new();
             for d in 2..=self.data[0].sqrt().ceil() as usize {
-                while n % d == 0 {
+                while n.is_multiple_of(d) {
                     primes.push(d as f64);
                     n /= d;
                 }

@@ -42,8 +42,7 @@ impl Compiler {
             && meta.comment.is_none()
             && !prelude.track_caller
             && binding.words.iter().filter(|w| w.value.is_code()).count() == 1
-        {
-            if let Some(r) = binding.words.iter().find_map(|w| match &w.value {
+            && let Some(r) = binding.words.iter().find_map(|w| match &w.value {
                 Word::Ref(r, chained)
                     if chained.is_empty()
                         && ident_modifier_args(&r.name.value) == 0
@@ -52,27 +51,25 @@ impl Compiler {
                     Some(r)
                 }
                 _ => None,
-            }) {
-                if let Ok(Some((path_locals, local))) = self.ref_local(r) {
-                    let allow_alias = match &self.asm.bindings[local.index].kind {
-                        BindingKind::Func(f) if f.sig.args() == 0 => false,
-                        BindingKind::Scope(_) => false,
-                        _ => true,
-                    };
-                    if allow_alias {
-                        self.validate_local(&r.name.value, local, &r.name.span);
-                        (self.code_meta.global_references)
-                            .insert(binding.name.span.clone(), local.index);
-                        for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                            (self.code_meta.global_references)
-                                .insert(comp.module.span.clone(), local.index);
-                        }
-                        (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
-                        let local = LocalIndex { public, ..local };
-                        self.scope.names.insert(name, local);
-                        return Ok(());
-                    }
+            })
+            && let Ok(Some((path_locals, local))) = self.ref_local(r)
+        {
+            let allow_alias = match &self.asm.bindings[local.index].kind {
+                BindingKind::Func(f) if f.sig.args() == 0 => false,
+                BindingKind::Scope(_) => false,
+                _ => true,
+            };
+            if allow_alias {
+                self.validate_local(&r.name.value, local, &r.name.span);
+                (self.code_meta.global_references).insert(binding.name.span.clone(), local.index);
+                for (local, comp) in path_locals.into_iter().zip(&r.path) {
+                    (self.code_meta.global_references)
+                        .insert(comp.module.span.clone(), local.index);
                 }
+                (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
+                let local = LocalIndex { public, ..local };
+                self.scope.names.insert(name, local);
+                return Ok(());
             }
         }
 
@@ -107,17 +104,17 @@ impl Compiler {
             let node = self.words(binding.words)?;
             let sig = match node.sig() {
                 Ok(s) => {
-                    if let Some(declared) = binding.signature {
-                        if s != declared.value {
-                            self.add_error(
-                                span.clone(),
-                                format!(
-                                    "Code macro signature mismatch: \
+                    if let Some(declared) = binding.signature
+                        && s != declared.value
+                    {
+                        self.add_error(
+                            span.clone(),
+                            format!(
+                                "Code macro signature mismatch: \
                                     declared {} but inferred {s}",
-                                    declared.value
-                                ),
-                            );
-                        }
+                                declared.value
+                            ),
+                        );
                     }
                     s
                 }
@@ -198,16 +195,16 @@ impl Compiler {
                         span.clone(),
                     );
                 }
-                if let Some(span) = shorthand_span {
-                    if *max > 0 {
-                        self.add_error(
-                            span.clone(),
-                            format!(
-                                "`{name}` cannot use the placeholder shorthand \
+                if let Some(span) = shorthand_span
+                    && *max > 0
+                {
+                    self.add_error(
+                        span.clone(),
+                        format!(
+                            "`{name}` cannot use the placeholder shorthand \
                                 because it contains a ^{max}. Use explicit ^0 instead."
-                            ),
-                        )
-                    }
+                        ),
+                    )
                 }
             }
         }
@@ -260,21 +257,18 @@ impl Compiler {
             let name = name.clone();
             move |mut node: Node, sig: Signature, comp: &mut Compiler| {
                 // Diagnostic for function that doesn't consume its arguments
-                if let [Node::Prim(Primitive::Dup, span), rest @ ..] = node.as_slice() {
-                    if let Span::Code(dup_span) = comp.get_span(*span) {
-                        if let Ok(rest_sig) = nodes_sig(rest) {
-                            if rest_sig.args() == sig.args()
-                                && rest_sig.outputs() + 1 == sig.outputs()
-                            {
-                                comp.emit_diagnostic(
-                                    "Functions should consume their arguments. \
+                if let [Node::Prim(Primitive::Dup, span), rest @ ..] = node.as_slice()
+                    && let Span::Code(dup_span) = comp.get_span(*span)
+                    && let Ok(rest_sig) = nodes_sig(rest)
+                    && rest_sig.args() == sig.args()
+                    && rest_sig.outputs() + 1 == sig.outputs()
+                {
+                    comp.emit_diagnostic(
+                        "Functions should consume their arguments. \
                                         Try removing this.",
-                                    DiagnosticKind::Style,
-                                    dup_span,
-                                );
-                            }
-                        }
-                    }
+                        DiagnosticKind::Style,
+                        dup_span,
+                    );
                 }
                 if prelude.track_caller {
                     node = Node::TrackCaller(SigNode::new(sig, node).into());
@@ -356,10 +350,10 @@ impl Compiler {
         }
 
         // Apply doc comment
-        if let Some(comment) = &meta.comment {
-            if let Some(sig) = &comment.sig {
-                self.apply_node_comment(&mut node, sig, &name, span);
-            }
+        if let Some(comment) = &meta.comment
+            && let Some(sig) = &comment.sig
+        {
+            self.apply_node_comment(&mut node, sig, &name, span);
         }
 
         // Resolve signature

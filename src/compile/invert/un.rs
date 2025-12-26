@@ -588,10 +588,10 @@ inverse!(
             for end in 1..=inp.len() {
                 if let Ok(mut inv) = anti_inverse(&inp[..end], asm, true) {
                     // Try to give pattern matches a decent span
-                    if let Some(span) = val.iter().find_map(Node::span) {
-                        if let [.., ImplPrim(MatchPattern, sp)] = inv.as_mut_slice() {
-                            *sp = span;
-                        }
+                    if let Some(span) = val.iter().find_map(Node::span)
+                        && let [.., ImplPrim(MatchPattern, sp)] = inv.as_mut_slice()
+                    {
+                        *sp = span;
                     }
                     inv.prepend(val);
                     dbgln!("matched inner anti pattern for un\n  on {input:?}\n  to {inv:?}");
@@ -1438,10 +1438,11 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
 inverse!(Val, input, asm, {
     for end in (1..=input.len()).rev() {
         let chunk = &input[..end];
-        if let Some(sig) = nodes_clean_sig(chunk) {
-            if sig == (0, 1) && chunk.iter().all(|n| n.is_pure(asm)) {
-                return Ok((&input[end..], Node::from(chunk)));
-            }
+        if let Some(sig) = nodes_clean_sig(chunk)
+            && sig == (0, 1)
+            && chunk.iter().all(|n| n.is_pure(asm))
+        {
+            return Ok((&input[end..], Node::from(chunk)));
         }
     }
     generic()

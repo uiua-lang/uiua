@@ -447,20 +447,20 @@ impl<T: ArrayValue> Array<T> {
                     }
 
                     if self.data.len() >= other.data.len() {
-                        if self.meta.label.is_none() {
-                            if let Some(label) = other.meta.take_label() {
-                                self.meta.label = Some(label);
-                            }
+                        if self.meta.label.is_none()
+                            && let Some(label) = other.meta.take_label()
+                        {
+                            self.meta.label = Some(label);
                         }
                         self.shape[0] += other.shape[0];
                         validate_size_of::<T>(self.shape.iter().copied())
                             .map_err(|e| ctx.error(e))?;
                         self.data.extend_from_cowslice(other.data);
                     } else {
-                        if other.meta.label.is_none() {
-                            if let Some(label) = self.meta.take_label() {
-                                other.meta.label = Some(label);
-                            }
+                        if other.meta.label.is_none()
+                            && let Some(label) = self.meta.take_label()
+                        {
+                            other.meta.label = Some(label);
                         }
                         let rot_len = self.data.len();
                         other.data.extend_from_cowslice(self.data);

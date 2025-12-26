@@ -580,13 +580,13 @@ pub fn Editor<'a>(
         let key = key.as_str();
         // logging::log!("press: {key:?}");
 
-        if key == "Control" && !on_mac() || key == "Meta" && on_mac() {
-            if let Some(overlay_element) = get_element::<HtmlDivElement>(&overlay_id()) {
-                overlay_element
-                    .style()
-                    .set_property("pointer-events", "all")
-                    .unwrap();
-            }
+        if (key == "Control" && !on_mac() || key == "Meta" && on_mac())
+            && let Some(overlay_element) = get_element::<HtmlDivElement>(&overlay_id())
+        {
+            overlay_element
+                .style()
+                .set_property("pointer-events", "all")
+                .unwrap();
         }
 
         let focused = event
@@ -2562,19 +2562,17 @@ fn binding_style(docs: &BindingDocs) -> String {
     if !get_rgb_bindings() {
         return String::new();
     }
-    if let BindingDocsKind::Constant(Some(val)) = &docs.kind {
-        if let Ok(nums) = val.as_nums(&IgnoreError, "") {
-            if let [r, g, b] = *nums {
-                if [r, g, b].iter().all(|c| (0.0..=1.0).contains(c)) {
-                    return format!(
-                        "color: rgb({}, {}, {})",
-                        (r * 255.0).round(),
-                        (g * 255.0).round(),
-                        (b * 255.0).round(),
-                    );
-                }
-            }
-        }
+    if let BindingDocsKind::Constant(Some(val)) = &docs.kind
+        && let Ok(nums) = val.as_nums(&IgnoreError, "")
+        && let [r, g, b] = *nums
+        && [r, g, b].iter().all(|c| (0.0..=1.0).contains(c))
+    {
+        return format!(
+            "color: rgb({}, {}, {})",
+            (r * 255.0).round(),
+            (g * 255.0).round(),
+            (b * 255.0).round(),
+        );
     }
     String::new()
 }

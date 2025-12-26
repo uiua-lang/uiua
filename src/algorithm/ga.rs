@@ -421,11 +421,11 @@ fn reverse_impl_not_transposed(dims: u8, mut arg: Arg) -> Array<f64> {
     let size = arg.arr.shape.last().copied().unwrap_or(1);
     let slice = arg.arr.data.as_mut_slice();
     for (i, g) in blade_grades(dims).enumerate() {
-        if let Some(i) = arg.sel[i] {
-            if g / 2 % 2 == 1 {
-                for v in slice.chunks_exact_mut(size) {
-                    v[i] = -v[i];
-                }
+        if let Some(i) = arg.sel[i]
+            && g / 2 % 2 == 1
+        {
+            for v in slice.chunks_exact_mut(size) {
+                v[i] = -v[i];
             }
         }
     }
@@ -435,11 +435,11 @@ fn reverse_impl_not_transposed(dims: u8, mut arg: Arg) -> Array<f64> {
 
 fn reverse_impl_transposed(dims: u8, mut arg: Arg) -> Array<f64> {
     for (i, g) in blade_grades(dims).enumerate() {
-        if let Some(i) = arg.sel[i] {
-            if g / 2 % 2 == 1 {
-                for v in arg.arr.row_slice_mut(i) {
-                    *v = -*v;
-                }
+        if let Some(i) = arg.sel[i]
+            && g / 2 % 2 == 1
+        {
+            for v in arg.arr.row_slice_mut(i) {
+                *v = -*v;
             }
         }
     }

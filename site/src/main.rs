@@ -94,7 +94,7 @@ pub fn Site() -> impl IntoView {
     visits = visits.overflowing_add(1).0;
 
     // Change the favicon to favicon-crayon.ico every 10 visits
-    if visits % 10 == 0 {
+    if visits.is_multiple_of(10) {
         let link = document().create_element("link").unwrap();
         link.set_attribute("rel", "icon").unwrap();
         link.set_attribute("href", "/favicon-crayon.ico").unwrap();

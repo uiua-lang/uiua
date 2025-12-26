@@ -346,12 +346,11 @@ impl Value {
         }
         flags.reverse_sorted();
         self.meta.flags |= flags;
-        if self.meta.is_sorted_up() || self.meta.is_sorted_down() {
-            if let Value::Num(arr) = self {
-                if arr.data.iter().any(|n| n.is_nan()) {
-                    arr.meta.take_sorted_flags();
-                }
-            }
+        if (self.meta.is_sorted_up() || self.meta.is_sorted_down())
+            && let Value::Num(arr) = self
+            && arr.data.iter().any(|n| n.is_nan())
+        {
+            arr.meta.take_sorted_flags();
         }
     }
 }
@@ -408,10 +407,10 @@ impl Value {
     pub(crate) fn fix_depth(&mut self, depth: usize) {
         let depth = depth.min(self.rank());
         self.shape.fix_depth(depth);
-        if depth == 0 {
-            if let Some(keys) = self.meta.map_keys_mut() {
-                keys.fix();
-            }
+        if depth == 0
+            && let Some(keys) = self.meta.map_keys_mut()
+        {
+            keys.fix();
         }
     }
     /// Set the sortedness flags according to the value's data
@@ -430,10 +429,10 @@ impl Value {
     }
     /// Collapse the top two dimensions of the array's shape
     pub fn undo_fix(&mut self) {
-        if let Some(keys) = self.meta.map_keys_mut() {
-            if !keys.unfix() {
-                self.meta.take_map_keys();
-            }
+        if let Some(keys) = self.meta.map_keys_mut()
+            && !keys.unfix()
+        {
+            self.meta.take_map_keys();
         }
         _ = self.shape.unfix();
         self.meta.take_sorted_flags();
@@ -933,10 +932,10 @@ impl Value {
         ctx: &C,
         requirement: impl Into<Option<&'static str>>,
     ) -> Result<Cow<'a, [f64]>, C::Error> {
-        if self.rank() <= 1 {
-            if let Value::Num(arr) = self {
-                return Ok(Cow::Borrowed(arr.data.as_slice()));
-            }
+        if self.rank() <= 1
+            && let Value::Num(arr) = self
+        {
+            return Ok(Cow::Borrowed(arr.data.as_slice()));
         }
         let requirement = requirement
             .into()
@@ -954,14 +953,13 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be array of natural numbers");
-        if let Value::Num(arr) = self {
-            if let Some(&(mut n)) =
+        if let Value::Num(arr) = self
+            && let Some(&(mut n)) =
                 (arr.data.iter()).find(|&&n| n > usize::MAX as f64 && n.fract() == 0.0)
-            {
-                let power = n.log10().floor() as i32;
-                n /= 10f64.powi(power);
-                return Err(ctx.error(format!("{requirement}, but {n}e{power} is too large")));
-            }
+        {
+            let power = n.log10().floor() as i32;
+            n /= 10f64.powi(power);
+            return Err(ctx.error(format!("{requirement}, but {n}e{power} is too large")));
         }
         self.as_number_list(ctx, requirement)
     }
@@ -973,10 +971,10 @@ impl Value {
         env: &Uiua,
         requirement: impl Into<Option<&'static str>>,
     ) -> UiuaResult<Cow<'a, [u8]>> {
-        if self.rank() <= 1 {
-            if let Value::Byte(arr) = self {
-                return Ok(Cow::Borrowed(arr.data.as_slice()));
-            }
+        if self.rank() <= 1
+            && let Value::Byte(arr) = self
+        {
+            return Ok(Cow::Borrowed(arr.data.as_slice()));
         }
         let requirement = requirement
             .into()
@@ -1118,17 +1116,16 @@ impl Value {
         env: &Uiua,
         requirement: &'static str,
     ) -> UiuaResult<Array<usize>> {
-        if let Value::Num(arr) = self {
-            if let Some(&(mut n)) =
+        if let Value::Num(arr) = self
+            && let Some(&(mut n)) =
                 (arr.data.iter()).find(|&&n| n > usize::MAX as f64 && n.fract() == 0.0)
-            {
-                let power = n.log10().floor() as i32;
-                n /= 10f64.powi(power);
-                return Err(env.error(format!(
-                    "{requirement}, but {}e{power} is too large",
-                    n.grid_string(false)
-                )));
-            }
+        {
+            let power = n.log10().floor() as i32;
+            n /= 10f64.powi(power);
+            return Err(env.error(format!(
+                "{requirement}, but {}e{power} is too large",
+                n.grid_string(false)
+            )));
         }
         self.as_number_array(env, requirement)
     }
@@ -1328,10 +1325,10 @@ impl Value {
     }
     /// Remove a single layer of boxing
     pub fn unbox(&mut self) {
-        if let Value::Box(boxed) = self {
-            if boxed.rank() == 0 {
-                *self = take(&mut boxed.data.as_mut_slice()[0].0);
-            }
+        if let Value::Box(boxed) = self
+            && boxed.rank() == 0
+        {
+            *self = take(&mut boxed.data.as_mut_slice()[0].0);
         }
     }
     /// Remove a single layer of boxing
@@ -2372,11 +2369,11 @@ impl Hash for AestheticHash<&Value> {
                     keys.hash(hasher);
                 }
                 Boxed::TYPE_ID.hash(hasher);
-                if let Some(scalar) = arr.as_scalar() {
-                    if let Some(value) = scalar.nested_value() {
-                        value.hash(hasher);
-                        return;
-                    }
+                if let Some(scalar) = arr.as_scalar()
+                    && let Some(value) = scalar.nested_value()
+                {
+                    value.hash(hasher);
+                    return;
                 }
                 arr.shape.hash(hasher);
                 (arr.data.iter()).for_each(|x| AestheticHash(&x.0).hash(hasher));

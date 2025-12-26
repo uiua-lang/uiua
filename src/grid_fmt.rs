@@ -718,27 +718,27 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 
             // SoA (struct-of-arrays)
             let mut is_soa = false;
-            if let Some(rows) = T::soa_rows(self) {
-                if !rows.iter().any(|(_, val)| val.is_map()) {
-                    is_soa = true;
-                    let metagrid = metagrid.get_or_insert_with(Metagrid::new);
-                    let mut labels_row = Vec::with_capacity(rows.len());
-                    for (label, _) in &rows {
-                        labels_row.push(vec![label.chars().collect()]);
+            if let Some(rows) = T::soa_rows(self)
+                && !rows.iter().any(|(_, val)| val.is_map())
+            {
+                is_soa = true;
+                let metagrid = metagrid.get_or_insert_with(Metagrid::new);
+                let mut labels_row = Vec::with_capacity(rows.len());
+                for (label, _) in &rows {
+                    labels_row.push(vec![label.chars().collect()]);
+                }
+                metagrid.push(labels_row);
+                let row_params = GridFmtParams {
+                    label: true,
+                    soa_row: true,
+                    ..Default::default()
+                };
+                for i in 0..rows[0].1.row_count() {
+                    let mut metarow = Vec::with_capacity(rows.len());
+                    for (_, val) in &rows {
+                        metarow.push(val.row(i).fmt_grid(row_params));
                     }
-                    metagrid.push(labels_row);
-                    let row_params = GridFmtParams {
-                        label: true,
-                        soa_row: true,
-                        ..Default::default()
-                    };
-                    for i in 0..rows[0].1.row_count() {
-                        let mut metarow = Vec::with_capacity(rows.len());
-                        for (_, val) in &rows {
-                            metarow.push(val.row(i).fmt_grid(row_params));
-                        }
-                        metagrid.push(metarow);
-                    }
+                    metagrid.push(metarow);
                 }
             }
 
@@ -981,13 +981,13 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         };
 
         // Add handle kind
-        if let Some(kind) = &self.meta.handle_kind {
-            if grid.len() == 1 {
-                grid[0] = (kind.to_string().chars().chain(['(']))
-                    .chain(take(&mut grid[0]))
-                    .chain([')'])
-                    .collect();
-            }
+        if let Some(kind) = &self.meta.handle_kind
+            && grid.len() == 1
+        {
+            grid[0] = (kind.to_string().chars().chain(['(']))
+                .chain(take(&mut grid[0]))
+                .chain([')'])
+                .collect();
         }
 
         // Add complex marker
@@ -1012,41 +1012,41 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         }
 
         // Add label
-        if params.label {
-            if let Some(label) = &self.meta.label {
-                if grid.len() == 1 && params.parent_rank == 0 {
-                    grid[0] = (label.chars().chain([':', ' ']))
-                        .chain(take(&mut grid[0]))
+        if params.label
+            && let Some(label) = &self.meta.label
+        {
+            if grid.len() == 1 && params.parent_rank == 0 {
+                grid[0] = (label.chars().chain([':', ' ']))
+                    .chain(take(&mut grid[0]))
+                    .collect();
+            } else {
+                if grid[0].len() >= 2 && "┌╭".contains(grid[0][1]) {
+                    grid[0] = label
+                        .chars()
+                        .chain(take(&mut grid[0]).into_iter().skip(1))
                         .collect();
+                    for row in grid.iter_mut().skip(1) {
+                        let ext = label.chars().count() - 1;
+                        row.extend(repeat_n(' ', ext));
+                        row.rotate_right(ext);
+                    }
                 } else {
-                    if grid[0].len() >= 2 && "┌╭".contains(grid[0][1]) {
-                        grid[0] = label
-                            .chars()
-                            .chain(take(&mut grid[0]).into_iter().skip(1))
-                            .collect();
-                        for row in grid.iter_mut().skip(1) {
-                            let ext = label.chars().count() - 1;
-                            row.extend(repeat_n(' ', ext));
-                            row.rotate_right(ext);
-                        }
-                    } else {
-                        if "┌╭".contains(grid[0][0]) {
-                            let trunc = if grid[0][2] == 'ℂ' { 3 } else { 2 };
-                            grid[0].truncate(trunc);
-                            grid[0].push(' ');
-                        } else {
-                            grid.insert(0, Vec::new());
-                        }
-                        grid[0].extend(label.chars());
-                    }
-                    // Normalize lengths
-                    while grid[0].len() < grid[1].len() {
+                    if "┌╭".contains(grid[0][0]) {
+                        let trunc = if grid[0][2] == 'ℂ' { 3 } else { 2 };
+                        grid[0].truncate(trunc);
                         grid[0].push(' ');
+                    } else {
+                        grid.insert(0, Vec::new());
                     }
-                    for i in 1..grid.len() {
-                        while grid[i].len() < grid[0].len() {
-                            grid[i].push(' ');
-                        }
+                    grid[0].extend(label.chars());
+                }
+                // Normalize lengths
+                while grid[0].len() < grid[1].len() {
+                    grid[0].push(' ');
+                }
+                for i in 1..grid.len() {
+                    while grid[i].len() < grid[0].len() {
+                        grid[i].push(' ');
                     }
                 }
             }
@@ -1199,7 +1199,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     let cell_size = data.len() / cell_count;
     let start_len = metagrid.len();
     for (i, cell) in data.chunks(cell_size).enumerate() {
-        if i > 0 && rank > 2 && !T::box_lines() && rank % 2 == 0 {
+        if i > 0 && rank > 2 && !T::box_lines() && rank.is_multiple_of(2) {
             for _ in 0..(rank - 2) / 2 {
                 metagrid.push(vec![vec![vec![' ']]; metagrid.last().unwrap().len()]);
             }

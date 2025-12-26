@@ -907,19 +907,19 @@ impl Compiler {
     ) {
         let mut spandex: Option<usize> = None;
         // Validate comment signature
-        if let Ok(sig) = node.sig() {
-            if !comment_sig.matches_sig(sig) {
-                let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
-                self.emit_diagnostic(
-                    format!(
-                        "{name} comment describes {}, \
+        if let Ok(sig) = node.sig()
+            && !comment_sig.matches_sig(sig)
+        {
+            let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
+            self.emit_diagnostic(
+                format!(
+                    "{name} comment describes {}, \
                         but its code has signature {sig}",
-                        comment_sig.sig_string()
-                    ),
-                    DiagnosticKind::Warning,
-                    self.get_span(span).clone().code().unwrap(),
-                );
-            }
+                    comment_sig.sig_string()
+                ),
+                DiagnosticKind::Warning,
+                self.get_span(span).clone().code().unwrap(),
+            );
         }
         if comment_sig.label {
             // Add argument labels
@@ -969,11 +969,11 @@ impl Compiler {
         words.retain(|word| word.value.is_code());
         // Extract semantic comment
         let mut sem = None;
-        if let Some(word) = words.last() {
-            if let Word::SemanticComment(com) = &word.value {
-                let com = com.clone();
-                sem = Some(words.pop().unwrap().span.sp(com));
-            }
+        if let Some(word) = words.last()
+            && let Word::SemanticComment(com) = &word.value
+        {
+            let com = com.clone();
+            sem = Some(words.pop().unwrap().span.sp(com));
         }
         // Right-to-left
         words.reverse();
@@ -996,13 +996,12 @@ impl Compiler {
             match &word.value {
                 Word::Primitive(p) => prim = Some(*p),
                 Word::Modified(m) => {
-                    if let Modifier::Primitive(mprim) = &m.modifier.value {
-                        if let Some(first) = m.operands.first() {
-                            if let Word::Primitive(p) = first.value {
-                                modif = Some(*mprim);
-                                prim = Some(p);
-                            }
-                        }
+                    if let Modifier::Primitive(mprim) = &m.modifier.value
+                        && let Some(first) = m.operands.first()
+                        && let Word::Primitive(p) = first.value
+                    {
+                        modif = Some(*mprim);
+                        prim = Some(p);
                     }
                 }
                 _ => {}
@@ -1827,19 +1826,19 @@ impl Compiler {
             self.global_index(local.index, span)
         } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
             // Name is a built-in constant
-            if let Some(suggestion) = constant.deprecation {
-                if self.deprecated_const_errors.insert(constant.name) {
-                    let suggestion = if suggestion.is_empty() {
-                        String::new()
-                    } else {
-                        format!(". {suggestion}")
-                    };
-                    let message = format!(
-                        "{} is deprecated and will be removed in a future version{}",
-                        constant.name, suggestion
-                    );
-                    self.emit_diagnostic(message, DiagnosticKind::Warning, span.clone());
-                }
+            if let Some(suggestion) = constant.deprecation
+                && self.deprecated_const_errors.insert(constant.name)
+            {
+                let suggestion = if suggestion.is_empty() {
+                    String::new()
+                } else {
+                    format!(". {suggestion}")
+                };
+                let message = format!(
+                    "{} is deprecated and will be removed in a future version{}",
+                    constant.name, suggestion
+                );
+                self.emit_diagnostic(message, DiagnosticKind::Warning, span.clone());
             }
             self.code_meta
                 .constant_references

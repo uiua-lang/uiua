@@ -64,33 +64,26 @@ pub(crate) fn table_impl(f: SigNode, env: &mut Uiua) -> UiuaResult {
                     Node::Prim(Primitive::Mul, _),
                     Node::Mod(Primitive::Reduce, args, _),
                 ] = f.node.as_slice()
+                    && let [sn] = args.as_slice()
+                    && let Some((Primitive::Add, _)) = sn.node.as_flipped_primitive()
                 {
-                    if let [sn] = args.as_slice() {
-                        if let Some((Primitive::Add, _)) = sn.node.as_flipped_primitive() {
-                            match (&xs, &ys) {
-                                (Value::Num(a), Value::Num(b)) => {
-                                    return a.matrix_mul(b, env).map(|val| env.push(val));
-                                }
-                                (Value::Num(a), Value::Byte(b)) => {
-                                    return a
-                                        .matrix_mul(&b.convert_ref(), env)
-                                        .map(|val| env.push(val));
-                                }
-                                (Value::Byte(a), Value::Num(b)) => {
-                                    return a
-                                        .convert_ref()
-                                        .matrix_mul(b, env)
-                                        .map(|val| env.push(val));
-                                }
-                                (Value::Byte(a), Value::Byte(b)) => {
-                                    return a
-                                        .convert_ref()
-                                        .matrix_mul(&b.convert_ref(), env)
-                                        .map(|val| env.push(val));
-                                }
-                                _ => {}
-                            }
+                    match (&xs, &ys) {
+                        (Value::Num(a), Value::Num(b)) => {
+                            return a.matrix_mul(b, env).map(|val| env.push(val));
                         }
+                        (Value::Num(a), Value::Byte(b)) => {
+                            return a.matrix_mul(&b.convert_ref(), env).map(|val| env.push(val));
+                        }
+                        (Value::Byte(a), Value::Num(b)) => {
+                            return a.convert_ref().matrix_mul(b, env).map(|val| env.push(val));
+                        }
+                        (Value::Byte(a), Value::Byte(b)) => {
+                            return a
+                                .convert_ref()
+                                .matrix_mul(&b.convert_ref(), env)
+                                .map(|val| env.push(val));
+                        }
+                        _ => {}
                     }
                 }
                 generic_table(f, xs, ys, env)

@@ -735,18 +735,17 @@ impl WatchArgs {
                 .flat_map(|event| event.paths)
                 .filter(|path| path.extension().is_some_and(|ext| ext == "ua"))
                 .last()
+                && last_time.elapsed() > Duration::from_millis(100)
             {
-                if last_time.elapsed() > Duration::from_millis(100) {
-                    if clear {
-                        if cfg!(target_os = "windows") {
-                            _ = Command::new("cmd").args(["/C", "cls"]).status();
-                        } else {
-                            _ = Command::new("clear").status();
-                        }
+                if clear {
+                    if cfg!(target_os = "windows") {
+                        _ = Command::new("cmd").args(["/C", "cls"]).status();
+                    } else {
+                        _ = Command::new("clear").status();
                     }
-                    run(&path, stdin_file.as_ref())?;
-                    last_time = Instant::now();
                 }
+                run(&path, stdin_file.as_ref())?;
+                last_time = Instant::now();
             }
             let mut child = WATCH_CHILD.lock();
             if let Some(ch) = &mut *child {
@@ -986,10 +985,10 @@ fn setup_audio(options: AudioOptions) {
         uiua::set_audio_stream_time(time);
     }
 
-    if let Some(port) = options.audio_port {
-        if let Err(e) = uiua::set_audio_stream_time_port(port) {
-            eprintln!("Failed to set audio time port: {e}");
-        }
+    if let Some(port) = options.audio_port
+        && let Err(e) = uiua::set_audio_stream_time_port(port)
+    {
+        eprintln!("Failed to set audio time port: {e}");
     }
 }
 
@@ -1296,11 +1295,10 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
 
     let mut prev: Option<CodeSpan> = None;
     for span in spans.spans {
-        if let Some(prev) = prev {
-            if prev.end.byte_pos < span.span.start.byte_pos {
-                colored
-                    .push_str(&code[prev.end.byte_pos as usize..span.span.start.byte_pos as usize]);
-            }
+        if let Some(prev) = prev
+            && prev.end.byte_pos < span.span.start.byte_pos
+        {
+            colored.push_str(&code[prev.end.byte_pos as usize..span.span.start.byte_pos as usize]);
         }
         let color = match span.value {
             SpanKind::Primitive(prim, sig) => color_prim(prim, sig.as_ref()),

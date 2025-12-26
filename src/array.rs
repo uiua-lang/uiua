@@ -884,11 +884,11 @@ impl<T: ArrayValue> Hash for Array<T> {
             ptr.get().hash(hasher);
         }
         T::TYPE_ID.hash(hasher);
-        if let Some(scalar) = self.as_scalar() {
-            if let Some(value) = scalar.nested_value() {
-                value.hash(hasher);
-                return;
-            }
+        if let Some(scalar) = self.as_scalar()
+            && let Some(value) = scalar.nested_value()
+        {
+            value.hash(hasher);
+            return;
         }
         self.shape.hash(hasher);
         self.data.iter().for_each(|x| x.array_hash(hasher));
@@ -1118,10 +1118,10 @@ impl ArrayValue for u8 {
     }
     #[track_caller]
     fn dbg_validate(arr: &Array<Self>) {
-        if arr.meta.flags.is_boolean() {
-            if let Some(b) = arr.data.iter().find(|&b| *b > 1) {
-                panic!("Array marked as boolean contains {b}")
-            }
+        if arr.meta.flags.is_boolean()
+            && let Some(b) = arr.data.iter().find(|&b| *b > 1)
+        {
+            panic!("Array marked as boolean contains {b}")
         }
     }
 }

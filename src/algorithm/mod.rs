@@ -553,13 +553,12 @@ pub fn switch(
             args.push(arg);
         }
         args[1..].reverse();
-        if new_shape.starts_with(&[1]) {
-            if let Some(sh) = (args.iter().skip(1))
+        if new_shape.starts_with(&[1])
+            && let Some(sh) = (args.iter().skip(1))
                 .map(|v| &v.shape)
                 .find(|s| !s.starts_with(&[1]))
-            {
-                *new_shape.row_count_mut() = sh.row_count();
-            }
+        {
+            *new_shape.row_count_mut() = sh.row_count();
         }
         let arg_shapes: Vec<Shape> = args[1..].iter().map(|v| v.shape.clone()).collect();
         let FixedRowsData {

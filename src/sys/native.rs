@@ -754,10 +754,10 @@ impl SysBackend for NativeSys {
             let temp_path = std::env::temp_dir().join("show.gif");
             fs::write(&temp_path, gif_bytes)?;
             let commands = open::commands(&temp_path);
-            if let Some(mut command) = commands.into_iter().next() {
-                if let Some(mut child) = NATIVE_SYS.gifs_child.lock().replace(command.spawn()?) {
-                    child.kill()?;
-                }
+            if let Some(mut command) = commands.into_iter().next()
+                && let Some(mut child) = NATIVE_SYS.gifs_child.lock().replace(command.spawn()?)
+            {
+                child.kill()?;
             }
             Ok(())
         })()
@@ -777,10 +777,10 @@ impl SysBackend for NativeSys {
             let temp_path = std::env::temp_dir().join("show.apng");
             fs::write(&temp_path, apng_bytes)?;
             let commands = open::commands(&temp_path);
-            if let Some(mut command) = commands.into_iter().next() {
-                if let Some(mut child) = NATIVE_SYS.gifs_child.lock().replace(command.spawn()?) {
-                    child.kill()?;
-                }
+            if let Some(mut command) = commands.into_iter().next()
+                && let Some(mut child) = NATIVE_SYS.gifs_child.lock().replace(command.spawn()?)
+            {
+                child.kill()?;
             }
             Ok(())
         })()
@@ -840,10 +840,10 @@ impl SysBackend for NativeSys {
                     times.push(self.time);
                     self.time += 1.0 / sample_rate;
                 }
-                if let Some(socket) = NATIVE_SYS.audio_time_socket.lock().as_ref() {
-                    if let Err(e) = socket.send(&self.time.to_be_bytes()) {
-                        eprintln!("Failed to send audio time: {e}");
-                    }
+                if let Some(socket) = NATIVE_SYS.audio_time_socket.lock().as_ref()
+                    && let Err(e) = socket.send(&self.time.to_be_bytes())
+                {
+                    eprintln!("Failed to send audio time: {e}");
                 }
                 match (self.f)(&times) {
                     Ok(samples) => {
@@ -1203,10 +1203,10 @@ impl SysBackend for NativeSys {
         Ok(())
     }
     fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {
-        if let Some(path) = NATIVE_SYS.git_paths.get(url) {
-            if path.is_err() || path.as_ref().unwrap().exists() {
-                return path.clone();
-            }
+        if let Some(path) = NATIVE_SYS.git_paths.get(url)
+            && (path.is_err() || path.as_ref().unwrap().exists())
+        {
+            return path.clone();
         }
         let mut parts = url.rsplitn(3, '/');
         let repo_name = parts.next().ok_or("Invalid git url")?;

@@ -49,52 +49,54 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<
     };
 
     if !expr.0.is_empty() {
-        if expr.0.len() == 1 && b == ZERO && a.is_none() {
-            if let (Term::X(p), k) = expr.0.into_iter().next().unwrap() {
-                // y = kx^p + c
-                let mut node = Node::empty();
-                if c != ZERO {
-                    node.push(push(c));
-                    node.push(Prim(Sub, span));
-                }
-
-                // The algebra system expression representation sometimes accumulates
-                // floating point error when other approaches would not. This code
-                // does something different depending on whether k^(1/p) seems to be
-                // a roundish number with a bit of error.
-                // - If it looks roundish, we do (y - c)^(1/p) / k^(1/p) with k^(1/p) getting its error fixed
-                // - Otherwise, we do x = ((y - c)/k)^(1/p)
-                let mut root_p_of_k = k.powc(1.0 / p);
-                const ROUND_TO: f64 = 2.0 * f64::EPSILON;
-                let rounded = (root_p_of_k / ROUND_TO).round() * ROUND_TO;
-                let k_is_int = k.im == 0.0 && k.re.fract() == 0.0;
-                let pre_calc_root = !k_is_int && root_p_of_k != rounded;
-                root_p_of_k = rounded;
-
-                if k != ONE && !pre_calc_root {
-                    node.push(push(k));
-                    node.push(Prim(Div, span));
-                }
-
-                if p == 2.0 {
-                    node.push(Prim(Sqrt, span));
-                } else if p == 0.5 {
-                    node.push(Prim(Dup, span));
-                    node.push(Prim(Mul, span));
-                } else if p == -1.0 {
-                    node.push(Prim(Reciprocal, span));
-                } else if p != 1.0 {
-                    node.push(push(p.into()));
-                    node.push(ImplPrim(Root, span));
-                }
-
-                if k != ONE && pre_calc_root {
-                    node.push(push(root_p_of_k));
-                    node.push(Prim(Div, span));
-                }
-                dbgln!("algebraic inverted to {node:?}");
-                return Ok(node);
+        if expr.0.len() == 1
+            && b == ZERO
+            && a.is_none()
+            && let (Term::X(p), k) = expr.0.into_iter().next().unwrap()
+        {
+            // y = kx^p + c
+            let mut node = Node::empty();
+            if c != ZERO {
+                node.push(push(c));
+                node.push(Prim(Sub, span));
             }
+
+            // The algebra system expression representation sometimes accumulates
+            // floating point error when other approaches would not. This code
+            // does something different depending on whether k^(1/p) seems to be
+            // a roundish number with a bit of error.
+            // - If it looks roundish, we do (y - c)^(1/p) / k^(1/p) with k^(1/p) getting its error fixed
+            // - Otherwise, we do x = ((y - c)/k)^(1/p)
+            let mut root_p_of_k = k.powc(1.0 / p);
+            const ROUND_TO: f64 = 2.0 * f64::EPSILON;
+            let rounded = (root_p_of_k / ROUND_TO).round() * ROUND_TO;
+            let k_is_int = k.im == 0.0 && k.re.fract() == 0.0;
+            let pre_calc_root = !k_is_int && root_p_of_k != rounded;
+            root_p_of_k = rounded;
+
+            if k != ONE && !pre_calc_root {
+                node.push(push(k));
+                node.push(Prim(Div, span));
+            }
+
+            if p == 2.0 {
+                node.push(Prim(Sqrt, span));
+            } else if p == 0.5 {
+                node.push(Prim(Dup, span));
+                node.push(Prim(Mul, span));
+            } else if p == -1.0 {
+                node.push(Prim(Reciprocal, span));
+            } else if p != 1.0 {
+                node.push(push(p.into()));
+                node.push(ImplPrim(Root, span));
+            }
+
+            if k != ONE && pre_calc_root {
+                node.push(push(root_p_of_k));
+                node.push(Prim(Div, span));
+            }
+            dbgln!("algebraic inverted to {node:?}");
+            return Ok(node);
         }
         return Err(Some(AlgebraError::TooComplex));
     }
@@ -804,10 +806,10 @@ impl Expr {
         if term == Term::ONE { Some(coef) } else { None }
     }
     fn pow(self, power: Self) -> Option<Self> {
-        if self.as_constant().is_some_and(|c| c == E.into()) {
-            if let Some((Term::X(1.0), _)) = power.single() {
-                return Some(Term::Exp(power).into());
-            }
+        if self.as_constant().is_some_and(|c| c == E.into())
+            && let Some((Term::X(1.0), _)) = power.single()
+        {
+            return Some(Term::Exp(power).into());
         }
         let power = power.as_constant()?.into_real()?;
         if power.fract() == 0.0 && power >= 0.0 {

@@ -709,13 +709,12 @@ fn generic_reduce_inner(
             let mut new_rows = Vec::with_capacity(xs.row_count());
 
             // Handle empty arrays
-            if xs.row_count() == 0 {
-                if let Some(mut xs) = reduce_identity(&f.node, xs.clone(), env)? {
-                    if xs.shape.elements() == 0 {
-                        xs.shape.prepend(0);
-                        return Ok(xs);
-                    }
-                }
+            if xs.row_count() == 0
+                && let Some(mut xs) = reduce_identity(&f.node, xs.clone(), env)?
+                && xs.shape.elements() == 0
+            {
+                xs.shape.prepend(0);
+                return Ok(xs);
             }
 
             // Normal case
@@ -1154,15 +1153,15 @@ pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
     }
     for i in 0..iterable_count {
         for j in i + 1..iterable_count {
-            if let (Ok(a), Ok(b)) = (&arrays[i], &arrays[j]) {
-                if a.len() != b.len() {
-                    return Err(env.error(format!(
-                        "Cannot {} arrays of different lengths: {} and {}",
-                        Primitive::Fold.format(),
-                        a.len(),
-                        b.len()
-                    )));
-                }
+            if let (Ok(a), Ok(b)) = (&arrays[i], &arrays[j])
+                && a.len() != b.len()
+            {
+                return Err(env.error(format!(
+                    "Cannot {} arrays of different lengths: {} and {}",
+                    Primitive::Fold.format(),
+                    a.len(),
+                    b.len()
+                )));
             }
         }
     }

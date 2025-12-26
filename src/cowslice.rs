@@ -125,7 +125,7 @@ impl<T: Clone> CowSlice<T> {
         let count = if size == 0 {
             0
         } else {
-            assert!(self.len() % size == 0);
+            assert!(self.len().is_multiple_of(size));
             self.len() / size
         };
         (0..count).map(move |i| {

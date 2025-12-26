@@ -1139,11 +1139,11 @@ impl Parser<'_> {
             }
             if let Some(arg) = self.strand() {
                 // Parse pack syntax
-                if let Word::Pack(_) = &arg.value {
-                    if i == 0 {
-                        args.push(arg);
-                        break;
-                    }
+                if let Word::Pack(_) = &arg.value
+                    && i == 0
+                {
+                    args.push(arg);
+                    break;
                 }
                 args.push(arg);
             } else {
@@ -1160,25 +1160,25 @@ impl Parser<'_> {
         match &modifier {
             Modifier::Primitive(Primitive::Un) => {
                 single_word_and(&args, |inverted| {
-                    if let Word::Array(arr) = &inverted.value {
-                        if arr_is_normal_di(arr) {
-                            self.diagnostics.pop(); // Pop lower diagnostic
-                            self.diagnostics.push(Diagnostic::new(
-                                format!(
-                                    "Prefer `{}{}` ({}{}) over `{}[{}{}]`",
-                                    Primitive::Un,
-                                    Primitive::Couple,
-                                    Primitive::Un.name(),
-                                    Primitive::Couple.name(),
-                                    Primitive::Un,
-                                    Primitive::Dip,
-                                    Primitive::Identity
-                                ),
-                                span.clone(),
-                                DiagnosticKind::Style,
-                                self.inputs.clone(),
-                            ));
-                        }
+                    if let Word::Array(arr) = &inverted.value
+                        && arr_is_normal_di(arr)
+                    {
+                        self.diagnostics.pop(); // Pop lower diagnostic
+                        self.diagnostics.push(Diagnostic::new(
+                            format!(
+                                "Prefer `{}{}` ({}{}) over `{}[{}{}]`",
+                                Primitive::Un,
+                                Primitive::Couple,
+                                Primitive::Un.name(),
+                                Primitive::Couple.name(),
+                                Primitive::Un,
+                                Primitive::Dip,
+                                Primitive::Identity
+                            ),
+                            span.clone(),
+                            DiagnosticKind::Style,
+                            self.inputs.clone(),
+                        ));
                     }
                 });
             }
@@ -1392,12 +1392,12 @@ impl Parser<'_> {
             span.merge_with(span2);
         }
         // Final suffix
-        if !s.contains(['η', 'π', 'τ']) {
-            if let Some(((n2, s2), span2)) = self.num_frag(true).map(Into::into) {
-                n = n.map_with(n2, |n, n2| n * n2, Complex::safe_mul);
-                s.push_str(&s2);
-                span.merge_with(span2);
-            }
+        if !s.contains(['η', 'π', 'τ'])
+            && let Some(((n2, s2), span2)) = self.num_frag(true).map(Into::into)
+        {
+            n = n.map_with(n2, |n, n2| n * n2, Complex::safe_mul);
+            s.push_str(&s2);
+            span.merge_with(span2);
         }
         Some(span.sp((n, s)))
     }
@@ -1512,12 +1512,10 @@ impl Parser<'_> {
         };
 
         // Complex component
-        if !suffix_mode {
-            if let Some(((n2, s2), span2)) = self.complex_comp().map(Into::into) {
-                n = n.map_with(n2, |n, c| n * c, Complex::safe_mul);
-                s.push_str(&s2);
-                span.merge_with(span2);
-            }
+        if !suffix_mode && let Some(((n2, s2), span2)) = self.complex_comp().map(Into::into) {
+            n = n.map_with(n2, |n, c| n * c, Complex::safe_mul);
+            s.push_str(&s2);
+            span.merge_with(span2);
         }
 
         Some(span.sp((n, s)))
@@ -1527,17 +1525,16 @@ impl Parser<'_> {
         allow_circle: bool,
         used: &[NumWord],
     ) -> Option<(Sp<(NumWord, String)>, bool)> {
-        if allow_circle {
-            if let Some(n_span) = [
+        if allow_circle
+            && let Some(n_span) = [
                 (Primitive::Eta, PI / 2.0),
                 (Primitive::Pi, PI),
                 (Primitive::Tau, TAU),
             ]
             .into_iter()
             .find_map(|(prim, n)| Some(self.exact(prim.into())?.sp((n.into(), prim.to_string()))))
-            {
-                return Some((n_span, true));
-            }
+        {
+            return Some((n_span, true));
         }
         let reset = self.index;
         let ident = self.ident()?;

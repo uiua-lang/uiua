@@ -514,15 +514,15 @@ pub fn run_prim_mod(prim: &Primitive, mut ops: Ops, env: &mut Uiua) -> UiuaResul
                 args.push(env.pop(i + 1)?);
             }
             let mut memo = env.rt.memo.get_or_default().borrow_mut();
-            if let Some(f_memo) = memo.get_mut(&f.node) {
-                if let Some(outputs) = f_memo.get(&args) {
-                    let outputs = outputs.clone();
-                    drop(memo);
-                    for val in outputs {
-                        env.push(val);
-                    }
-                    return Ok(());
+            if let Some(f_memo) = memo.get_mut(&f.node)
+                && let Some(outputs) = f_memo.get(&args)
+            {
+                let outputs = outputs.clone();
+                drop(memo);
+                for val in outputs {
+                    env.push(val);
                 }
+                return Ok(());
             }
             drop(memo);
             for arg in args.iter().rev() {
@@ -1532,19 +1532,19 @@ impl ImplPrimitive {
                             }
                         }
                     }
-                } else if let Some(n) = sub.num {
-                    if n > 0 {
-                        let n = n.unsigned_abs() as usize;
-                        for val in vals.iter_mut() {
-                            if val.rank() <= n {
-                                while val.rank() < max_rank {
-                                    val.fix()
-                                }
-                            } else {
-                                while val.rank() < max_rank {
-                                    let i = val.rank() - n;
-                                    val.shape.insert(i, 1);
-                                }
+                } else if let Some(n) = sub.num
+                    && n > 0
+                {
+                    let n = n.unsigned_abs() as usize;
+                    for val in vals.iter_mut() {
+                        if val.rank() <= n {
+                            while val.rank() < max_rank {
+                                val.fix()
+                            }
+                        } else {
+                            while val.rank() < max_rank {
+                                let i = val.rank() - n;
+                                val.shape.insert(i, 1);
                             }
                         }
                     }
@@ -1891,10 +1891,10 @@ fn undo_regex(env: &mut Uiua) -> UiuaResult {
                 )),
             }
     };
-    if let Many(ref x) = repls {
-        if locations.len() != x.len() {
-            return Err(env.error("Expected to have the same amount of captures and replacements"));
-        }
+    if let Many(ref x) = repls
+        && locations.len() != x.len()
+    {
+        return Err(env.error("Expected to have the same amount of captures and replacements"));
     }
     let repls = (&repls)
         .into_iter()

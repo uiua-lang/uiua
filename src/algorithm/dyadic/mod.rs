@@ -1244,11 +1244,11 @@ impl<T: ArrayValue> Array<T> {
         }
         if by.rank().saturating_sub(depth) > 1 {
             self.meta.take_map_keys();
-        } else if depth == 0 {
-            if let Some(keys) = self.meta.map_keys_mut() {
-                let by = by.data[0];
-                keys.rotate(by);
-            }
+        } else if depth == 0
+            && let Some(keys) = self.meta.map_keys_mut()
+        {
+            let by = by.data[0];
+            keys.rotate(by);
         }
         self.meta.take_sorted_flags();
         Ok(())

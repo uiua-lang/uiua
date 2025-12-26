@@ -744,10 +744,10 @@ impl Uiua {
                 );
             }
         }
-        if let Some(hook) = &self.rt.interrupted {
-            if hook() {
-                return Err(UiuaErrorKind::Interrupted.into());
-            }
+        if let Some(hook) = &self.rt.interrupted
+            && hook()
+        {
+            return Err(UiuaErrorKind::Interrupted.into());
         }
         Ok(())
     }

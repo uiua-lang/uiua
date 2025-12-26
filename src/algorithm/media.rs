@@ -60,23 +60,20 @@ impl SmartOutput {
         #[cfg(feature = "audio_encode")]
         if value.row_count() >= 44100 / 4
             && matches!(&value, Value::Num(arr) if arr.elements().all(|x| x.abs() <= 5.0))
+            && let Ok(bytes) = value_to_wav_bytes(&value, backend.audio_sample_rate())
         {
-            if let Ok(bytes) = value_to_wav_bytes(&value, backend.audio_sample_rate()) {
-                let label = value.meta.label.as_ref().map(Into::into);
-                return Self::Wav(bytes, label);
-            }
+            let label = value.meta.label.as_ref().map(Into::into);
+            return Self::Wav(bytes, label);
         }
         // Try to convert the value to an image
         #[cfg(feature = "image")]
-        if let Ok(image) = value_to_image(&value) {
-            if image.width() >= MIN_AUTO_IMAGE_DIM as u32
-                && image.height() >= MIN_AUTO_IMAGE_DIM as u32
-            {
-                if let Ok(bytes) = image_to_bytes(&image, ImageFormat::Png) {
-                    let label = value.meta.label.as_ref().map(Into::into);
-                    return Self::Png(bytes, label);
-                }
-            }
+        if let Ok(image) = value_to_image(&value)
+            && image.width() >= MIN_AUTO_IMAGE_DIM as u32
+            && image.height() >= MIN_AUTO_IMAGE_DIM as u32
+            && let Ok(bytes) = image_to_bytes(&image, ImageFormat::Png)
+        {
+            let label = value.meta.label.as_ref().map(Into::into);
+            return Self::Png(bytes, label);
         }
         // Try to convert the value to a gif or apng
         let animation = if prefer_apng {
@@ -729,10 +726,10 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
 #[cfg(feature = "gif")]
 pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, String> {
     // Maybe the array is the already-encoded GIF
-    if let Value::Byte(arr) = value {
-        if gif::Decoder::new(arr.data.as_slice()).is_ok() {
-            return Ok(arr.data.as_slice().into());
-        }
+    if let Value::Byte(arr) = value
+        && gif::Decoder::new(arr.data.as_slice()).is_ok()
+    {
+        return Ok(arr.data.as_slice().into());
     }
     // Faster and higher-quality for grayscale GIFs
     if value.rank() == 3 && value.type_id() == f64::TYPE_ID {

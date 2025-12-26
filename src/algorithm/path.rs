@@ -302,10 +302,11 @@ fn path_impl(
                 let from_curr_nei_cost = curr_cost + nei_cost;
                 let curr_nei_cost = full_cost.get(&nei).copied().unwrap_or(f64::INFINITY);
                 if from_curr_nei_cost <= curr_nei_cost {
-                    if let PathMode::Take(n) = mode {
-                        if ends.contains(&nei) && count_paths(&ends, &came_from) >= n {
-                            break 'outer;
-                        }
+                    if let PathMode::Take(n) = mode
+                        && ends.contains(&nei)
+                        && count_paths(&ends, &came_from) >= n
+                    {
+                        break 'outer;
                     }
                     let parents = came_from.entry(nei).or_default();
                     // If a better path was found we...
@@ -386,10 +387,10 @@ fn path_impl(
                     } else {
                         path_val
                     });
-                    if let PathMode::Take(n) = mode {
-                        if paths.len() >= n {
-                            break 'outer;
-                        }
+                    if let PathMode::Take(n) = mode
+                        && paths.len() >= n
+                    {
+                        break 'outer;
                     }
                 }
             }
@@ -401,10 +402,10 @@ fn path_impl(
                 } else {
                     if_empty
                 }
-            } else if let PathMode::Take(0) = mode {
-                if paths_val.row_count() > 0 {
-                    paths_val.drop_n(1);
-                }
+            } else if let PathMode::Take(0) = mode
+                && paths_val.row_count() > 0
+            {
+                paths_val.drop_n(1);
             }
             env.push(paths_val);
         }

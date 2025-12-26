@@ -693,20 +693,20 @@ impl Compiler {
                     let span = self.add_span(modified.modifier.span.clone());
                     let op = self.monadic_modifier_op(modified)?.0;
                     if let Some((side, sub_span)) = sub.side.as_mut().zip(sub_span) {
-                        if let Some(side_n) = side.n {
-                            if side_n > op.sig.args() {
-                                self.add_error(
-                                    modified.modifier.span.clone().merge(sub_span),
-                                    format!(
-                                        "Sided {}'s quantifier cannot be greater than its \
+                        if let Some(side_n) = side.n
+                            && side_n > op.sig.args()
+                        {
+                            self.add_error(
+                                modified.modifier.span.clone().merge(sub_span),
+                                format!(
+                                    "Sided {}'s quantifier cannot be greater than its \
                                         function's arguments, but {} > {}",
-                                        Primitive::Both.format(),
-                                        side_n,
-                                        op.sig.args()
-                                    ),
-                                );
-                                side.n = Some(op.sig.args());
-                            }
+                                    Primitive::Both.format(),
+                                    side_n,
+                                    op.sig.args()
+                                ),
+                            );
+                            side.n = Some(op.sig.args());
                         }
                     } else if op.sig.args() == 0 {
                         let n = sub.num.unwrap_or(2) as usize;
@@ -1147,10 +1147,10 @@ impl Compiler {
                 invert::dbgln!("\n//////////////\n// begin UN //\n//////////////");
                 self.add_span(span.clone());
                 let mut normal = sn.un_inverse(&self.asm);
-                if let Node::Prim(Pretty, _) = sn.node {
-                    if let Err(e) = &mut normal {
-                        *e = InversionError::Pretty;
-                    }
+                if let Node::Prim(Pretty, _) = sn.node
+                    && let Err(e) = &mut normal
+                {
+                    *e = InversionError::Pretty;
                 }
                 invert::dbgln!("////////////\n// end UN //\n////////////\n");
                 if let Ok(Node::CustomInverse(..)) = normal.as_ref().map(|sn| &sn.node) {
@@ -1191,12 +1191,13 @@ impl Compiler {
                     let (f_before, mut f_after) = f
                         .under_inverse(g.sig, false, &self.asm)
                         .map_err(|e| self.error(f_span.clone(), e))?;
-                    if let Some(ss) = sub_side {
-                        if ss.value == SubSide::Right && g.sig.outputs() > f_after.sig.args() {
-                            let span = self.add_span(ss.span);
-                            let depth = g.sig.outputs() - f_after.sig.args();
-                            f_after = f_after.dipped(depth, span);
-                        }
+                    if let Some(ss) = sub_side
+                        && ss.value == SubSide::Right
+                        && g.sig.outputs() > f_after.sig.args()
+                    {
+                        let span = self.add_span(ss.span);
+                        let depth = g.sig.outputs() - f_after.sig.args();
+                        f_after = f_after.dipped(depth, span);
                     }
                     let mut node = f_before.node;
                     node.push(g.node.clone());
@@ -1475,29 +1476,28 @@ impl Compiler {
                 let sub = self.validate_subscript(sub);
                 let sub_span = sub.span;
                 let mut sub = sub.value;
-                if let Some(n) = &mut sub.num {
-                    if n.abs() > 10 {
-                        self.add_error(
-                            sub_span.clone(),
-                            format!("{} max subscript magnitude is 10", prim.format()),
-                        );
-                        *n = n.signum() * 10;
-                    }
+                if let Some(n) = &mut sub.num
+                    && n.abs() > 10
+                {
+                    self.add_error(
+                        sub_span.clone(),
+                        format!("{} max subscript magnitude is 10", prim.format()),
+                    );
+                    *n = n.signum() * 10;
                 }
-                if let Some(side) = sub.side {
-                    if let Some(n) = side.n {
-                        if n >= sn.sig.args() {
-                            self.emit_diagnostic(
-                                format!(
-                                    "Specifying {n} fixed arrays for a function \
+                if let Some(side) = sub.side
+                    && let Some(n) = side.n
+                    && n >= sn.sig.args()
+                {
+                    self.emit_diagnostic(
+                        format!(
+                            "Specifying {n} fixed arrays for a function \
                                     with signature {} is probably not what you want",
-                                    sn.sig,
-                                ),
-                                DiagnosticKind::Advice,
-                                sub_span.clone(),
-                            );
-                        }
-                    }
+                            sn.sig,
+                        ),
+                        DiagnosticKind::Advice,
+                        sub_span.clone(),
+                    );
                 }
                 construct_extracted_monadic_modifier(
                     Node::ImplMod,
@@ -1574,10 +1574,10 @@ impl Compiler {
                     .map(|curr| curr.recurses)
                     .unwrap_or(0);
                 let (sn, span) = self.monadic_modifier_op(modified)?;
-                if let Some(curr) = self.current_bindings.last() {
-                    if curr.recurses > recurses_before {
-                        self.add_error(span, format!("Cannot {prim} recursive function"))
-                    }
+                if let Some(curr) = self.current_bindings.last()
+                    && curr.recurses > recurses_before
+                {
+                    self.add_error(span, format!("Cannot {prim} recursive function"))
                 }
                 let span = self.add_span(modified.modifier.span.clone());
                 Node::Mod(prim, eco_vec![sn], span)
@@ -1986,10 +1986,11 @@ impl Compiler {
             .iter()
             .map(|w| {
                 let mut formatted = format_word(w, &self.asm.inputs);
-                if let Word::Func(_) = &w.value {
-                    if formatted.starts_with('(') && formatted.ends_with(')') {
-                        formatted = formatted[1..formatted.len() - 1].to_string();
-                    }
+                if let Word::Func(_) = &w.value
+                    && formatted.starts_with('(')
+                    && formatted.ends_with(')')
+                {
+                    formatted = formatted[1..formatted.len() - 1].to_string();
                 }
                 Boxed(formatted.trim().into())
             })

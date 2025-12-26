@@ -113,17 +113,16 @@ impl Value {
     /// Get a value from a map array
     pub fn get(&self, key: &Value, env: &Uiua) -> UiuaResult<Value> {
         // Check for higher-ranked keys
-        if let Some(keys) = self.meta.map_keys.as_ref() {
-            if key.rank() > 0
-                && key.rank() == keys.keys.rank()
-                && key.type_id() == keys.keys.type_id()
-            {
-                let mut values = Vec::with_capacity(key.row_count());
-                for key in key.rows() {
-                    values.push(self.get(&key, env)?);
-                }
-                return Value::from_row_values(values, env);
+        if let Some(keys) = self.meta.map_keys.as_ref()
+            && key.rank() > 0
+            && key.rank() == keys.keys.rank()
+            && key.type_id() == keys.keys.type_id()
+        {
+            let mut values = Vec::with_capacity(key.row_count());
+            for key in key.rows() {
+                values.push(self.get(&key, env)?);
             }
+            return Value::from_row_values(values, env);
         }
         // An empty array cannot have the key
         if self.row_count() == 0 {
@@ -152,14 +151,15 @@ impl Value {
     }
     /// Check if a map array contains a key
     pub fn has_key(&self, key: &Value, env: &Uiua) -> UiuaResult<Array<u8>> {
-        if let Some(keys) = self.meta.map_keys.as_ref() {
-            if key.rank() == keys.keys.rank() && key.type_id() == keys.keys.type_id() {
-                let mut values = EcoVec::with_capacity(key.row_count());
-                for key in key.rows() {
-                    values.push(keys.get(&key).is_some().into());
-                }
-                return Ok(values.into());
+        if let Some(keys) = self.meta.map_keys.as_ref()
+            && key.rank() == keys.keys.rank()
+            && key.type_id() == keys.keys.type_id()
+        {
+            let mut values = EcoVec::with_capacity(key.row_count());
+            for key in key.rows() {
+                values.push(keys.get(&key).is_some().into());
             }
+            return Ok(values.into());
         }
 
         if self.row_count() == 0 {
@@ -312,13 +312,14 @@ impl Value {
     }
     /// Remove a key-value pair from a map array
     pub fn remove(&mut self, key: Value, env: &Uiua) -> UiuaResult {
-        if let Some(keys) = self.meta.map_keys.as_ref() {
-            if key.rank() == keys.keys.rank() && key.type_id() == keys.keys.type_id() {
-                for key in key.into_rows() {
-                    self.remove(key, env)?;
-                }
-                return Ok(());
+        if let Some(keys) = self.meta.map_keys.as_ref()
+            && key.rank() == keys.keys.rank()
+            && key.type_id() == keys.keys.type_id()
+        {
+            for key in key.into_rows() {
+                self.remove(key, env)?;
             }
+            return Ok(());
         }
 
         if self.row_count() == 0 {
@@ -854,16 +855,18 @@ fn coerce_values(
         *a = b_clone.first_dim_zero();
         return Ok(b);
     }
-    if let Value::Box(a) = a {
-        if a.rank() == 1 && !matches!(b, Value::Box(_)) {
-            return Ok(Boxed(b).into());
-        }
+    if let Value::Box(a) = a
+        && a.rank() == 1
+        && !matches!(b, Value::Box(_))
+    {
+        return Ok(Boxed(b).into());
     }
-    if let Value::Box(b_arr) = &b {
-        if b_arr.rank() == 0 && !matches!(a, Value::Box(_)) {
-            *a = Array::from_iter(a.rows().map(Boxed)).into();
-            return Ok(b);
-        }
+    if let Value::Box(b_arr) = &b
+        && b_arr.rank() == 0
+        && !matches!(a, Value::Box(_))
+    {
+        *a = Array::from_iter(a.rows().map(Boxed)).into();
+        return Ok(b);
     }
     match (&mut *a, b) {
         (Value::Num(arr), Value::Num(item)) if arr.rank() > 0 && arr.shape[1..] != item.shape => {

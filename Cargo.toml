@@ -8,7 +8,7 @@ keywords = ["uiua", "array", "stack", "language", "apl"]
 license = "MIT"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
-rust-version = "1.85.0"
+rust-version = "1.88.0"
 version = "0.18.0-dev.3"
 
 [dependencies.uiua_parser]

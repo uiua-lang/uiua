@@ -1908,6 +1908,7 @@ fn flip_unsplit_lines_impl(lines: Vec<Vec<Sp<Word>>>, in_array: bool) -> Vec<Vec
     };
 
     let flip_line = |mut line: Vec<Sp<Word>>| {
+        let eol = line.pop_if(|w| w.value.is_end_of_line());
         if line.iter().any(|w| matches!(w.value, Word::FlipLine)) {
             let mut parts = Vec::new();
             while let Some(i) = (line.iter()).rposition(|w| matches!(w.value, Word::FlipLine)) {
@@ -1921,6 +1922,7 @@ fn flip_unsplit_lines_impl(lines: Vec<Vec<Sp<Word>>>, in_array: bool) -> Vec<Vec
             parts.push(line);
             line = parts.into_iter().flatten().collect();
         }
+        line.extend(eol);
         line
     };
 

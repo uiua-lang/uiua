@@ -32,6 +32,7 @@ This version is not yet released. If you are reading this on the website, then t
   - `<=` for [`less or equal ≤`](<https://uiua.org/docs/less or equal>) is now `le`
   - `>=` for [`greater or equal ≤`](<https://uiua.org/docs/greater or equal>) is now `ge`
 - Allow `≁` for private imports/exports from modules
+- Stabilize [`un °`](https://uiua.org/docs/un) [`under ⍜`](https://uiua.org/docs/under)
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
 - Add modifier version of [`gif`](https://uiua.org/docs/gif), written as `gif!`

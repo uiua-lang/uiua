@@ -228,6 +228,7 @@ pub struct CustomInverse {
     /// Whether this was created with obverse
     ///
     /// Inverses that are not set by obverse may be overridden
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub is_obverse: bool,
 }
 

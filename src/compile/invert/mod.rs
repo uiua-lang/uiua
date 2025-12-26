@@ -189,8 +189,6 @@ pub enum InversionError {
     ComplexInvertedUnder,
     UnderExperimental,
     AlgebraError(AlgebraError),
-    UnUnderExperimental,
-    UnUnderSignature(Signature),
     ReduceFormat,
     Pretty,
     SidedBoth,
@@ -235,25 +233,6 @@ impl fmt::Display for InversionError {
                 )
             }
             InversionError::AlgebraError(e) => e.fmt(f),
-            InversionError::UnUnderExperimental => {
-                write!(
-                    f,
-                    "{} {} for non-monadic functions is experimental. To \
-                    enable it, add `# Experimental!` to the top of the file.",
-                    Primitive::Un.format(),
-                    Primitive::Under.format()
-                )
-            }
-            InversionError::UnUnderSignature(sig) => {
-                write!(
-                    f,
-                    "{} {}'s first function must have a net-zero \
-                    signature, but its signature is {}",
-                    Primitive::Un.format(),
-                    Primitive::Under.format(),
-                    sig
-                )
-            }
             InversionError::ReduceFormat => write!(
                 f,
                 "Only format functions with 2 arguments \

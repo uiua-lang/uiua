@@ -1204,15 +1204,14 @@ impl Compiler {
                     let sig = self.sig_of(&node, &f_span)?;
                     SigNode::new(sig, node)
                 };
-                let span = self.add_span(modified.modifier.span.clone());
-                let un = if normal.sig == (1, 1) || self.allow_experimental() {
+                let un = {
                     let (f_before, f_after) =
                         f.node.under_inverse(g.sig, true, &self.asm).map_err(|e| {
                             let span = (e.span().map(|s| self.get_span(s)))
                                 .unwrap_or_else(|| f_span.clone().into());
                             self.error(span, e)
                         })?;
-                    (g.node.un_inverse(&self.asm).ok())
+                    let un = (g.node.un_inverse(&self.asm).ok())
                         .map(|g_inv| -> UiuaResult<SigNode> {
                             let mut node = f_before;
                             node.push(g_inv);
@@ -1220,13 +1219,8 @@ impl Compiler {
                             let sig = self.sig_of(&node, &f_span)?;
                             Ok(SigNode::new(sig, node))
                         })
-                        .transpose()?
-                } else {
-                    let cust = CustomInverse::from(InversionError::UnUnderExperimental);
-                    Some(SigNode::new(
-                        normal.sig.inverse(),
-                        Node::CustomInverse(cust.into(), span),
-                    ))
+                        .transpose()?;
+                    un.filter(|un_sn| un_sn.sig == normal.sig.inverse())
                 };
                 let under = if normal.sig.args() == normal.sig.outputs() {
                     un.clone().map(|un| (normal.clone(), un))

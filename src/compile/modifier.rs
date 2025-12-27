@@ -692,25 +692,25 @@ impl Compiler {
                     });
                     let span = self.add_span(modified.modifier.span.clone());
                     let op = self.monadic_modifier_op(modified)?.0;
-                    if let Some((side, sub_span)) = sub.side.as_mut().zip(sub_span) {
-                        if let Some(side_n) = side.n
-                            && side_n > op.sig.args()
-                        {
-                            self.add_error(
-                                modified.modifier.span.clone().merge(sub_span),
-                                format!(
-                                    "Sided {}'s quantifier cannot be greater than its \
-                                        function's arguments, but {} > {}",
-                                    Primitive::Both.format(),
-                                    side_n,
-                                    op.sig.args()
-                                ),
-                            );
-                            side.n = Some(op.sig.args());
-                        }
-                    } else if op.sig.args() == 0 {
+                    if op.sig.args() == 0 {
+                        // No args, just N times
                         let n = sub.num.unwrap_or(2) as usize;
                         return Ok(Node::from_iter(repeat_n(op.node, n).flatten()));
+                    } else if let Some((side, sub_span)) = sub.side.as_mut().zip(sub_span)
+                        && let Some(side_n) = side.n
+                        && side_n > op.sig.args()
+                    {
+                        self.add_error(
+                            modified.modifier.span.clone().merge(sub_span),
+                            format!(
+                                "Sided {}'s quantifier cannot be greater than its \
+                                        function's arguments, but {} > {}",
+                                Primitive::Both.format(),
+                                side_n,
+                                op.sig.args()
+                            ),
+                        );
+                        side.n = Some(op.sig.args());
                     }
                     if sub.num.unwrap_or(2) == 2 && sub.side.is_none() {
                         Node::Mod(Both, eco_vec![op], span)

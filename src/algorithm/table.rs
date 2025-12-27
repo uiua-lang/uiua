@@ -57,7 +57,7 @@ pub(crate) fn table_impl(f: SigNode, env: &mut Uiua) -> UiuaResult {
         n => {
             let xs = env.pop(1)?;
             let ys = env.pop(2)?;
-            if n == 2 && xs.rank() <= 1 && ys.rank() <= 1 {
+            if n == 2 && (xs.rank() <= 1 || ys.rank() <= 1 || xs.rank() == ys.rank()) {
                 table_list(f, xs, ys, env)
             } else {
                 if let [
@@ -67,6 +67,7 @@ pub(crate) fn table_impl(f: SigNode, env: &mut Uiua) -> UiuaResult {
                     && let [sn] = args.as_slice()
                     && let Some((Primitive::Add, _)) = sn.node.as_flipped_primitive()
                 {
+                    // Matrix mul
                     match (&xs, &ys) {
                         (Value::Num(a), Value::Num(b)) => {
                             return a.matrix_mul(b, env).map(|val| env.push(val));
@@ -277,7 +278,7 @@ pub fn table_list(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
             }
             Primitive::Min => env.push(fast_table_list(xs, ys, min::byte_byte, env)?),
             Primitive::Max => env.push(fast_table_list(xs, ys, max::byte_byte, env)?),
-            Primitive::Join | Primitive::Couple => {
+            Primitive::Join | Primitive::Couple if xs.rank() <= 1 && ys.rank() <= 1 => {
                 env.push(fast_table_list_join_or_couple(xs, ys, flipped, env)?)
             }
             _ => generic_table(f, Value::Byte(xs), Value::Byte(ys), env)?,
@@ -408,7 +409,7 @@ macro_rules! table_math {
                 Primitive::Complex if !flipped => env.push(fast_table_list(xs, ys, complex::$f, env)?),
                 Primitive::Min => env.push(fast_table_list(xs, ys, min::$f, env)?),
                 Primitive::Max => env.push(fast_table_list(xs, ys, max::$f, env)?),
-                Primitive::Join | Primitive::Couple => {
+                Primitive::Join | Primitive::Couple if xs.rank() <= 1 && ys.rank() <= 1  => {
                     env.push(fast_table_list_join_or_couple(xs, ys, flipped, env)?)
                 }
                 _ => return Ok(Err((xs, ys))),
@@ -427,14 +428,78 @@ fn fast_table_list<T: ArrayValue, U: ArrayValue + Default>(
     f: impl Fn(T, T) -> U,
     env: &Uiua,
 ) -> UiuaResult<Array<U>> {
+    match (a.rank(), b.rank()) {
+        (0..=1, 0..=1) => fast_table_same(a, b, f, env),
+        (1, _) => fast_table_left(a, b, f, env),
+        (_, 1) => fast_table_right(a, b, f, env),
+        _ => fast_table_same(a, b, f, env),
+    }
+}
+
+fn fast_table_same<T: ArrayValue, U: ArrayValue + Default>(
+    a: Array<T>,
+    b: Array<T>,
+    f: impl Fn(T, T) -> U,
+    env: &Uiua,
+) -> UiuaResult<Array<U>> {
     let elem_count = validate_size::<U>([a.data.len(), b.data.len()], env)?;
     let mut new_data = eco_vec![U::default(); elem_count];
     let data_slice = new_data.make_mut();
     let mut i = 0;
-    for x in a.data {
-        for y in b.data.iter().cloned() {
-            data_slice[i] = f(x.clone(), y);
+    for a in a.data {
+        for b in &b.data {
+            data_slice[i] = f(a.clone(), b.clone());
             i += 1;
+        }
+    }
+    let mut new_shape = a.shape;
+    new_shape.extend_from_slice(&b.shape);
+    Ok(Array::new(new_shape, new_data))
+}
+
+fn fast_table_left<T: ArrayValue, U: ArrayValue + Default>(
+    a: Array<T>,
+    b: Array<T>,
+    f: impl Fn(T, T) -> U,
+    env: &Uiua,
+) -> UiuaResult<Array<U>> {
+    let elem_count = validate_size::<U>([a.data.len(), b.data.len()], env)?;
+    let mut new_data = eco_vec![U::default(); elem_count];
+    let data_slice = new_data.make_mut();
+    let mut i = 0;
+    let b_row_len = b.row_len();
+    if b_row_len > 0 {
+        for a in a.data {
+            for b in b.data.chunks_exact(b_row_len).flatten() {
+                data_slice[i] = f(a.clone(), b.clone());
+                i += 1;
+            }
+        }
+    }
+    let mut new_shape = a.shape;
+    new_shape.extend_from_slice(&b.shape);
+    Ok(Array::new(new_shape, new_data))
+}
+
+fn fast_table_right<T: ArrayValue, U: ArrayValue + Default>(
+    a: Array<T>,
+    b: Array<T>,
+    f: impl Fn(T, T) -> U,
+    env: &Uiua,
+) -> UiuaResult<Array<U>> {
+    let elem_count = validate_size::<U>([a.data.len(), b.data.len()], env)?;
+    let mut new_data = eco_vec![U::default(); elem_count];
+    let data_slice = new_data.make_mut();
+    let mut i = 0;
+    let a_row_len = b.row_len();
+    if a_row_len > 0 {
+        for a in a.data.chunks_exact(a_row_len) {
+            for b in &b.data {
+                for a in a {
+                    data_slice[i] = f(a.clone(), b.clone());
+                    i += 1;
+                }
+            }
         }
     }
     let mut new_shape = a.shape;

@@ -1,10 +1,11 @@
 # Uiua Todo
 
 # 0.18
-- `keep by rows` optimization?
 - Early-terminating `fold`
-- Make assemblies importable
-- `table` non-lists optimizations?
+
+# 0.19
+- Best-effort compile-time type/shape checking
+  - Generic stack container to deduplicate implementations
 - `first group/partition` optimization
 - `under group/partition inventory` optimization
 

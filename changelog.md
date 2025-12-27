@@ -42,7 +42,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [`noise`](https://uiua.org/docs/noise) function, which generates random noise from a seed and coordinates
 - Add experimental [`&fetch`](https://uiua.org/docs/&fetch) function to easily fetch data from a url
 - Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
-- Add experimental sided subscripts for [`under ⍜`](https://uiua.org/docs/under), wich automatically [`dip ⊙`](https://uiua.org/docs/dip) on net-positive second functions
+- Add experimental sided subscripts for [`under ⍜`](https://uiua.org/docs/under), which automatically [`dip ⊙`](https://uiua.org/docs/dip) on net-positive second functions
 - Add mathematical constants `φ` (golden ratio) and `γ` (Euler-Mascheroni)
 - Add `PlanetSymbols` and `ZodiacSymbols` constants, symbolic versions of `Planets` and `Zodiac`
 - Add `Elements` and `ElementSymbols` constants listing the chemical elements
@@ -517,7 +517,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.13.0).
 - Add experimental [data definitions](https://uiua.org/docs/experimental#data-definitions)
   - These allow for structured data similar to `struct`s and `enum`s in other languages
   - They also allow a limited form of namable function arguments
-  - The experimental [`struct`](https://uiua.org/docs/struct) modifier/macro has been deprecated in favor of data definitions
+  - The experimental `struct` modifier/macro has been deprecated in favor of data definitions
 - Add the experimental [`layout`](https://uiua.org/docs/layout) function, which renders text into an image array
 - [`astar`](https://uiua.org/docs/astar) no longer errors if no paths are found
 - Remove previously deprecated function strands
@@ -955,7 +955,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - This should make it easier to scope [`fill ⬚`](https://uiua.org/docs/fill) correctly
 - [`fill ⬚`](https://uiua.org/docs/fill) can now match the lengths of inputs to [`rows ≡`](https://uiua.org/docs/rows)
 - Add recursion via referring to a binding's name within its body
-  - Deprecate [`this ↬`](https://uiua.org/docs/this) and [`recur ↫`](https://uiua.org/docs/recur), as they are no longer necessary
+  - Deprecate `this ↬` and `recur ↫`, as they are no longer necessary
 - Extend some math functions to work with characters
   - [`sign ±`](https://uiua.org/docs/sign) gets the case of a character
   - [`absolute value ⌵`](https://uiua.org/docs/absolute) uppercases a character
@@ -995,7 +995,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - These both check array properties at runtime and serve as a form of documentation
 - [`&var`](https://uiua.org/docs/&var) now throws an error if the variable is not found
 - Deprecate [`pop ◌`](https://uiua.org/docs/pop) formatting from `;`
-- Deprecate [`all ⋔`](https://uiua.org/docs/all)
+- Deprecate `all ⋔`
   - It was rarely used and was hard to reason about
 - Add an experimental `repr` function that produces a string representation of a value in a format that can be read by the interpreter
 ### Interpreter
@@ -1021,13 +1021,13 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 ## 0.8.0 - 2024-01-31
 ### Language
 - Add the [`content ◇`](https://uiua.org/docs/content) modifier, which unboxes its function's arguments before calling it
-  - Deprecate [`unpack ⊐`](https://uiua.org/docs/unpack) in favor of [`content ◇`](https://uiua.org/docs/content)
-  - The behavior of [`content ◇`](https://uiua.org/docs/content) is less implicit and is not prone to some of the potential unexpected behavior of [`unpack ⊐`](https://uiua.org/docs/unpack)
+  - Deprecate `unpack ⊐` in favor of [`content ◇`](https://uiua.org/docs/content)
+  - The behavior of [`content ◇`](https://uiua.org/docs/content) is less implicit and is not prone to some of the potential unexpected behavior of `unpack ⊐`
 - Add the [`unique ◰`](https://uiua.org/docs/unique) function, which creates a mask of the first occurrence of each unique value in an array
   - Change [`deduplicate ◴`](https://uiua.org/docs/deduplicate)'s glyph to reflect its relationship with [`unique ◰`](https://uiua.org/docs/unique). Code using `⊖` will continue to work and will be formatted as `◴`.
 - [`table ⊞`](https://uiua.org/docs/table) now works on rows of arrays but keeps its optimizations for lists
   - You never wanted element-wise combinations of multi-dimensional arrays anyway
-  - Deprecate [`cross ⊠`](https://uiua.org/docs/cross), as it is now redundant
+  - Deprecate `cross ⊠`, as it is now redundant
   - This is technically a breaking change, but it is unlikely to break much code
 - [`fill ⬚`](https://uiua.org/docs/fill) can now be used to specify default accumulators for [`reduce /`](https://uiua.org/docs/reduce), [`group ⊕`](https://uiua.org/docs/group), and [`partition ⊜`](https://uiua.org/docs/partition)
   - **Breaking Change** - Reducing [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) no longer take a required accumulator
@@ -1070,7 +1070,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - [`repeat ⍥`](https://uiua.org/docs/repeat) can now be used with [`un °`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under)
 - [`reshape ↯`](https://uiua.org/docs/reshape) now works with [`under ⍜`](https://uiua.org/docs/under)
 - [`scan \`](https://uiua.org/docs/scan) now works with [`un °`](https://uiua.org/docs/un) in some cases
-- [`setinv`](https://uiua.org/docs/setinv) and [`setund`](https://uiua.org/docs/setund) are no longer experimental
+- `setinv` and `setund` are no longer experimental
 - Add output comments, which the formatter fills with values from the stack
   - Make an empty comment starting with `n` additional `#`s
   - The formatter will replace the comment with the top `n` values from the stack
@@ -1093,7 +1093,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 
 ## 0.6.1 - 2023-12-07
 ### Interpreter
-- Make [proxy values](https://uiua.org/tutorial/Modifiers and Functions#proxy) a little less leaky
+- Make proxy values a little less leaky
 - Make placeholders work properly with [`both ∩`](https://uiua.org/docs/both)
 - Some other bug and crash fixes
 
@@ -1160,12 +1160,12 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - [`windows ◫`](https://uiua.org/docs/windows) can now take negative window sizes
 - Add an *experimental* distinction for some functions/modifiers
   - Experimental features are opt-in and must be enabled by putting an `# Experimental!` comment at the top of a file
-- Add the experimental [`all ⋔`](https://uiua.org/docs/all) modifier, which is a variadic generalization of [`both ∩`](https://uiua.org/docs/both)
+- Add the experimental `all ⋔` modifier, which is a variadic generalization of [`both ∩`](https://uiua.org/docs/both)
 - Add the experimental `rectify ⌅` modifier, which sets a function's inverse to itself
-- Add the experimental [`setinv`](https://uiua.org/docs/setinv) modifier, which sets the inverse of a function
-- Add the experimental [`setunder`](https://uiua.org/docs/setund) modifier, which sets the [`under ⍜`](https://uiua.org/docs/under)-compatible inverse of a function
-- Add the experimental [`this ↬`](https://uiua.org/docs/this) modifier, which sets a function to recur to
-- Add the experimental [`recur ↫`](https://uiua.org/docs/recur) modifier, which calls a function recursively
+- Add the experimental `setinv` modifier, which sets the inverse of a function
+- Add the experimental `setunder` modifier, which sets the [`under ⍜`](https://uiua.org/docs/under)-compatible inverse of a function
+- Add the experimental `this ↬` modifier, which sets a function to recur to
+- Add the experimental `recur ↫` modifier, which calls a function recursively
 - Allow custom modifiers to use switch function syntax
 - [`sign ±`](https://uiua.org/docs/sign) now normalizes complex numbers
 - Change [`type`](https://uiua.org/docs/type) mapping

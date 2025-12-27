@@ -1348,6 +1348,9 @@ primitive!(
     /// ex: ⍜⊏⋅η_τ 1_5 ⇡10
     /// ex: ⍜⊏≡⋅[] 1_5 ⇡10
     /// ex: ⍜⊏≡⋅η_τ_π 1_5 ⇡10
+    /// [anti][by][select] or [under][select][pop] can be used to replace row(s) in a value.
+    /// ex: ⌝⊸⊏ 1_3 10_20 [1 2 3 4 5]
+    ///   : ⍜⊏◌ 1_3 [1 2 3 4 5] 10_20
     ///
     /// [anti][select] puts the rows of an array at their corresponding indices. This requires a [fill] value if not all indices are present.
     /// ex: ⌝⊏ 3_1_2_0 "abcd"
@@ -1371,9 +1374,10 @@ primitive!(
     /// ex: ⍜⊡(×10) 2 [8 3 9 2 0]
     /// This works with multiple and/or deeper indices.
     /// ex: ⍜⊡(×10) [2_1 0_2] +1↯3_4⇡12
-    /// To simply set a value, you can use [under][pick][pop].
-    /// ex: ⍜⊡◌ 2 [8 3 9 2 0] 42
-    /// Or [under][pick][gap] if the replacement is static.
+    /// To simply set a value, you can use [anti][by][pick] or [under][pick][pop].
+    /// ex: ⌝⊸⊡ 2 42 [8 3 9 2 0]
+    ///   : ⍜⊡◌ 2 [8 3 9 2 0] 42
+    /// [under][pick][gap] also works if the replacement is static.
     ///
     /// [anti][pick] puts the values of an array at their corresponding indices. This requires a [fill] value if not all indices are present.
     /// ex: ⬚0⌝⊡ 1_2 5

@@ -416,28 +416,36 @@ macro_rules! reduce_math {
                 Primitive::Mul => fast_reduce(xs, 1.0.into(), fill, depth, mul::$f, env)?,
                 Primitive::Or => fast_reduce(xs, 0.0.into(), fill, depth, or::$f, env)?,
                 Primitive::Min if TID == 0 && xs.rank() == 1 && xs.meta.is_sorted_up() => {
-                    (xs.data.first().copied())
-                        .unwrap_or(f64::INFINITY.into())
-                        .min(fill.unwrap_or(f64::INFINITY.into()))
-                        .into()
+                    let mut min = (xs.data.iter().find(|x| x.is_sortable()).copied())
+                        .unwrap_or(f64::NEG_INFINITY.into());
+                    if let Some(fill) = fill {
+                        min = min.min(fill);
+                    }
+                    min.into()
                 }
                 Primitive::Min if TID == 0 && xs.rank() == 1 && xs.meta.is_sorted_down() => {
-                    (xs.data.last().copied())
-                        .unwrap_or(f64::INFINITY.into())
-                        .min(fill.unwrap_or(f64::INFINITY.into()))
-                        .into()
+                    let mut min = (xs.data.iter().rfind(|&&x| x.is_sortable()).copied())
+                        .unwrap_or(f64::NEG_INFINITY.into());
+                    if let Some(fill) = fill {
+                        min = min.min(fill);
+                    }
+                    min.into()
                 }
                 Primitive::Max if TID == 0 && xs.rank() == 1 && xs.meta.is_sorted_up() => {
-                    (xs.data.last().copied())
-                        .unwrap_or(f64::NEG_INFINITY.into())
-                        .max(fill.unwrap_or(f64::NEG_INFINITY.into()))
-                        .into()
+                    let mut max = (xs.data.iter().rfind(|&&x| x.is_sortable()).copied())
+                        .unwrap_or(f64::NEG_INFINITY.into());
+                    if let Some(fill) = fill {
+                        max = max.max(fill);
+                    }
+                    max.into()
                 }
                 Primitive::Max if TID == 0 && xs.rank() == 1 && xs.meta.is_sorted_down() => {
-                    (xs.data.first().copied())
-                        .unwrap_or(f64::NEG_INFINITY.into())
-                        .max(fill.unwrap_or(f64::NEG_INFINITY.into()))
-                        .into()
+                    let mut max = (xs.data.iter().find(|x| x.is_sortable()).copied())
+                        .unwrap_or(f64::NEG_INFINITY.into());
+                    if let Some(fill) = fill {
+                        max = max.max(fill);
+                    }
+                    max.into()
                 }
                 Primitive::Min => fast_reduce(xs, f64::INFINITY.into(), fill, depth, min::$f, env)?,
                 Primitive::Max => {

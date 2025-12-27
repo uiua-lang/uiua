@@ -74,6 +74,7 @@ pub fn Site() -> impl IntoView {
             </div>
         }
         .into_view(),
+        "That's right! It goes into the array hole.".into_view(),
         "Abandon nominativity. Embrace relativity.".into_view(),
         view!(<div style="font-style: normal"><Prim prim=Under glyph_only=true/>"🗄️🍴"</div>).into_view(),
         "It's got um...I um...arrays".into_view(),

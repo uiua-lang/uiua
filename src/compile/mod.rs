@@ -1284,6 +1284,28 @@ impl Compiler {
                         add `# Experimental!` to the top of the file."
                     });
                 }
+                // Diagnostic for array of characters
+                let line_count = arr.lines.len();
+                if line_count <= 1
+                    && arr.lines.iter().any(|item| match item {
+                        Item::Words(words) => {
+                            words.iter().any(|w| matches!(w.value, Word::Char(_)))
+                        }
+                        _ => false,
+                    })
+                    && arr.lines.iter().all(|item| match item {
+                        Item::Words(words) => words
+                            .iter()
+                            .all(|w| !w.value.is_code() || matches!(w.value, Word::Char(_))),
+                        _ => false,
+                    })
+                {
+                    self.emit_diagnostic(
+                        "Stranded characters should instead be written as a string",
+                        DiagnosticKind::Advice,
+                        word.span.clone(),
+                    );
+                }
                 // Track span for LSP
                 if !arr.boxes
                     && (arr.word_lines().flatten())
@@ -1298,7 +1320,6 @@ impl Compiler {
                         .array_inner_spans
                         .insert(word.span.clone(), just_spans);
                 }
-                let line_count = arr.lines.len();
                 let any_contents = arr.word_lines().flatten().any(|w| w.value.is_code());
                 // Compile lines
                 let (mut word_lines, item_lines): (Vec<_>, Vec<_>) = arr
@@ -1333,20 +1354,6 @@ impl Compiler {
                         ));
                     }
                 };
-                // Diagnostic for array of characters
-                if line_count <= 1
-                    && !arr.boxes
-                    && !inner.is_empty()
-                    && inner.iter().all(
-                        |instr| matches!(instr, Node::Push(Value::Char(arr)) if arr.rank() == 0),
-                    )
-                {
-                    self.emit_diagnostic(
-                        "An array of characters should instead be written as a string",
-                        DiagnosticKind::Advice,
-                        word.span.clone(),
-                    );
-                }
                 let span = self.add_span(word.span.clone());
                 // Inline constant arrays
                 if inner.iter().all(|instr| matches!(instr, Node::Push(_))) {

@@ -122,6 +122,13 @@ impl Compiler {
                 }
             });
 
+            fn hash_bytes(bytes: &[u8]) -> u64 {
+                let mut hasher = DefaultHasher::default();
+                crate::VERSION.hash(&mut hasher);
+                bytes.hash(&mut hasher);
+                hasher.finish()
+            }
+
             let (asm, ua_hash) = if let Some(asm) = asm {
                 asm
             } else {
@@ -136,9 +143,7 @@ impl Compiler {
                     .map_err(|e| self.error(span.clone(), e))?;
 
                 // Hash file and determine cache path
-                let mut hasher = DefaultHasher::default();
-                bytes.hash(&mut hasher);
-                let ua_hash = hasher.finish();
+                let ua_hash = hash_bytes(&bytes);
                 let cache_subpath = match file_kind {
                     FileScopeKind::Source => PathBuf::from(format!(
                         "{}/{ua_hash:016x}.uasm",
@@ -171,9 +176,7 @@ impl Compiler {
                         let Ok(bytes) = self.backend().file_read_all(path) else {
                             return false;
                         };
-                        let mut hasher = DefaultHasher::default();
-                        bytes.hash(&mut hasher);
-                        let curr_hash = hasher.finish();
+                        let curr_hash = hash_bytes(&bytes);
                         // println!("    {} same: {}", path.display(), curr_hash == *hash);
                         curr_hash == *hash
                     }) {

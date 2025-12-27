@@ -329,6 +329,7 @@ impl Compiler {
         self.asm.functions.extend(asm.functions);
         self.asm.bindings.extend(asm.bindings);
         self.asm.inputs.files.extend(asm.inputs.files);
+        self.asm.inputs.macros.extend(asm.inputs.macros);
         self.asm.dependencies.extend(asm.dependencies);
         self.asm.test_assert_count += asm.test_assert_count;
     }

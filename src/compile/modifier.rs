@@ -2146,11 +2146,8 @@ impl Compiler {
         error.map_or(Ok(()), Err)
     }
     fn quote(&mut self, code: &str, name: Option<Ident>, span: &CodeSpan) -> UiuaResult<Node> {
-        let (items, errors, _) = parse(
-            code,
-            InputSrc::Macro(span.clone().into()),
-            &mut self.asm.inputs,
-        );
+        let src = InputSrc::Macro(span.clone().into());
+        let (items, errors, _) = parse(code, src, &mut self.asm.inputs);
         if !errors.is_empty() {
             return Err(UiuaErrorKind::Parse(errors, self.asm.inputs.clone().into())
                 .error()

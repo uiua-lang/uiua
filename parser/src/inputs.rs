@@ -93,7 +93,11 @@ impl Inputs {
                 if let Some(src) = self.macros.get(span) {
                     f(src.value())
                 } else {
-                    f("MACRO")
+                    panic!(
+                        "Macro at {} not found. Available sources are {}",
+                        span,
+                        self.available_srcs()
+                    )
                 }
             }
             InputSrc::Literal(s) => f(s),

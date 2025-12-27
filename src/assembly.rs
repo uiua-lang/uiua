@@ -213,6 +213,10 @@ impl Assembly {
         let (spans_src, rest) = rest.trim().split_once("FILES").ok_or("No files")?;
         let (files_src, rest) = rest
             .trim()
+            .split_once("MACRO EXPANSIONS")
+            .ok_or("No macro expansions")?;
+        let (expansions_src, rest) = rest
+            .trim()
             .split_once("STRING INPUTS")
             .unwrap_or((rest, ""));
         let strings_src = rest.trim();
@@ -262,6 +266,20 @@ impl Assembly {
             files.insert(path, src);
         }
 
+        // Macro expansions
+        let macros = DashMap::new();
+        let mut macro_spans = Vec::new();
+        for line in expansions_src
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+        {
+            let (span, code) = line.split_once(": ").ok_or("No path")?;
+            let span: CodeSpan = serde_json::from_str(span).map_err(|e| e.to_string())?;
+            macro_spans.push(span.clone());
+            let code: EcoString = serde_json::from_str(code).map_err(|e| e.to_string())?;
+            macros.insert(span, code);
+        }
+
         // Spans
         let mut spans = EcoVec::new();
         spans.push(Span::Builtin);
@@ -271,11 +289,14 @@ impl Assembly {
             } else {
                 let (src_start, end) = line.trim().rsplit_once(' ').ok_or("invalid span")?;
                 let (src, start) = src_start.split_once(' ').ok_or("invalid span")?;
-                let src = if let Some(i) = src
-                    .strip_prefix("file")
-                    .and_then(|s| s.parse::<usize>().ok())
+                let src = if let Some(i) =
+                    (src.strip_prefix("file")).and_then(|s| s.parse::<usize>().ok())
                 {
                     InputSrc::File(PathBuf::from(&file_paths[i]).into())
+                } else if let Some(i) =
+                    (src.strip_prefix("macro")).and_then(|s| s.parse::<usize>().ok())
+                {
+                    InputSrc::Macro(macro_spans[i].clone().into())
                 } else {
                     serde_json::from_str(src).map_err(|e| e.to_string())?
                 };
@@ -400,7 +421,7 @@ impl Assembly {
             inputs: Inputs {
                 files,
                 strings,
-                ..Inputs::default()
+                macros,
             },
             dynamic_functions: EcoVec::new(),
             test_assert_count: 0,
@@ -486,10 +507,14 @@ impl Assembly {
         let file_indices: HashMap<PathBuf, usize> = (self.inputs.files.iter().enumerate())
             .map(|(i, entry)| (entry.key().into(), i))
             .collect();
+        let macro_indices: HashMap<CodeSpan, usize> = (self.inputs.macros.iter().enumerate())
+            .map(|(i, entry)| (entry.key().clone(), i))
+            .collect();
         for span in self.spans.iter().skip(1) {
             if let Span::Code(span) = span {
                 let src = match &span.src {
                     InputSrc::File(path) => format!("file{}", file_indices[&**path]),
+                    InputSrc::Macro(span) => format!("macro{}", macro_indices[span]),
                     src => serde_json::to_string(src).unwrap(),
                 };
                 uasm.push_str(&src);
@@ -503,9 +528,13 @@ impl Assembly {
 
         uasm.push_str("\nFILES\n");
         for entry in &self.inputs.files {
-            let key = entry.key();
-            let value = entry.value();
-            uasm.push_str(&format!("{}: {:?}\n", key.display(), value));
+            uasm.push_str(&format!("{}: {:?}\n", entry.key().display(), entry.value()));
+        }
+
+        uasm.push_str("\nMACRO EXPANSIONS\n");
+        for entry in &self.inputs.macros {
+            uasm.push_str(&serde_json::to_string(entry.key()).unwrap());
+            uasm.push_str(&format!(": {:?}\n", entry.value()));
         }
 
         if !self.inputs.strings.is_empty() {

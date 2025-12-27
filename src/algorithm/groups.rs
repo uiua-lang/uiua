@@ -424,7 +424,16 @@ pub fn undo_partition_part1(ops: Ops, env: &mut Uiua) -> UiuaResult {
             Primitive::Partition.format()
         )));
     }
-    let partitioned = env.pop(1)?;
+    let len = env.pop(1)?.as_nat(env, "")?;
+    let partitioned = env.pop(2)?;
+    if partitioned.row_count() != len && sig.under() != (0, 0) {
+        return Err(env.error(format!(
+            "Cannot undo {} because the length of the \
+            partitioned array changed from {} to {len}",
+            Primitive::Partition.format(),
+            partitioned.row_count()
+        )));
+    }
     // Untransform rows
     let mut untransformed = Vec::with_capacity(partitioned.row_count());
     for row in partitioned.into_rows().rev() {
@@ -432,8 +441,7 @@ pub fn undo_partition_part1(ops: Ops, env: &mut Uiua) -> UiuaResult {
         env.exec(f.clone())?;
         untransformed.push(Boxed(env.pop("unpartitioned row")?));
     }
-    untransformed.reverse();
-    env.push(Array::from_iter(untransformed));
+    env.push(Array::from_iter(untransformed.into_iter().rev()));
     Ok(())
 }
 
@@ -664,7 +672,16 @@ pub fn undo_group_part1(ops: Ops, env: &mut Uiua) -> UiuaResult {
             Primitive::Group.format()
         )));
     }
-    let grouped = env.pop(1)?;
+    let len = env.pop(1)?.as_nat(env, "")?;
+    let grouped = env.pop(2)?;
+    if grouped.row_count() != len && sig.under() != (0, 0) {
+        return Err(env.error(format!(
+            "Cannot undo {} because the length of the \
+            grouped array changed from {} to {len}",
+            Primitive::Group.format(),
+            grouped.row_count()
+        )));
+    }
 
     // Untransform rows
     let mut ungrouped_rows = Vec::with_capacity(grouped.row_count());

@@ -1109,9 +1109,15 @@ macro_rules! partition_group {
     ($name:ident, $prim:ident, $impl_prim1:ident, $impl_prim2:ident) => {
         under!($name, input, g_sig, inverse, asm, $prim, span, [f], {
             let (f_before, f_after) = f.under_inverse(g_sig, inverse, asm)?;
-            let before =
-                Node::from_iter([CopyToUnder(2, span), Mod($prim, eco_vec![f_before], span)]);
+            let before = Node::from_iter([
+                CopyToUnder(2, span),
+                Mod($prim, eco_vec![f_before], span),
+                Prim(Dup, span),
+                Prim(Len, span),
+                PushUnder(1, span),
+            ]);
             let after = Node::from_iter([
+                PopUnder(1, span),
                 ImplMod($impl_prim1, eco_vec![f_after], span),
                 Mod(Dip, eco_vec![PopUnder(2, span).sig_node()?], span),
                 ImplPrim(ImplPrimitive::$impl_prim2, span),

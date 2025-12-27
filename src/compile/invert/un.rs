@@ -303,6 +303,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     ),
     &(IndexIn, (Flip, Select)),
     &AntiByPat,
+    &AntiFixMatchRanksPat,
     &AntiMultiKeepPat,
     &AntiEncodings,
     &MatrixDivPat,
@@ -1175,6 +1176,21 @@ inverse!(FixMatchRanksPat, input, asm, {
     };
     Ok((input, inv))
 });
+
+inverse!(
+    (AntiFixMatchRanksPat, input, asm),
+    ref,
+    ImplMod(FixMatchRanks, args, span),
+    {
+        let [f] = args.as_slice() else {
+            return generic();
+        };
+        Ok((
+            input,
+            ImplMod(FixMatchRanks, eco_vec![f.anti_inverse(asm)?], *span),
+        ))
+    }
+);
 
 inverse!(DumpPat, input, _, ref, Mod(Dump, args, span), {
     Ok((input, ImplMod(UnDump, args.clone(), *span)))

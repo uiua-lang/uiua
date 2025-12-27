@@ -2151,6 +2151,12 @@ impl Value {
     pub(crate) fn last_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
         val_as_arr!(self, env, Array::last_max_index).map(Into::into)
     }
+    pub(crate) fn first_sort(self, env: &Uiua) -> UiuaResult<Self> {
+        val_as_arr!(self, |arr| arr.first_sort(env).map(Into::into))
+    }
+    pub(crate) fn last_sort(self, env: &Uiua) -> UiuaResult<Self> {
+        val_as_arr!(self, |arr| arr.last_sort(env).map(Into::into))
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -2229,6 +2235,28 @@ impl<T: ArrayValue> Array<T> {
             .unwrap()
             .0;
         Ok(index as f64)
+    }
+    pub(crate) fn first_sort(self, env: &Uiua) -> UiuaResult<Self> {
+        if self.rank() == 0 || self.row_count() <= 1 || self.is_sorted_up() {
+            return self.first(env);
+        } else if self.is_sorted_down() {
+            return self.last(env);
+        }
+        let index = (0..self.row_count())
+            .min_by_key(|&r| ArrayCmpSlice(self.row_slice(r)))
+            .unwrap();
+        Ok(self.row(index))
+    }
+    pub(crate) fn last_sort(self, env: &Uiua) -> UiuaResult<Self> {
+        if self.rank() == 0 || self.row_count() <= 1 || self.is_sorted_up() {
+            return self.last(env);
+        } else if self.is_sorted_down() {
+            return self.first(env);
+        }
+        let index = (0..self.row_count())
+            .max_by_key(|&r| ArrayCmpSlice(self.row_slice(r)))
+            .unwrap();
+        Ok(self.row(index))
     }
 }
 

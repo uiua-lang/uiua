@@ -270,6 +270,23 @@ impl<T: ArrayValue> Array<T> {
         }
         true
     }
+    /// Check whether the array is sorted down
+    pub fn is_sorted_down(&self) -> bool {
+        if self.meta.is_sorted_down() {
+            return true;
+        }
+        let mut rows = self.row_slices().map(ArrayCmpSlice);
+        let Some(mut prev) = rows.next() else {
+            return true;
+        };
+        for row in rows {
+            if prev < row {
+                return false;
+            }
+            prev = row;
+        }
+        true
+    }
 }
 
 fn sort<T: ArrayValue>(

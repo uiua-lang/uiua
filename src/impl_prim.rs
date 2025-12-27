@@ -218,6 +218,8 @@ impl_primitive!(
     (1, AllSame),
     (1, OneUnique),
     (1, SortedUp),
+    (1, FirstSort),
+    (1, LastSort),
     (1[1], ReduceContent),
     ([1], ReduceConjoinInventory),
     (2(1)[2], ReduceTable),

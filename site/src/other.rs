@@ -239,6 +239,8 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[Last, Rise]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
             <tr><th><Prims prims=[First, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
             <tr><th><Prims prims=[Last, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
+            <tr><th><Prims prims=[First, Sort]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
+            <tr><th><Prims prims=[Last, Sort]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
             <tr><th><Prims prims=[Match, By, Sort]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
             <tr><th><Prims prims=[First, Where]/></th><td>"O(n)"</td><td>"Stop at first non-zero from front"</td></tr>
             <tr><th><Prims prims=[Last, Where]/></th><td>"O(n)"</td><td>"Stop at first non-zero from back"</td></tr>

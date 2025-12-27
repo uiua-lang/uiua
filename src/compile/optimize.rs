@@ -119,6 +119,8 @@ static UNSORTED_OPTS: &[&dyn Optimization] = &[
     &((Dup, Fall, Select), SortDown),
     &((Sort, Reverse), SortDown),
     &((SortDown, Reverse), Sort),
+    &((Sort, First), FirstSort),
+    &((Sort, Last), LastSort),
     &((Pop, Rand), ReplaceRand),
     &((Pop, Pop, Rand), ReplaceRand2),
     &((-1, Pow), (1, Flip, Div)),

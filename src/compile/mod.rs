@@ -1301,7 +1301,7 @@ impl Compiler {
                     })
                 {
                     self.emit_diagnostic(
-                        "Stranded characters should instead be written as a string",
+                        "Characters in an arrayshould instead be written as a string",
                         DiagnosticKind::Advice,
                         word.span.clone(),
                     );

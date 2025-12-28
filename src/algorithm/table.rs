@@ -57,7 +57,7 @@ pub(crate) fn table_impl(f: SigNode, env: &mut Uiua) -> UiuaResult {
         n => {
             let xs = env.pop(1)?;
             let ys = env.pop(2)?;
-            if n == 2 && (xs.rank() <= 1 || ys.rank() <= 1 || xs.rank() == ys.rank()) {
+            if n == 2 && (xs.rank() <= 1 || ys.rank() <= 1 || xs.shape[1..] == ys.shape[1..]) {
                 table_list(f, xs, ys, env)
             } else {
                 if let [
@@ -429,14 +429,14 @@ fn fast_table_list<T: ArrayValue, U: ArrayValue + Default>(
     env: &Uiua,
 ) -> UiuaResult<Array<U>> {
     match (a.rank(), b.rank()) {
-        (0..=1, 0..=1) => fast_table_same(a, b, f, env),
+        (0..=1, 0..=1) => fast_table_list_inner(a, b, f, env),
         (1, _) => fast_table_left(a, b, f, env),
         (_, 1) => fast_table_right(a, b, f, env),
         _ => fast_table_same(a, b, f, env),
     }
 }
 
-fn fast_table_same<T: ArrayValue, U: ArrayValue + Default>(
+fn fast_table_list_inner<T: ArrayValue, U: ArrayValue + Default>(
     a: Array<T>,
     b: Array<T>,
     f: impl Fn(T, T) -> U,
@@ -491,7 +491,7 @@ fn fast_table_right<T: ArrayValue, U: ArrayValue + Default>(
     let mut new_data = eco_vec![U::default(); elem_count];
     let data_slice = new_data.make_mut();
     let mut i = 0;
-    let a_row_len = b.row_len();
+    let a_row_len = a.row_len();
     if a_row_len > 0 {
         for a in a.data.chunks_exact(a_row_len) {
             for b in &b.data {
@@ -502,7 +502,32 @@ fn fast_table_right<T: ArrayValue, U: ArrayValue + Default>(
             }
         }
     }
-    let mut new_shape = a.shape;
+    let mut new_shape = Shape::from([a.row_count(), b.row_count()]);
+    new_shape.extend(a.shape.iter().skip(1).copied());
+    Ok(Array::new(new_shape, new_data))
+}
+
+fn fast_table_same<T: ArrayValue, U: ArrayValue + Default>(
+    a: Array<T>,
+    b: Array<T>,
+    f: impl Fn(T, T) -> U,
+    env: &Uiua,
+) -> UiuaResult<Array<U>> {
+    assert_eq!(a.shape[1..], b.shape[1..]);
+    let elem_count = validate_size::<U>([a.row_count(), b.data.len()], env)?;
+    let mut new_data = eco_vec![U::default(); elem_count];
+    let data_slice = new_data.make_mut();
+    let mut i = 0;
+    let (a_row_len, b_row_len) = (a.row_len(), b.row_len());
+    for a in a.data.chunks_exact(a_row_len) {
+        for b in b.data.chunks_exact(b_row_len) {
+            for (a, b) in a.iter().zip(b) {
+                data_slice[i] = f(a.clone(), b.clone());
+                i += 1;
+            }
+        }
+    }
+    let mut new_shape = Shape::from(a.row_count());
     new_shape.extend_from_slice(&b.shape);
     Ok(Array::new(new_shape, new_data))
 }

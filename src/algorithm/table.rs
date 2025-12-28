@@ -523,11 +523,13 @@ fn fast_table_same<T: ArrayValue, U: ArrayValue + Default>(
     let data_slice = new_data.make_mut();
     let mut i = 0;
     let (a_row_len, b_row_len) = (a.row_len(), b.row_len());
-    for a in a.data.chunks_exact(a_row_len) {
-        for b in b.data.chunks_exact(b_row_len) {
-            for (a, b) in a.iter().zip(b) {
-                data_slice[i] = f(a.clone(), b.clone());
-                i += 1;
+    if a_row_len > 0 && b_row_len > 0 {
+        for a in a.data.chunks_exact(a_row_len) {
+            for b in b.data.chunks_exact(b_row_len) {
+                for (a, b) in a.iter().zip(b) {
+                    data_slice[i] = f(a.clone(), b.clone());
+                    i += 1;
+                }
             }
         }
     }

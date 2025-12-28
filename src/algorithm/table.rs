@@ -430,8 +430,8 @@ fn fast_table_list<T: ArrayValue, U: ArrayValue + Default>(
 ) -> UiuaResult<Array<U>> {
     match (a.rank(), b.rank()) {
         (0..=1, 0..=1) => fast_table_list_inner(a, b, f, env),
-        (1, _) => fast_table_left(a, b, f, env),
-        (_, 1) => fast_table_right(a, b, f, env),
+        (0..=1, _) => fast_table_left(a, b, f, env),
+        (_, 0..=1) => fast_table_right(a, b, f, env),
         _ => fast_table_same(a, b, f, env),
     }
 }
@@ -502,8 +502,12 @@ fn fast_table_right<T: ArrayValue, U: ArrayValue + Default>(
             }
         }
     }
-    let mut new_shape = Shape::from([a.row_count(), b.row_count()]);
-    new_shape.extend(a.shape.iter().skip(1).copied());
+    let new_shape = Shape::from_iter(
+        (a.shape.iter().take(1))
+            .chain(b.shape.iter().take(1))
+            .chain(a.shape.iter().skip(1))
+            .copied(),
+    );
     Ok(Array::new(new_shape, new_data))
 }
 
@@ -527,8 +531,12 @@ fn fast_table_same<T: ArrayValue, U: ArrayValue + Default>(
             }
         }
     }
-    let mut new_shape = Shape::from(a.row_count());
-    new_shape.extend_from_slice(&b.shape);
+    let new_shape = Shape::from_iter(
+        (a.shape.iter().take(1))
+            .chain(b.shape.iter().take(1))
+            .chain(a.shape.iter().skip(1))
+            .copied(),
+    );
     Ok(Array::new(new_shape, new_data))
 }
 

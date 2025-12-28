@@ -21,7 +21,7 @@ use rayon::prelude::*;
 use smallvec::SmallVec;
 
 use crate::{
-    Complex, RNG, Shape, Uiua, UiuaResult,
+    Complex, Primitive, RNG, Shape, Uiua, UiuaResult,
     algorithm::pervade::{self, InfalliblePervasiveFn, bin_pervade_recursive},
     array::*,
     boxed::Boxed,
@@ -1209,11 +1209,20 @@ impl<T: ArrayValue> Array<T> {
                 }
                 [b, rest @ ..] => {
                     if *b != shape[0] {
-                        return Err(env.error(format!(
-                            "Shapes {} and {} are not compatible for rotation",
-                            FormatShape(bysh),
-                            FormatShape(shape)
-                        )));
+                        return Err(env.error(if depth == 0 {
+                            format!(
+                                "Shapes {} and {} are not compatible for rotation",
+                                FormatShape(bysh),
+                                FormatShape(shape)
+                            )
+                        } else {
+                            format!(
+                                "Cannot {} arrays with shapes {} and {}",
+                                Primitive::Rows.format(),
+                                FormatShape(bysh),
+                                FormatShape(shape)
+                            )
+                        }));
                     }
                     let by_row_len = rest.iter().product::<usize>();
                     let shape = &shape[1..];

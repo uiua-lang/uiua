@@ -4,6 +4,9 @@ Y ← comptime(X)
 ⍤⤙≍ X Y
 Z ← comptime(+1Y)
 ⍤⤙≍ Z +1 X
+A ← ⧻Lena
+⍤⤙≍ 512 comptime(A)
+⍤⤙≍ 512 comptime(A)
 
 # Number literals
 ⍤⤙≍ 11 ⧻[

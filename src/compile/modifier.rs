@@ -2068,9 +2068,7 @@ impl Compiler {
 
         // Quote
         if let Some(code) = code {
-            self.code_meta
-                .macro_expansions
-                .insert(full_span, (mac_name.clone(), code.clone()));
+            (self.code_meta.macro_expansions).insert(full_span, (mac_name.clone(), code.clone()));
             self.suppress_diagnostics(|comp| {
                 comp.macro_scope((*mac.names).clone(), None, |comp| {
                     comp.quote(&code, mac_name, &modifier_span)
@@ -2228,7 +2226,8 @@ impl Compiler {
             });
         }
         let root = replace(&mut self.asm.root, sn.node);
-        let res = self.macro_env.run_asm(self.asm.clone());
+        let res = self.macro_env.run_asm(take(&mut self.asm));
+        self.asm = take(&mut self.macro_env.asm);
         let mut stack = self.macro_env.take_stack();
         let values = if let Err(e) = res {
             if self.errors.is_empty() {

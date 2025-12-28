@@ -191,6 +191,7 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prim prim=Reduce/></th> <td>"✔"</td> <td></td>  <td></td> <td>"✔"</td> <td></td></tr>
             <tr><th><Prim prim=Scan/></th> <td>"✔"</td>  <td>"✔"</td> <td>"✔"</td> <td></td> <td></td></tr>
         </table>
+        <p>"Note that these optimizations only apply to "<Prim prim=Table/>" when one or both of the input arrays is rank 0 or 1, "<em>"or"</em>" if they have the same row shapes."</p>
 
         <p>"The pattern "<Prims prims=[Reduce]/><code>"F"</code><Prims prims=[Table]/><code>"G"</code>" is optimized to use much less memory and run much faster than the naive implementation. This only occurs when both functions have signature "<code>"|2.1"</code>". Rather than creating the entire table and then reducing it, each reduced row is generated as it is needed."</p>
         <p>"On top of this, particular combinations of "<code>"F"</code>" and "<code>"G"</code>" are optimized to eliminate all interpreter overhead. All combinations of the following functions are optimized:"</p>

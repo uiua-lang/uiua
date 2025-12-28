@@ -65,6 +65,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Optimize `°ₑ₂` and `°ₑ₁₀` to be both faster and more correct
 - Optimize `˙×⌵` on complex numbers to not do a square root
 - Optimize `⊢⍆` and `⊣⍆` to be O(n)
+- Extend [`table ⊞`](https://uiua.org/docs/table) list optimizations to non-lists
 - Values generated on the same line in code will appear on the same line in output
 - Add `-i/--stdin` flag to `uiua run` and `uiua eval` to pipe stdin to the first argument in a program
 - Add `gh:` prefix for import strings to shorten GitHub imports

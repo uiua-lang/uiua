@@ -38,6 +38,7 @@ pub struct Assembly {
     pub code_macros: Arc<IndexMap<usize, CodeMacro>>,
     /// A list of global bindings
     pub bindings: EcoVec<BindingInfo>,
+    /// Indexable list of spans
     pub spans: EcoVec<Span>,
     /// Inputs used to build the assembly
     pub inputs: Inputs,
@@ -110,23 +111,28 @@ impl<'de> Deserialize<'de> for Function {
 
 /// An index macro
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct IndexMacro {
-    pub(crate) words: Vec<Sp<Word>>,
+pub struct IndexMacro {
+    /// The words of the macro
+    pub words: Vec<Sp<Word>>,
     /// Map of spans of identifiers used in the macro that were in scope
     /// when the macro was declared to their local indices. This is used
     /// for name resolution. It is keyed by span rather than by name so
     /// that names in both the declaration and invocation's scope can
     /// be disambiguated.
-    pub(crate) locals: EcoVec<(CodeSpan, usize)>,
-    pub(crate) sig: Option<Signature>,
-    pub(crate) recursive: bool,
+    pub locals: EcoVec<(CodeSpan, usize)>,
+    /// The provided signature
+    pub sig: Option<Signature>,
+    /// Whether the macro is recursive
+    pub recursive: bool,
 }
 
 /// A code macro
 #[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct CodeMacro {
-    pub(crate) root: SigNode,
-    pub(crate) names: Arc<LocalNames>,
+pub struct CodeMacro {
+    /// The root node of the macro
+    pub root: SigNode,
+    /// The names that are in scope for the macro
+    pub names: Arc<LocalNames>,
 }
 
 impl Assembly {

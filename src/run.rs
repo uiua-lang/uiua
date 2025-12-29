@@ -9,7 +9,7 @@ use std::{
     panic::{AssertUnwindSafe, catch_unwind},
     path::{Path, PathBuf},
     str::FromStr,
-    sync::Arc,
+    sync::{Arc, LazyLock},
     time::Duration,
 };
 
@@ -1519,15 +1519,17 @@ impl Uiua {
         let recv = {
             let (send, recv) = crossbeam_channel::unbounded();
             if _pool {
-                let max_threads = std::thread::available_parallelism()
-                    .map(|p| p.get())
-                    .unwrap_or(1);
+                static MAX_THREADS: LazyLock<usize> = LazyLock::new(|| {
+                    std::thread::available_parallelism()
+                        .map(|p| p.get())
+                        .unwrap_or(1)
+                });
                 let mut pool = self.rt.thread_pool.lock();
                 if pool.is_none() {
-                    *pool = Some(ThreadPool::new(max_threads));
+                    *pool = Some(ThreadPool::new(*MAX_THREADS));
                 }
                 let pool = pool.as_mut().unwrap();
-                while pool.active_count() >= max_threads {
+                while pool.active_count() >= *MAX_THREADS {
                     std::thread::yield_now();
                 }
                 let mut env = make_env();

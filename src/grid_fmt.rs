@@ -153,7 +153,8 @@ impl GridFmt for f64 {
             [1u8, 2, 3, 4, 5, 6, 8, 9, 12].iter().find_map(|&denom| {
                 let num = (positive * denom as f64) / TAU;
                 let rounded = num.round();
-                if rounded <= 100.0 && (num - rounded).abs() <= f64::EPSILON && rounded != 0.0 {
+                if rounded <= 100.0 && (num - rounded).abs() <= 8.0 * f64::EPSILON && rounded != 0.0
+                {
                     Some((rounded, denom, num != rounded))
                 } else {
                     None

@@ -487,6 +487,15 @@ impl VirtualEnv {
                     let [sig] = get_args(args)?;
                     self.handle_sig(sig);
                 }
+                FoldWhile => {
+                    let [f, _g] = get_args(args)?;
+                    if f == (0, 0) {
+                    } else if f.outputs() >= f.args() {
+                        self.handle_args_outputs(f.args(), f.outputs() + 1 - f.args());
+                    } else {
+                        self.handle_sig(f);
+                    }
+                }
                 RepeatWithInverse => {
                     let [f, inv] = get_args_nodes(args)?;
                     if f.sig.inverse() != inv.sig {

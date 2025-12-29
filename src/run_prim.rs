@@ -1435,6 +1435,7 @@ impl ImplPrimitive {
                 path::path_pop(neighbors, is_goal, None, env)?;
             }
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(ops, depth, env)?,
+            ImplPrimitive::FoldWhile => reduce::fold_while(ops, env)?,
             ImplPrimitive::RepeatWithInverse => loops::repeat(ops, true, false, env)?,
             ImplPrimitive::RepeatCountConvergence => loops::repeat(ops, false, true, env)?,
             ImplPrimitive::UnScan => reduce::unscan(ops, env)?,

@@ -252,6 +252,7 @@ impl_primitive!(
     (1, NBits(usize)),
     (1, DeshapeSub(i32)),
     ([1], TableSub(i32)),
+    ([2], FoldWhile),
     (1, ClassifySub(usize)),
     (1, ParseSub(usize)),
     (1, TransposeN(i32)),

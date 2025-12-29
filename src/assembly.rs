@@ -31,14 +31,14 @@ pub struct Assembly {
     /// A list of top-level names
     pub exports: Arc<IndexMap<Ident, usize>>,
     /// Functions
-    pub(crate) functions: EcoVec<Node>,
+    pub functions: EcoVec<Node>,
     /// Unexpanded index macros
-    pub(crate) index_macros: Arc<IndexMap<usize, IndexMacro>>,
+    pub index_macros: Arc<IndexMap<usize, IndexMacro>>,
     /// Unexpanded code macros
-    pub(crate) code_macros: Arc<IndexMap<usize, CodeMacro>>,
+    pub code_macros: Arc<IndexMap<usize, CodeMacro>>,
     /// A list of global bindings
     pub bindings: EcoVec<BindingInfo>,
-    pub(crate) spans: EcoVec<Span>,
+    pub spans: EcoVec<Span>,
     /// Inputs used to build the assembly
     pub inputs: Inputs,
     pub(crate) dynamic_functions: EcoVec<DynFn>,

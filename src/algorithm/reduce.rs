@@ -6,8 +6,8 @@ use std::{convert::identity, mem::take};
 use ecow::{EcoVec, eco_vec};
 
 use crate::{
-    Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Uiua,
-    UiuaResult, Value,
+    Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Signature,
+    Uiua, UiuaResult, Value,
     algorithm::{get_ops, loops::flip, pervade::*, validate_size},
     check::{nodes_clean_sig, nodes_sig},
     cowslice::cowslice,
@@ -1132,10 +1132,17 @@ where
     }
 }
 
-pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
-    crate::profile_function!();
-    let [f] = get_ops(ops, env)?;
-    let sig = f.sig;
+struct FoldState<T> {
+    arrays: Vec<Result<T, Value>>,
+    acc_count: usize,
+    excess_count: usize,
+    row_count: usize,
+}
+
+fn prepare_fold(
+    sig: Signature,
+    env: &mut Uiua,
+) -> UiuaResult<FoldState<impl Iterator<Item = Value> + 'static>> {
     let (iterable_count, acc_count, excess_count) = if sig.args() > sig.outputs() {
         (sig.args() - sig.outputs(), sig.outputs(), 0)
     } else {
@@ -1182,6 +1189,23 @@ pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
     if row_count == 0 && arrays.iter().all(Result::is_err) {
         row_count = 1;
     }
+    Ok(FoldState {
+        arrays,
+        acc_count,
+        excess_count,
+        row_count,
+    })
+}
+
+pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let [f] = get_ops(ops, env)?;
+    let FoldState {
+        mut arrays,
+        excess_count,
+        acc_count,
+        row_count,
+    } = prepare_fold(f.sig, env)?;
     let mut excess_rows = vec![Vec::new(); excess_count];
     for _ in 0..row_count {
         for array in arrays.iter_mut().rev() {
@@ -1189,6 +1213,65 @@ pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
                 Ok(arr) => arr.next().unwrap(),
                 Err(arr) => arr.clone(),
             });
+        }
+        env.exec(f.clone())?;
+        if excess_count > 0 {
+            for (i, row) in env
+                .remove_n(excess_count, acc_count + excess_count)?
+                .enumerate()
+            {
+                excess_rows[i].push(row);
+            }
+        }
+    }
+    // Remove preserved/excess values
+    if excess_count > 0 {
+        _ = env.remove_n(acc_count, acc_count)?;
+    }
+    // Collect excess values
+    for rows in excess_rows.into_iter().rev() {
+        let new_val = Value::from_row_values(rows, env)?;
+        env.push(new_val);
+    }
+    Ok(())
+}
+
+pub fn fold_while(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let [f, g] = get_ops(ops, env)?;
+    let FoldState {
+        mut arrays,
+        excess_count,
+        acc_count,
+        row_count,
+    } = prepare_fold(f.sig, env)?;
+    let mut excess_rows = vec![Vec::new(); excess_count];
+    let mut g_args = Vec::with_capacity(g.sig.args());
+    let iterable_count = arrays.len();
+    for _ in 0..row_count {
+        let mut arr_iter = arrays.iter_mut().map(|array| match array {
+            Ok(arr) => arr.next().unwrap(),
+            Err(arr) => arr.clone(),
+        });
+        for i in 0..g.sig.args() {
+            g_args.push(if let Some(arr) = arr_iter.next() {
+                arr
+            } else {
+                env.copy_nth(i - iterable_count)?
+            })
+        }
+        for arg in g_args.drain(..).rev() {
+            env.push(arg);
+        }
+        env.exec(g.clone())?;
+        let condition = env
+            .pop("condition")?
+            .as_bool(env, "Condition must be a boolean")?;
+        if !condition {
+            break;
+        }
+        for arr in arr_iter.rev() {
+            env.push(arr);
         }
         env.exec(f.clone())?;
         if excess_count > 0 {

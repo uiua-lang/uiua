@@ -1682,8 +1682,9 @@ macro_rules! value_mon_impl {
         $(|$sorted_val:ident, $sorted_flags:ident| $sorted_body:expr)?
     ) => {
         impl Value {
+            #[doc(hidden)]
             #[allow(unused_mut, clippy::redundant_closure_call)]
-            pub(crate) fn $name(mut self, env: &Uiua) -> UiuaResult<Self> {
+            pub fn $name(mut self, env: &Uiua) -> UiuaResult<Self> {
                 let _sorted_flags = self.meta.take_sorted_flags();
                 let mut val: Value = self.keep_meta(|val| Ok(match val {
                     $($(Self::$in_place(mut array) $(if (|$meta: &ArrayMeta| $pred)(&array.meta))* => {
@@ -1909,8 +1910,9 @@ macro_rules! value_dy_impl {
         })?
     ) => {
         impl Value {
+            #[doc(hidden)]
             #[allow(unreachable_patterns, unused_assignments, unused_mut, clippy::wrong_self_convention)]
-            pub(crate) fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+            pub fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 let (mut a, mut b) = optimize_types(self, other);
                 let mut handle_pre: Option<&dyn Fn(&mut Value)> = None;
                 a.match_fill(env);

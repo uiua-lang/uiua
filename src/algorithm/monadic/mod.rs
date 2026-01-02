@@ -1704,7 +1704,7 @@ impl<T: RealArrayValue> Array<T> {
                     Primitive::Bits.format()
                 )));
             }
-            let mut nat = n.abs().round() as u128;
+            let mut nat = n.abs().round_ties_even() as u128;
             if let Some(count) = count {
                 nat &= (1 << count) - 1;
             }

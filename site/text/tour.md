@@ -38,7 +38,7 @@ You don't even have to type the whole name of a built-in function, just enough t
 ran10
 ```
 
-If you're ever not sure what a glyph is called, you can hold ctrl/⌘ and hover over it to see its name.
+If you're ever not sure what a glyph is called, you can hover over it to see its name.
 
 You can ctrl/⌘-click any glyph in the editor to see its documentation.
 

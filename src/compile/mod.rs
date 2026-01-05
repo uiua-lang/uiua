@@ -1301,7 +1301,7 @@ impl Compiler {
                     })
                 {
                     self.emit_diagnostic(
-                        "Characters in an arrayshould instead be written as a string",
+                        "Characters in an array should instead be written as a string",
                         DiagnosticKind::Advice,
                         word.span.clone(),
                     );

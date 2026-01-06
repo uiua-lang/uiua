@@ -48,8 +48,7 @@ This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.75) to be ins
   cargo build    # to build latest debug version of uiua
   cargo run repl # to get uiua repl
   ```
-  `nix develop` is not necessary if you have direnv active, in that case `direnv allow` will activate the flake devshell.
-  
+
   *Note:* If you encounter errors such as rustc or any other package
   version mismatch, it is most likely that flake.lock file needs to be
   updated to pull in updated dependencies for nix shell.

@@ -2219,24 +2219,12 @@ mod server {
                     config.as_slice()
                 {
                     (
-                        match m_binding_sigs {
-                            serde_json::Value::Bool(binding_sigs) => *binding_sigs,
-                            _ => default_binding_sigs,
-                        },
-                        match m_inline_sigs {
-                            serde_json::Value::Bool(inline_sigs) => *inline_sigs,
-                            _ => default_inline_sigs,
-                        },
-                        match m_min_length {
-                            serde_json::Value::Number(min_length) => {
-                                min_length.as_u64().unwrap_or(1) as usize
-                            }
-                            _ => default_min_length,
-                        },
-                        match m_show_values {
-                            serde_json::Value::Bool(show_values) => *show_values,
-                            _ => default_show_values,
-                        },
+                        m_binding_sigs.as_bool().unwrap_or(default_binding_sigs),
+                        m_inline_sigs.as_bool().unwrap_or(default_inline_sigs),
+                        m_min_length
+                            .as_u64()
+                            .map_or(default_min_length, |u| u as usize),
+                        m_show_values.as_bool().unwrap_or(default_show_values),
                     )
                 } else {
                     (

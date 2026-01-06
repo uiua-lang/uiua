@@ -285,9 +285,6 @@ ReprTest! ←^ ˙$"\"_\" repr _" °□⊢
 ⍤⤙≍ ⟜(⁅₁₀⍜fft∘) ℂ0[1 2 3 5]
 ⍤⤙≍ ⟜(⁅₁₀⍜°fft∘) ℂ0°△3_3
 
-# Gen
-⍤⤙≍ gen [] 1 0.2791433297717809
-
 # Experimental!
 
 # Occurrences

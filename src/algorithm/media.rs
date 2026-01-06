@@ -927,7 +927,7 @@ fn encode_gif_impl<C, E>(
     frame_rate = frame_rate.max(MIN_FRAME_RATE).abs();
     let mut t = 0;
 
-    let mut encoder = if first_frame.rank() == 2 {
+    let mut encoder = if first_frame.rank() == 2 && first_frame.type_id() == f64::TYPE_ID {
         let first_frame = value_to_image(&first_frame)
             .map_err(|e| error(ctx, e))?
             .to_luma8();

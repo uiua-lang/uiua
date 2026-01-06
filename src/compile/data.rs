@@ -328,7 +328,11 @@ impl Compiler {
         }
 
         // Make field names
-        let span = self.add_span(data.init_span.clone());
+        let span = self.add_span(if let Some(name) = &data.name {
+            name.span.clone()
+        } else {
+            data.init_span.clone()
+        });
         let local = LocalIndex {
             index: self.next_global,
             public: true,

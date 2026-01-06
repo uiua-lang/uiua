@@ -603,8 +603,7 @@ impl Formatter<'_> {
                     // line.push_str(&" ".repeat(spaces));
                     line.extend(repeat_n(' ', spaces));
                     line.extend(repeat_n('#', octos));
-                    if (!comment.starts_with(' ') || octos > 1)
-                        && self.config.comment_space_after_hash
+                    if self.config.comment_space_after_hash
                         // Shebang
                         && !comment.starts_with('!')
                     {
@@ -1177,14 +1176,7 @@ impl Formatter<'_> {
                     .trim()
                     .is_empty();
                 if beginning_of_line || !self.config.align_comments {
-                    self.output.push('#');
-                    if !comment.starts_with(' ')
-                        && self.config.comment_space_after_hash
-                        && !comment.starts_with('!')
-                    {
-                        self.output.push(' ');
-                    }
-                    self.output.push_str(comment);
+                    self.format_comment(&word.span.clone().sp(comment.clone()));
                 } else {
                     let line_number = self.output.split('\n').count();
                     self.end_of_line_comments
@@ -1463,7 +1455,14 @@ impl Formatter<'_> {
         }
     }
     fn format_comment(&mut self, comment: &Sp<EcoString>) {
-        self.push(&comment.span, &format!("# {}", comment.value));
+        self.push(
+            &comment.span,
+            &if self.config.comment_space_after_hash {
+                format!("# {}", comment.value)
+            } else {
+                format!("#{}", comment.value)
+            },
+        );
     }
     fn eval_output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {
         let values = self.output_comments.get_or_insert_with(|| {
@@ -2054,6 +2053,8 @@ F ← (
   # cool
   # wow
 }
+#   spaces before
+∘ #   spaces before
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

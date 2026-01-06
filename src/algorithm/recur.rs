@@ -183,6 +183,9 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
                             scalar_child: false,
                         });
                     }
+                } else if stack.is_empty() {
+                    env.push(value);
+                    break;
                 }
             }
         }

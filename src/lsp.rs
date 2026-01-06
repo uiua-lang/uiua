@@ -2210,22 +2210,30 @@ mod server {
                 )
                 .await
                 .unwrap_or_default();
-            let (binding_sigs, inline_sigs, min_length, show_values) = if let [
-                serde_json::Value::Bool(binding_sigs),
-                serde_json::Value::Bool(inline_sigs),
-                serde_json::Value::Number(min_length),
-                serde_json::Value::Bool(show_values),
-            ] = config.as_slice()
-            {
-                (
-                    *binding_sigs,
-                    *inline_sigs,
-                    min_length.as_u64().unwrap_or(1) as usize,
-                    *show_values,
-                )
-            } else {
-                (true, true, 3, true)
-            };
+            let default_binding_sigs = true;
+            let default_inline_sigs = true;
+            let default_min_length = 3;
+            let default_show_values = true;
+            let (binding_sigs, inline_sigs, min_length, show_values) =
+                if let [m_binding_sigs, m_inline_sigs, m_min_length, m_show_values] =
+                    config.as_slice()
+                {
+                    (
+                        m_binding_sigs.as_bool().unwrap_or(default_binding_sigs),
+                        m_inline_sigs.as_bool().unwrap_or(default_inline_sigs),
+                        m_min_length
+                            .as_u64()
+                            .map_or(default_min_length, |u| u as usize),
+                        m_show_values.as_bool().unwrap_or(default_show_values),
+                    )
+                } else {
+                    (
+                        default_binding_sigs,
+                        default_inline_sigs,
+                        default_min_length,
+                        default_show_values,
+                    )
+                };
             let path = uri_path(&params.text_document.uri);
             // Signature hints
             let mut hints = Vec::new();

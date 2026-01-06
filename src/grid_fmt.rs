@@ -965,16 +965,18 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                             && params.max_boxed_rank != 1))
                 {
                     // Disambiguate fixed arrays
-                    let mut fix_amnt = self.shape.iter().take_while(|&&d| d == 1).count();
-                    if T::compress_list_grid() && self.shape.last() == Some(&1) {
-                        fix_amnt = fix_amnt.saturating_sub(1);
-                    }
-                    for row in &mut grid {
-                        row.extend(repeat_n(' ', fix_amnt));
-                        row.rotate_right(fix_amnt);
-                    }
-                    for i in 0..fix_amnt {
-                        grid[0][i] = Primitive::Fix.glyph().unwrap();
+                    if !requires_summary {
+                        let mut fix_amnt = self.shape.iter().take_while(|&&d| d == 1).count();
+                        if T::compress_list_grid() && self.shape.last() == Some(&1) {
+                            fix_amnt = fix_amnt.saturating_sub(1);
+                        }
+                        for row in &mut grid {
+                            row.extend(repeat_n(' ', fix_amnt));
+                            row.rotate_right(fix_amnt);
+                        }
+                        for i in 0..fix_amnt {
+                            grid[0][i] = Primitive::Fix.glyph().unwrap();
+                        }
                     }
                 }
             }

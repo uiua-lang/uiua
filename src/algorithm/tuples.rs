@@ -375,6 +375,11 @@ impl<T: ArrayValue> Array<T> {
         Ok(match k {
             1 => Array::new(shape, self.data.clone()),
             _ if !same && n < k => Array::new(shape, []),
+            _ if !same && n == k && rev => {
+                let mut arr = self.clone();
+                arr.reverse();
+                Array::new(shape, arr.data)
+            }
             _ if !same && n == k => Array::new(shape, self.data.clone()),
             _ if !same && n == k + 1 => {
                 let mut data = EcoVec::with_capacity(elem_count);

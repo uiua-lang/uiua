@@ -3322,7 +3322,7 @@ primitive!(
     ///
     /// The first argument is a string representing the compression algorithm.
     /// The second argument is the bytes to compress.
-    /// Currently supported algorithms are `gzip` and `zlib`.
+    /// Currently supported algorithms are `gzip`, `zlib`, and `deflate`.
     /// ex: compress "gzip" [1 2 3 4]
     /// For compressing text, use [utf₈] first.
     /// ex: compress "gzip" utf₈ "Uiua 😊"

@@ -163,7 +163,7 @@ splits a string on the first `-` and returns the two parts
 ```
 
 ```challenge
-matches the argument against string prefixes `a`, `bc`, or `def` and adds `1`, `2`, or `3` to the second argument respectively, or adds 10` otherwise
+matches the argument against string prefixes `a`, `bc`, or `def` and adds `1`, `2`, or `3` to the second argument respectively, or adds `10` otherwise
 ⍣(+1 ◌°$"a_"|+2 ◌°$"bc_"|+3 ◌°$"def_"|+10 ◌)
 
 "definite" 5

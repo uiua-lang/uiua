@@ -87,7 +87,7 @@ The code macro's function must return either a string or an array of boxed strin
 Format strings can help a lot in generating new code. For example, if we wanted to make a version of [both]() that calls its function on an arbitrary number of sets of values, we could use [reshape]() and [bracket]().
 
 ```uiua
-All‼ ←^ $"⊓(_)" /$"_|_" ↯⋕ °{⊙∘}
+All‼ ←^ $"⊓(_)" /$"_|_" ↯⋕ □₂
 [All‼3+ 1 2 3 4 5 6]
 ```
 

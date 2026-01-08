@@ -105,10 +105,8 @@ impl GridFmt for u8 {
             min = min.min(elem);
             max = max.max(elem);
         }
-        let mut mean = elems[0] as f64;
-        for (i, &elem) in elems.iter().enumerate().skip(1) {
-            mean += (elem as f64 - mean) / (i + 1) as f64;
-        }
+        let sum: u64 = elems.iter().map(|&e| e as u64).sum();
+        let mean = (sum as f64) / (elems.len() as f64);
         if min == max {
             format!("all {}", min.grid_string(false))
         } else {

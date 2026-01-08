@@ -88,7 +88,7 @@ If the handler function has 0 arguments, then it is simply called. This is a nic
 ⍣⋕0 "dog"
 ```
 
-If the handler function has 1 argument, then the original argument it passed to it.
+If the handler function has 1 argument, then the original argument is passed to it.
 
 ```uiua
 ⍣⋕∘ "5"

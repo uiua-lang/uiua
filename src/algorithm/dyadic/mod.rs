@@ -8,14 +8,16 @@ use core::f64;
 use std::{
     borrow::Cow,
     cmp::Ordering,
-    hash::{DefaultHasher, Hash, Hasher},
+    hash::{Hash, Hasher},
     iter::{once, repeat_n},
     mem::{replace, swap, take},
 };
 
 use bytemuck::allocation::cast_vec;
 use ecow::{EcoVec, eco_vec};
+use highway::HighwayHasher;
 use rand::prelude::*;
+use rand::rngs::Xoshiro256PlusPlus;
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -2139,10 +2141,10 @@ impl Value {
     }
     /// Generate randomly seeded arrays
     pub fn seeded_gen(&self, seed: &Self, env: &Uiua) -> UiuaResult<Value> {
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = HighwayHasher::default();
         seed.hash(&mut hasher);
         let seed = hasher.finish();
-        let mut rng = SmallRng::seed_from_u64(seed);
+        let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
 
         const SHAPE_REQ: &str = "Shape must be an array of natural \
             numbers with at most rank 2";

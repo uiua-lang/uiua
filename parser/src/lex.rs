@@ -1661,6 +1661,7 @@ impl<'a> Lexer<'a> {
                 "_" => char::MAX.to_string(),
                 "W" => WILDCARD_CHAR.to_string(),
                 "Z" => '\u{200d}'.to_string(),
+                "p" => std::path::MAIN_SEPARATOR.to_string(),
                 "x" => {
                     let mut code = 0;
                     for _ in 0..2 {

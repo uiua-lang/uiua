@@ -5,9 +5,10 @@ use std::{
     cell::RefCell,
     collections::HashMap,
     fmt,
-    hash::{DefaultHasher, Hash, Hasher},
+    hash::{Hash, Hasher},
     slice,
 };
+use rapidhash::quality::RapidHasher;
 
 use serde::*;
 
@@ -47,7 +48,7 @@ fn nodes_all_sigs(nodes: &[Node]) -> Result<Signature, SigCheckError> {
     thread_local! {
         static CACHE: RefCell<AllSigsCache> = RefCell::new(AllSigsCache::new());
     }
-    let mut hasher = DefaultHasher::new();
+    let mut hasher = RapidHasher::new(1);
     nodes.hash(&mut hasher);
     let hash = hasher.finish();
     CACHE.with(|cache| {

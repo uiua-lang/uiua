@@ -170,9 +170,11 @@ These bindings will also get indented by the formatter if they immediately follo
 
 You can also re-bind the module itself.
 
+```uiua
 Ex ~ "example.ua"
 LocalEx ← Ex
 LocalEx~Square 7
+```
 
 ## Visibility
 

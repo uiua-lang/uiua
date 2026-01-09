@@ -2362,9 +2362,8 @@ impl Hash for AestheticHash<&Value> {
         match self.0 {
             Value::Num(arr) => {
                 arr.hash(hasher);
-                for n in &arr.data {
-                    n.is_sign_positive().hash(hasher);
-                }
+                let signs_as_bytes: Vec<u8> = arr.data.iter().map(|n| u8::from(n.is_sign_positive())).collect();
+                hasher.write(&signs_as_bytes);
             }
             Value::Box(arr) => {
                 if let Some(keys) = &arr.meta.map_keys {

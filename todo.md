@@ -14,14 +14,14 @@ Features that are planned to be implemented in the future.
 
 - Stackless execution trees?
 - Step debugging
-- Better compiler IR sytem
+- Better compiler IR system
   - Make the stack only exist at compile time?
 - Dead code elimination
   - Eliminate unused anonymous functions
 - Dynamic modules
   - A system by which the public interface of a module can be specified
   - Instances of a dynamic module can be loaded at runtime
-  - Enabled things from simple config files to game mods
+  - Enables things from simple config files to game mods
 - System APIs
   - File metadata
     - `&fmeta` to get metadata about a file

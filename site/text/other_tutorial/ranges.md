@@ -1,6 +1,6 @@
 # Ranges
 
-Working with regular sequences of numbers is a common task in programming. Many languages handle this with with a `for` loop, but Uiua uses the same construct it uses for most things: arrays.
+Working with regular sequences of numbers is a common task in programming. Many languages handle this with a `for` loop, but Uiua uses the same construct it uses for most things: arrays.
 
 ## [`range`]()
 

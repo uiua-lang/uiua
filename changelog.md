@@ -271,10 +271,10 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.16.0).
 - Remove errors when a line is too long
 - The formatter will now allow putting multiple function pack branches on a single line
 - Optimizations
-  - [`stencil ⧈`](https://uiua.org/docs/stencil) is now optimized when used with with monadic functions that are optimized for [`rows ≡`](https://uiua.org/docs/rows)
+  - [`stencil ⧈`](https://uiua.org/docs/stencil) is now optimized when used with monadic functions that are optimized for [`rows ≡`](https://uiua.org/docs/rows)
   - Add sortedness flags to arrays to allow short-circuiting some operations
   - Optimize [`tuples ⧅`](https://uiua.org/docs/tuples) with `⋅⋅1` and `⋅⧻`
-  - The main sorting algorith for [`sort ⍆`](https://uiua.org/docs/sort) is now implemented in the interpreter source code rather than a library
+  - The main sorting algorithm for [`sort ⍆`](https://uiua.org/docs/sort) is now implemented in the interpreter source code rather than a library
     - This allows it to sort arrays in place without allocating memory
     - Observed performance improvements of ~2.5x
   - [`sort ⍆`](https://uiua.org/docs/sort) on lists of bytes now uses counting sort, for massive performance improvements

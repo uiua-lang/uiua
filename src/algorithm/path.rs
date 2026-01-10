@@ -315,7 +315,7 @@ fn path_impl(
                         parents.clear();
                         // 2. Update the known cost
                         full_cost.insert(nei, from_curr_nei_cost);
-                        // 3. Add to to see
+                        // 3. Add to see
                         to_see.push(NodeCost {
                             cost: from_curr_nei_cost + env.heuristic(&backing[nei])?,
                             node: nei,

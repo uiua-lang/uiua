@@ -1077,7 +1077,7 @@ primitive!(
     /// ex:    ⊚ [0 1 0 0 2 0 1]
     /// ex: ˜▽°⊏ [0 1 0 0 2 0 1]
     ///
-    /// [un][where] will convert the indices back into a a list of counts
+    /// [un][where] will convert the indices back into a list of counts
     /// ex: °⊚ [0 0 0 1 1 2 2 2 2 2 3]
     /// The indices need not be in order
     /// ex: °⊚ [0 1 2 2 0 3 2 1 2 0 2]
@@ -1664,7 +1664,7 @@ primitive!(
     (2, Keep, DyadicArray, ("keep", '▽')),
     /// Find the occurrences of one array in another
     ///
-    /// A `1` marker will be placed the the start of each occurrence of the first array in the second array.
+    /// A `1` marker will be placed at the start of each occurrence of the first array in the second array.
     /// ex: ⌕ 5 [1 8 5 2 3 5 4 5 6 7]
     /// ex: ⌕ "ab" "abracadabra"
     /// If the searched-in array is multidimensional, the `1` marker will be placed in the minimum index "top left" corner.
@@ -1871,7 +1871,7 @@ primitive!(
     /// ex: \-   1_2_3_4
     /// ex: \˜- 1_2_3_4
     /// [scan] is often used to do something with masks.
-    /// [scan]ning with [minimum] or [maximum] will propogate `0`s or `1`s.
+    /// [scan]ning with [minimum] or [maximum] will propagate `0`s or `1`s.
     /// ex: ▽\↧⊸≠@  "Hello World!"
     /// [scan]ning with [add] and then using [group] can split by a delimiter while keeping the delimiter.
     /// ex: ⊕□\+⊸=@     "Everyday man's on the block"

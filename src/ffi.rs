@@ -601,7 +601,7 @@ mod enabled {
                 .iter()
                 .map(FfiType::align)
                 .max()
-                .expect("Struct must have at least on field");
+                .expect("Struct must have at least one field");
 
             let mut offsets = Vec::new();
             let mut size = 0;

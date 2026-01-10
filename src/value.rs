@@ -1443,7 +1443,7 @@ impl Value {
             Value::Box(arr) => Cow::Borrowed(arr),
         }
     }
-    /// Propogate a value's label accross an operation
+    /// Propagate a value's label across an operation
     pub fn keep_label(mut self, f: impl FnOnce(Self) -> UiuaResult<Self>) -> UiuaResult<Self> {
         let label = self.meta.take_label();
         let mut result = f(self)?;
@@ -1452,7 +1452,7 @@ impl Value {
         }
         Ok(result)
     }
-    /// Propogate values' labels accross an operation
+    /// Propagate values' labels across an operation
     pub fn keep_labels(
         mut self,
         mut other: Self,
@@ -1472,7 +1472,7 @@ impl Value {
         }
         Ok(result)
     }
-    /// Propogate a value's map keys accross an operation
+    /// Propagate a value's map keys across an operation
     pub fn keep_map_key(mut self, f: impl FnOnce(Self) -> UiuaResult<Self>) -> UiuaResult<Self> {
         let keys = self.meta.take_map_keys();
         let mut result = f(self)?;
@@ -1481,7 +1481,7 @@ impl Value {
         }
         Ok(result)
     }
-    /// Propogate values' map keys accross an operation
+    /// Propagate values' map keys across an operation
     pub fn keep_map_keys(
         mut self,
         mut other: Self,
@@ -1495,11 +1495,11 @@ impl Value {
         }
         Ok(result)
     }
-    /// Propogate a value's uncorruptable metadata accross an operation
+    /// Propagate a value's uncorruptable metadata across an operation
     pub fn keep_meta(self, f: impl FnOnce(Self) -> UiuaResult<Self>) -> UiuaResult<Self> {
         self.keep_label(|val| val.keep_map_key(f))
     }
-    /// Propogate values' uncorruptable metadata accross an operation
+    /// Propagate values' uncorruptable metadata across an operation
     pub fn keep_metas(
         self,
         other: Self,

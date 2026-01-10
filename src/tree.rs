@@ -13,6 +13,7 @@ use std::{
 
 use ecow::{EcoString, EcoVec, eco_vec};
 use indexmap::IndexSet;
+use rapidhash::quality::RapidHasher;
 use serde::*;
 
 use crate::{
@@ -870,7 +871,7 @@ impl Node {
             static CACHE: RefCell<HashMap<(u64, Purity), bool>> = RefCell::default();
         }
 
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = RapidHasher::new(1);
         self.hash(&mut hasher);
         let hash = hasher.finish();
         CACHE.with(|cache| {

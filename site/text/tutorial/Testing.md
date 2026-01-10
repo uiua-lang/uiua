@@ -8,7 +8,7 @@ The language has a couple built-in mechanisms for streamlining testing.
 
 The [assert](/docs/assert) function will return an error when its second argument is anything other than `1`.
 
-While this can be used in some forms of [control flow](/tutorial/Control Flow), it is also useful for testing.
+While this can be used in some forms of [control flow](</tutorial/Control Flow>), it is also useful for testing.
 
 When testing is enabled (as it is in all editors on this website), a line with [assert](/docs/assert) at the beginning will be interpreted as a test.
 

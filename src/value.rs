@@ -2362,7 +2362,11 @@ impl Hash for AestheticHash<&Value> {
         match self.0 {
             Value::Num(arr) => {
                 arr.hash(hasher);
-                let signs_as_bytes: Vec<u8> = arr.data.iter().map(|n| u8::from(n.is_sign_positive())).collect();
+                let signs_as_bytes: Vec<u8> = arr
+                    .data
+                    .iter()
+                    .map(|n| u8::from(n.is_sign_positive()))
+                    .collect();
                 hasher.write(&signs_as_bytes);
             }
             Value::Box(arr) => {

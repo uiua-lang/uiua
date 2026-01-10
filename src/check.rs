@@ -1,5 +1,6 @@
 //! Signature checker implementation
 
+use rapidhash::quality::RapidHasher;
 use std::{
     array,
     cell::RefCell,
@@ -8,7 +9,6 @@ use std::{
     hash::{Hash, Hasher},
     slice,
 };
-use rapidhash::quality::RapidHasher;
 
 use serde::*;
 

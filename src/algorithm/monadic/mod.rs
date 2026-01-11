@@ -1740,9 +1740,10 @@ impl<T: RealArrayValue> Array<T> {
                 let mut n = n;
                 for j in 0..bit_count.min(127) {
                     let index = i * bit_count + j;
-                    new_data_slice[index] = u8::from(n & 1 != 0) as f64;
-                    if is_neg {
-                        new_data_slice[index] = -new_data_slice[index];
+                    let bit = u8::from(n & 1 != 0) as f64;
+                    let signed_bit = if is_neg { -bit } else { bit };
+                    unsafe {
+                        *new_data_slice.get_unchecked_mut(index) = signed_bit;
                     }
                     n >>= 1;
                 }
@@ -1757,7 +1758,9 @@ impl<T: RealArrayValue> Array<T> {
                 let mut n = n;
                 for j in 0..bit_count.min(127) {
                     let index = i * bit_count + j;
-                    new_data_slice[index] = u8::from(n & 1 != 0);
+                    unsafe {
+                        *new_data_slice.get_unchecked_mut(index) = u8::from(n & 1 != 0);
+                    }
                     n >>= 1;
                 }
             }

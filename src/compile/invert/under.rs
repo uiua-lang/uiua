@@ -448,7 +448,11 @@ under!(BothPat, input, g_sig, inverse, asm, {
     let rest_before_sig = rest_before.sig()?;
     let rest_after_sig = rest_after.sig()?;
     let other_sig = rest_after_sig.compose(g_sig.compose(rest_before_sig));
-    let n_reduction = other_sig.args().saturating_sub(other_sig.outputs());
+    let n_reduction = if other_sig.outputs() == 0 {
+        0
+    } else {
+        other_sig.args().saturating_sub(other_sig.outputs())
+    };
     // Make before
     let mut before = val.unwrap_or_default();
     before.push(if !inverse || n_reduction == 0 {

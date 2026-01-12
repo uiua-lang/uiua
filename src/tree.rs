@@ -1,7 +1,7 @@
 use std::{
     borrow::Borrow,
     cell::RefCell,
-    collections::{HashMap},
+    collections::HashMap,
     fmt,
     hash::{Hash, Hasher},
     iter::once,

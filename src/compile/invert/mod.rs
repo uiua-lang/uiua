@@ -1,6 +1,7 @@
 mod un;
 mod under;
 
+use rapidhash::quality::RapidHasher;
 use std::{
     boxed,
     cell::RefCell,
@@ -9,7 +10,6 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
 };
-use rapidhash::quality::RapidHasher;
 
 use ecow::eco_vec;
 use serde::*;

@@ -315,6 +315,9 @@ li {
 #header-uiua {
     text-decoration: none;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 #subtitle {

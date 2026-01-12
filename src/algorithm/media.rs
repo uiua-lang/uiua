@@ -808,7 +808,7 @@ fn dither(mut img: image::RgbaImage, width: u32, height: u32) -> (Vec<u8>, bool)
     let mut buffer = vec![0; (width * height) as usize];
     let mut has_transparent = false;
     for y in 0..height {
-        // TODO: Maybe use a scaline buffer for the adjusted colors on this line
+        // TODO: Maybe use a scanline buffer for the adjusted colors on this line
         for x in 0..width {
             let (index, err) = nearest_color(img[(x, y)]);
             has_transparent |= index == 0;

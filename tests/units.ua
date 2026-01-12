@@ -115,7 +115,7 @@ A ← ⧻Lena
 ⍤⤙≍ ℂ0 η ∠ ℂ0 1 0
 ⍤⤙≍ ℂ0 η ∠ ℂ0 1 ℂ0 0
 
-# Bytes integrity - ensure the the boolean flag is properly set and unset
+# Bytes integrity - ensure the boolean flag is properly set and unset
 ⍤⤙≍ ¯4 ¬5
 ⍤⤙≍ 1 ¬0
 ⍤⤙≍ 0 ¬1

@@ -1,7 +1,7 @@
 use std::{
     collections::{BTreeMap, HashMap},
     fmt,
-    hash::{DefaultHasher, Hash, Hasher},
+    hash::{Hash, Hasher},
     ops::{Index, IndexMut},
     path::PathBuf,
     str::FromStr,
@@ -11,6 +11,7 @@ use std::{
 use dashmap::DashMap;
 use ecow::{EcoString, EcoVec, eco_vec};
 use indexmap::IndexMap;
+use rapidhash::quality::RapidHasher;
 use serde::*;
 
 use crate::{
@@ -143,7 +144,7 @@ impl Assembly {
     /// Add a function to the assembly
     pub fn add_function(&mut self, id: FunctionId, sig: Signature, mut root: Node) -> Function {
         root.optimize_early();
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = RapidHasher::new(1);
         root.hash(&mut hasher);
         let hash = hasher.finish();
         self.functions.push(root);

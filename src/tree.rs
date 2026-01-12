@@ -1,7 +1,7 @@
 use std::{
     borrow::Borrow,
     cell::RefCell,
-    collections::{HashMap, hash_map::DefaultHasher},
+    collections::HashMap,
     fmt,
     hash::{Hash, Hasher},
     iter::once,
@@ -13,6 +13,7 @@ use std::{
 
 use ecow::{EcoString, EcoVec, eco_vec};
 use indexmap::IndexSet;
+use rapidhash::quality::RapidHasher;
 use serde::*;
 
 use crate::{
@@ -870,7 +871,7 @@ impl Node {
             static CACHE: RefCell<HashMap<(u64, Purity), bool>> = RefCell::default();
         }
 
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = RapidHasher::new(1);
         self.hash(&mut hasher);
         let hash = hasher.finish();
         CACHE.with(|cache| {
@@ -1159,10 +1160,10 @@ macro_rules! node {
         impl PartialEq for Node {
             #[allow(unused_variables)]
             fn eq(&self, other: &Self) -> bool {
-                let mut hasher = DefaultHasher::new();
+                let mut hasher = RapidHasher::new(1);
                 self.hash(&mut hasher);
                 let hash = hasher.finish();
-                let mut other_hasher = DefaultHasher::new();
+                let mut other_hasher = RapidHasher::new(1);
                 other.hash(&mut other_hasher);
                 let other_hash = other_hasher.finish();
                 hash == other_hash

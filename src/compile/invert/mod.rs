@@ -1,13 +1,14 @@
 mod un;
 mod under;
 
+use rapidhash::quality::RapidHasher;
 use std::{
     boxed,
     cell::RefCell,
     collections::HashMap,
     error::Error,
     fmt,
-    hash::{DefaultHasher, Hasher},
+    hash::{Hash, Hasher},
 };
 
 use ecow::eco_vec;

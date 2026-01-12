@@ -132,6 +132,9 @@ fn impl_prim_mon2_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMon2F
 }
 
 pub(crate) fn f_mon_fast_fn(node: &Node, env: &Uiua) -> Option<(ValueMonFn, usize)> {
+    if let Node::Prim(Primitive::Identity, span) = node {
+        return Some((spanned_mon_fn(*span, |v, _, _| Ok(v)), 0));
+    }
     thread_local! {
         static CACHE: RefCell<HashMap<Node, Option<(ValueMonFn, usize)>>>
         = RefCell::new(HashMap::new());

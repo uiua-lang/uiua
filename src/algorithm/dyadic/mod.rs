@@ -1334,9 +1334,9 @@ fn fill_shift<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: &[T
 }
 
 impl Value {
-    pub(crate) fn undo_windows(&self, from: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn undo_windows(&self, from: Self, sided: bool, env: &Uiua) -> UiuaResult<Self> {
         let size_array = self.as_integer_array(env, "Window size must be an integer array")?;
-        if !matches!(&*size_array.shape, [1, _]) {
+        if !sided && !matches!(&*size_array.shape, [1, _]) {
             return Err(env.error("Only chunking windows can be undone"));
         }
         Ok(val_as_arr!(from, |a| a

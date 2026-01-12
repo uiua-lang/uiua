@@ -184,7 +184,7 @@ impl_primitive!(
     (3, UndoKeep),
     (3, UndoRerank),
     (2, UndoReshape),
-    (2, UndoWindows),
+    (2, UndoWindows(bool)),
     (2, UndoWhere),
     (2, AntiOrient),
     (3, UndoAntiOrient),

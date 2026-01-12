@@ -911,7 +911,12 @@ impl ImplPrimitive {
                 val.undo_reshape(orig_shape, env)?;
                 Ok(val)
             })?,
-            ImplPrimitive::UndoWindows => env.dyadic_ro_env(Value::undo_windows)?,
+            &ImplPrimitive::UndoWindows(sided) => {
+                let n = env.pop(1)?;
+                let val = env.pop(1)?;
+                let val = n.undo_windows(val, sided, env)?;
+                env.push(val);
+            }
             ImplPrimitive::UndoFirst => {
                 let into = env.pop(1)?;
                 let from = env.pop(2)?;

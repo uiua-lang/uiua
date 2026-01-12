@@ -582,6 +582,10 @@ F ← ⍜⊢¯ ⊏⊙"nubtqphsoe" -@0 °⋕
 ⍤⤙≍ {[10 11 12 13] 2} {°⟜˜⊏} [10 11 12 13] 12
 ⍤⤙≍ 2 °(˜⊏[1 2 3 4]) 3
 
+# Path separator escape (only in $"format string")
+⍤⤙≍ ¤pathsep $"\p"
+⍤⤙≍ 2 ⧻$$ \p
+
 # ThisFile
 ⍤⤙≍ $"tests_units.ua" pathsep ThisFile
 ⍤⤙≍ ThisFile /◇⊂ {ThisFileDir pathsep ThisFileName}

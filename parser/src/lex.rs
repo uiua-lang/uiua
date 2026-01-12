@@ -1315,7 +1315,12 @@ impl<'a> Lexer<'a> {
                         continue;
                     }
                     // Single-line strings
-                    let inner = self.parse_string_contents(start, Some('"'), EscapeMode::All);
+                    let escape_mode = if first_dollar {
+                        EscapeMode::Format
+                    } else {
+                        EscapeMode::All
+                    };
+                    let inner = self.parse_string_contents(start, Some('"'), escape_mode);
                     if !self.next_char_exact("\"") {
                         self.errors.push(
                             self.end_span(start)
@@ -1661,7 +1666,9 @@ impl<'a> Lexer<'a> {
                 "_" => char::MAX.to_string(),
                 "W" => WILDCARD_CHAR.to_string(),
                 "Z" => '\u{200d}'.to_string(),
-                "p" => std::path::MAIN_SEPARATOR.to_string(),
+                "p" if escape_mode == EscapeMode::Format => {
+                    std::path::MAIN_SEPARATOR.to_string()
+                }
                 "x" => {
                     let mut code = 0;
                     for _ in 0..2 {
@@ -1706,6 +1713,7 @@ impl<'a> Lexer<'a> {
             }
         } else if c == "\\"
             && (escape_mode == EscapeMode::All
+                || escape_mode == EscapeMode::Format
                 || escape_mode == EscapeMode::UnderscoreOnly && self.peek_char() == Some("_"))
         {
             *escaped = true;
@@ -1751,6 +1759,7 @@ pub(crate) fn subscript(s: &str) -> Option<(Subscript, &str)> {
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum EscapeMode {
     All,
+    Format,
     None,
     UnderscoreOnly,
 }

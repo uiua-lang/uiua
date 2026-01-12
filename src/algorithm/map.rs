@@ -68,6 +68,8 @@ impl<T: ArrayValue> Array<T> {
             len: 0,
             fix_stack: Vec::new(),
         };
+        // 2x space to reduce collision odds
+        map_keys.grow_to(keys.row_count() * 2);
         let mut to_remove = Vec::new();
         for (i, key) in keys.into_rows().enumerate() {
             let replaced = map_keys.insert(key, i, ctx)?;

@@ -35,7 +35,7 @@ pub fn un_inverse(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
     thread_local! {
         static CACHE: RefCell<HashMap<u64, InversionResult<Node>>> = Default::default();
     }
-    let mut hasher = DefaultHasher::new();
+    let mut hasher = RapidHasher::new(1);
     for node in input {
         node.hash_with_span(&mut hasher);
     }
@@ -97,7 +97,7 @@ fn anti_inverse(input: &[Node], asm: &Assembly, for_un: bool) -> InversionResult
     thread_local! {
         static CACHE: RefCell<HashMap<u64, InversionResult<Node>>> = Default::default();
     }
-    let mut hasher = DefaultHasher::new();
+    let mut hasher = RapidHasher::new(1);
     for node in input {
         node.hash_with_span(&mut hasher);
     }

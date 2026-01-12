@@ -7,8 +7,9 @@ use std::{
     collections::HashMap,
     error::Error,
     fmt,
-    hash::{DefaultHasher, Hasher},
+    hash::{Hash, Hasher},
 };
+use rapidhash::quality::RapidHasher;
 
 use ecow::eco_vec;
 use serde::*;

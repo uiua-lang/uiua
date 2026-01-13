@@ -2307,13 +2307,19 @@ impl Array<f64> {
             let mut n = n as u64; // note: u64, not usize
 
             let mut divisors = eco_vec![];
-            let mut d = 2;
+
+            while n.is_multiple_of(2) {
+                n /= 2;
+                divisors.push(2.0f64);
+            }
+
+            let mut d = 3;
             while d * d <= n {
                 while n.is_multiple_of(d) {
                     divisors.push(d as f64);
                     n /= d;
                 }
-                d += 1;
+                d += 2;
             }
             if n != 1 {
                 divisors.push(n as f64)

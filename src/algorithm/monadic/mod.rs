@@ -2299,24 +2299,22 @@ impl Array<f64> {
 
         if self.data.len() == 1 {
             let n = self.data[0];
-            dbg!(n);
             check_number(n, env, u64::MAX as f64)?;
 
             // u64 instead of usize for scalar case
             let mut n = n as u64;
             let upper_limit = (n as f64).sqrt().ceil() as u64;
 
-            let mut divisors = vec![];
-            if n % 2 == 0 {
-                divisors.push(2)
-            }
-            for i in (3..=upper_limit).step_by(2) {
-                if n % i as u64 == 0 {
-                    divisors.push(i)
+            let mut divisors = eco_vec![];
+            let mut d = 2;
+            while n > 1 {
+                while n % d == 0 {
+                    divisors.push(d);
+                    n /= d
                 }
+                d += 1;
             }
 
-            dbg!(&divisors);
             let mut data = eco_vec![];
             for p in &divisors {
                 while n % p == 0 {
@@ -2325,7 +2323,13 @@ impl Array<f64> {
                 }
             }
 
-            Ok(Array::new(vec![data.len()], data))
+            Ok(Array::new(
+                vec![divisors.len()],
+                divisors
+                    .into_iter()
+                    .map(|x| x as f64)
+                    .collect::<EcoVec<_>>(),
+            ))
         } else {
             let mut max = 0;
             // Validate nums and calc max

@@ -2297,13 +2297,12 @@ impl Array<f64> {
             Ok(())
         }
 
-        if self.data.len() == 1 {
+        if self.shape.len() == 0 {
+            // When scalar, allow reaching u64 instead of usize
             let n = self.data[0];
             check_number(n, env, u64::MAX as f64)?;
 
-            // u64 instead of usize for scalar case
-            let mut n = n as u64;
-            let upper_limit = (n as f64).sqrt().ceil() as u64;
+            let mut n = n as u64; // note: u64, not usize
 
             let mut divisors = eco_vec![];
             let mut d = 2;
@@ -2313,14 +2312,6 @@ impl Array<f64> {
                     n /= d
                 }
                 d += 1;
-            }
-
-            let mut data = eco_vec![];
-            for p in &divisors {
-                while n % p == 0 {
-                    n /= p;
-                    data.push(*p as f64);
-                }
             }
 
             Ok(Array::new(

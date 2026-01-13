@@ -2330,24 +2330,6 @@ impl Array<f64> {
                 check_number(n, env, u32::MAX as f64)?;
                 max = max.max(n as usize);
             }
-
-            if self.shape.elements() == 1 {
-                let mut n = self.data[0] as usize;
-                let mut primes = EcoVec::new();
-                for d in 2..=self.data[0].sqrt().ceil() as usize {
-                    while n.is_multiple_of(d) {
-                        primes.push(d as f64);
-                        n /= d;
-                    }
-                }
-                if n > 1 {
-                    primes.push(n as f64);
-                }
-                let mut shape = self.shape.clone();
-                shape.prepend(primes.len());
-                return Ok(Array::new(shape, primes));
-            }
-
             validate_size::<usize>([max, 2], env)?;
 
             // Sieve of Eratosthenes

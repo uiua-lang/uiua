@@ -2275,7 +2275,7 @@ impl Value {
 
 impl Array<f64> {
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        fn check_number(x: f64, env: &Uiua) -> UiuaResult<()> {
+        fn check_number(x: f64, env: &Uiua, upper_bound: f64) -> UiuaResult<()> {
             if x <= 0.0 {
                 return Err(env.error(format!(
                     "Cannot get primes of non-positive number {}",
@@ -2288,7 +2288,7 @@ impl Array<f64> {
                     x.grid_string(true)
                 )));
             }
-            if x > usize::MAX as f64 {
+            if x > upper_bound {
                 return Err(env.error(format!(
                     "Cannot get primes of {} because it is too large",
                     x.grid_string(true)
@@ -2299,24 +2299,29 @@ impl Array<f64> {
 
         if self.data.len() == 1 {
             let n = self.data[0];
-            check_number(n, env)?;
+            dbg!(n);
+            check_number(n, env, u64::MAX as f64)?;
 
             // u64 instead of usize for scalar case
             let mut n = n as u64;
+            let upper_limit = (n as f64).sqrt().ceil() as u64;
 
-            let mut primes = vec![2, 3];
-            for i in (5..n).step_by(6) {
-                if n % i == 0 {
-                    primes.push(i)
+            let mut divisors = vec![];
+            if n % 2 == 0 {
+                divisors.push(2)
+            }
+            for i in (3..=upper_limit).step_by(2) {
+                if n % i as u64 == 0 {
+                    divisors.push(i)
                 }
             }
 
+            dbg!(&divisors);
             let mut data = eco_vec![];
-
-            for p in primes {
+            for p in &divisors {
                 while n % p == 0 {
                     n /= p;
-                    data.push(p as f64);
+                    data.push(*p as f64);
                 }
             }
 
@@ -2325,7 +2330,7 @@ impl Array<f64> {
             let mut max = 0;
             // Validate nums and calc max
             for &n in &self.data {
-                check_number(n, env)?;
+                check_number(n, env, u32::MAX as f64)?;
                 max = max.max(n as usize);
             }
 

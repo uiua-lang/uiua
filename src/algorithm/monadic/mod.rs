@@ -2297,7 +2297,7 @@ impl Array<f64> {
             Ok(())
         }
 
-        if self.shape.len().is_empty() {
+        if self.shape.is_empty() {
             // When scalar, allow reaching u64 instead of usize
             let n = self.data[0];
             check_number(n, env, u64::MAX as f64)?;

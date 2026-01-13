@@ -2308,24 +2308,18 @@ impl Array<f64> {
             let mut d = 2;
             while d * d <= n {
                 while n.is_multiple_of(d) {
-                    divisors.push(d);
+                    divisors.push(d as f64);
                     n /= d;
                 }
                 d += 1;
             }
             if n != 1 {
-                divisors.push(n)
+                divisors.push(n as f64)
             }
 
             let mut shape = self.shape.clone();
             shape.insert(0, divisors.len());
-            Ok(Array::new(
-                shape,
-                divisors
-                    .into_iter()
-                    .map(|x| x as f64)
-                    .collect::<EcoVec<_>>(),
-            ))
+            Ok(Array::new(shape, divisors))
         } else {
             let mut max = 0;
             // Validate nums and calc max

@@ -2275,99 +2275,130 @@ impl Value {
 
 impl Array<f64> {
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        let mut max = 0;
-        // Validate nums and calc max
-        for &n in &self.data {
-            if n <= 0.0 {
+        fn check_number(x: f64, env: &Uiua) -> UiuaResult<()> {
+            if x <= 0.0 {
                 return Err(env.error(format!(
                     "Cannot get primes of non-positive number {}",
-                    n.grid_string(true)
+                    x.grid_string(true)
                 )));
             }
-            if n.fract() != 0.0 {
+            if x.fract() != 0.0 {
                 return Err(env.error(format!(
                     "Cannot get primes of non-integer number {}",
-                    n.grid_string(true)
+                    x.grid_string(true)
                 )));
             }
-            if n > usize::MAX as f64 {
+            if x > usize::MAX as f64 {
                 return Err(env.error(format!(
                     "Cannot get primes of {} because it is too large",
-                    n.grid_string(true)
+                    x.grid_string(true)
                 )));
             }
-            max = max.max(n as usize);
+            Ok(())
         }
 
-        if self.shape.elements() == 1 {
-            let mut n = self.data[0] as usize;
-            let mut primes = EcoVec::new();
-            for d in 2..=self.data[0].sqrt().ceil() as usize {
-                while n.is_multiple_of(d) {
-                    primes.push(d as f64);
-                    n /= d;
+        if self.data.len() == 1 {
+            let n = self.data[0];
+            check_number(n, env)?;
+
+            // u64 instead of usize for scalar case
+            let mut n = n as u64;
+
+            let mut primes = vec![2, 3];
+            for i in (5..n).step_by(6) {
+                if n % i == 0 {
+                    primes.push(i)
                 }
             }
-            if n > 1 {
-                primes.push(n as f64);
+
+            let mut data = eco_vec![];
+
+            for p in primes {
+                while n % p == 0 {
+                    n /= p;
+                    data.push(p as f64);
+                }
             }
-            let mut shape = self.shape.clone();
-            shape.prepend(primes.len());
-            return Ok(Array::new(shape, primes));
-        }
 
-        validate_size::<usize>([max, 2], env)?;
+            Ok(Array::new(vec![data.len()], data))
+        } else {
+            let mut max = 0;
+            // Validate nums and calc max
+            for &n in &self.data {
+                check_number(n, env)?;
+                max = max.max(n as usize);
+            }
 
-        // Sieve of Eratosthenes
-        let mut spf = vec![1; max + 1];
-        for i in 2..=max {
-            spf[i] = i;
-        }
-        for i in 2..=max {
-            if spf[i] == i {
-                let (ii, overflow) = i.overflowing_mul(i);
-                if !overflow && ii <= max {
-                    for j in (ii..=max).step_by(i) {
-                        if spf[j] == j {
-                            spf[j] = i;
+            if self.shape.elements() == 1 {
+                let mut n = self.data[0] as usize;
+                let mut primes = EcoVec::new();
+                for d in 2..=self.data[0].sqrt().ceil() as usize {
+                    while n.is_multiple_of(d) {
+                        primes.push(d as f64);
+                        n /= d;
+                    }
+                }
+                if n > 1 {
+                    primes.push(n as f64);
+                }
+                let mut shape = self.shape.clone();
+                shape.prepend(primes.len());
+                return Ok(Array::new(shape, primes));
+            }
+
+            validate_size::<usize>([max, 2], env)?;
+
+            // Sieve of Eratosthenes
+            let mut spf = vec![1; max + 1];
+            for i in 2..=max {
+                spf[i] = i;
+            }
+            for i in 2..=max {
+                if spf[i] == i {
+                    let (ii, overflow) = i.overflowing_mul(i);
+                    if !overflow && ii <= max {
+                        for j in (ii..=max).step_by(i) {
+                            if spf[j] == j {
+                                spf[j] = i;
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // Factorize
-        let mut lengths: Vec<usize> = Vec::with_capacity(self.data.len());
-        let mut factors: Vec<usize> = Vec::with_capacity(self.data.len());
-        for &n in &self.data {
-            let mut m = n as usize;
-            if m == 1 {
-                lengths.push(0);
-                continue;
+            // Factorize
+            let mut lengths: Vec<usize> = Vec::with_capacity(self.data.len());
+            let mut factors: Vec<usize> = Vec::with_capacity(self.data.len());
+            for &n in &self.data {
+                let mut m = n as usize;
+                if m == 1 {
+                    lengths.push(0);
+                    continue;
+                }
+                let mut len = 0;
+                while m != 1 {
+                    factors.push(spf[m]);
+                    m /= spf[m];
+                    len += 1;
+                }
+                lengths.push(len);
             }
-            let mut len = 0;
-            while m != 1 {
-                factors.push(spf[m]);
-                m /= spf[m];
-                len += 1;
-            }
-            lengths.push(len);
-        }
 
-        // Pad and create array
-        let longest = lengths.iter().max().copied().unwrap_or(0);
-        let mut data = eco_vec![1.0; self.data.len() * longest];
-        let data_slice = data.make_mut();
-        let mut k = 0;
-        for (i, len) in lengths.into_iter().enumerate() {
-            for j in (longest - len)..longest {
-                data_slice[j * self.data.len() + i] = factors[k] as f64;
-                k += 1;
+            // Pad and create array
+            let longest = lengths.iter().max().copied().unwrap_or(0);
+            let mut data = eco_vec![1.0; self.data.len() * longest];
+            let data_slice = data.make_mut();
+            let mut k = 0;
+            for (i, len) in lengths.into_iter().enumerate() {
+                for j in (longest - len)..longest {
+                    data_slice[j * self.data.len() + i] = factors[k] as f64;
+                    k += 1;
+                }
             }
+            let mut shape = self.shape.clone();
+            shape.prepend(longest);
+            Ok(Array::new(shape, data))
         }
-        let mut shape = self.shape.clone();
-        shape.prepend(longest);
-        Ok(Array::new(shape, data))
     }
 }
 

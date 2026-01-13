@@ -2306,12 +2306,22 @@ impl Array<f64> {
 
             let mut divisors = eco_vec![];
             let mut d = 2;
-            while n > 1 {
+            while d * d <= n {
                 while n.is_multiple_of(d) {
                     divisors.push(d);
                     n /= d
                 }
                 d += 1;
+            }
+            if (n as f64).sqrt().fract() != 0.0
+                && let Some(d) = divisors.last()
+            {
+                divisors.push(n / d);
+            }
+            let i = 0;
+            while i < divisors.len() - 1 {
+                let d = divisors[i];
+                divisors.push(n / d);
             }
 
             let mut shape = self.shape.clone();

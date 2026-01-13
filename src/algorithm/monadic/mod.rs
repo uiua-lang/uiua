@@ -818,7 +818,9 @@ impl Value {
         let mut val: Value = if elems < 256 {
             Array::new(shape, EcoVec::from_iter((0..elems).map(|i| i as u8))).into()
         } else {
-            Array::new(shape, EcoVec::from_iter((0..elems).map(|i| i as f64))).into()
+            let mut v = EcoVec::new();
+            unsafe { v.extend_from_trusted((0..elems).map(|i| i as f64)) }
+            Array::new(shape, v).into()
         };
         let first_max = ishape.first().copied().unwrap_or(0);
         for (i, s) in ishape.into_iter().enumerate() {

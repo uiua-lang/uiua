@@ -2297,8 +2297,8 @@ impl Array<f64> {
             Ok(())
         }
 
-        if self.shape.is_empty() {
-            // When scalar, allow reaching u64 instead of usize
+        if self.data.len() == 1 {
+            // When "scalar" (i.e. length-one), allow reaching u64 instead of usize
             let n = self.data[0];
             check_number(n, env, u64::MAX as f64)?;
 
@@ -2314,8 +2314,10 @@ impl Array<f64> {
                 d += 1;
             }
 
+            let mut shape = self.shape.clone();
+            shape.insert(0, divisors.len());
             Ok(Array::new(
-                vec![divisors.len()],
+                shape,
                 divisors
                     .into_iter()
                     .map(|x| x as f64)

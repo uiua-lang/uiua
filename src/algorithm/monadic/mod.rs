@@ -2297,7 +2297,7 @@ impl Array<f64> {
             Ok(())
         }
 
-        if self.shape.len() == 0 {
+        if self.shape.len().is_empty() {
             // When scalar, allow reaching u64 instead of usize
             let n = self.data[0];
             check_number(n, env, u64::MAX as f64)?;
@@ -2307,7 +2307,7 @@ impl Array<f64> {
             let mut divisors = eco_vec![];
             let mut d = 2;
             while n > 1 {
-                while n % d == 0 {
+                while n.is_multiple_of(d) {
                     divisors.push(d);
                     n /= d
                 }

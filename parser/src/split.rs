@@ -61,6 +61,8 @@ pub enum PrimComponent {
     Num(NumComponent),
     /// Subscript 0
     Sub0,
+    /// Subscript 1
+    Sub1,
     /// Subscript 2
     Sub2,
     /// (
@@ -88,6 +90,7 @@ impl PrimComponent {
             PrimComponent::Prim(prim) => prim.name(),
             PrimComponent::Num(num) => num.name(),
             PrimComponent::Sub0 => "₀",
+            PrimComponent::Sub1 => "₁",
             PrimComponent::Sub2 => "₂",
             PrimComponent::OpenParen => "(",
             PrimComponent::CloseParen => ")",
@@ -259,6 +262,8 @@ impl Primitive {
             alias!((d, Fork), (u, Reach), (n, Both), (e, Join)),
             alias!((kor, Keep), (k, PrimComponent::Sub2)),
             alias!((eac, Rows), (h, PrimComponent::Sub0)),
+            alias!((in, Add), (c, PrimComponent::Sub1)),
+            alias!((de, Sub), (c, PrimComponent::Sub1)),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

@@ -1378,6 +1378,7 @@ impl<'a> Lexer<'a> {
                                 PrimComponent::Prim(prim) => Glyph(prim),
                                 PrimComponent::Num(num) => Ident(num.name().into()),
                                 PrimComponent::Sub0 => Subscr(0.into()),
+                                PrimComponent::Sub1 => Subscr(1.into()),
                                 PrimComponent::Sub2 => Subscr(2.into()),
                                 PrimComponent::OpenParen => OpenParen.into(),
                                 PrimComponent::CloseParen => CloseParen.into(),

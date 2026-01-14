@@ -1733,7 +1733,6 @@ fn end_loc(s: &str) -> Loc {
     let mut line = 0;
     let mut col = 0;
     let mut char_pos = 0;
-    let mut byte_pos = 0;
     for c in s.chars() {
         if c == '\n' {
             line += 1;
@@ -1742,8 +1741,8 @@ fn end_loc(s: &str) -> Loc {
             col += 1;
         }
         char_pos += 1;
-        byte_pos += c.len_utf8() as u32;
     }
+    let byte_pos = s.len() as u32;
     Loc {
         line,
         col,

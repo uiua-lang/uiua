@@ -15,6 +15,7 @@ use std::{
 use InlineMacro;
 use ecow::EcoString;
 use paste::paste;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     CodeSpan, Compiler, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode, Primitive, RunMode,
@@ -546,7 +547,9 @@ impl Formatter<'_> {
                                 _ => false,
                             })
                             .map(|item| match item {
-                                Item::Binding(binding) => binding.name.value.chars().count(),
+                                Item::Binding(binding) => {
+                                    binding.name.value.graphemes(true).count()
+                                }
                                 _ => 0,
                             })
                             .max()
@@ -580,7 +583,7 @@ impl Formatter<'_> {
                 .collect();
             for (line_number, octos, comment) in self.end_of_line_comments.drain(..) {
                 let line = &lines[line_number - 1];
-                let line_len = line.chars().count();
+                let line_len = line.graphemes(true).count();
                 if let Some((max, group)) = groups.last_mut() {
                     if line_number - group.last().unwrap().0 == 1 {
                         *max = (*max).max(line_len);
@@ -598,8 +601,8 @@ impl Formatter<'_> {
                     // Add comment back to line
                     let line = &mut lines[line_number - 1];
                     let start_byte_len = line.len();
-                    let start_char_len = line.chars().count();
-                    let spaces = (max + 1).saturating_sub(line.chars().count());
+                    let start_char_len = line.graphemes(true).count();
+                    let spaces = (max + 1).saturating_sub(line.graphemes(true).count());
                     // line.push_str(&" ".repeat(spaces));
                     line.extend(repeat_n(' ', spaces));
                     line.extend(repeat_n('#', octos));
@@ -612,7 +615,7 @@ impl Formatter<'_> {
                     line.push_str(&comment);
                     // Update subsequent mappings
                     let byte_len_diff = line.len() - start_byte_len - 1;
-                    let char_len_diff = line.chars().count() - start_char_len - 1;
+                    let char_len_diff = line.graphemes(true).count() - start_char_len - 1;
                     for (before, after) in self.glyph_map.iter_mut() {
                         if before.start.line as usize > line_number {
                             after.0.byte_pos += byte_len_diff as u32;
@@ -736,7 +739,7 @@ impl Formatter<'_> {
                 }
 
                 self.output.push_str(&binding.name.value);
-                let len = binding.name.value.chars().count();
+                let len = binding.name.value.graphemes(true).count();
                 if len < max_name_len {
                     for _ in 0..max_name_len - len {
                         self.output.push(' ');
@@ -1044,7 +1047,7 @@ impl Formatter<'_> {
                 } else {
                     (self.output.split('\n').next_back())
                         .unwrap_or_default()
-                        .chars()
+                        .graphemes(true)
                         .count()
                 };
                 for (i, line) in lines.iter().enumerate() {
@@ -1074,7 +1077,7 @@ impl Formatter<'_> {
                 } else {
                     (self.output.split('\n').next_back())
                         .unwrap_or_default()
-                        .chars()
+                        .graphemes(true)
                         .count()
                 };
                 for (i, line) in lines.iter().enumerate() {
@@ -1204,7 +1207,7 @@ impl Formatter<'_> {
                 } else {
                     (self.output.split('\n').next_back())
                         .unwrap_or_default()
-                        .chars()
+                        .graphemes(true)
                         .count()
                 };
                 // Build grid
@@ -1234,7 +1237,7 @@ impl Formatter<'_> {
                             .map(|row| {
                                 row[i]
                                     .iter()
-                                    .map(|line| line.chars().count())
+                                    .map(|line| line.graphemes(true).count())
                                     .max()
                                     .unwrap_or_default()
                             })
@@ -1246,7 +1249,7 @@ impl Formatter<'_> {
                     for (i, cell) in row.iter_mut().enumerate() {
                         let width = max_widths[i];
                         for line in cell {
-                            for _ in line.chars().count()..=width {
+                            for _ in line.graphemes(true).count()..=width {
                                 line.push(' ');
                             }
                         }
@@ -1261,7 +1264,7 @@ impl Formatter<'_> {
                             let j = top_row + j;
                             let prepad = i + max_widths.iter().take(i).sum::<usize>();
                             for line in &mut lines {
-                                for _ in line.chars().count()..prepad {
+                                for _ in line.graphemes(true).count()..prepad {
                                     line.push(' ');
                                 }
                             }
@@ -1269,7 +1272,7 @@ impl Formatter<'_> {
                                 lines.push(str::repeat(" ", prepad));
                             }
                             lines[j].push_str(line);
-                            if lines[j].chars().count() > 200 {
+                            if lines[j].graphemes(true).count() > 200 {
                                 lines[j] = lines[j].chars().take(199).collect();
                                 lines[j].push('…');
                             }
@@ -1396,7 +1399,7 @@ impl Formatter<'_> {
         let start_line_pos = if self.output.ends_with('\n') {
             0
         } else {
-            curr_line.chars().count()
+            curr_line.graphemes(true).count()
         };
         let depth_indent = self.config.multiline_indent * depth;
         let starts_indented = start_line_pos > depth_indent;
@@ -1491,7 +1494,8 @@ impl Formatter<'_> {
         values.remove(&index).unwrap_or_default()
     }
     fn func(&mut self, func: &Func, depth: usize) {
-        let start_indent = (self.output.rsplit('\n').next()).map_or(0, |line| line.chars().count());
+        let start_indent =
+            (self.output.rsplit('\n').next()).map_or(0, |line| line.graphemes(true).count());
 
         let double_nest = self.output.ends_with(['(', '{', '[']);
 
@@ -1536,7 +1540,8 @@ impl Formatter<'_> {
             self.push(down_span, "↓");
         }
 
-        let start_indent = (self.output.lines().last()).map_or(0, |line| line.chars().count());
+        let start_indent =
+            (self.output.lines().last()).map_or(0, |line| line.graphemes(true).count());
         let indent = self.config.multiline_indent * depth;
 
         self.output.push(match pack.is_array {
@@ -2063,7 +2068,12 @@ F ← (
             .chars()
             .zip(input.chars())
             .position(|(a, b)| a != b)
-            .unwrap_or_else(|| formatted.chars().count().min(input.chars().count()))
+            .unwrap_or_else(|| {
+                formatted
+                    .graphemes(true)
+                    .count()
+                    .min(input.graphemes(true).count())
+            })
             .saturating_sub(N / 2);
         panic!(
             "Formatting non-idempotent:\n\

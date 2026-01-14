@@ -1897,6 +1897,15 @@ fn native() -> &'static dyn SysBackend {
 
 #[test]
 #[cfg(test)]
+fn formatter_edge_case_newline_free() {
+    let input = "id";
+    let output = "∘\n";
+    let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
+    assert_eq!(formatted, output);
+}
+
+#[test]
+#[cfg(test)]
 fn formatter_idempotence() {
     let input = "\
 ⊃(|)

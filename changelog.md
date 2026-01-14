@@ -66,6 +66,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Optimize `˙×⌵` on complex numbers to not do a square root
 - Optimize `⊢⍆` and `⊣⍆` to be O(n)
 - Add `inc` and `dec` aliases
+- Add `bw` alias for [`backward ˜`](https://uiua.org/docs/backward)
 - Extend [`table ⊞`](https://uiua.org/docs/table) list optimizations to non-lists
 - Values generated on the same line in code will appear on the same line in output
 - Add `-i/--stdin` flag to `uiua run` and `uiua eval` to pipe stdin to the first argument in a program

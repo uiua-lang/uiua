@@ -2233,6 +2233,13 @@ impl Compiler {
                         self.primitive(Mul, span.clone()),
                         self.primitive(Floor, span),
                     ]),
+                    Json => match n {
+                        5 => Node::ImplPrim(ImplPrimitive::Json5, self.add_span(span)),
+                        _ => {
+                            self.add_error(span.clone(), "Only json and json₅ are supported");
+                            self.primitive(Json, span)
+                        }
+                    },
                     Utf8 => match n {
                         8 => self.primitive(Utf8, span),
                         16 => Node::ImplPrim(ImplPrimitive::Utf16, self.add_span(span)),

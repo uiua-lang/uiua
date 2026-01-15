@@ -163,7 +163,7 @@ image = {version = "0.25", optional = true, default-features = false, features =
   "qoi",
   "webp",
 ]}
-json5 = {version = "0.4.1", optional = true}
+json5 = {version = "1.3.0", optional = true}
 libffi = {version = "4", optional = true}
 libloading = {version = "0.8.3", optional = true}
 nokhwa = {version = "0.10.9", optional = true, features = ["input-native"]}

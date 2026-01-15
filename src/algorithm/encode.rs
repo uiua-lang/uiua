@@ -17,6 +17,17 @@ impl Value {
         let json = self.to_json_value(env)?;
         serde_json::to_string(&json).map_err(|e| env.error(e))
     }
+    pub(crate) fn to_json5_string(&self, env: &Uiua) -> UiuaResult<String> {
+        #[cfg(not(feature = "json5"))]
+        {
+            self.to_json_string(env)
+        }
+        #[cfg(feature = "json5")]
+        {
+            let json = self.to_json_value(env)?;
+            json5::to_string(&json).map_err(|e| env.error(e))
+        }
+    }
     pub(crate) fn to_json_value(&self, env: &Uiua) -> UiuaResult<serde_json::Value> {
         Ok(match self {
             Value::Num(n) if n.rank() == 0 => {

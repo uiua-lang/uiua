@@ -666,7 +666,7 @@
     "glyph": "∵",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "IteratingModifier",
+    "class": "MappingModifier",
     "description": "Apply a function to each element of an array or arrays",
     "deprecated": true
   },
@@ -766,7 +766,7 @@
     "glyph": "∧",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "AggregatingModifier",
+    "class": "IteratingModifier",
     "description": "Apply a function to aggregate arrays"
   },
   "fork": {
@@ -833,7 +833,7 @@
     "glyph": "⊕",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "AggregatingModifier",
+    "class": "MappingModifier",
     "description": "Group elements of an array into buckets by index"
   },
   "has": {
@@ -901,7 +901,7 @@
     "glyph": "⍚",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "IteratingModifier",
+    "class": "MappingModifier",
     "description": "Apply a function to each unboxed row of an array and re-box the results"
   },
   "join": {
@@ -1145,7 +1145,7 @@
     "glyph": "⊜",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "AggregatingModifier",
+    "class": "MappingModifier",
     "description": "Group sequential sections of an array"
   },
   "path": {
@@ -1254,7 +1254,7 @@
     "glyph": "/",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "AggregatingModifier",
+    "class": "IteratingModifier",
     "description": "Apply a reducing function to an array"
   },
   "regex": {
@@ -1329,7 +1329,7 @@
     "glyph": "≡",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "IteratingModifier",
+    "class": "MappingModifier",
     "description": "Apply a function to each row of an array or arrays"
   },
   "scan": {
@@ -1337,7 +1337,7 @@
     "args": 1,
     "outputs": 1,
     "modifier_args": 1,
-    "class": "AggregatingModifier",
+    "class": "IteratingModifier",
     "description": "Reduce, but keep intermediate values"
   },
   "select": {
@@ -1406,7 +1406,7 @@
     "args": 2,
     "outputs": 1,
     "modifier_args": 1,
-    "class": "IteratingModifier",
+    "class": "MappingModifier",
     "description": "Call a function on windows of an array"
   },
   "subtract": {
@@ -1427,7 +1427,7 @@
     "glyph": "⊞",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "IteratingModifier",
+    "class": "MappingModifier",
     "description": "Apply a function to each combination of rows of some arrays"
   },
   "take": {
@@ -1474,7 +1474,7 @@
     "glyph": "⧅",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "IteratingModifier",
+    "class": "MappingModifier",
     "description": "Get permutations or combinations of an array"
   },
   "type": {

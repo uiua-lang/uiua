@@ -623,6 +623,7 @@ impl ImplPrimitive {
                 env.push(keys);
             }
             ImplPrimitive::UnWhere => env.monadic_ref_env(Value::unwhere)?,
+            ImplPrimitive::Json5 => env.monadic_ref_env(Value::to_json5_string)?,
             ImplPrimitive::Utf16 => env.monadic_ref_env(Value::utf16)?,
             ImplPrimitive::UnUtf8 => env.monadic_ref_env(Value::unutf8)?,
             ImplPrimitive::UnUtf16 => env.monadic_ref_env(Value::unutf16)?,
@@ -741,8 +742,8 @@ impl ImplPrimitive {
             }
             ImplPrimitive::UnSort => env.monadic_mut(Value::shuffle)?,
             ImplPrimitive::UnHsv => env.monadic_env(Value::hsv_to_rgb)?,
-            ImplPrimitive::UnJson => {
-                let json = env.pop(1)?.as_string(env, "JSON expects a string")?;
+            ImplPrimitive::UnJson | ImplPrimitive::UnJson5 => {
+                let json = env.pop(1)?.as_string(env, "json expects a string")?;
                 let val = Value::from_json_string(&json, env)?;
                 env.push(val);
             }

@@ -2,7 +2,7 @@
 
 Uiua is not yet stable.
 
-## 0.18.0 - 202?-??-??
+## 0.18.0 - 2026-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - **Breaking Change** - Subscripted [`range ⇡`](https://uiua.org/docs/range) now makes the range inclusive up to the maximum while still changing the start, rather than offsetting the entire range
@@ -33,6 +33,7 @@ This version is not yet released. If you are reading this on the website, then t
   - `>=` for [`greater or equal ≤`](<https://uiua.org/docs/greater or equal>) is now `ge`
 - Allow `≁` for private imports/exports from modules
 - Stabilize [`un °`](https://uiua.org/docs/un) [`under ⍜`](https://uiua.org/docs/under)
+- Add [`json`](https://uiua.org/docs/json)`₅` for serializing to pretty JSON5
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
 - Add modifier version of [`gif`](https://uiua.org/docs/gif), written as `gif!`

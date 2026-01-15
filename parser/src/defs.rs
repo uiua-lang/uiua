@@ -3236,6 +3236,10 @@ primitive!(
     /// This means that [infinity] is converted to `NaN` in a round-trip.
     /// ex: json [1 ¯5 NaN ∞]
     /// ex: °json "[1,null,-3,null]"
+    ///
+    /// [json]`₅` will serialize to JSON5 rather than just JSON, omitting `"`s and adding trailing `,`s where possible. This is nice if you want the output to be more human-readable.
+    /// ex: &p json  map {"foo" "bar"} {"hello" [1 2 3]}
+    /// ex: &p json₅ map {"foo" "bar"} {"hello" [1 2 3]}
     (1, Json, Encoding, "json"),
     /// Encode an array into a CSV string
     ///

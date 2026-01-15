@@ -1427,6 +1427,8 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         UnBox => Prim(Box, span),
         UnHsv => Prim(Hsv, span),
         UnJson => Prim(Json, span),
+        Json5 => ImplPrim(UnJson5, span),
+        UnJson5 => ImplPrim(Json5, span),
         UnBinary => Prim(Binary, span),
         UnCompress => Prim(Compress, span),
         UnCsv => Prim(Csv, span),

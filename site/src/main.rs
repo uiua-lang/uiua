@@ -287,7 +287,7 @@ pub fn MainPage() -> impl IntoView {
             <div>
                 <A href="/install">"Installation"</A>
                 <A href="/docs">"Documentation"</A>
-                <A href="/tour">"Tour"</A>
+                <A href="/tour">"Language Tour"</A>
             </div>
             <div>
                 <A href="/tutorial/Introduction" class="slow-pulse">"Tutorial"</A>

@@ -3,6 +3,7 @@
 compile_error!("To compile the uiua interpreter binary, you must enable the `binary` feature flag");
 
 use std::{
+    borrow::Cow,
     env,
     error::Error,
     fmt::{self, Display},
@@ -494,8 +495,18 @@ fn run(
     formatter_options: Option<FormatterOptions>,
     no_color: bool,
 ) {
+    let path: Cow<'_, Path> = if path == Path::new("-") {
+        let mut buffer = Vec::new();
+        std::io::stdin().read_to_end(&mut buffer).unwrap();
+
+        let temp_path = std::env::temp_dir().join("main.ua");
+        fs::write(&temp_path, &buffer).unwrap();
+        Cow::Owned(temp_path)
+    } else {
+        Cow::Borrowed(path)
+    };
     let mut rt = Uiua::with_native_sys()
-        .with_file_path(path)
+        .with_file_path(&*path)
         .with_args(args)
         .time_instrs(time_instrs)
         .maybe_with_execution_limit(limit.map(Duration::from_secs_f64));
@@ -511,9 +522,9 @@ fn run(
     } else {
         if let Some(formatter_options) = formatter_options {
             let config =
-                FormatConfig::from_source(formatter_options.format_config_source, Some(path))
+                FormatConfig::from_source(formatter_options.format_config_source, Some(&path))
                     .unwrap_or_else(uiua_fail);
-            format_file(path, &config).unwrap_or_else(uiua_fail);
+            format_file(&path, &config).unwrap_or_else(uiua_fail);
         }
         let mode = mode.unwrap_or(RunMode::Normal);
         let res = rt.compile_run(|comp| comp.mode(mode).print_diagnostics(true).load_file(path));
@@ -786,7 +797,7 @@ struct App {
 enum Comm {
     #[clap(about = "Initialize a new main.ua file")]
     Init,
-    #[clap(about = "Format and run a file")]
+    #[clap(about = "Format and run a file (- for stdin)")]
     Run {
         path: Option<PathBuf>,
         #[clap(long, help = "Don't format the file before running")]

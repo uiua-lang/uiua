@@ -407,12 +407,12 @@ impl Allowed {
                 (
                     "modifier",
                     &[
-                        PrimClass::AggregatingModifier,
+                        PrimClass::MappingModifier,
                         PrimClass::IteratingModifier,
                         PrimClass::OtherModifier,
                     ],
                 ),
-                ("aggregating", &[PrimClass::AggregatingModifier]),
+                ("mapping", &[PrimClass::MappingModifier]),
                 ("iterating", &[PrimClass::IteratingModifier]),
                 ("other", &[PrimClass::OtherModifier]),
                 ("misc", &[PrimClass::Misc]),
@@ -468,7 +468,7 @@ impl Allowed {
                 PrimClass::DyadicPervasive => "dyadic-pervasive-functions",
                 PrimClass::MonadicArray => "monadic-array-functions",
                 PrimClass::DyadicArray => "dyadic-array-functions",
-                PrimClass::AggregatingModifier => "aggregating-modifiers",
+                PrimClass::MappingModifier => "mapping-modifiers",
                 PrimClass::IteratingModifier => "iterating-modifiers",
                 PrimClass::InversionModifier => "inversion-modifiers",
                 PrimClass::Comptime => "comptime-modifiers",
@@ -531,13 +531,13 @@ impl Allowed {
                     ("Monadic Array".into_view(), "Operate on a single array")
                 }
                 PrimClass::DyadicArray => ("Dyadic Array".into_view(), "Operate on two arrays"),
+                PrimClass::MappingModifier => (
+                    "Mapping Modifiers".into_view(),
+                    "Apply a function to separate rows of an array or arrays",
+                ),
                 PrimClass::IteratingModifier => (
                     "Iterating Modifiers".into_view(),
-                    "Iterate and apply a function to an array or arrays",
-                ),
-                PrimClass::AggregatingModifier => (
-                    "Aggregating Modifiers".into_view(),
-                    "Apply a function to aggregate an array",
+                    "Apply a function to iteratively transform an array or arrays",
                 ),
                 PrimClass::InversionModifier => (
                     "Inversion Modifiers".into_view(),

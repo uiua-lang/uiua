@@ -1827,7 +1827,7 @@ primitive!(
     /// If the function takes more than 2 arguments, additional arguments in front of the array will be passed to the function on every iteration. This is useful for things like interspersing one array between the rows of another.
     /// ex: /(⊂⊂) 0_1 [2 3 4 5]
     /// ex: /◇(⊂⊂) @, {"cat" "bird" "dog"}
-    ([1], Reduce, AggregatingModifier, ("reduce", '/')),
+    ([1], Reduce, IteratingModifier, ("reduce", '/')),
     /// Apply a function to aggregate arrays
     ///
     /// Expects as many arguments as its function takes.
@@ -1864,7 +1864,7 @@ primitive!(
     /// ex: ∧(⟜∘+) [1 2 3 4 5] 0
     /// ex: # Experimental!
     ///   : ∧(◡⊙∘⊓⌞+×) [1 2 3 4 5] 0 1
-    ([1], Fold, AggregatingModifier, ("fold", '∧')),
+    ([1], Fold, IteratingModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
     /// ex: \+   1_2_3_4
@@ -1887,7 +1887,7 @@ primitive!(
     /// If the function takes more than 2 arguments, additional arguments before the array will be passed to the function on every iteration.
     /// ex: \(+×) 10 [1 2 3 4]
     /// ex: ⬚@ \(⊂⊂) @, "abcd"
-    (1[1], Scan, AggregatingModifier, ("scan", '\\')),
+    (1[1], Scan, IteratingModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or arrays
     ///
     /// This is the element-wise version of [rows].
@@ -1907,7 +1907,7 @@ primitive!(
     ///   : ∵₁□ °△2_3_4
     ///   : ∵₂□ °△2_3_4
     ///   : ∵₃□ °△2_3_4
-    ([1], Each, IteratingModifier, ("each", '∵')),
+    ([1], Each, MappingModifier, ("each", '∵')),
     /// Apply a function to each row of an array or arrays
     ///
     /// ex:  /+ [1_2_3 4_5_6 7_8_9]  # Sum each row with the next
@@ -1945,7 +1945,7 @@ primitive!(
     /// ex: ≡⌞₂(⊂⊂) 1_2 3_4 5_6
     ///   : ≡⌟₂(⊂⊂) 1_2 3_4 5_6
     /// [rows] accepts mixed numeric and sided subscripts.
-    ([1], Rows, IteratingModifier, ("rows", '≡')),
+    ([1], Rows, MappingModifier, ("rows", '≡')),
     /// Apply a function to each unboxed row of an array and re-box the results
     ///
     /// For monadic functions, this is equivalent to `rows``under``un``box`.
@@ -1979,7 +1979,7 @@ primitive!(
     /// The side quantifier specifies how many arguments to [fix].
     /// ex: ⍚⌞₂(⊂⊂) 1_2 3_4 5_6
     ///   : ⍚⌟₂(⊂⊂) 1_2 3_4 5_6
-    ([1], Inventory, IteratingModifier, ("inventory", '⍚')),
+    ([1], Inventory, MappingModifier, ("inventory", '⍚')),
     /// Apply a function to each combination of rows of some arrays
     ///
     /// ex: ⊞+ 1_2_3 4_5_6_7
@@ -2005,7 +2005,7 @@ primitive!(
     /// ex: ⊞₁(□⊂) "abc" ["1234""5678"]
     /// ex: ⊸≍ ⊃⊞(□⊂)⊞₋₁(□⊂) "abc" ["1234""5678"]
     /// ex: ⊞₀(□⊂) "abc" ["1234""5678"]
-    ([1], Table, IteratingModifier, ("table", '⊞')),
+    ([1], Table, MappingModifier, ("table", '⊞')),
     /// Get permutations or combinations of an array
     ///
     /// When given a dyadic function, [tuples] takes two arguments.
@@ -2059,7 +2059,7 @@ primitive!(
     ///
     /// The tuple size may be given as a subscript.
     /// ex: ⍉ ⧅₂< ⇡5
-    ([1], Tuples, IteratingModifier, ("tuples", '⧅')),
+    ([1], Tuples, MappingModifier, ("tuples", '⧅')),
     /// Call a function on windows of an array
     ///
     /// The first argument is the window size.
@@ -2117,7 +2117,7 @@ primitive!(
     /// Adding a third row to the array allows the fill amount to be specified for each axis.
     /// ex: ⬚0⧈□ [2_2 1_1 0_1] +1°△2_2
     /// ex: ⬚0⧈□ [2_2 2_2 0_1] +1°△4_6
-    (2[1], Stencil, IteratingModifier, ("stencil", '⧈')),
+    (2[1], Stencil, MappingModifier, ("stencil", '⧈')),
     /// Repeat a function a number of times
     ///
     /// ex: ⍥(+2)5 0
@@ -2199,7 +2199,7 @@ primitive!(
     /// ex! ⍜⊕□⇌ ⊸≠@  $ These are some words
     ///
     /// [group] is closely related to [partition].
-    ([1], Group, AggregatingModifier, ("group", '⊕')),
+    ([1], Group, MappingModifier, ("group", '⊕')),
     /// Group sequential sections of an array
     ///
     /// The most common use of [partition] is to split an array by a delimiter.
@@ -2251,7 +2251,7 @@ primitive!(
     /// ex: ⍜⊜⊢⌵  ⊸≠@  $ These are some words
     ///
     /// [partition] is closely related to [group].
-    ([1], Partition, AggregatingModifier, ("partition", '⊜')),
+    ([1], Partition, MappingModifier, ("partition", '⊜')),
     /// Call a function with its arguments' axes reversed
     ///
     /// Uiua primitives tend to treat axes near the front of the shape as spanning items in a collection. Axes near the end of the shape are often treated as the items or components of the items.

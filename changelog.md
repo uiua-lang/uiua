@@ -70,6 +70,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Extend [`table ⊞`](https://uiua.org/docs/table) list optimizations to non-lists
 - Values generated on the same line in code will appear on the same line in output
 - Add `-i/--stdin` flag to `uiua run` and `uiua eval` to pipe stdin to the first argument in a program
+- Add `-` flag to `uiua run` to run stdin as a program
 - Add `gh:` prefix for import strings to shorten GitHub imports
 - Upgrade to Rust 2024 edition
   - Increase minumum Rust version to 1.85.0

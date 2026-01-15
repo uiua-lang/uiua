@@ -165,7 +165,6 @@ pub fn Site() -> impl IntoView {
                                         }
                                     }
                                     <a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">"Support "{lang}"'s development"</a>
-                                    <a href="/">"Home"</a>
                                 </div>
                             </div>
                             <Outlet/>

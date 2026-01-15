@@ -1735,19 +1735,36 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
 }
 
 fn end_loc(s: &str) -> Loc {
+    let bytes = s.as_bytes();
+
     let mut line = 0;
-    let mut col = 0;
     let mut char_pos = 0;
-    for c in s.chars() {
-        if c == '\n' {
+
+    for &b in bytes {
+        // Newline count
+        if b == b'\n' {
             line += 1;
-            col = 0;
-        } else {
-            col += 1;
         }
-        char_pos += 1;
+        // Non-continuation bytes (character count)
+        // (includes newline)
+        if (b & 0xC0) != 0x80 {
+            char_pos += 1;
+        }
     }
-    let byte_pos = s.len() as u32;
+
+    // Column number
+    let col = match bytes.iter().rposition(|&b| b == b'\n') {
+        Some(index) => {
+            // Character count after last newline
+            let tail = &bytes[index + 1..];
+            tail.iter().filter(|&&b| (b & 0xC0) != 0x80).count() as u16
+        }
+        // No newline exists, use character count
+        None => char_pos as u16,
+    };
+
+    let byte_pos: u32 = bytes.len() as u32;
+
     Loc {
         line,
         col,
@@ -1876,6 +1893,15 @@ fn native() -> &'static dyn SysBackend {
     {
         &NoSys
     }
+}
+
+#[test]
+#[cfg(test)]
+fn formatter_edge_case_newline_free() {
+    let input = "id";
+    let output = "∘\n";
+    let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
+    assert_eq!(formatted, output);
 }
 
 #[test]

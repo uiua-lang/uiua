@@ -320,9 +320,20 @@ pub fn MainPage() -> impl IntoView {
                 "You can run with ctrl/shift + enter.",
             ]}/>
         <br/>
-        <p class="main-text">{lang}" "<span class="wee-wuh-span">"("<i>"wee-wuh "</i><button on:click=|_| weewuh() class="sound-button">"🔉"</button>")"</span>" is a general purpose array-oriented programming language with a focus on simplicity, beauty, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
-        <p class="main-text">{lang}" lets you write code that is as short as possible while remaining readable, so you can focus on problems rather than ceremony."</p>
-        <p class="main-text">"The language is not yet stable, as its design space is still being explored. However, it is already quite powerful and fun to use!"</p>
+        <div class="what-is-uiua">
+            <div class="what-is-uiua-item">
+                <Prim prim=Fork glyph_only=true hide_docs=true />
+                <p class="main-text">{lang}" "<span class="wee-wuh-span">"("<button on:click=|_| weewuh() class="sound-button">"wee-wuh"</button>")"</span>" is a general purpose array-oriented programming language with a focus on simplicity, beauty, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
+            </div>
+            <div class="what-is-uiua-item">
+                <Prim prim=Where glyph_only=true hide_docs=true />
+                <p class="main-text">{lang}" lets you write code that is as short as possible while remaining readable, so you can focus on problems rather than ceremony."</p>
+            </div>
+            <div class="what-is-uiua-item">
+                <Prim prim=Reshape glyph_only=true hide_docs=true />
+                <p class="main-text">"The language is not yet stable, as its design space is still being explored. However, it is already quite powerful and fun to use!"</p>
+            </div>
+        </div>
         <div class="features">
             <div>
                 <div>

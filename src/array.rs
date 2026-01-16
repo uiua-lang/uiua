@@ -139,12 +139,7 @@ impl ArrayMeta {
     }
     /// Take the label from the metadata
     pub fn take_label(&mut self) -> Option<EcoString> {
-        let inner = self.get_inner_mut()?;
-        if inner.label.is_some() {
-            inner.label.take()
-        } else {
-            None
-        }
+        self.get_inner_mut()?.label.take()
     }
     /// Take the map keys from the metadata
     pub fn take_map_keys(&mut self) -> Option<MapKeys> {

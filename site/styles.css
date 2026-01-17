@@ -407,9 +407,8 @@ li {
 
 .main-text { margin: 0;
     margin-left: -0.5rem;
-    margin-top: 0.2rem;
+    margin-top: -0.25rem;
     padding: 0.4rem 1rem;
-    background: light-dark( #f4f6f6, #1d2c3a);
     z-index: 1;
     border-radius: 0.5rem;
 }

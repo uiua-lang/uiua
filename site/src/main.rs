@@ -322,7 +322,7 @@ pub fn MainPage() -> impl IntoView {
         <br/>
         <div class="what-is-uiua">
             <div class="what-is-uiua-item">
-                <Prim prim=Fork glyph_only=true hide_docs=true />
+                <Prim prim=Below glyph_only=true hide_docs=true />
                 <p class="main-text">{lang}" "<span class="wee-wuh-span">"("<button on:click=|_| weewuh() class="sound-button">"wee-wuh"</button>")"</span>" is a general purpose array-oriented programming language with a focus on simplicity, beauty, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
             </div>
             <div class="what-is-uiua-item">

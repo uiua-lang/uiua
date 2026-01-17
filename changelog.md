@@ -55,6 +55,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Remove previously deprecated `progressive indexof ⊘` function
 - Remove previously deprecated `tag` function
 ### Interpreter
+- Upgrade to Rust 2024 edition
 - Increase minimum Rust version to `1.88.0`
 - Compiled dependecies are now cached, increasing performance with large dependencies in the online pad and local LSP
 - Gifs now use Floyd-Steinberg dithering rather than color quantization
@@ -73,8 +74,6 @@ This version is not yet released. If you are reading this on the website, then t
 - Add `-i/--stdin` flag to `uiua run` and `uiua eval` to pipe stdin to the first argument in a program
 - Add `-` flag to `uiua run` to run stdin as a program
 - Add `gh:` prefix for import strings to shorten GitHub imports
-- Upgrade to Rust 2024 edition
-  - Increase minumum Rust version to 1.85.0
 - Add support for multiline input in REPL by ending lines with a `\`
 ### Website
 - Reword all documentation and tutorials to no longer refer to a stack

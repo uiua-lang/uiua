@@ -4259,8 +4259,8 @@ sys_op! {
     ///
     /// *Warning ⚠️: [&malloc] can lead to undefined behavior if used incorrectly.*
     ///
-    /// Some foreign functions require you to allocate memory for them to write into. This function allows you 
-    /// 
+    /// Some foreign functions require you to allocate memory for them to write into.
+    ///
     /// Use [&memfree] to free the memory when you are done with it.
     (1, Malloc, Ffi, "&malloc", "allocate memory", Mutating, { experimental: true }),
 }

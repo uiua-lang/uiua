@@ -125,7 +125,7 @@ The [gap]() modifier discards the first argument and calls its function.
 ⋅+ 1 2 3
 ```
 
-This is of limitied usefulness on its own.
+This is of limited usefulness on its own.
 
 However, by combining [dip]()s and [gap]()s along with the [identity]() function inside a [fork](), we get a useful emergent notation. Chained [dip]()s and [gap]()s (with a terminating [identity]()) act as a sort of boolean selector to choose which arguments to keep and which to discard in a branch.
 

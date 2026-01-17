@@ -239,8 +239,8 @@ pub unsafe extern "C" fn is_null_ptr(ptr: *const c_void) -> bool {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn test_fill_ptr(ptr: *mut u8, len: u8) {
     let slice = unsafe { std::slice::from_raw_parts_mut(ptr, len as usize) };
-    for i in 0..len as usize {
-        slice[i] = i as u8;
+    for (i, item) in slice.iter_mut().enumerate().take(len as usize) {
+        *item = i as u8;
     }
 }
 

@@ -4255,4 +4255,12 @@ sys_op! {
     /// Expects a pointer. If the pointer is `NULL` [&memfree] will do nothing.
     /// See [&memcpy] for an example.
     (1(0), MemFree, Ffi, "&memfree", "free memory", Mutating, { experimental: true }),
+    /// Allocate memory for the given number of bytes and return a pointer to it
+    ///
+    /// *Warning ⚠️: [&malloc] can lead to undefined behavior if used incorrectly.*
+    ///
+    /// Some foreign functions require you to allocate memory for them to write into. This function allows you 
+    /// 
+    /// Use [&memfree] to free the memory when you are done with it.
+    (1, Malloc, Ffi, "&malloc", "allocate memory", Mutating, { experimental: true }),
 }

@@ -502,6 +502,18 @@ mod enabled {
         Ok(())
     }
 
+    impl FfiState {
+        pub(crate) fn ffi_allocate(&self, size: usize) -> Result<MetaPtr, String> {
+            if size == 0 {
+                return Err("Cannot allocate zero bytes".to_string());
+            }
+            let mut buffer = vec![0u8; size];
+            let ptr = buffer.as_mut_ptr() as usize;
+            self.buffers.insert(ptr, buffer);
+            Ok(MetaPtr::new(ptr, FfiType::UChar))
+        }
+    }
+
     impl FfiArg {
         fn is_list(&self) -> bool {
             self.len_index.is_some()

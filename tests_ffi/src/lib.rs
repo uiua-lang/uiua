@@ -231,6 +231,11 @@ pub unsafe extern "C" fn fmt_ptr(ptr: *const c_void) -> *const c_char {
     s.into_raw()
 }
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn is_null_ptr(ptr: *const c_void) -> bool {
+    ptr.is_null()
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

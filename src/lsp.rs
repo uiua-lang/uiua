@@ -546,7 +546,7 @@ impl Spanner {
                 underable: self.asm[f]
                     .under_inverse(Signature::new(1, 1), false, &self.asm)
                     .is_ok(),
-                pure: self.asm[f].is_pure(&self.asm),
+                pure: !meta.external && self.asm[f].is_pure(&self.asm),
             },
             BindingKind::IndexMacro(args) => BindingDocsKind::Modifier(*args),
             BindingKind::CodeMacro(_) => {

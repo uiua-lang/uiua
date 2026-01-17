@@ -54,3 +54,4 @@ Bytes ← "{unsigned char*}"
 ⍤⤙≍ 1 Lib {"bool" "is_null_ptr" "void*"} {NULL}
 ⍤⤙≍ 0 Lib {"bool" "is_null_ptr" "void*"} {&malloc 16}
 ⍤⤙≍ 1 ⍣(1 &memfree &malloc 16|0)
+⍤⤙≍ [0 1 2 3 4 5 6 7] ◡⊃(&memfree|&memcpy|◌Lib {"void" "test_fill_ptr" "byte*" "byte"} □₂) ⊸&malloc 8

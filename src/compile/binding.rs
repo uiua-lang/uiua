@@ -32,7 +32,7 @@ impl Compiler {
             comment,
             deprecation: prelude.deprecation,
             counts: Some(binding.counts),
-            external: false,
+            external: prelude.external,
         };
 
         // Alias re-bound imports

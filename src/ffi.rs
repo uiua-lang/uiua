@@ -1,7 +1,7 @@
 use std::{
     fmt::{self, Display},
-    str::FromStr,
     mem::forget,
+    str::FromStr,
 };
 
 /// Data for how to send an argument type to `&ffi`

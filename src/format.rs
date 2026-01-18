@@ -1460,7 +1460,7 @@ impl Formatter<'_> {
     fn format_comment(&mut self, comment: &Sp<EcoString>) {
         self.push(
             &comment.span,
-            &if self.config.comment_space_after_hash {
+            &if self.config.comment_space_after_hash && !comment.value.starts_with('!') {
                 format!("# {}", comment.value)
             } else {
                 format!("#{}", comment.value)

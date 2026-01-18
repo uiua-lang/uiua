@@ -17,8 +17,8 @@ use rapidhash::quality::RapidHasher;
 use serde::*;
 
 use crate::{
-    AestheticHash, Assembly, BindingKind, DynamicFunction, Function, FunctionOrigin, ImplPrimitive,
-    Primitive, Purity, Signature, Value,
+    AestheticHash, Assembly, BindingKind, DynamicFunction, Function, ImplPrimitive, Primitive,
+    Purity, Signature, Value,
     check::SigCheckError,
     compile::invert::{InversionError, InversionResult},
 };

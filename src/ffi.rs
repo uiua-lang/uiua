@@ -1,6 +1,5 @@
 use std::{
     fmt::{self, Display},
-    mem::forget,
     str::FromStr,
 };
 
@@ -508,9 +507,8 @@ mod enabled {
             if size == 0 {
                 return Err("Cannot allocate zero bytes".to_string());
             }
-            let mut buffer = vec![0u8; size];
-            let ptr = buffer.as_mut_ptr() as usize;
-            forget(buffer);
+            let buffer = unsafe { Box::<[u8]>::new_uninit_slice(size).assume_init() };
+            let ptr = Box::leak(buffer).as_ptr() as usize;
             Ok(MetaPtr::new(ptr, FfiType::UChar))
         }
     }

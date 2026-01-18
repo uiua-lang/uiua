@@ -1,6 +1,7 @@
 use std::{
     fmt::{self, Display},
     str::FromStr,
+    mem::forget,
 };
 
 /// Data for how to send an argument type to `&ffi`
@@ -509,7 +510,7 @@ mod enabled {
             }
             let mut buffer = vec![0u8; size];
             let ptr = buffer.as_mut_ptr() as usize;
-            self.buffers.insert(ptr, buffer);
+            forget(buffer);
             Ok(MetaPtr::new(ptr, FfiType::UChar))
         }
     }

@@ -507,7 +507,7 @@ mod enabled {
             if size == 0 {
                 return Err("Cannot allocate zero bytes".to_string());
             }
-            let buffer = unsafe { Box::<[u8]>::new_uninit_slice(size).assume_init() };
+            let buffer = Box::<[u8]>::new_uninit_slice(size);
             let ptr = Box::leak(buffer).as_ptr() as usize;
             Ok(MetaPtr::new(ptr, FfiType::UChar))
         }

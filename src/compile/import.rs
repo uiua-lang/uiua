@@ -297,7 +297,12 @@ impl Compiler {
         // Offset bindings
         for binfo in asm.bindings.make_mut() {
             match &mut binfo.kind {
-                BindingKind::Func(f) => f.index += func_offset,
+                BindingKind::Func(f) => {
+                    f.index += func_offset;
+                    if let FunctionOrigin::Binding(i) = &mut f.origin {
+                        *i += bind_offset;
+                    }
+                }
                 BindingKind::Module(module) => (module.names.0.values_mut().flatten())
                     .for_each(|local| local.index += bind_offset),
                 BindingKind::CodeMacro(node) => {

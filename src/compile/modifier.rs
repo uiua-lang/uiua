@@ -1704,7 +1704,12 @@ impl Compiler {
             let node = self.suppress_diagnostics(|comp| comp.words(words))?;
             // Add
             let sig = self.sig_of(&node, &span)?;
-            let func = (self.asm).add_function(FunctionId::Macro(None, span.clone()), sig, node);
+            let func = (self.asm).add_function(
+                FunctionId::Macro(None, span.clone()),
+                sig,
+                node,
+                FunctionOrigin::Macro,
+            );
             let span = self.add_span(span);
             Node::Call(func, span)
         })
@@ -1831,6 +1836,7 @@ impl Compiler {
                         FunctionId::Named(name.clone()),
                         Signature::new(1, 1),
                         node,
+                        FunctionOrigin::Macro,
                     );
                     let meta = BindingMeta {
                         comment: Some(arg.comment.into()),
@@ -1938,7 +1944,7 @@ impl Compiler {
                 // Add
                 let sig = self.sig_of(&node, &ref_span)?;
                 let id = FunctionId::Macro(Some(name.value), name.span);
-                let func = self.asm.add_function(id, sig, node);
+                let func = self.asm.add_function(id, sig, node, FunctionOrigin::Macro);
                 if let Some(exp_index) = macro_local.expansion_index {
                     self.asm.bindings.make_mut()[exp_index].kind = BindingKind::Func(func.clone());
                 }

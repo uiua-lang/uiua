@@ -300,15 +300,15 @@ impl Compiler {
             }
             // Add validator
             node.extend(field.validator_inv.take());
-            let func = self
-                .asm
-                .add_function(id.clone(), Signature::new(1, 1), node);
             let local = LocalIndex {
                 index: self.next_global,
                 public: true,
             };
             field.global_index = local.index;
             self.next_global += 1;
+            let func = self
+                .asm
+                .add_function(id.clone(), Signature::new(1, 1), node, local.index);
             let comment = match (&def_name, &field.comment) {
                 (Some(def_name), Some(comment)) => {
                     format!("Get {def_name}'s {field_name}\n{comment}")
@@ -406,16 +406,17 @@ impl Compiler {
             }
         }
         let constructor_name = Ident::from("New");
-        let constructor_func = self.asm.add_function(
-            FunctionId::Named(constructor_name.clone()),
-            Signature::new(constructor_args, 1),
-            node,
-        );
         let constr_local = LocalIndex {
             index: self.next_global,
             public: true,
         };
         self.next_global += 1;
+        let constructor_func = self.asm.add_function(
+            FunctionId::Named(constructor_name.clone()),
+            Signature::new(constructor_args, 1),
+            node,
+            constr_local.index,
+        );
         let mut constr_comment = match (&def_name, data.func.is_some()) {
             (Some(name), false) => format!("Create a new {name}\n{name} ?"),
             (Some(name), true) => format!("Create a new array of {name}'s args\n{name}Args ?"),
@@ -482,9 +483,12 @@ impl Compiler {
                         public: true,
                     };
                     comp.next_global += 1;
-                    let func =
-                        comp.asm
-                            .add_function(FunctionId::Named("Args".into()), sn.sig, sn.node);
+                    let func = comp.asm.add_function(
+                        FunctionId::Named("Args".into()),
+                        sn.sig,
+                        sn.node,
+                        local.index,
+                    );
                     args_function_stuff = Some((local, func, span));
                 }
 
@@ -501,6 +505,7 @@ impl Compiler {
                     FunctionId::Named(constructor_name.clone()),
                     sn.sig,
                     sn.node,
+                    local.index,
                 );
                 function_stuff = Some((local, func, span));
                 Ok(())

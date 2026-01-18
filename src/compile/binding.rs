@@ -276,7 +276,8 @@ impl Compiler {
                 if prelude.no_inline {
                     node = Node::NoInline(node.into());
                 }
-                comp.asm.add_function(FunctionId::Named(name), sig, node)
+                comp.asm
+                    .add_function(FunctionId::Named(name), sig, node, local.index)
             }
         };
         let words_span = (binding.words.first())

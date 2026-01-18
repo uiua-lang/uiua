@@ -29,10 +29,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan,
     CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
-    ExactDoubleIterator, Function, FunctionId, GitTarget, Ident, ImplPrimitive, IndexMacro,
-    InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass, Primitive, Purity,
-    RunMode, SUBSCRIPT_DIGITS, SemanticComment, SigNode, Signature, Sp, Span, SubSide, Subscript,
-    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
+    ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GitTarget, Ident, ImplPrimitive,
+    IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass,
+    Primitive, Purity, RunMode, SUBSCRIPT_DIGITS, SemanticComment, SigNode, Signature, Sp, Span,
+    SubSide, Subscript, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
     algorithm::ga::{self, Spec},
     ast::*,
     check::nodes_sig,
@@ -1120,7 +1120,7 @@ impl Compiler {
         const MAX_RECURSION_DEPTH: usize =
             match (cfg!(target_arch = "wasm32"), cfg!(debug_assertions)) {
                 (false, false) => (512 + 256 + 64) * 1024 * 2,
-                (false, true) => (512 + 256 + 64) * 1024,
+                (false, true) => (512 + 256 + 128) * 1024,
                 (true, false) => 640 * 1024,
                 (true, true) => 640 * 1024,
             };
@@ -2629,8 +2629,12 @@ impl Compiler {
     ) -> Function {
         let sig = signature.into();
         let df = self.create_dynamic_function(sig, f);
-        self.asm
-            .add_function(FunctionId::Unnamed, sig, Node::Dynamic(df))
+        self.asm.add_function(
+            FunctionId::Unnamed,
+            sig,
+            Node::Dynamic(df),
+            FunctionOrigin::Dynamic,
+        )
     }
     fn create_dynamic_function(
         &mut self,

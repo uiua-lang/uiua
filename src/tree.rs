@@ -17,8 +17,8 @@ use rapidhash::quality::RapidHasher;
 use serde::*;
 
 use crate::{
-    AestheticHash, Assembly, BindingKind, DynamicFunction, Function, ImplPrimitive, Primitive,
-    Purity, Signature, Value,
+    AestheticHash, Assembly, BindingKind, DynamicFunction, Function, FunctionOrigin, ImplPrimitive,
+    Primitive, Purity, Signature, Value,
     check::SigCheckError,
     compile::invert::{InversionError, InversionResult},
 };
@@ -837,7 +837,11 @@ impl Node {
                 }
                 Node::Array { inner, .. } => recurse(inner, purity, asm, visited),
                 Node::Call(func, _) => {
-                    visited.insert(func) && recurse(&asm[func], purity, asm, visited)
+                    if (func.origin.binding()).is_some_and(|i| asm.bindings[i].meta.external) {
+                        false
+                    } else {
+                        visited.insert(func) && recurse(&asm[func], purity, asm, visited)
+                    }
                 }
                 Node::CallGlobal(index, _) => {
                     if let Some(binding) = asm.bindings.get(*index) {

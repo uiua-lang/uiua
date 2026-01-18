@@ -231,6 +231,19 @@ pub unsafe extern "C" fn fmt_ptr(ptr: *const c_void) -> *const c_char {
     s.into_raw()
 }
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn is_null_ptr(ptr: *const c_void) -> bool {
+    ptr.is_null()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn test_fill_ptr(ptr: *mut u8, len: u8) {
+    let slice = unsafe { std::slice::from_raw_parts_mut(ptr, len as usize) };
+    for (i, item) in slice.iter_mut().enumerate().take(len as usize) {
+        *item = i as u8;
+    }
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

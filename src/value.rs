@@ -94,6 +94,11 @@ impl Value {
         arr.meta.pointer = Some(MetaPtr::null());
         Value::from(arr)
     }
+    pub(crate) fn ffi_pointer(ptr: &MetaPtr) -> Self {
+        let mut arr = Array::<u8>::default();
+        arr.meta.pointer = Some(ptr.clone());
+        Value::from(arr)
+    }
     pub(crate) fn builder(capacity: usize) -> ValueBuilder {
         ValueBuilder::with_capacity(capacity)
     }

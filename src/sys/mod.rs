@@ -598,6 +598,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn mem_free(&self, ptr: &MetaPtr) -> Result<(), String> {
         Err("Pointer freeing is not supported in this environment".into())
     }
+    /// Allocate memory and return a pointer to it
+    fn mem_allocate(&self, size: usize) -> Result<Value, String> {
+        Err("Memory allocation is not supported in this environment".into())
+    }
     /// Load a git repo as a module and return the path to its `lib.ua` file
     ///
     /// The returned path should be loadable via [`SysBackend::file_read_all`]
@@ -1439,6 +1443,15 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 .ok_or_else(|| env.error("Freed pointer must be a pointer value"))?;
 
             (env.rt.backend).mem_free(ptr).map_err(|e| env.error(e))?;
+        }
+        SysOp::Malloc => {
+            let size = env
+                .pop("size")?
+                .as_nat(env, "Allocated size must be a non-negative integer")?;
+            let val = (env.rt.backend)
+                .mem_allocate(size)
+                .map_err(|e| env.error(e))?;
+            env.push(val);
         }
         SysOp::Breakpoint => {
             if !env.rt.backend.breakpoint(env).map_err(|e| env.error(e))? {

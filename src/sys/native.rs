@@ -1202,6 +1202,10 @@ impl SysBackend for NativeSys {
         NATIVE_SYS.ffi.ffi_free(ptr);
         Ok(())
     }
+    fn mem_allocate(&self, size: usize) -> Result<Value, String> {
+        let ptr = NATIVE_SYS.ffi.ffi_allocate(size)?;
+        Ok(Value::ffi_pointer(&ptr))
+    }
     fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {
         if let Some(path) = NATIVE_SYS.git_paths.get(url)
             && (path.is_err() || path.as_ref().unwrap().exists())

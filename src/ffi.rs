@@ -502,6 +502,17 @@ mod enabled {
         Ok(())
     }
 
+    impl FfiState {
+        pub(crate) fn ffi_allocate(&self, size: usize) -> Result<MetaPtr, String> {
+            if size == 0 {
+                return Err("Cannot allocate zero bytes".to_string());
+            }
+            let buffer = Box::<[u8]>::new_uninit_slice(size);
+            let ptr = Box::leak(buffer).as_ptr() as usize;
+            Ok(MetaPtr::new(ptr, FfiType::UChar))
+        }
+    }
+
     impl FfiArg {
         fn is_list(&self) -> bool {
             self.len_index.is_some()

@@ -630,8 +630,16 @@ impl Compiler {
         let mut item_queue = VecDeque::from(flip_unsplit_items(split_items(items)));
         while let Some(item) = item_queue.pop_front() {
             let must_run = mode == ItemCompMode::CodeMacro
-                || matches!(&item, Item::Words(_))
-                    && item_queue.iter().any(|item| match item {
+                || 'blk: {
+                    let Item::Words(words) = &item else {
+                        break 'blk false;
+                    };
+                    if (words.iter().find(|w| w.value.is_code()))
+                        .is_some_and(|w| matches!(w.value, Word::Primitive(Primitive::Assert)))
+                    {
+                        break 'blk true;
+                    }
+                    item_queue.iter().any(|item| match item {
                         Item::Binding(binding)
                             if (binding.words.iter())
                                 .filter(|word| word.value.is_code())
@@ -640,12 +648,11 @@ impl Compiler {
                         {
                             true
                         }
-                        Item::Words(line) => line
-                            .iter()
-                            .find(|w| w.value.is_code())
+                        Item::Words(line) => (line.iter().find(|w| w.value.is_code()))
                             .is_some_and(|w| matches!(w.value, Word::Primitive(Primitive::Assert))),
                         _ => false,
-                    });
+                    })
+                };
             if let Err(e) = self.item(item, must_run, mode, &mut prelude) {
                 if !item_errored || self.errors.is_empty() {
                     self.errors.push(e);

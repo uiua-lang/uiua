@@ -2249,7 +2249,7 @@ macro_rules! cmp_impls {
                 [Num, same_type],
                 [Complex, com_x],
                 (Box, Box, generic),
-                (Byte, Byte, same_type),
+                [Byte, same_type],
                 (Char, Char, generic),
                 (Num, Byte, num_byte),
                 (Byte, Num, byte_num),

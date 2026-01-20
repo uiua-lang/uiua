@@ -264,10 +264,10 @@ pub fn MainPage() -> impl IntoView {
         ),
     ];
 
+    let mut rng = SmallRng::seed_from_u64(visits as u64);
     let indices = if visits < 4 {
         vec![0, rich_prims.len() - 3, rich_prims.len() - 1]
     } else {
-        let mut rng = SmallRng::seed_from_u64(visits as u64);
         let mut indices: Vec<usize> = (0..rich_prims.len()).collect();
         indices.shuffle(&mut rng);
         indices.truncate(3);
@@ -280,6 +280,10 @@ pub fn MainPage() -> impl IntoView {
         .map(|i| rich_prims.remove(i)())
         .collect();
     rich_prims.reverse();
+
+    let prim1 = [Below, Dip, On, By, Fork][rng.random_range(0..5)];
+    let prim2 = [Rise, Where, Deduplicate, Classify, Occurrences][rng.random_range(0..5)];
+    let prim3 = [Reshape, Under, Fill][rng.random_range(0..3)];
 
     view! {
         <Title text=lang()/>
@@ -322,15 +326,15 @@ pub fn MainPage() -> impl IntoView {
         <br/>
         <div class="what-is-uiua">
             <div class="what-is-uiua-item">
-                <Prim prim=Below glyph_only=true hide_docs=true />
+                <Prim prim=prim1 glyph_only=true hide_docs=true />
                 <p class="main-text">{lang}" "<span class="wee-wuh-span">"("<button on:click=|_| weewuh() class="sound-button">"wee-wuh"</button>")"</span>" is a general purpose array-oriented programming language with a focus on simplicity, beauty, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
             </div>
             <div class="what-is-uiua-item">
-                <Prim prim=Where glyph_only=true hide_docs=true />
+                <Prim prim=prim2 glyph_only=true hide_docs=true />
                 <p class="main-text">{lang}" lets you write code that is as short as possible while remaining readable, so you can focus on problems rather than ceremony."</p>
             </div>
             <div class="what-is-uiua-item">
-                <Prim prim=Reshape glyph_only=true hide_docs=true />
+                <Prim prim=prim3 glyph_only=true hide_docs=true />
                 <p class="main-text">"The language is not yet stable, as its design space is still being explored. However, it is already quite powerful and fun to use!"</p>
             </div>
         </div>

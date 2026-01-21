@@ -183,6 +183,13 @@
     "class": "Command",
     "description": "Invoke a path with the system's default program"
   },
+  "&malloc": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Ffi",
+    "description": "Allocate memory for the given number of bytes and return a pointer to it",
+    "experimental": true
+  },
   "&memcpy": {
     "args": 2,
     "outputs": 1,

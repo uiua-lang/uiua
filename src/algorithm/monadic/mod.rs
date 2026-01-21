@@ -493,6 +493,7 @@ impl Value {
                 Err(env.error(format!("Cannot unparse {n} to base {base}")))
             }
             1 => {
+                env.respect_execution_limit()?;
                 if n < 0.0 || n.fract() != 0.0 {
                     return Err(env.error(format!("Cannot unparse {n} to base {base}")));
                 }

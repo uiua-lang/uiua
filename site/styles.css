@@ -125,6 +125,7 @@ li {
     #header-uiua,
     .spoiler:hover {
         color: #d1daec;
+        color-scheme: dark;
     }
 
     body,
@@ -211,6 +212,7 @@ li {
     #header-uiua,
     .spoiler:hover {
         color: #344;
+        color-scheme: light;
     }
 
     body,
@@ -369,13 +371,50 @@ li {
     align-content: flex-start;
 }
 
-.main-text {
-    font-size: 120%;
-    text-align: center;
+.what-is-uiua {
+    text-align: left;
+    display: flex;
+    gap: 1rem;
 }
 
+@media screen and (max-width: 768px) {
+    .what-is-uiua {
+        flex-direction: column;
+    }
+}
+
+.what-is-uiua-item {
+    display: inline-flex;
+    align-items: start;
+    gap: 0rem;
+    flex: 1;
+    font-size: 90%;
+}
+
+.what-is-uiua-item .prim-code:hover::after {
+    display: none;
+}
+
+.what-is-uiua-item .prim-code-a {
+    font-size: 250%;
+    margin-top: 0rem;
+}
+
+.what-is-uiua-item .prim-glyph {
+    display: inline-block;
+    transform: scale(1.3);
+}
+
+.main-text { margin: 0;
+    margin-left: -0.5rem;
+    margin-top: -0.25rem;
+    padding: 0.4rem 1rem;
+    z-index: 1;
+    border-radius: 0.5rem;
+}
+
+
 .wee-wuh-span {
-    font-size: 70%;
     opacity: 0.8;
 }
 
@@ -1219,6 +1258,7 @@ option,
 
 .sound-button {
     background-color: transparent;
+    font-size: inherit;
 }
 
 .tutorial-nav {

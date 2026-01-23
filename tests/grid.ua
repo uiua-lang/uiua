@@ -120,8 +120,8 @@ RoundtripRepr!@\u{100001}
 RoundtripRepr!@\u{100002}
 
 ⍤⤙≍ ["@ "] pretty@\s
-⍤⟜≍ pretty@\u{100001} ¤$ @\∅
-⍤⟜≍ pretty@\u{100002} ¤$ @\⊥
+⍤⟜≍ pretty@\u{2ffff} ¤$ @\∅
+⍤⟜≍ pretty@\u{2fffe} ¤$ @\⊥
 
 pretty ¤ $label [1]
 ["╭─ label"

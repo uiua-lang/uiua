@@ -825,9 +825,9 @@ pub const EMPTY_NAN: f64 = must_cast(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000
 // A NaN value used as a tombstone, not the standard NaN.
 pub const TOMBSTONE_NAN: f64 = must_cast(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000_0002);
 // A character value used as empty
-pub const EMPTY_CHAR: char = '\u{100001}';
+pub const EMPTY_CHAR: char = '\u{2ffff}';
 // A character value used as a tombstone
-pub const TOMBSTONE_CHAR: char = '\u{100002}';
+pub const TOMBSTONE_CHAR: char = '\u{2fffe}';
 
 #[track_caller]
 fn hash_start<T: ArrayValue>(arr: &Array<T>, capacity: usize) -> usize {

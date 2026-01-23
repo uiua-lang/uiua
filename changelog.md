@@ -75,6 +75,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add `-` flag to `uiua run` to run stdin as a program
 - Add `gh:` prefix for import strings to shorten GitHub imports
 - Add support for multiline input in REPL by ending lines with a `\`
+- Change map empty and tombstone characters to U+2ffff and U+2fffe
 ### Website
 - Reword all documentation and tutorials to no longer refer to a stack
   - Introduce argument manipulation modifiers earlier in the tutorial

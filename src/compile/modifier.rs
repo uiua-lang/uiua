@@ -302,14 +302,17 @@ impl Compiler {
                 let span = self.add_span(modifier.span.clone());
                 Ok(Node::ImplMod(ImplPrimitive::Astar, args, span))
             }
-            // Modifier::Primitive(Primitive::Fold) if pack.branches.len() == 2 => {
-            //     let mut args = pack.lexical_order().cloned().map(|w| w.map(Word::Func));
-            //     let f = self.word_sig(args.next().unwrap())?;
-            //     let g = self.word_sig(args.next().unwrap())?;
-            //     let args = eco_vec![f, g];
-            //     let span = self.add_span(modifier.span.clone());
-            //     Ok(Node::ImplMod(ImplPrimitive::FoldWhile, args, span))
-            // }
+            Modifier::Primitive(Primitive::Fold) if pack.branches.len() == 2 => {
+                self.experimental_error_it(&modifier.span, || {
+                    format!("{} function pack", Primitive::Fold.format())
+                });
+                let mut args = pack.lexical_order().cloned().map(|w| w.map(Word::Func));
+                let f = self.word_sig(args.next().unwrap())?;
+                let g = self.word_sig(args.next().unwrap())?;
+                let args = eco_vec![f, g];
+                let span = self.add_span(modifier.span.clone());
+                Ok(Node::ImplMod(ImplPrimitive::FoldWhile, args, span))
+            }
             Modifier::Primitive(Primitive::Geometric) if pack.branches.len() == 2 => {
                 let mut args = pack.lexical_order().cloned().map(|w| w.map(Word::Func));
                 let metrics = args.next().unwrap();

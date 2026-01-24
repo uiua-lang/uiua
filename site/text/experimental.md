@@ -115,6 +115,23 @@ The lexical ordering symbol `↓` can also be used on stack array notation to ma
   3 4]
 ```
 
+## [fold](/docs/fold) Function Packs
+
+Using [fold](/docs/fold) with a function pack of 2 functions acts like a cross between [fold](/docs/fold) and [do](/docs/do).
+
+The second function is a condition check. If it returns false, iteration ends early.
+
+This simple example folds while the number is `<` `10` is encountered. Note that in most cases, it is likely faster to simply filter the array first and do a [reduce](/docs/reduce)
+```uiua
+# Experimental!
+∧(+|<10) ⊙0 [1 2 3 10 4 5]
+```
+This example folds while the *sum* is `<` `10`. The only other way to do this is with [do](/docs/do) with manual accumulation.
+```uiua
+# Experimental!
+∧(+|<⋅10) ⊙0 [1 2 3 10 4 5]
+```
+
 ## [derivative](/docs/derivative) and [integral](/docs/integral)
 
 These modifiers transform a mathematical expression.

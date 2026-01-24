@@ -303,6 +303,9 @@ impl Compiler {
                 Ok(Node::ImplMod(ImplPrimitive::Astar, args, span))
             }
             Modifier::Primitive(Primitive::Fold) if pack.branches.len() == 2 => {
+                self.experimental_error_it(&modifier.span, || {
+                    format!("{} function pack", Primitive::Fold.format())
+                });
                 let mut args = pack.lexical_order().cloned().map(|w| w.map(Word::Func));
                 let f = self.word_sig(args.next().unwrap())?;
                 let g = self.word_sig(args.next().unwrap())?;

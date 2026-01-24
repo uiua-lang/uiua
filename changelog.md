@@ -44,6 +44,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [`&fetch`](https://uiua.org/docs/&fetch) function to easily fetch data from a url
 - Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
 - Add experimental sided subscripts for [`under ⍜`](https://uiua.org/docs/under), which automatically [`dip ⊙`](https://uiua.org/docs/dip) on net-positive second functions
+- Add experimental [`fold ∧`](https://uiua.org/docs/fold) function packs, which allows a condition to be specified for early termination. You can read more [here](https://uiua.org/docs/experimental#fold-function-packs)
 - Add mathematical constants `φ` (golden ratio) and `γ` (Euler-Mascheroni)
 - Add `PlanetSymbols` and `ZodiacSymbols` constants, symbolic versions of `Planets` and `Zodiac`
 - Add `Elements` and `ElementSymbols` constants listing the chemical elements

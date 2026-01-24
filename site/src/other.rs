@@ -600,6 +600,11 @@ pub fn Subscripts() -> impl IntoView {
             "⍚⌞⊂ 1_2_3 4_5_6\n⍚⌟⊂ 1_2_3 4_5_6",
         ),
         subscript(
+            Fill,
+            "Fill on the left or right",
+            "# Experimental!\n# Experimental!\n⬚⌞0[1 2_3 4_5_6]\n⬚⌟@ °⋕[1 23 456]",
+        ),
+        subscript(
             Slf,
             "Duplicate only the first or last argument",
             "# Experimental!\n˙⌞⊟₃ 1 2\n˙⌟⊟₃ 1 2",

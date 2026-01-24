@@ -121,7 +121,7 @@ Using [fold](/docs/fold) with a function pack of 2 functions acts like a cross b
 
 The second function is a condition check. If it returns false, iteration ends early.
 
-This simple example folds while the number is `<` `10` is encountered. Note that in most cases, it is likely faster to simply filter the array first and do a [reduce](/docs/reduce)
+This simple example folds while the number is `<` `10`. Note that in most cases, it is likely faster to simply filter the array first and do a [reduce](/docs/reduce)
 ```uiua
 # Experimental!
 ∧(+|<10) ⊙0 [1 2 3 10 4 5]

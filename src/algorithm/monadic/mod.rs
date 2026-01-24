@@ -498,7 +498,7 @@ impl Value {
                     return Err(env.error(format!("Cannot unparse {n} to base {base}")));
                 }
                 let _ = validate_size::<char>([n as usize], env)?;
-                Ok(iter::repeat_n('1', n as usize).collect())
+                Ok("1".repeat(n as usize))
             }
             10 => Ok(n.to_string()),
             64 => {

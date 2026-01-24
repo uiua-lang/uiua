@@ -78,7 +78,7 @@ pub fn Site() -> impl IntoView {
         "Abandon nominativity. Embrace relativity.".into_view(),
         view!(<div style="font-style: normal"><Prim prim=Under glyph_only=true/>"🗄️🍴"</div>).into_view(),
         "It's got um...I um...arrays".into_view(),
-        view!(<p style="font-size: 0.9em; max-width: 25em;">
+        view!(<p style="font-size: 0.9em; max-width: 25em; margin: 0;">
             "A monad is "
             <s>"a monoid in the category of endofunctors"</s>
             " a function with 1 argument"
@@ -164,7 +164,7 @@ pub fn Site() -> impl IntoView {
                                             None
                                         }
                                     }
-                                    <a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">"Support "{lang}"'s development"</a>
+                                    <a class="pls-no-block desktop-only" href="https://github.com/sponsors/uiua-lang">"Support "{lang}"'s development"</a>
                                 </div>
                             </div>
                             <Outlet/>
@@ -287,18 +287,23 @@ pub fn MainPage() -> impl IntoView {
 
     view! {
         <Title text=lang()/>
-        <div id="links">
-            <div>
-                <A href="/install">"Installation"</A>
-                <A href="/docs">"Documentation"</A>
-                <A href="/tour">"Language Tour"</A>
-            </div>
-            <div>
-                <A href="/tutorial/Introduction" class="slow-pulse">"Tutorial"</A>
-                <A href="/pad">"Pad"</A>
-                <A href="/blog">"Blog"</A>
-                <a href="https://discord.gg/3r9nrfYhCc">"Discord"</a>
-                <a href="https://github.com/uiua-lang/uiua">"GitHub"</a>
+        <input type="checkbox" id="mobile-menu-toggle"/>
+        <label id="mobile-menu-label" class="mobile-only" for="mobile-menu-toggle" aria-label="Menu">"☰"</label>
+        <div id="links-grid">
+            <div id="links">
+                <div>
+                    <a class="mobile-only" href="https://github.com/sponsors/uiua-lang">"Support "{lang}"'s development"</a>
+                    <A href="/install">"Installation"</A>
+                    <A href="/docs">"Documentation"</A>
+                    <A href="/tour">"Language Tour"</A>
+                </div>
+                <div>
+                    <A href="/tutorial/Introduction" class="slow-pulse">"Tutorial"</A>
+                    <A href="/pad">"Pad"</A>
+                    <A href="/blog">"Blog"</A>
+                    <a href="https://discord.gg/3r9nrfYhCc">"Discord"</a>
+                    <a href="https://github.com/uiua-lang/uiua">"GitHub"</a>
+                </div>
             </div>
         </div>
         <Editor

@@ -325,6 +325,7 @@ li {
 #subtitle {
     margin-left: 1.5em;
     font-size: 1em;
+    font-synthesis: none;
     font-weight: bold;
     font-style: italic;
 }

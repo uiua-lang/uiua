@@ -16,7 +16,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     Ident, Inputs, NumericSubscript, PrimComponent, Primitive, SidedSubscript, SubSide, Subscript,
-    WILDCARD_CHAR, split_name,
+    WILDCARD_CHAR, ast::FormatString, split_name,
 };
 
 /// Subscript digit characters
@@ -611,9 +611,9 @@ pub enum Token {
     Char(String),
     Str(String),
     Label(Ident),
-    FormatStr(Vec<String>),
+    FormatStr(FormatString),
     MultilineString(String),
-    MultilineFormatStr(Vec<String>),
+    MultilineFormatStr(FormatString),
     Simple(AsciiToken),
     Glyph(Primitive),
     Placeholder(Option<usize>),
@@ -651,9 +651,9 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_format_string(&self) -> Option<Vec<String>> {
+    pub(crate) fn as_format_string(&self) -> Option<FormatString> {
         match self {
-            Token::FormatStr(frags) => Some(frags.clone()),
+            Token::FormatStr(s) => Some(s.clone()),
             _ => None,
         }
     }
@@ -663,9 +663,9 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_multiline_format_string(&self) -> Option<Vec<String>> {
+    pub(crate) fn as_multiline_format_string(&self) -> Option<FormatString> {
         match self {
-            Token::MultilineFormatStr(parts) => Some(parts.clone()),
+            Token::MultilineFormatStr(s) => Some(s.clone()),
             _ => None,
         }
     }
@@ -723,16 +723,7 @@ impl fmt::Display for Token {
                 Ok(())
             }
             Token::Label(s) => write!(f, "${s}"),
-            Token::FormatStr(parts) | Token::MultilineFormatStr(parts) => {
-                write!(f, "format string")?;
-                for (i, part) in parts.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, "_")?;
-                    }
-                    write!(f, "{part}")?;
-                }
-                Ok(())
-            }
+            Token::FormatStr(s) | Token::MultilineFormatStr(s) => s.fmt(f),
             Token::Simple(t) => t.fmt(f),
             Token::Glyph(p) => p.fmt(f),
             Token::LeftArrow => write!(f, "←"),
@@ -1271,7 +1262,7 @@ impl<'a> Lexer<'a> {
                         // Raw strings
                         let mut start = start;
                         let escape_mode = if format_raw {
-                            EscapeMode::UnderscoreOnly
+                            EscapeMode::FormatString
                         } else {
                             EscapeMode::None
                         };
@@ -1706,7 +1697,7 @@ impl<'a> Lexer<'a> {
             }
         } else if c == "\\"
             && (escape_mode == EscapeMode::All
-                || escape_mode == EscapeMode::UnderscoreOnly && self.peek_char() == Some("_"))
+                || escape_mode == EscapeMode::FormatString && self.peek_char() == Some("_"))
         {
             *escaped = true;
             return self.character(escaped, escape_char, escape_mode);
@@ -1752,7 +1743,7 @@ pub(crate) fn subscript(s: &str) -> Option<(Subscript, &str)> {
 enum EscapeMode {
     All,
     None,
-    UnderscoreOnly,
+    FormatString,
 }
 
 fn parse_format_fragments(s: &str) -> Vec<String> {

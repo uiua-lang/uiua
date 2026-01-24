@@ -1,6 +1,6 @@
 //! Uiua's abstract syntax tree
 
-use std::{collections::BTreeMap, fmt, iter::once, mem::discriminant};
+use std::{collections::BTreeMap, fmt, iter::once, mem::discriminant, path::MAIN_SEPARATOR};
 
 use ecow::EcoString;
 use serde::*;
@@ -973,5 +973,49 @@ impl fmt::Display for NumWord {
             NumWord::Complex(c) => write!(f, "{c}"),
             NumWord::Err(e) => write!(f, "error({e})"),
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FormatFrag {
+    Arg,
+    PathSep,
+    #[serde(untagged)]
+    Text(EcoString),
+}
+
+impl fmt::Display for FormatFrag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "$\"")?;
+        match self {
+            FormatFrag::Arg => write!(f, "_"),
+            FormatFrag::PathSep => write!(f, "{MAIN_SEPARATOR}"),
+            FormatFrag::Text(s) => s.fmt(f),
+        }?;
+        write!(f, "\"")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct FormatString {
+    pub frags: Vec<Sp<FormatFrag>>,
+}
+
+impl FormatString {
+    pub fn args(&self) -> usize {
+        (self.frags.iter())
+            .filter(|frag| matches!(frag.value, FormatFrag::Arg))
+            .count()
+    }
+}
+
+impl fmt::Display for FormatString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for frag in &self.frags {
+            write!(f, "{frag}")?;
+        }
+        Ok(())
     }
 }

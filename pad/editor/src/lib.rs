@@ -2,6 +2,7 @@ pub mod backend;
 pub mod utils;
 
 use std::{
+    borrow::Cow,
     cell::Cell,
     iter::{once, repeat_n},
     mem::take,
@@ -459,7 +460,13 @@ pub fn Editor<'a>(
         let Some((start, end)) = get_code_cursor() else {
             return;
         };
-        let inserted = inserted.replace('\r', "");
+        let mut inserted = Cow::Borrowed(inserted);
+        if inserted.contains('\r') {
+            inserted = inserted.replace('\r', "").into();
+        }
+        if inserted.contains('\t') {
+            inserted = inserted.replace('\t', "  ").into();
+        }
         let (start, end) = (start.min(end), start.max(end) as usize);
         // logging::log!("replace start: {start}, end: {end}");
         let code = get_code();

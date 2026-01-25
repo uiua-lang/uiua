@@ -2255,12 +2255,12 @@ impl Compiler {
             }
             vec![Value::default(); sn.sig.outputs()]
         } else {
+            self.asm.spans.truncate(orig_spans_len);
             stack.reverse();
             stack.truncate(sn.sig.outputs());
             stack.reverse();
             stack
         };
-        self.asm.spans.truncate(orig_spans_len);
         self.asm.root = root;
         Ok((values, sn.sig))
     }

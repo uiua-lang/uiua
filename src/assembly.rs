@@ -327,8 +327,7 @@ impl Assembly {
         }
 
         // Spans
-        let mut spans = EcoVec::new();
-        spans.push(Span::Builtin);
+        let mut spans = eco_vec![Span::Builtin];
         for line in spans_src.lines() {
             if line.trim().is_empty() {
                 spans.push(Span::Builtin);
@@ -351,6 +350,7 @@ impl Assembly {
                 spans.push(Span::Code(CodeSpan { src, start, end }));
             }
         }
+        assert_eq!(spans.pop(), Some(Span::Builtin)); // Remove extra empty line
 
         // Bindings
         let mut bindings = EcoVec::new();

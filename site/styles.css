@@ -1399,6 +1399,13 @@ input[type=text] {
     animation: pulseAnimation 2s infinite;
 }
 
+.skeleton {
+    border-radius: 1em;
+    animation: fadeAnimation 2s infinite;
+    background: light-dark(#fff6, #fff2);
+    flex: 1;
+}
+
 @keyframes fadeAnimation {
 
     0%,

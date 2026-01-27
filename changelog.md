@@ -70,6 +70,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Optimize `⊢⍆` and `⊣⍆` to be O(n)
 - Add `inc` and `dec` aliases
 - Add `bw` alias for [`backward ˜`](https://uiua.org/docs/backward)
+- Add `fla` alias for [`deshape ♭`](https://uiua.org/docs/deshape), which is a prefix of `flat`
 - Extend [`table ⊞`](https://uiua.org/docs/table) list optimizations to non-lists
 - Values generated on the same line in code will appear on the same line in output
 - Add `-i/--stdin` flag to `uiua run` and `uiua eval` to pipe stdin to the first argument in a program

@@ -631,15 +631,19 @@ option,
 
 .code-outer {
     text-align: left;
-    border-radius: 0.5em;
+    border-radius: 0.5em 0.5em 0 0;
     width: 100%;
     box-sizing: border-box;
     outline: none;
     border: none;
-    padding: 0.3em;
+    padding: 0.3rem 0.5rem;
     height: 100%;
     display: flex;
     gap: 0.5em;
+}
+
+.medium-editor .code-outer {
+    border-radius: 0;
 }
 
 .code-and-overlay {
@@ -965,7 +969,7 @@ option,
 }
 
 .glyph-buttons {
-    padding: 0.1em;
+    padding: 0.25rem 0.5rem;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
@@ -1967,8 +1971,6 @@ a.clean {
         resize: none;
         min-height: 100%;
         height: fit-content;
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
         overflow-y: unset;
         overflow-x: unset;
     }

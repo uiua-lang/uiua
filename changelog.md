@@ -10,7 +10,6 @@ This version is not yet released. If you are reading this on the website, then t
 - Allow for multiple [`fill ⬚`](https://uiua.org/docs/fill) values by returning multiple values from the fill function.
 - Add [`anti ⌝`](https://uiua.org/docs/anti)[`by ⊸`](https://uiua.org/docs/by) for dyadic functions
 - Add digit separators for number literals with `,`. Ex: `123,456.078,9`
-- Add `shuf` and `shuffle` aliases for [`un °`](https://uiua.org/docs/un)[`sort ⍆`](https://uiua.org/docs/sort)
 - Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
 - Make sided [`fill ⬚`](https://uiua.org/docs/fill) work with [`stencil ⧈`](https://uiua.org/docs/stencil)
 - Add sided subscripts for [`join ⊂`](https://uiua.org/docs/join), which joins with one side as the list
@@ -24,14 +23,18 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`reciprocal ⨪`](https://uiua.org/docs/reciprocal) function
 - Add [`compress`](https://uiua.org/docs/compress) function to compress arrays of bytes
 - A function/constant and a module with the same name can now be in scope at the same time
+- Allow `≁` for private imports/exports from modules
 - Change [`reach ∪`](https://uiua.org/docs/reach)'s glyph
 - Change how sided [`reach ∪`](https://uiua.org/docs/reach) works
+- Add `shuf` and `shuffle` aliases for [`un °`](https://uiua.org/docs/un)[`sort ⍆`](https://uiua.org/docs/sort)
 - Remove the 2-character ASCII aliases for comparison functions in favor of 2-letter aliases
   - These symbolic aliases created conflicts with other language syntax
   - `!=` for [`not equals ≠`](<https://uiua.org/docs/not equals>) is now `ne`
   - `<=` for [`less or equal ≤`](<https://uiua.org/docs/less or equal>) is now `le`
   - `>=` for [`greater or equal ≤`](<https://uiua.org/docs/greater or equal>) is now `ge`
-- Allow `≁` for private imports/exports from modules
+- Add `inc` and `dec` aliases
+- Add `bw` alias for [`backward ˜`](https://uiua.org/docs/backward)
+- Add `fla` alias for [`deshape ♭`](https://uiua.org/docs/deshape), which is a prefix of `flat`
 - Stabilize [`un °`](https://uiua.org/docs/un) [`under ⍜`](https://uiua.org/docs/under)
 - Add [`json`](https://uiua.org/docs/json)`₅` for serializing to pretty JSON5
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
@@ -68,9 +71,6 @@ This version is not yet released. If you are reading this on the website, then t
 - Optimize `°ₑ₂` and `°ₑ₁₀` to be both faster and more correct
 - Optimize `˙×⌵` on complex numbers to not do a square root
 - Optimize `⊢⍆` and `⊣⍆` to be O(n)
-- Add `inc` and `dec` aliases
-- Add `bw` alias for [`backward ˜`](https://uiua.org/docs/backward)
-- Add `fla` alias for [`deshape ♭`](https://uiua.org/docs/deshape), which is a prefix of `flat`
 - Extend [`table ⊞`](https://uiua.org/docs/table) list optimizations to non-lists
 - Values generated on the same line in code will appear on the same line in output
 - Add `-i/--stdin` flag to `uiua run` and `uiua eval` to pipe stdin to the first argument in a program

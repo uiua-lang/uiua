@@ -16,6 +16,38 @@ TODO: Summarize changes in a few sentences
 
 TODO: Sections on major changes
 
+## ~~Stack~~ Arguments
+
+From the first day it was made public, Uiua was conceived of as a stack-based language, where functions operate on a global stack. Many of the original fundamental functions simply manipulated the stack to get arguments in the right order.
+
+However, as Uiua has developed, direct stack manipulation via functions has been gradually superseded by modifiers like [`fork ⊃`](https://uiua.org/docs/fork), [`both ∩`](https://uiua.org/docs/both), and [`by ⊸`](https://uiua.org/docs/by). These modifiers encourage thinking about data flow through the program as directing and reusing arguments rather than as manipulation of a stack.
+
+In Uiua 0.18, this design philosophy has been solidified in a few ways:
+- All mentions of a stack in tutorials and documentation have been removed.
+- Data flow is now referred to in terms of a *list or arguments* being operated on by functions.
+  - This was already done in many cases, but is now done everywhere.
+  - Terms like "top stack value" are now replaced with "first argument"
+- [`duplicate .`](https://uiua.org/docs/duplicate) has been deprecated
+- [`flip :`](https://uiua.org/docs/flip) has been deprecated
+
+## Notable Stabilizations
+
+[`evert ⧋`](https://uiua.org/docs/evert) has been stabilized! It is a powerful tool for operating on the last axis of an array.
+
+```uiua
+⧋÷⟜⇡ 4_4
+```
+
+```uiua
+⧋/+ [[1_2 0_5] [¯6_10 3_3]]
+```
+
+[`reciprocal ⨪`](https://uiua.org/docs/reciprocal) has been stabilized!
+
+```uiua
+⨪ [1 2 4 5 8]
+```
+
 ## Notable Breaking Changes
 
 Subscripted [`range ⇡`](https://uiua.org/docs/range) now creates an inclusive range starting at the subscript number. This breaks cases other than `⇡₁`.
@@ -26,6 +58,12 @@ Subscripted [`range ⇡`](https://uiua.org/docs/range) now creates an inclusive 
 ⇡₂ 5
 ⇡₋₁5
 ```
+
+## Kala
+
+As discussed in a [previous blog post](https://www.uiua.org/blog/uiuas-official-mascot), Uiua now has an official mascot: Kala the Cuttlefish!
+
+![default image of kala, a colorful cuttlefish](https://raw.githubusercontent.com/uiua-lang/uiua/refs/heads/main/site/assets/kala/default.png)
 
 ## Contributors
 

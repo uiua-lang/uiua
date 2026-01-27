@@ -602,7 +602,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(
             Fill,
             "Fill on the left or right",
-            "# Experimental!\n# Experimental!\n⬚⌞0[1 2_3 4_5_6]\n⬚⌟@ °⋕[1 23 456]",
+            "# Experimental!\n⬚⌞0[1 2_3 4_5_6]\n⬚⌟@ °⋕[1 23 456]",
         ),
         subscript(
             Slf,

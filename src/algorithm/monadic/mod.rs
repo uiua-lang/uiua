@@ -1398,7 +1398,7 @@ impl<T: ArrayValue> Array<T> {
             return vec![0; self.row_count()];
         }
         let mut classified = Vec::with_capacity(self.row_count());
-        if self.meta.is_sorted_up() {
+        if self.meta.is_sorted_up() || self.meta.is_sorted_down() {
             let mut rows = self.row_slices().map(ArrayCmpSlice);
             if let Some(mut prev) = rows.next() {
                 let mut curr_class = 0;

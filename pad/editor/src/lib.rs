@@ -2329,7 +2329,7 @@ pub fn Editor<'a>(
                                 stroke-linejoin="round"
                             >
                                 <path d="M19 12H5"/>
-                                <path d="M12 19l-7-7 7-7"/>
+                                <path d="M11 18l-6-6 6-6"/>
                             </svg>
                         </button>
                         <button
@@ -2351,7 +2351,7 @@ pub fn Editor<'a>(
                                 stroke-linejoin="round"
                             >
                                 <path d="M5 12h14"/>
-                                <path d="M12 5l7 7-7 7"/>
+                                <path d="M13 6l6 6-6 6"/>
                             </svg>
                         </button>
                     </div>

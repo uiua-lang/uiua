@@ -69,6 +69,7 @@ pub fn Editor<'a>(
     #[prop(optional)] nonprogressive: bool,
     #[prop(optional)] examples: Option<Vec<String>>,
     #[prop(optional)] kala: &'a str,
+    #[prop(optional)] format_hint: bool,
 ) -> impl IntoView {
     START_TIME.get_or_init(|| Date::now() / 1000.0);
 
@@ -142,6 +143,7 @@ pub fn Editor<'a>(
     let (copied_link, set_copied_link) = create_signal(false);
     let (settings_open, set_settings_open) = create_signal(false);
     let (fullscreen_enabled, set_fullscreen_enabled) = create_signal(false);
+    let (show_format_hint, set_show_format_hint) = create_signal(format_hint);
     let update_token_count = move |code: &str| {
         set_token_count.set(
             lex(code, (), &mut Default::default())
@@ -1537,6 +1539,15 @@ pub fn Editor<'a>(
             .map(|text| view! { <span id="example-tracker">{text}</span> })
     };
 
+    // Select a class for the run button
+    let run_button_class = move || {
+        if show_format_hint.get() {
+            "code-button important-button click-me"
+        } else {
+            "code-button"
+        }
+    };
+
     // Select a class for the next example button
     let next_button_class = move || {
         if example.get() == examples_len - 1 {
@@ -1627,7 +1638,7 @@ pub fn Editor<'a>(
         handle_load_files(files);
     });
 
-    let h = &get_state.get().hidden;
+    let h = &get_state.get_untracked().hidden;
     let hidden_lines = if h.is_empty() {
         0
     } else {
@@ -2305,26 +2316,57 @@ pub fn Editor<'a>(
                             {"Format"}
                         </button>
                         <button
-                            class="code-button"
-                            on:click=move |_| run(get_run_on_format(), false)
+                            class=move || run_button_class
+                            on:click=move |_| {
+                                set_show_format_hint.set(false);
+                                run(get_run_on_format(), false)
+                            }
                         >
                             {"Run"}
                         </button>
                         <button
                             id="prev-example"
                             class="code-button"
+                            aria-label="Previous"
                             style=example_arrow_style
                             on:click=prev_example
                         >
-                            {"<"}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="1em"
+                                height="1em"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M19 12H5"/>
+                                <path d="M11 18l-6-6 6-6"/>
+                            </svg>
                         </button>
                         <button
                             id="next-example"
                             class=next_button_class
+                            aria-label="Next"
                             style=example_arrow_style
                             on:click=next_example
                         >
-                            {">"}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="1em"
+                                height="1em"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M5 12h14"/>
+                                <path d="M13 6l6 6-6 6"/>
+                            </svg>
                         </button>
                     </div>
                 </div>

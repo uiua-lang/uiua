@@ -392,7 +392,7 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <Hd id="unicode-formatter">"Unicode Formatter"</Hd>
                     <p>{lang}" has the terseness and expressivity afforded by Unicode glyphs without the need for special keyboard or editor support. Instead, the language comes with a formatter that converts the names of built-in functions into glyphs."</p>
-                    <Editor example="floor*10repeatrand5" help={&["", "Click to format ⇡⇡⇡            "]}/>
+                    <Editor example="floor*10repeatrand5" format_hint={true} />
                 </div>
                 <div>
                     <Hd id="multimedia-output">"Multimedia Output"</Hd>

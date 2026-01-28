@@ -815,11 +815,19 @@ option,
     margin: 0 0 0 0.2em;
     height: auto;
     text-align: center;
-    text-justify: center;
+    padding: 0 0.4em;
+    border-radius: 0.3em;
+    display: flex;
+    align-items: center;
 }
 
 .important-button {
     animation: fadeAnimation 2s infinite;
+}
+
+.click-me::after {
+    content: " (click me!)";
+    white-space: pre;
 }
 
 .output-line {

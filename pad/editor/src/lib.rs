@@ -1540,10 +1540,12 @@ pub fn Editor<'a>(
     };
 
     // Select a class for the run button
-    let run_button_class = move || if show_format_hint.get() {
-        "code-button important-button click-me"
-    } else {
-        "code-button"
+    let run_button_class = move || {
+        if show_format_hint.get() {
+            "code-button important-button click-me"
+        } else {
+            "code-button"
+        }
     };
 
     // Select a class for the next example button

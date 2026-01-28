@@ -1,4 +1,4 @@
-uiua-0.18.0(9764b956-97e4-4d37-9f87-e51d1a3e7e09): 2026-??-?? - Announcing uiua 0.18
+#uiua-0.18.0(9764b956-97e4-4d37-9f87-e51d1a3e7e09): 2026-??-?? - Announcing uiua 0.18
 uiuas-official-mascot(136f50c2-a212-40ee-8062-0c4530830a27): 2025-11-15 - Uiua's Official Mascot
 uiua-0.17.0(f0369adf-a4f1-4267-96e1-9c6527298cd3): 2025-09-23 - Announcing Uiua 0.17.0
 how-the-uiua-logo-works(f7077c7c-3968-4f10-8e7d-140ebcaebc77): 2025-05-29 - How the Uiua Logo Works

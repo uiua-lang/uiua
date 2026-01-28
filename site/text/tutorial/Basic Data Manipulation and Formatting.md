@@ -63,7 +63,7 @@ Uiua does not have multiline comments.
 
 Most of Uiua's built-in functions use special Unicode characters. To type multiplication and division signs, you can use `*` and `%` respectively. Then, run the code to format the ASCII characters into Unicode.
 
-```uiua kala arms help(⇡⇡⇡⇡ Click   )
+```uiua kala arms format_hint
 # Click Run to format!
 %6 *3 8
 ```

@@ -358,7 +358,8 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                         Some((h, c)) => (c.strip_prefix('\n').unwrap_or(c), h.trim_end()),
                         None => (&*block.literal, ""),
                     };
-                view!(<Editor example=code hidden=hidden help=help kala=kala no_run=no_run/>)
+                let format_hint = block.info.contains("format_hint");
+                view!(<Editor example=code hidden=hidden help=help kala=kala no_run=no_run format_hint=format_hint/>)
                     .into_view()
             } else if block.info.starts_with("challenge") {
                 let mut lines = block.literal.lines().map(|s| s.to_string());

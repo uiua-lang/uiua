@@ -821,6 +821,11 @@ option,
     animation: fadeAnimation 2s infinite;
 }
 
+.click-me::after {
+    content: " (click me!)";
+    white-space: pre;
+}
+
 .output-line {
     font-family: "Code Font", monospace;
     font-size: inherit;

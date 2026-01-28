@@ -36,7 +36,10 @@ pub fn Fetch<S: Into<String>, F: Fn(&str) -> View + 'static>(src: S, f: F) -> im
 
 fn options() -> ComrakOptions<'static> {
     ComrakOptions {
-        extension: ExtensionOptions::builder().table(true).build(),
+        extension: ExtensionOptions::builder()
+            .table(true)
+            .strikethrough(true)
+            .build(),
         ..Default::default()
     }
 }
@@ -333,13 +336,12 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
         NodeValue::Strikethrough => view!(<del>{children}</del>).into_view(),
         NodeValue::LineBreak => view!(<br/>).into_view(),
         NodeValue::CodeBlock(block) => {
-            if block.literal.trim() == "LOGO" {
+            let lit = block.literal.trim_end_matches("\n");
+            if lit.trim() == "LOGO" {
                 view!(<Editor example=LOGO/>).into_view()
             } else if block.info.starts_with("uiua")
                 || block.info.is_empty()
-                    && uiua::parse(&block.literal, (), &mut Default::default())
-                        .1
-                        .is_empty()
+                    && uiua::parse(lit, (), &mut Default::default()).1.is_empty()
             {
                 let mut help: &[_] = &[];
                 let hlp;
@@ -353,16 +355,15 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                     .nth(1)
                     .unwrap_or_default();
                 let no_run = (block.info.split_whitespace()).any(|w| w == "norun");
-                let (code, hidden) =
-                    match block.literal.trim_end().split_once("\n# ^^^ HIDDEN ^^^\n") {
-                        Some((h, c)) => (c.strip_prefix('\n').unwrap_or(c), h.trim_end()),
-                        None => (&*block.literal, ""),
-                    };
+                let (code, hidden) = match lit.trim_end().split_once("\n# ^^^ HIDDEN ^^^\n") {
+                    Some((h, c)) => (c.strip_prefix('\n').unwrap_or(c), h.trim_end()),
+                    None => (lit, ""),
+                };
                 let format_hint = block.info.contains("format_hint");
                 view!(<Editor example=code hidden=hidden help=help kala=kala no_run=no_run format_hint=format_hint/>)
                     .into_view()
             } else if block.info.starts_with("challenge") {
-                let mut lines = block.literal.lines().map(|s| s.to_string());
+                let mut lines = lit.lines().map(|s| s.to_string());
                 let prompt = markdown_view_impl(&lines.next().unwrap_or_default(), false);
                 let answer = lines.next().unwrap_or_default();
                 let best_answer = lines.next().unwrap_or_default();
@@ -393,7 +394,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 }
                 .into_view()
             } else {
-                view!(<code class="code-block">{&block.literal}</code>).into_view()
+                view!(<code class="code-block">{lit.to_string()}</code>).into_view()
             }
         }
         NodeValue::ThematicBreak => view!(<hr/>).into_view(),

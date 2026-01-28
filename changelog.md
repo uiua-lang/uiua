@@ -31,7 +31,7 @@ This version is not yet released. If you are reading this on the website, then t
   - These symbolic aliases created conflicts with other language syntax
   - `!=` for [`not equals ≠`](<https://uiua.org/docs/not equals>) is now `ne`
   - `<=` for [`less or equal ≤`](<https://uiua.org/docs/less or equal>) is now `le`
-  - `>=` for [`greater or equal ≤`](<https://uiua.org/docs/greater or equal>) is now `ge`
+  - `>=` for [`greater or equal ≥`](<https://uiua.org/docs/greater or equal>) is now `ge`
 - Add `inc` and `dec` aliases
 - Add `bw` alias for [`backward ˜`](https://uiua.org/docs/backward)
 - Add `fla` alias for [`deshape ♭`](https://uiua.org/docs/deshape), which is a prefix of `flat`
@@ -61,6 +61,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - Upgrade to Rust 2024 edition
 - Increase minimum Rust version to `1.88.0`
+- Many bug/crash fixes
 - Compiled dependecies are now cached, increasing performance with large dependencies in the online pad and local LSP
 - Gifs now use Floyd-Steinberg dithering rather than color quantization
   - It's both faster and looks better

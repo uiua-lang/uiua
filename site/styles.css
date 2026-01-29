@@ -70,7 +70,7 @@ button {
     position: relative;
 }
 
-button:active {
+button:enabled:active {
     transform: translateY(0.1em);
 }
 
@@ -562,36 +562,61 @@ li {
     font-size: 1.4em;
 }
 
-#settings {
+#settings-container-outer {
     grid-area: settings;
+    display: block;
+}
+
+#settings-container-inner {
+    display: grid;
+    overflow: hidden;
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition: grid-template-rows 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+#settings {
     display: flex;
-    justify-content: space-between;
+    min-height: 0;
     font-size: 0.6em;
-    padding: 0.2em;
-    gap: 0.5em;
+    justify-content: center;
+    gap: 2em 4em;
+    flex-direction: row;
 }
 
-#settings>* {
+@media screen and (max-width: 768px) {
+    #settings {
+        flex-direction: column;
+        margin: auto;
+    }
+}
+
+.settings-group {
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.2em 1em;
-}
-
-#settings-left {
-    width: 85%;
-    justify-content: space-between;
-}
-
-#settings-right {
     flex-direction: column;
-    align-items: flex-end;
+    gap: 0.25em;
+    margin-bottom: 1em;
 }
 
-#settings>*>* {
-    display: inline-block;
-    white-space: nowrap;
-    width: max(20%, 10em)
+.settings-group hr {
+    min-width: 1em;
+}
+
+.settings-group h3 {
+    margin: 0 0 0.5rem 0;
+}
+
+.settings-group button {
+    padding: 0.1rem 0.5rem;
+    height: 1.6em;
+}
+
+.settings-group label {
+    margin-left: -0.2em;
+}
+
+.settings-group label input[type=checkbox] {
+    margin-right: 0.5em;
 }
 
 input[type=number] {
@@ -938,7 +963,7 @@ option,
     content: attr(data-title);
     position: absolute;
     font-family: "Code Font", monospace;
-    font-size: 0.75em;
+    font-size: 0.8em;
     right: 0;
     top: 100%;
     bottom: 1.5em;
@@ -947,6 +972,7 @@ option,
     border-radius: 0.2em;
     pointer-events: none;
     height: fit-content;
+    z-index: 1;
 }
 
 .editor-right-button:hover::after,
@@ -960,6 +986,7 @@ option,
     width: 24em;
     white-space: pre-wrap;
     text-align: left;
+    padding: 0.5em 1em;
 }
 
 .experimental-icon {

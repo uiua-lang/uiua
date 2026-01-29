@@ -603,12 +603,13 @@ li {
 }
 
 .settings-group h3 {
-    margin: 0 0 0.5rem 0;
+    margin: 0.5rem 0;
 }
 
 .settings-group button {
     padding: 0.1rem 0.5rem;
     height: 1.6em;
+    width: 100%;
 }
 
 .settings-group label {
@@ -617,6 +618,31 @@ li {
 
 .settings-group label input[type=checkbox] {
     margin-right: 0.5em;
+}
+
+.settings-group-grid {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 0.5em;
+    margin-top: 0.5em;
+}
+
+.settings-group-grid select {
+    margin-left: 0;
+}
+
+.settings-group-grid>div {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: span 2;
+}
+
+.settings-group-grid>div>* {
+    grid-column: 2;
+}
+
+.settings-group-grid>div>*:first-child {
+    grid-column: 1;
 }
 
 input[type=number] {
@@ -634,13 +660,10 @@ select,
 option,
 #settings>*>*>input,
 #settings>*>*>select {
-    border-radius: 0.5em;
+    border-radius: 0.1em;
     border: none;
     margin-left: 0.5em;
-}
-
-#settings>*>*>input[type=number] {
-    width: 3em;
+    padding: 0.1em 0.4em;
 }
 
 .editor-area {

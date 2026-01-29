@@ -30,6 +30,7 @@ Setters for multiple optional arguments can occur in any order.
 # Experimental!
 ~F {A ← 0|B ← 0|C ← 0|D ← 0|E} ∘
 F!(°⊸D1 °⊸A4 °⊸C2 °⊸B3) 5
+F!°⊸⊃(D|A|C|B) 1 4 2 3 5
 ```
 
 ---

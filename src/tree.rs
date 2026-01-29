@@ -74,7 +74,6 @@ node!(
     /// Track the caller of this node
     TrackCaller(inner(Arc<SigNode>)),
     /// Push a value onto the stack
-    (#[serde(untagged)] rep),
     Push(val(Value)),
     /// Run a primitive function
     (#[serde(untagged)] rep),

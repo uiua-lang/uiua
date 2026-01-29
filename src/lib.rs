@@ -340,7 +340,7 @@ mod tests {
     fn assembly_round_trip() {
         use super::*;
         let path = Path::new("tests_special/uasm.ua");
-        let mut comp = Compiler::new();
+        let mut comp = Compiler::with_backend(NativeSys);
         comp.load_file(path).unwrap();
         let asm = comp.finish();
         let root = asm.root.clone();
@@ -348,6 +348,9 @@ mod tests {
         let asm = Assembly::from_uasm(&uasm).unwrap();
         assert_eq!(asm.root, root);
         let mut env = Uiua::with_native_sys();
+        env.run_asm(asm.clone()).unwrap();
+        // Run twice to make sure module caching works
+        env = Uiua::with_native_sys();
         env.run_asm(asm).unwrap();
     }
 

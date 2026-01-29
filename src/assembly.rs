@@ -378,9 +378,11 @@ impl Assembly {
                     Err("No key".into())
                 }
             })?;
-            let span: usize = span.parse().map_err(|_| "Invalid binding span")?;
+            let span: usize = span
+                .parse()
+                .map_err(|_| format!("Invalid binding span {span:?}"))?;
             let span = (spans.get(span + 1).cloned())
-                .unwrap_or_else(|| panic!("Invalid span for binding {kind:?}"))
+                .unwrap_or_else(|| panic!("Invalid span ({span}) for binding {kind:?}"))
                 .code()
                 .unwrap_or_else(CodeSpan::dummy);
             let comment = (lines.peek())

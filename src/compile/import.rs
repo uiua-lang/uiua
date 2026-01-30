@@ -167,7 +167,7 @@ impl Compiler {
                     && let Ok(asm) = Assembly::from_uasm(&String::from_utf8_lossy(&uasm))
                         .inspect_err(|e| {
                             self.emit_diagnostic(
-                                format!("Error loading cached assemebly: {e}"),
+                                format!("Error loading cached assemebly: {e}.\nModule will be recompiled."),
                                 DiagnosticKind::Warning,
                                 span.clone(),
                             )

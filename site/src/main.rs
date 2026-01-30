@@ -22,9 +22,9 @@ use leptos_router::*;
 use rand::prelude::*;
 use uiua::{ConstantDef, Primitive, SysOp, now};
 use uiua_editor::{
-    EDITOR_SHORTCUTS, Editor, EditorMode, Prim, binding_name_class, lang,
+    Editor, EditorMode, Prim, binding_name_class, editor_shortcuts, lang,
     utils::{
-        ChallengeDef, get_april_fools_setting, get_april_fools_time, its_called_weewuh,
+        ChallengeDef, get_april_fools_setting, get_april_fools_time, its_called_weewuh, on_mac,
         set_april_fools,
     },
 };
@@ -285,6 +285,15 @@ pub fn MainPage() -> impl IntoView {
     let prim2 = [Rise, Where, Deduplicate, Classify, Occurrences][rng.random_range(0..5)];
     let prim3 = [Reshape, Under, Fill][rng.random_range(0..3)];
 
+    let help_text = [
+        "Type a glyph's name, then run to format the names into glyphs.",
+        if on_mac() {
+            "You can run with ⌘/shift + enter."
+        } else {
+            "You can run with ctrl/shift + enter."
+        },
+    ];
+
     view! {
         <Title text=lang()/>
         <input type="checkbox" id="mobile-menu-toggle"/>
@@ -324,10 +333,7 @@ pub fn MainPage() -> impl IntoView {
                 )
                 .map(ToString::to_string)
                 .collect()
-            help={&[
-                "Type a glyph's name, then run to format the names into glyphs.",
-                "You can run with ctrl/shift + enter.",
-            ]}/>
+            help={&help_text}/>
         <br/>
         <div class="what-is-uiua">
             <div class="what-is-uiua-item">
@@ -581,7 +587,7 @@ pub fn PadPage() -> impl IntoView {
         <p>"Replace "<code>"pad"</code>" in links with "<code>"embed"</code>" or "<code>"embedpad"</code>" to embed the editor."</p>
         <p>"Keyboard shortcuts:"</p>
         <code class="code-block">
-            { EDITOR_SHORTCUTS }
+            { editor_shortcuts() }
         </code>
         <p>"Want a pad-like experience in the native interpreter? Try the "<code>"uiua -w"</code>" command to show output in a window."</p>
         <p>"You can download the newest version of the native interpreter "<a href="https://github.com/uiua-lang/uiua/releases">"here"</a>"."</p>

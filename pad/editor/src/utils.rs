@@ -379,7 +379,7 @@ impl CodeLines {
 pub fn on_mac() -> bool {
     window()
         .navigator()
-        .user_agent()
+        .platform()
         .unwrap()
         .to_lowercase()
         .contains("mac")

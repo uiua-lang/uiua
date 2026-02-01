@@ -344,6 +344,35 @@ We can use the idiom `/⍚⊂≡` to properly initialize lists of default fields
 /⍚⊂≡Person {"Alice" "Bob" "Carol"} 30
 ```
 
+## Data Functions
+
+If the fields of a data definition are immediately followed by some code, the data definition becomes a *data function*. Data functions have a `Call` function defined which is invoked instead of the normal `New` constructor when the data definition's name is used as a function.
+
+The normal constructor is called, then the constructed data is passed to the function.
+
+```uiua
+# Experimental!
+~Person {Name Surname ← ""} $"_ _"⊃(Name|Surname)
+Person "Dave"
+```
+
+But if the function is called immediately, how do we set `Surname`?
+
+In this case `Surname` is an *optional argument*. When the data function's name is used as a macro, we can set optional arguments within the macro's function. We can set optional arguments with the [un](/docs/un) [by](/docs/by) idiom followed by their name.
+
+```uiua
+~Person {Name Surname ← ""} $"_ _"⊃(Name|Surname)
+Person!°⊸Surname "Daveson" "Dave"
+```
+
+Setters for multiple optional arguments can occur in any order. [un](/docs/un)[by](/docs/by)[fork](/docs/fork) can be used to set multiple optional arguments.
+
+```uiua
+~F {A ← 0|B ← 0|C ← 0|D ← 0|E} ∘
+F!(°⊸D1 °⊸A4 °⊸C2 °⊸B3) 5
+F!°⊸⊃(D|A|C|B) 1 4 2 3 5
+```
+
 ## Dynamic Structure
 
 Which fields a data definition has are generally static. Fields accesses via the generated functions are static.

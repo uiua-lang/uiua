@@ -2,39 +2,6 @@
 
 [Data definitions](</tutorial/Data Definitions>) have a few experimental features.
 
-### Data Functions
-
-If the fields of a data definition are immediately followed by some code, the data definition becomes a *data function*. Data functions have a `Call` function defined which is invoked instead of the normal `New` constructor when the data definition's name is used as a function.
-
-The normal constructor is called, then the constructed data is passed to the function.
-
-```uiua
-# Experimental!
-~Person {Name Surname ← ""} $"_ _"⊃(Name|Surname)
-Person "Dave"
-```
-
-But if the function is called immediately, how do we set `Surname`?
-
-In this case `Surname` is an *optional argument*. When the data function's name is used as a macro, we can set optional arguments within the macro's function. We can set optional arguments with the [un](/docs/un) [by](/docs/by) idiom followed by their name.
-
-```uiua
-# Experimental!
-~Person {Name Surname ← ""} $"_ _"⊃(Name|Surname)
-Person!°⊸Surname "Daveson" "Dave"
-```
-
-Setters for multiple optional arguments can occur in any order.
-
-```uiua
-# Experimental!
-~F {A ← 0|B ← 0|C ← 0|D ← 0|E} ∘
-F!(°⊸D1 °⊸A4 °⊸C2 °⊸B3) 5
-F!°⊸⊃(D|A|C|B) 1 4 2 3 5
-```
-
----
-
 ### Validators
 
 You can add validation functions to a field. This function will be called both upon construction (after the initializer) and upon mutation.

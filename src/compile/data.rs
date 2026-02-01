@@ -454,10 +454,6 @@ impl Compiler {
         let mut args_function_stuff = None;
         // Data functions
         if let Some(words) = data.func {
-            self.experimental_error(&data.init_span, || {
-                "Data functions are experimental. To use them, add \
-                `# Experimental!` to the top of the file."
-            });
             self.in_scope(ScopeKind::Binding, |comp| {
                 let word_span =
                     (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());

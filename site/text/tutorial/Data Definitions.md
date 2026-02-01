@@ -351,7 +351,6 @@ If the fields of a data definition are immediately followed by some code, the da
 The normal constructor is called, then the constructed data is passed to the function.
 
 ```uiua
-# Experimental!
 ~Person {Name Surname ← ""} $"_ _"⊃(Name|Surname)
 Person "Dave"
 ```

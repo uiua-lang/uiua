@@ -2341,15 +2341,16 @@ impl Array<f64> {
             // Sieve of Eratosthenes
             let mut spf = vec![1; max + 1];
             for i in 2..=max {
-                spf[i] = i;
+                spf[i] = i as u32;
             }
             for i in 2..=max {
-                if spf[i] == i {
+                if spf[i] == i as u32 {
                     let (ii, overflow) = i.overflowing_mul(i);
+
                     if !overflow && ii <= max {
                         for j in (ii..=max).step_by(i) {
-                            if spf[j] == j {
-                                spf[j] = i;
+                            if spf[j] == j as u32 {
+                                spf[j] = i as u32;
                             }
                         }
                     }
@@ -2367,8 +2368,9 @@ impl Array<f64> {
                 }
                 let mut len = 0;
                 while m != 1 {
-                    factors.push(spf[m]);
-                    m /= spf[m];
+                    let factor = spf[m] as usize;
+                    factors.push(factor);
+                    m /= factor;
                     len += 1;
                 }
                 lengths.push(len);

@@ -874,7 +874,7 @@ impl Uiua {
         let start_height = self.rt.stack.len();
         let sig = frame.sig;
         self.rt.call_stack.push(frame);
-        let res = self.exec(node);
+        let res = self.exec(node.clone());
         let frame = self.rt.call_stack.pop().unwrap();
         if let Err(mut err) = res {
             // Trace errors
@@ -896,7 +896,7 @@ impl Uiua {
                 )
             } else {
                 format!(
-                    "Function modified the stack by {height_diff} values, but its \
+                    "Function ({node:?}) modified the stack by {height_diff} values, but its \
                     signature of {sig} implies a change of {sig_diff}"
                 )
             };

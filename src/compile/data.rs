@@ -124,7 +124,9 @@ impl Compiler {
                         `# Experimental!` to the top of the file."
                     });
                     let mut validator = self.words_sig(validator.words)?;
+                    let mut error = false;
                     if validator.sig.args() != 1 {
+                        error = true;
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
@@ -135,6 +137,7 @@ impl Compiler {
                         );
                     }
                     if validator.sig.outputs() > 1 {
+                        error = true;
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
@@ -152,10 +155,32 @@ impl Compiler {
                     }
 
                     let inverse = validator.node.un_inverse(&self.asm);
-                    Some(match inverse {
+                    match inverse {
+                        _ if error => None,
+                        _ if validation_only => Some((
+                            Node::CustomInverse(
+                                CustomInverse {
+                                    normal: Ok(validator.clone()),
+                                    un: Some(SigNode::default()),
+                                    under: Some((validator.clone(), SigNode::default())),
+                                    ..Default::default()
+                                }
+                                .into(),
+                                span,
+                            ),
+                            Node::CustomInverse(
+                                CustomInverse {
+                                    un: Some(validator.clone()),
+                                    under: Some((SigNode::default(), validator)),
+                                    ..Default::default()
+                                }
+                                .into(),
+                                span,
+                            ),
+                        )),
                         Ok(inverse) => {
                             let inverse = SigNode::new(Signature::new(1, 1), inverse);
-                            (
+                            Some((
                                 Node::CustomInverse(
                                     CustomInverse {
                                         normal: Ok(validator.clone()),
@@ -176,37 +201,16 @@ impl Compiler {
                                     .into(),
                                     span,
                                 ),
-                            )
+                            ))
                         }
-                        Err(_) if validation_only => (
-                            Node::CustomInverse(
-                                CustomInverse {
-                                    normal: Ok(validator.clone()),
-                                    un: Some(SigNode::default()),
-                                    under: Some((validator.clone(), SigNode::default())),
-                                    ..Default::default()
-                                }
-                                .into(),
-                                span,
-                            ),
-                            Node::CustomInverse(
-                                CustomInverse {
-                                    un: Some(validator.clone()),
-                                    under: Some((SigNode::default(), validator)),
-                                    ..Default::default()
-                                }
-                                .into(),
-                                span,
-                            ),
-                        ),
                         Err(e) => {
                             self.add_error(
                                 data_field.name.span.clone(),
                                 format!("Transforming validator has no inverse: {e}"),
                             );
-                            (validator.node, Node::empty())
+                            Some((validator.node, Node::empty()))
                         }
-                    })
+                    }
                 } else {
                     None
                 };

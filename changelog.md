@@ -7,6 +7,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - **Breaking Change** - Subscripted [`range ⇡`](https://uiua.org/docs/range) now makes the range inclusive up to the maximum while still changing the start, rather than offsetting the entire range
   - This breaks all uses of subscripted [`range ⇡`](https://uiua.org/docs/range) *other* than `⇡₁`
+- Stabilize [data functions](<https://uiua.org/tutorial/Data Definitions#data-functions>)
 - Allow for multiple [`fill ⬚`](https://uiua.org/docs/fill) values by returning multiple values from the fill function.
 - Add [`anti ⌝`](https://uiua.org/docs/anti)[`by ⊸`](https://uiua.org/docs/by) for dyadic functions
 - Add digit separators for number literals with `,`. Ex: `123,456.078,9`

@@ -373,6 +373,14 @@ F!(°⊸D1 °⊸A4 °⊸C2 °⊸B3) 5
 F!°⊸⊃(D|A|C|B) 1 4 2 3 5
 ```
 
+Not every argument to the function needs to be a field in the data definition.
+
+```uiua
+~Append {N ← 1} ˜⊂▽N
+Append 5 1_2_3
+Append!°⊸N 4 5 1_2_3
+```
+
 ## Dynamic Structure
 
 Which fields a data definition has are generally static. Fields accesses via the generated functions are static.

@@ -1,18 +1,18 @@
 # Announcing Uiua 0.18.0
 
-2026-??-??
+2026-02-??
 
 ---
 
 Uiua 0.18.0 is now available!
 
-You can find the full changelog [here](https://uiua.org/docs/changelog#0.18.0---2026-??-??).
+You can find the full changelog [here](https://uiua.org/docs/changelog#0.18.0---2026-02-??).
 
 You can download pre-built binaries [here](https://github.com/uiua-lang/uiua/releases).
 
 Uiua is a general-purpose array-oriented programming language with a focus on tacit code.
 
-This version adds many small quality-of-life features to various primitives, including adding subscripts to several primitives.
+This version adds some features to data definitions and many small quality-of-life features to various primitives, including adding subscripts to several primitives.
 
 ## ~~Stack~~ Arguments
 
@@ -28,6 +28,43 @@ In Uiua 0.18, this design philosophy has been solidified in a few ways:
 - [`duplicate .`](https://uiua.org/docs/duplicate) has been deprecated
 - [`flip :`](https://uiua.org/docs/flip) has been deprecated
 - `stack ?` has been renamed to [`args ?`](https://uiua.org/docs/args)
+
+## Data Functions
+
+[Data functions](<https://uiua.org/tutorial/Data Definitions#data-functions>) have been stabilized.
+
+Data functions allow you to use the fields of a data definition as bundled arguments to a function.
+
+Data functions are defined by adding code after a data definition. The names of the data definitions fields are in scope inside this code. When the data definition is called as a function, its constructor is called, then it is passed to the function.
+
+```uiua
+~F {A B} +⊃A B
+F 1 2
+F @a ¯12_8_20_0_¯64
+```
+
+```uiua
+~Quad [A B C] ÷×2⊃A(-⊃B(⊟⊸¯√ℂ0 -/×⊃⊃[4|A|C](˙×B)))
+Quad 1 2 0
+```
+
+Data functions also enable a nice mechanism for named optional arguments. Optional arguments are set by calling the function as a macro and using the [`un ∩`](https://uiua.org/docs/un)[`by ⊸`](https://uiua.org/docs/by) idiom. A default constructed instance of the data is passed to the macro's function, the optional arugments are set, and then that data is passed to the data function.
+
+```uiua
+~F {X Y ← 1|Z ← 1} $"X=_,Y=_,Z=_" ⊃(X|Y|Z)
+F 5
+F!°⊸Z 10 5
+F!(°⊸Y 0 °⊸Z 4) 1
+F!°⊸⊃Y Z 0 4 1
+```
+
+Not every argument to the function needs to be a field in the data definition.
+
+```uiua
+~Append {N ← 1} ˜⊂▽N
+Append 5 1_2_3
+Append!°⊸N 4 5 1_2_3
+```
 
 ## Sided [`stencil ⧈`](https://uiua.org/docs/stencil)
 
@@ -84,7 +121,7 @@ This is also useful when you want to separate the first or last item from an arr
 °˜⊂⌟1_2_3
 ```
 
-## Notable Stabilizations
+## Other Notable Stabilizations
 
 [`evert ⧋`](https://uiua.org/docs/evert) has been stabilized! It is a powerful tool for operating on the last axis of an array.
 
@@ -118,7 +155,7 @@ You can now use aliases:
 
 ## Notable Breaking Changes
 
-Subscripted [`range ⇡`](https://uiua.org/docs/range) now creates an inclusive range starting at the subscript number. This breaks cases *other* than `⇡₁`.
+Subscripted [`range ⇡`](https://uiua.org/docs/range) now creates an inclusive range starting at the subscript number. This breaks cases *other* than `⇡``₁`.
 
 ```uiua
 ⇡₀ 5
@@ -139,15 +176,15 @@ Many people contributed to this release in various ways, whether by proposing ne
 
 I'd like to give special thanks to two direct contributors who did a lot for this release:
 
-[ndren](https://github.com/ndren) implemented several [optimizations](https://github.com/uiua-lang/uiua/commits/main/?author=ndren) in the interpreter for improved performance in several primitives, as well as the compiler itself.
+[**ndren**](https://github.com/ndren) implemented several [optimizations](https://github.com/uiua-lang/uiua/commits/main/?author=ndren) in the interpreter for improved performance in several primitives, as well as the compiler itself.
 
-[lynn](https://github.com/lynn) did [work](https://github.com/uiua-lang/uiua/commits/main/?author=lynn) on the Uiua website. She did a lot to make its design a bit more modern, particularly the front page.
+[**lynn**](https://github.com/lynn) did [work](https://github.com/uiua-lang/uiua/commits/main/?author=lynn) on the Uiua website. She did a lot to make its design a bit more modern, particularly the front page.
 
 Thanks so much to both of them!
 
 ## Thank You!
 
-The changes listed above are only a fraction those in Uiua 0.18. You can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.18.0---2026-??-??).
+The changes listed above are only a fraction those in Uiua 0.18. You can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.18.0---2026-02-??).
 
 As always, a huge thank you to Uiua's generous [GitHub sponsors! ❤️](https://github.com/sponsors/uiua-lang) You too could support Uiua's development and help pay my rent!
 

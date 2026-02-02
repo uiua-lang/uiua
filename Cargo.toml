@@ -202,8 +202,6 @@ batteries = [
   "fft",
   "font_shaping",
   "compress",
-  "ffi",
-  "ogg",
 ]
 binary = [
   "ctrlc",
@@ -215,6 +213,10 @@ binary = [
   "terminal-light",
   "terminal_size",
 ]
+binary_batteries = [
+  "ffi",
+  "ogg",
+]
 bytes = [] # No longer used
 clipboard = ["arboard"]
 compress = ["flate2"]
@@ -223,6 +225,8 @@ default = [
   # "window", # Comment in for dev
   # "webcam", # Comment in for dev
   "binary",
+  "batteries",
+  "binary_batteries",
   "terminal_image",
   "lsp",
   "stand",
@@ -233,7 +237,6 @@ default = [
   "raw_mode",
   "clipboard",
   "opt",
-  "batteries",
 ]
 ffi = ["libffi", "libloading"]
 fft = ["rustfft", "num-complex"]

@@ -840,16 +840,10 @@ impl ImplPrimitive {
             &ImplPrimitive::UndoRotate(n) => {
                 env.require_height(n + 1)?;
                 let mut amount = env.pop(1)?;
-                if amount.rank() > 1 {
-                    return Err(env.error(format!(
-                        "Multidimensional {} cannot be undone",
-                        Primitive::Rotate.format()
-                    )));
-                }
                 let depth = amount.rank().saturating_sub(1);
                 if n == 1 {
                     let mut val = env.pop(2)?;
-                    if amount.rank() > 0 && amount.row_count() > val.rank() {
+                    if amount.rank() == 1 && amount.row_count() > val.rank() {
                         amount.drop_n(amount.row_count() - val.rank());
                     }
                     amount.rotate_depth(&mut val, depth, false, env)?;
@@ -858,13 +852,13 @@ impl ImplPrimitive {
                     let end = env.stack_height() - n;
                     let mut vals = env.truncate_stack(end);
                     let max_rank = vals.iter().map(|v| v.rank()).max().unwrap_or(0);
-                    if amount.rank() > 0 && amount.row_count() > max_rank {
+                    if amount.rank() == 1 && amount.row_count() > max_rank {
                         amount.drop_n(amount.row_count() - max_rank);
                     }
                     for val in &mut vals {
                         let mut amount = amount.clone();
                         if amount.row_count() > 1 {
-                            if amount.rank() > 0 && amount.row_count() > val.rank() {
+                            if amount.rank() == 1 && amount.row_count() > val.rank() {
                                 amount.drop_n(amount.row_count() - val.rank());
                             }
                             amount.rotate_depth(val, depth, false, env)?;

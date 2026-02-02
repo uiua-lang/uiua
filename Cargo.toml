@@ -202,6 +202,8 @@ batteries = [
   "fft",
   "font_shaping",
   "compress",
+  "ffi",
+  "ogg",
 ]
 binary = [
   "ctrlc",
@@ -210,10 +212,8 @@ binary = [
   "color-backtrace",
   "rustyline",
   "native_sys",
-  "ffi",
   "terminal-light",
   "terminal_size",
-  "ogg",
 ]
 bytes = [] # No longer used
 clipboard = ["arboard"]

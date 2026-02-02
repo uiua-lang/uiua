@@ -840,6 +840,12 @@ impl ImplPrimitive {
             &ImplPrimitive::UndoRotate(n) => {
                 env.require_height(n + 1)?;
                 let mut amount = env.pop(1)?;
+                if amount.rank() > 1 {
+                    return Err(env.error(format!(
+                        "Multidimensional {} cannot be undone",
+                        Primitive::Rotate.format()
+                    )));
+                }
                 let depth = amount.rank().saturating_sub(1);
                 if n == 1 {
                     let mut val = env.pop(2)?;

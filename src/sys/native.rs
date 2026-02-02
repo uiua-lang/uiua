@@ -1204,6 +1204,7 @@ impl SysBackend for NativeSys {
         NATIVE_SYS.ffi.ffi_free(ptr);
         Ok(())
     }
+    #[cfg(feature = "ffi")]
     fn mem_allocate(&self, size: usize) -> Result<Value, String> {
         let ptr = NATIVE_SYS.ffi.ffi_allocate(size)?;
         Ok(Value::ffi_pointer(&ptr))

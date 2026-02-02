@@ -1821,11 +1821,12 @@ impl Compiler {
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
             self.global_index(local.index, span)
-        } else if let Some(curr) =
-            (self.current_bindings.last_mut()).filter(|curr| curr.name == ident)
-        {
+        } else if let Some(i) = (self.current_bindings.iter()).position(|curr| curr.name == ident) {
             // Name is a recursive call
-            curr.recurses += 1;
+            for curr_binding in &mut self.current_bindings[i..] {
+                curr_binding.recurses += 1;
+            }
+            let curr = &mut self.current_bindings[i];
             let global_index = curr.global_index;
             (self.code_meta.global_references).insert(span.clone(), global_index);
             if let Some(sig) = curr.signature.filter(|sig| sig.outputs() <= 10) {

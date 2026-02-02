@@ -12,6 +12,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`anti ⌝`](https://uiua.org/docs/anti)[`by ⊸`](https://uiua.org/docs/by) for dyadic functions
 - Add digit separators for number literals with `,`. Ex: `123,456.078,9`
 - Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
+- Enable mutually recursive functions if one function is defined inside another
 - Make sided [`fill ⬚`](https://uiua.org/docs/fill) work with [`stencil ⧈`](https://uiua.org/docs/stencil)
 - Add sided subscripts for [`join ⊂`](https://uiua.org/docs/join), which joins with one side as the list
 - Add numeric subscripts for [`classify ⊛`](https://uiua.org/docs/classify), which classifies all subrows of a given rank

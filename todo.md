@@ -1,9 +1,8 @@
 # Uiua Todo
 
-# 0.18
-- Early-terminating `fold`
-
 # 0.19
+- Case packs for pattern matching?
+- Improve GA API
 - Best-effort compile-time type/shape checking
   - Generic stack container to deduplicate implementations
 - `first group/partition` optimization

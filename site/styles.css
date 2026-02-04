@@ -624,7 +624,6 @@ li {
     display: grid;
     grid-template-columns: auto auto;
     gap: 0.5em;
-    margin-top: 0.5em;
 }
 
 .settings-group-grid select {

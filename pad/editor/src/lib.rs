@@ -2032,6 +2032,9 @@ pub fn Editor<'a>(
                                         "Show values"
                                     </label>
                                 </div>
+                            </div>
+                            <div class="settings-group">
+                                <h3>"Theme"</h3>
                                 <div class="settings-group-grid">
                                     <div>
                                         <label class="setting-name">"Font size"</label> <select on:change=on_select_font_size>

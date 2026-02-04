@@ -580,22 +580,16 @@ li {
     min-height: 0;
     font-size: 0.6em;
     justify-content: center;
-    gap: 2em 4em;
+    gap: 1em 2em;
     flex-direction: row;
-}
-
-@media screen and (max-width: 768px) {
-    #settings {
-        flex-direction: column;
-        margin: auto;
-    }
+    flex-wrap: wrap;
 }
 
 .settings-group {
     display: flex;
     flex-direction: column;
-    gap: 0.25em;
-    margin-bottom: 1em;
+    gap: 0.2em;
+    margin-bottom: 0.5em;
 }
 
 .settings-group hr {
@@ -603,7 +597,7 @@ li {
 }
 
 .settings-group h3 {
-    margin: 0.5rem 0;
+    margin: 0;
 }
 
 .settings-group button {
@@ -628,6 +622,7 @@ li {
 
 .settings-group-grid select {
     margin-left: 0;
+    max-width: 8.5em;
 }
 
 .settings-group-grid>div {
@@ -647,6 +642,7 @@ li {
 input[type=number] {
     appearance: textfield;
     -moz-appearance: textfield;
+    max-width: 2.5em;
 }
 
 .code-block {

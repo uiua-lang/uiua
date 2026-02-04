@@ -2144,6 +2144,11 @@ pub fn Editor<'a>(
                                             " s"
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                            <div class="settings-group">
+                                <h3>"Output"</h3>
+                                <div class="settings-group-grid">
                                     <div title="Default format for displaying animation arrays">
                                         <label class="setting-name">"Animation"</label> <select on:change=on_select_animation_format>
                                             <option value="GIF" selected={get_animation_format() == "GIF"}>
@@ -2167,12 +2172,14 @@ pub fn Editor<'a>(
                                 </div>
                             </div>
                             <div class="settings-group">
-                                <h3>"Code"</h3>
+                                <div style="display:flex; justify-content:space-between;">
+                                    <h3>"Code"</h3>
+                                    <div>"Tokens: " {move || token_count.get()}</div>
+                                </div>
                                 <div><button class="info-button" data-title={editor_shortcuts()} disabled>"🛈 View shortcuts"</button></div>
                                 <div>{toggle_experimental_button}</div>
                                 <div><button on:click=download_code>"Download Code"</button></div>
                                 <div><button on:click=copy_markdown_link>"Copy Markdown"</button></div>
-                                <div>"Tokens: " {move || token_count.get()}</div>
                             </div>
                         </div>
                     </div>

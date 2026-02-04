@@ -1,6 +1,7 @@
 # Uiua Todo
 
 # 0.19
+- Optimize `rows match`
 - Case packs for pattern matching?
 - Improve GA API
 - Best-effort compile-time type/shape checking

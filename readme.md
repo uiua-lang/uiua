@@ -18,7 +18,7 @@ You can try the language without installing anything on [the website](https://ui
 If you want to install the interpreter locally, there are 2 options:
 - If your OS is supported, you can simply download the [latest release](https://github.com/uiua-lang/uiua/releases).
 - If not, you will need to install via Cargo.
-This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.75) to be installed.
+This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.88) to be installed.
 
   You can install with one of the following commands:
   ```
@@ -49,8 +49,8 @@ This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.75) to be ins
   cargo run repl # to get uiua repl
   ```
 
-  *Note:* If you encounter errors such as rustc or any other package
-  version mismatch, it is most likely that flake.lock file needs to be
+  *Note:* If you encounter errors such as `rustc` or any other package
+  version mismatch, it is most likely that `flake.lock` file needs to be
   updated to pull in updated dependencies for nix shell.
 
 ## Language and Font Support

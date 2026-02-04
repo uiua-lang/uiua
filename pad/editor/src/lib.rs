@@ -2,13 +2,7 @@ pub mod backend;
 pub mod utils;
 
 use std::{
-    borrow::Cow,
-    cell::Cell,
-    iter::{once, repeat_n},
-    mem::take,
-    path::PathBuf,
-    rc::Rc,
-    sync::Arc,
+    borrow::Cow, cell::Cell, iter::repeat_n, mem::take, path::PathBuf, rc::Rc, sync::Arc,
     time::Duration,
 };
 
@@ -1165,7 +1159,7 @@ pub fn Editor<'a>(
             data-title="Toggle # Experimental!"
             on:click=on_toggle_experimental
         >
-            "🧪"
+            "🧪 # Experimental!"
         </button>
     }
     .into_view();
@@ -1247,8 +1241,6 @@ pub fn Editor<'a>(
         EditorMode::Example => false,
         EditorMode::Showcase | EditorMode::Pad => true,
     });
-
-    let glyph_toggle_experimental_button = toggle_experimental_button.clone();
 
     let glyph_buttons_container = move || {
         show_glyphs.get().then(|| {
@@ -1436,12 +1428,9 @@ pub fn Editor<'a>(
             );
             glyph_buttons.swap(insertion_point, insertion_point - 1);
 
-            let experimental_glyph_buttons: Vec<_> = once(glyph_toggle_experimental_button.clone())
-                .chain(
-                    Primitive::non_deprecated()
-                        .filter(|prim| prim.is_experimental())
-                        .filter_map(make_glyph_button),
-                )
+            let experimental_glyph_buttons: Vec<_> = Primitive::non_deprecated()
+                .filter(|prim| prim.is_experimental())
+                .filter_map(make_glyph_button)
                 .collect();
 
             view! { <div>
@@ -1737,9 +1726,9 @@ pub fn Editor<'a>(
     // Settings
     let settings_style = move || {
         if settings_open.get() {
-            ""
+            "grid-template-rows:1fr; visibility: visible;"
         } else {
-            "display:none"
+            ""
         }
     };
     let on_execution_limit_change = move |event: Event| {
@@ -1987,167 +1976,211 @@ pub fn Editor<'a>(
             <div id=editor_wrapper_id class=editor_class style=editor_style>
                 {glyph_buttons_container}
                 {file_tab_display}
-                <div id="settings" style=settings_style>
-                    <div id="settings-left">
-                        <div title="The maximum number of seconds a program can run for">
-                            "Exec limit:"
-                            <input
-                                type="number"
-                                min="0.01"
-                                max="1000000"
-                                width="3em"
-                                value=get_execution_limit
-                                on:input=on_execution_limit_change
-                            /> "s"
-                        </div>
-                        <div title="The maximum number of seconds of audio &ast will generate">
-                            <Prim prim=Primitive::Sys(SysOp::AudioStream) />
-                            " time:"
-                            <input
-                                type="number"
-                                min="1"
-                                max="600"
-                                width="3em"
-                                value=get_ast_time
-                                on:input=on_ast_time_change
-                            />
-                            "s"
-                        </div>
-                        <div title="Place the cursor on the left of the current token when formatting">
-                            "Format left:"
-                            <input
-                                type="checkbox"
-                                checked=get_right_to_left
-                                on:change=toggle_right_to_left
-                            />
-                        </div>
-                        <div title="Automatically run pad links">
-                            "Autorun links:"
-                            <input type="checkbox" checked=get_autorun on:change=toggle_autorun />
-                        </div>
-                        <div title="Automatically play audio">
-                            "Autoplay audio:"
-                            <input type="checkbox" checked=get_autoplay on:change=toggle_autoplay />
-                        </div>
-                        <div title="Default format for displaying animation arrays">
-                            "Animation:" <select on:change=on_select_animation_format>
-                                <option value="GIF" selected={get_animation_format() == "GIF"}>
-                                    "GIF"
-                                </option>
-                                <option value="APNG" selected={get_animation_format() == "APNG"}>
-                                    "APNG"
-                                </option>
-                            </select>
-                        </div>
-                        <div title="Show experimental primitive glyphs">
-                            "Show experimental:"
-                            <input
-                                type="checkbox"
-                                checked=get_show_experimental
-                                on:change=toggle_show_experimental
-                            />
-                        </div>
-                        <div title="Run and format together">
-                            "Run on format:"
-                            <input
-                                type="checkbox"
-                                checked=get_run_on_format
-                                on:change=toggle_run_on_format
-                            />
-                        </div>
-                        <div title="Enable LGBTQ+ colors">
-                            "🏳️‍🌈:"
-                            <select on:change=on_select_gayness>
-                                <option value={Gayness::Gray.str()} selected={get_gayness() == Gayness::Gray}>
-                                    {Gayness::Gray.str()}
-                                </option>
-                                <option value={Gayness::None.str()} selected={get_gayness() == Gayness::None}>
-                                    {Gayness::None.str()}
-                                </option>
-                                <option value={Gayness::Ally.str()} selected={get_gayness() == Gayness::Ally}>
-                                    {Gayness::Ally.str()}
-                                </option>
-                                <option value={Gayness::VeryGay.str()} selected={get_gayness() == Gayness::VeryGay}>
-                                    {Gayness::VeryGay.str()}
-                                </option>
-                            </select>
-                        </div>
-                        <div title="Color constant [r g b] bindings according to their value">
-                            "RGB bindings:"
-                            <input
-                                type="checkbox"
-                                checked=get_rgb_bindings
-                                on:change=toggle_rgb_bindings
-                            />
-                        </div>
-                        <div title="Show line values to the right of the code">
-                            "Show values:"
-                            <input
-                                type="checkbox"
-                                checked=get_inlay_values
-                                on:change=toggle_inlay_values
-                            />
-                        </div>
-                        <div>
-                            "Args:" <select on:change=on_select_top_at_top>
-                                <option value="false" selected=get_top_at_top()>
-                                    "First at bottom"
-                                </option>
-                                <option value="true" selected=get_top_at_top()>
-                                    "First at top"
-                                </option>
-                            </select>
-                        </div>
-                        <div>
-                            "Font size:" <select on:change=on_select_font_size>
-                                <option value="0.6em" selected=get_font_size() == "0.6em">
-                                    "Scalar"
-                                </option>
-                                <option value="0.8em" selected=get_font_size() == "0.8em">
-                                    "Small"
-                                </option>
-                                <option value="1em" selected=get_font_size() == "1em">
-                                    "Normal"
-                                </option>
-                                <option value="1.2em" selected=get_font_size() == "1.2em">
-                                    "Big"
-                                </option>
-                                <option value="1.4em" selected=get_font_size() == "1.4em">
-                                    "Rank 3"
-                                </option>
-                            </select>
-                        </div>
-                        <div>
-                            "Font:" <select on:change=on_select_font>
-                                <option value="Uiua386" selected=get_font_name() == "Uiua386">
-                                    {format!("{}386", lang())}
-                                </option>
-                                <option value="TerminusUiua_14" selected=get_font_name() == "TerminusUiua_14">
-                                    "TerminusUiua 14"
-                                </option>
-                                <option value="TerminusUiua_16" selected=get_font_name() == "TerminusUiua_16">
-                                    "TerminusUiua 16"
-                                </option>
-                                <option value="TerminusUiua_24" selected=get_font_name() == "TerminusUiua_24">
-                                    "TerminusUiua 24"
-                                </option>
-                                <option value="Pixua" selected=get_font_name() == "Pixua">
-                                    "Pixua"
-                                </option>
-                            </select>
-                        </div>
-                        <button on:click=download_code>"Download Code"</button>
-                        <button on:click=copy_markdown_link>"Copy Markdown"</button>
-                    </div>
-                    <div id="settings-right">
-                        <div style="display: flex; gap: 0.2em;">
-                            {toggle_experimental_button}
-                            <button class="info-button" data-title=EDITOR_SHORTCUTS disabled>
-                                "🛈"
-                            </button>
-                        </div>
-                        <div style="margin-right: 0.1em">
-                            "Tokens: " {move || token_count.get()}
+                <div id="settings-container-outer">
+                    <div id="settings-container-inner" style=settings_style>
+                        <div id="settings">
+                            <div class="settings-group">
+                                <h3>"Editor"</h3>
+                                <div title="Place the cursor on the left of the current token when formatting">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked=get_right_to_left
+                                            on:change=toggle_right_to_left
+                                        />
+                                        "Format left"
+                                    </label>
+                                </div>
+
+                                <div title="Show experimental primitive glyphs">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked=get_show_experimental
+                                        on:change=toggle_show_experimental
+                                    />
+                                    "Show experimental"
+                                </label>
+                                </div>
+                                <div title="Run and format together">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked=get_run_on_format
+                                            on:change=toggle_run_on_format
+                                        />
+                                        "Run on format"
+                                    </label>
+                                </div>
+                                <div title="Color constant [r g b] bindings according to their value">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked=get_rgb_bindings
+                                            on:change=toggle_rgb_bindings
+                                        />
+                                        "RGB bindings"
+                                    </label>
+                                </div>
+                                <div title="Show line values to the right of the code">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked=get_inlay_values
+                                            on:change=toggle_inlay_values
+                                        />
+                                        "Show values"
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="settings-group">
+                                <h3>"Theme"</h3>
+                                <div class="settings-group-grid">
+                                    <div>
+                                        <label class="setting-name">"Font size"</label> <select on:change=on_select_font_size>
+                                            <option value="0.6em" selected=get_font_size() == "0.6em">
+                                                "Scalar"
+                                            </option>
+                                            <option value="0.8em" selected=get_font_size() == "0.8em">
+                                                "Small"
+                                            </option>
+                                            <option value="1em" selected=get_font_size() == "1em">
+                                                "Normal"
+                                            </option>
+                                            <option value="1.2em" selected=get_font_size() == "1.2em">
+                                                "Big"
+                                            </option>
+                                            <option value="1.4em" selected=get_font_size() == "1.4em">
+                                                "Rank 3"
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="setting-name">"Font"</label> <select on:change=on_select_font>
+                                            <option value="Uiua386" selected=get_font_name() == "Uiua386">
+                                                {format!("{}386", lang())}
+                                            </option>
+                                            <option value="TerminusUiua_14" selected=get_font_name() == "TerminusUiua_14">
+                                                "TerminusUiua 14"
+                                            </option>
+                                            <option value="TerminusUiua_16" selected=get_font_name() == "TerminusUiua_16">
+                                                "TerminusUiua 16"
+                                            </option>
+                                            <option value="TerminusUiua_24" selected=get_font_name() == "TerminusUiua_24">
+                                                "TerminusUiua 24"
+                                            </option>
+                                            <option value="Pixua" selected=get_font_name() == "Pixua">
+                                                "Pixua"
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div title="Enable LGBTQ+ colors">
+                                        <label class="setting-name">"🏳️‍🌈"</label>
+                                        <select on:change=on_select_gayness>
+                                            <option value={Gayness::Gray.str()} selected={get_gayness() == Gayness::Gray}>
+                                                {Gayness::Gray.str()}
+                                            </option>
+                                            <option value={Gayness::None.str()} selected={get_gayness() == Gayness::None}>
+                                                {Gayness::None.str()}
+                                            </option>
+                                            <option value={Gayness::Ally.str()} selected={get_gayness() == Gayness::Ally}>
+                                                {Gayness::Ally.str()}
+                                            </option>
+                                            <option value={Gayness::VeryGay.str()} selected={get_gayness() == Gayness::VeryGay}>
+                                                {Gayness::VeryGay.str()}
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-group">
+                                <h3>"Execution"</h3>
+                                <div title="Automatically run pad links">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked=get_autorun
+                                            on:change=toggle_autorun
+                                        />
+                                        "Autorun links"
+                                    </label>
+                                </div>
+                                <div title="Automatically play audio">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked=get_autoplay
+                                            on:change=toggle_autoplay
+                                        />
+                                        "Autoplay audio"
+                                    </label>
+                                </div>
+                                <div class="settings-group-grid">
+                                    <div title="The maximum number of seconds a program can run for">
+                                        <label class="setting-name">"Exec limit"</label>
+                                        <div>
+                                            <input
+                                                type="number"
+                                                min="0.01"
+                                                max="1000000"
+                                                style="width: 4em;"
+                                                value=get_execution_limit
+                                                on:input=on_execution_limit_change
+                                            />
+                                            " s"
+                                        </div>
+                                    </div>
+                                    <div title="The maximum number of seconds of audio &ast will generate">
+                                        <label class="setting-name"><Prim prim=Primitive::Sys(SysOp::AudioStream) /> " time"</label>
+                                        <div>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="600"
+                                                style="width: 4em;"
+                                                value=get_ast_time
+                                                on:input=on_ast_time_change
+                                            />
+                                            " s"
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-group">
+                                <h3>"Output"</h3>
+                                <div class="settings-group-grid">
+                                    <div title="Default format for displaying animation arrays">
+                                        <label class="setting-name">"Animation"</label> <select on:change=on_select_animation_format>
+                                            <option value="GIF" selected={get_animation_format() == "GIF"}>
+                                                "GIF"
+                                            </option>
+                                            <option value="APNG" selected={get_animation_format() == "APNG"}>
+                                                "APNG"
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="setting-name">"Args"</label> <select on:change=on_select_top_at_top>
+                                            <option value="false" selected=get_top_at_top()>
+                                                "First at bottom"
+                                            </option>
+                                            <option value="true" selected=get_top_at_top()>
+                                                "First at top"
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-group">
+                                <div style="display:flex; justify-content:space-between;">
+                                    <h3>"Code"</h3>
+                                    <div>"Tokens: " {move || token_count.get()}</div>
+                                </div>
+                                <div><button class="info-button" data-title={editor_shortcuts()} disabled>"🛈 View shortcuts"</button></div>
+                                <div>{toggle_experimental_button}</div>
+                                <div><button on:click=download_code>"Download Code"</button></div>
+                                <div><button on:click=copy_markdown_link>"Copy Markdown"</button></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2626,16 +2659,19 @@ fn binding_style(docs: &BindingDocs) -> String {
     String::new()
 }
 
-pub const EDITOR_SHORTCUTS: &str = " shift Enter   - Run + Format
-ctrl/⌘ Click   - Open glyph docs
-ctrl/⌘ /       - Toggle line comment
-ctrl/⌘ 4       - Toggle multiline string
-   alt Up/Down - Swap lines
- shift Delete  - Delete lines
-ctrl/⌘ Z       - Undo
-ctrl/⌘ Y       - Redo
-ctrl/⌘ E       - Insert # Experimental! comment
-ctrl/⌘ shift E - Remove # Experimental! comment";
+pub fn editor_shortcuts() -> String {
+    "shift Enter   - Run + Format
+ ctrl Click   - Open glyph docs
+ ctrl /       - Toggle line comment
+ ctrl 4       - Toggle multiline string
+  alt Up/Down - Swap lines
+shift Delete  - Delete lines
+ ctrl Z       - Undo
+ ctrl Y       - Redo
+ ctrl E       - Insert # Experimental! comment
+ ctrl shift E - Remove # Experimental! comment"
+        .replace("ctrl", if on_mac() { "   ⌘" } else { "ctrl" })
+}
 
 pub fn replace_lang_name() -> bool {
     cfg!(target_arch = "wasm32") && its_called_weewuh()

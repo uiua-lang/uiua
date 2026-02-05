@@ -398,8 +398,7 @@
     "modifier_args": 1,
     "class": "Arguments",
     "description": "Keep all arguments to a function above the outputs on the stack",
-    "experimental": true,
-    "deprecated": true
+    "experimental": true
   },
   "absolute value": {
     "glyph": "⌵",

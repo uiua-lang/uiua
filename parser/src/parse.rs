@@ -27,7 +27,6 @@ pub enum ParseError {
     Unexpected(Token),
     InvalidArgCount(String),
     InvalidOutCount(String),
-    AmpersandBindingName,
     ModifierImportName,
     SplitInModifier,
     FlipInModifier,
@@ -90,7 +89,6 @@ impl fmt::Display for ParseError {
             ParseError::Unexpected(token) => write!(f, "Unexpected token {token}"),
             ParseError::InvalidArgCount(n) => write!(f, "Invalid argument count `{n}`"),
             ParseError::InvalidOutCount(n) => write!(f, "Invalid output count `{n}`"),
-            ParseError::AmpersandBindingName => write!(f, "Binding names may not contain `&`"),
             ParseError::ModifierImportName => {
                 write!(f, "Modifier names may not be used as import names")
             }
@@ -746,10 +744,6 @@ impl Parser<'_> {
         })
     }
     fn validate_binding_name(&mut self, name: &Sp<Ident>) {
-        if name.value.contains('&') {
-            self.errors
-                .push(name.span.clone().sp(ParseError::AmpersandBindingName));
-        }
         if name
             .value
             .trim_end_matches(['!', '‼', '\'', '′', '″', '‴'])

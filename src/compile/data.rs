@@ -35,6 +35,8 @@ impl Compiler {
             .map(|text| DocComment::from(text.as_str()));
         if top_level {
             if let Some(name) = data.name.clone() {
+                self.validate_binding_name(&name.value, &name.span);
+
                 let global_index = self.next_global;
                 self.next_global += 1;
                 let local = LocalIndex {
@@ -100,10 +102,9 @@ impl Compiler {
             boxed = data_fields.boxed;
             has_fields = true;
             for mut data_field in data_fields.fields {
+                self.validate_binding_name(&data_field.name.value, &data_field.name.span);
                 let span = self.add_span(data_field.name.span.clone());
-                let mut comment = data_field
-                    .comments
-                    .as_ref()
+                let mut comment = (data_field.comments.as_ref())
                     .map(|comments| {
                         (comments.lines.iter().enumerate())
                             .flat_map(|(i, com)| {

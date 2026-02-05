@@ -2061,6 +2061,11 @@ impl Compiler {
         let spandex = self.add_span(span.clone());
         Node::Prim(prim, spandex)
     }
+    fn validate_binding_name(&mut self, name: &str, span: &CodeSpan) {
+        if name.contains('&') {
+            self.add_error(span.clone(), "User-defined names may not contain `&`");
+        }
+    }
     #[allow(clippy::match_single_binding)]
     fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
         let scr = sub.script;

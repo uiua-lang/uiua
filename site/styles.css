@@ -404,6 +404,9 @@ li {
     display: grid;
     grid-template-rows: 1fr;
     transition: grid-template-rows 0.3s ease-in-out;
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
 }
 
 @media screen and (min-width: 768px) {
@@ -573,6 +576,9 @@ li {
     grid-template-rows: 0fr;
     visibility: hidden;
     transition: grid-template-rows 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
 }
 
 #settings {

@@ -1382,6 +1382,9 @@ impl<'a> Lexer<'a> {
                                 PrimComponent::Sub2 => Subscr(2.into()),
                                 PrimComponent::OpenParen => OpenParen.into(),
                                 PrimComponent::CloseParen => CloseParen.into(),
+                                PrimComponent::Epsilon => {
+                                    Ident(PrimComponent::Epsilon.name().into())
+                                }
                             };
                             self.tokens.push(self.make_span(start, end).sp(tok));
                             start = end;

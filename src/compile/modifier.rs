@@ -104,7 +104,14 @@ impl Compiler {
                 }
                 self.modified(new, subscript)
             }
-            Modifier::Primitive(Primitive::Try | Primitive::Fill) => {
+            Modifier::Primitive(Primitive::Try) => self.try_(
+                pack.lexical_order()
+                    .cloned()
+                    .map(|f| f.map(Word::Func))
+                    .collect(),
+                modifier.span.clone(),
+            ),
+            Modifier::Primitive(Primitive::Fill) => {
                 let mut branches = pack.lexical_order().cloned().rev();
                 let mut new = Modified {
                     modifier: modifier.clone(),
@@ -1281,88 +1288,10 @@ impl Compiler {
                 }
                 Node::CustomInverse(cust.into(), spandex)
             }
-            Try => {
-                let in_try = replace(&mut self.in_try, true);
-                let nodes = self.dyadic_modifier_ops(modified);
-                self.in_try = in_try;
-                let (mut tried, mut handler, _, handler_span) = nodes?;
-
-                let span = self.add_span(modified.modifier.span.clone());
-
-                // Normalize noreturn tried function
-                if tried.node.is_noreturn(&self.asm) {
-                    tried.sig.update_args_outputs(|a, o| {
-                        (
-                            a.max(handler.sig.args().saturating_sub(1)),
-                            o.max(handler.sig.outputs()),
-                        )
-                    });
-                }
-
-                // Handler must have at least as many outputs as tried
-                if handler.sig.outputs() < tried.sig.outputs()
-                    && !handler.node.is_noreturn(&self.asm)
-                {
-                    let diff = tried.sig.outputs() - handler.sig.outputs();
-                    (handler.sig).update_args_outputs(|a, o| (a + diff, o + diff));
-                }
-                // Tried must have at least 1 arg less than handler
-                if tried.sig.args() + 1 < handler.sig.args() {
-                    // Tried must pop arguments that are only for the handler
-                    let arg_diff = handler.sig.args() - tried.sig.args() - 1;
-                    let pre =
-                        SigNode::new((arg_diff, 0), eco_vec![Node::Prim(Pop, span); arg_diff])
-                            .dipped(tried.sig.args(), span);
-                    tried.sig.update_args(|a| a + arg_diff);
-                    tried.node.prepend(pre.node);
-                } else if tried.sig.outputs() < handler.sig.outputs() {
-                    let diff = handler.sig.outputs() - tried.sig.outputs();
-                    tried.sig.update_args_outputs(|a, o| (a + diff, o + diff));
-                }
-                // Handler must have at least as many args as tried
-                if handler.sig.args() < tried.sig.args() {
-                    let arg_diff = tried.sig.args() - handler.sig.args();
-                    if handler.sig.outputs() <= tried.sig.outputs() {
-                        let output_diff = tried.sig.outputs() - handler.sig.outputs();
-                        let diff_diff = arg_diff.saturating_sub(output_diff);
-                        if diff_diff > 0 {
-                            // Handler must pop arguments that are only for the tried
-                            let pre = SigNode::new(
-                                (diff_diff, 0),
-                                eco_vec![Node::Prim(Pop, span); diff_diff],
-                            )
-                            .dipped(handler.sig.args() + arg_diff - diff_diff, span);
-                            (handler.sig)
-                                .update_args_outputs(|a, o| (a + arg_diff, o + output_diff));
-                            handler.node.prepend(pre.node);
-                        } else {
-                            (handler.sig).update_args_outputs(|a, o| (a + arg_diff, o + arg_diff));
-                        }
-                    } else {
-                        (handler.sig).update_args_outputs(|a, o| (a + arg_diff, o + arg_diff));
-                    }
-                }
-                if handler.sig.args() == tried.sig.args()
-                    && handler.sig.outputs() + 1 == tried.sig.outputs()
-                {
-                    handler.sig.update_args_outputs(|a, o| (a + 1, o + 1));
-                }
-
-                if handler.sig.args() > tried.sig.args() + 1 {
-                    self.add_error(
-                        handler_span.clone(),
-                        format!(
-                            "Handler function must have at most \
-                            one more argument than the tried function, \
-                            but their signatures are {} and \
-                            {} respectively.",
-                            handler.sig, tried.sig
-                        ),
-                    );
-                }
-
-                Node::Mod(Primitive::Try, eco_vec![tried, handler], span)
-            }
+            Try => self.try_(
+                modified.code_operands().cloned().collect(),
+                modified.modifier.span.clone(),
+            )?,
             Switch => self.switch(
                 modified.code_operands().cloned().collect(),
                 modified.modifier.span.clone(),

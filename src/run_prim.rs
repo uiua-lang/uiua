@@ -301,7 +301,6 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             env.pop("regex locations")?;
         }
         Primitive::Hsv => env.monadic_env(Value::rgb_to_hsv)?,
-        Primitive::Oklab => env.monadic_env(Value::rgb_to_oklab)?,
         Primitive::Oklch => env.monadic_env(Value::rgb_to_oklch)?,
         Primitive::Json => env.monadic_ref_env(Value::to_json_string)?,
         Primitive::Binary => env.monadic_ref_env(Value::to_binary)?,
@@ -744,7 +743,6 @@ impl ImplPrimitive {
             }
             ImplPrimitive::UnSort => env.monadic_mut(Value::shuffle)?,
             ImplPrimitive::UnHsv => env.monadic_env(Value::hsv_to_rgb)?,
-            ImplPrimitive::UnOklab => env.monadic_env(Value::oklab_to_rgb)?,
             ImplPrimitive::UnOklch => env.monadic_env(Value::oklch_to_rgb)?,
             ImplPrimitive::UnJson | ImplPrimitive::UnJson5 => {
                 let json = env.pop(1)?.as_string(env, "json expects a string")?;

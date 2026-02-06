@@ -2411,25 +2411,6 @@ impl Value {
             val => Err(env.error(format!("Cannot convert {} to RGB", val.type_name_plural()))),
         }
     }
-    /// Convert a value from RGB to Oklab
-    pub fn rgb_to_oklab(self, env: &Uiua) -> UiuaResult<Self> {
-        match self {
-            Value::Num(arr) => arr.rgb_to_oklab(env).map(Into::into),
-            Value::Byte(arr) => arr.convert_ref::<f64>().rgb_to_oklab(env).map(Into::into),
-            val => Err(env.error(format!(
-                "Cannot convert {} to Oklab",
-                val.type_name_plural()
-            ))),
-        }
-    }
-    /// Convert a value from Oklab to RGB
-    pub fn oklab_to_rgb(self, env: &Uiua) -> UiuaResult<Self> {
-        match self {
-            Value::Num(arr) => arr.oklab_to_rgb(env).map(Into::into),
-            Value::Byte(arr) => arr.convert_ref::<f64>().oklab_to_rgb(env).map(Into::into),
-            val => Err(env.error(format!("Cannot convert {} to RGB", val.type_name_plural()))),
-        }
-    }
     /// Convert a value from RGB to Oklch
     pub fn rgb_to_oklch(self, env: &Uiua) -> UiuaResult<Self> {
         match self {
@@ -2514,46 +2495,6 @@ impl Array<f64> {
         self.validate();
         Ok(self)
     }
-    /// Convert an array from RGB to Oklab
-    pub fn rgb_to_oklab(mut self, env: &Uiua) -> UiuaResult<Self> {
-        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
-            return Err(env.error(format!(
-                "Array to convert to Oklab must have a shape \
-                ending with 3 or 4, but its shape is {}",
-                self.shape
-            )));
-        }
-        let channels = *self.shape.last().unwrap();
-        for rgb in self.data.as_mut_slice().chunks_exact_mut(channels) {
-            let [l, a, b] = rgb_to_oklab(rgb[0], rgb[1], rgb[2]);
-            rgb[0] = l;
-            rgb[1] = a;
-            rgb[2] = b;
-        }
-        self.meta.take_sorted_flags();
-        self.validate();
-        Ok(self)
-    }
-    /// Convert an array from Oklab to RGB
-    pub fn oklab_to_rgb(mut self, env: &Uiua) -> UiuaResult<Self> {
-        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
-            return Err(env.error(format!(
-                "Array to convert to RGB must have a shape \
-                ending with 3 or 4, but its shape is {}",
-                self.shape
-            )));
-        }
-        let channels = *self.shape.last().unwrap();
-        for oklab in self.data.as_mut_slice().chunks_exact_mut(channels) {
-            let [r, g, b] = oklab_to_rgb(oklab[0], oklab[1], oklab[2]);
-            oklab[0] = r;
-            oklab[1] = g;
-            oklab[2] = b;
-        }
-        self.meta.take_sorted_flags();
-        self.validate();
-        Ok(self)
-    }
     /// Convert an array from RGB to Oklch
     pub fn rgb_to_oklch(mut self, env: &Uiua) -> UiuaResult<Self> {
         if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
@@ -2611,20 +2552,6 @@ pub(crate) fn hsv_to_rgb(h: f64, s: f64, v: f64) -> [f64; 3] {
         4 => [t, p, v],
         _ => [v, p, q],
     }
-}
-
-pub(crate) fn rgb_to_oklab(r: f64, g: f64, b: f64) -> [f64; 3] {
-    use palette::{Oklab, Srgb, convert::FromColorUnclamped};
-    let rgb = Srgb::new(r as f32, g as f32, b as f32);
-    let oklab = Oklab::from_color_unclamped(rgb);
-    [oklab.l as f64, oklab.a as f64, oklab.b as f64]
-}
-
-pub(crate) fn oklab_to_rgb(l: f64, a: f64, b: f64) -> [f64; 3] {
-    use palette::{Oklab, Srgb, convert::IntoColorUnclamped};
-    let oklab = Oklab::new(l as f32, a as f32, b as f32);
-    let rgb: Srgb = oklab.into_color_unclamped();
-    [rgb.red as f64, rgb.green as f64, rgb.blue as f64]
 }
 
 pub(crate) fn rgb_to_oklch(r: f64, g: f64, b: f64) -> [f64; 3] {

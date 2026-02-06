@@ -2768,16 +2768,6 @@ primitive!(
     /// ex: ⍜(⊡1°⍉hsv|÷2) ▽₂0.5 Lena # Half saturation
     /// ex: ⍜(⊡2°⍉hsv|÷2) ▽₂0.5 Lena # Half value
     (1, Hsv, Algorithm, "hsv"),
-    /// Convert a color array from RGB to Oklab
-    ///
-    /// The last axis of the array must be `3` or `4`. This axis is the color channels. If present, a fourth channel is interpreted as an alpha channel and will be ignored.
-    /// Oklab is a perceptual color space designed for image processing. L (lightness) ranges from 0 to 1, while a and b are roughly in the range -0.4 to 0.4.
-    /// ex: oklab [Red Orange Yellow Green]
-    /// ex: ⊢°⍉ oklab ▽₂0.5 Lena # Lightness map
-    /// [un][oklab] converts from Oklab to RGB. This means it can be used with [under] to do various color manipulations.
-    /// ex: ⍜(⊡1°⍉oklab|×2) ▽₂0.5 Lena # Increase red-green contrast
-    /// ex: ⍜(⊡2°⍉oklab|×2) ▽₂0.5 Lena # Increase blue-yellow contrast
-    (1, Oklab, Algorithm, "oklab"),
     /// Convert a color array from RGB to Oklch
     ///
     /// The last axis of the array must be `3` or `4`. This axis is the color channels. If present, a fourth channel is interpreted as an alpha channel and will be ignored.

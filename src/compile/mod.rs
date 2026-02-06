@@ -2020,6 +2020,90 @@ impl Compiler {
             under_cond: false,
         })
     }
+    fn try_(&mut self, branches: Vec<Sp<Word>>, span: CodeSpan) -> UiuaResult<Node> {
+        let in_try = replace(&mut self.in_try, true);
+        let mut branches = branches.into_iter();
+        let tried = self.word_sig(branches.next().unwrap());
+        self.in_try = in_try;
+        let mut ops = eco_vec![tried?];
+        let span = self.add_span(span);
+        for handler in branches {
+            let tried = ops.make_mut().last_mut().unwrap();
+            let handler_span = handler.span.clone();
+            let mut handler = self.word_sig(handler)?;
+            // Normalize noreturn tried function
+            if tried.node.is_noreturn(&self.asm) {
+                tried.sig.update_args_outputs(|a, o| {
+                    (
+                        a.max(handler.sig.args().saturating_sub(1)),
+                        o.max(handler.sig.outputs()),
+                    )
+                });
+            }
+            // Handler must have at least as many outputs as tried
+            if handler.sig.outputs() < tried.sig.outputs() && !handler.node.is_noreturn(&self.asm) {
+                let diff = tried.sig.outputs() - handler.sig.outputs();
+                (handler.sig).update_args_outputs(|a, o| (a + diff, o + diff));
+            }
+            // Tried must have at least 1 arg less than handler
+            if tried.sig.args() + 1 < handler.sig.args() {
+                // Tried must pop arguments that are only for the handler
+                let arg_diff = handler.sig.args() - tried.sig.args() - 1;
+                let pre = SigNode::new(
+                    (arg_diff, 0),
+                    eco_vec![Node::Prim(Primitive::Pop, span); arg_diff],
+                )
+                .dipped(tried.sig.args(), span);
+                tried.sig.update_args(|a| a + arg_diff);
+                tried.node.prepend(pre.node);
+            } else if tried.sig.outputs() < handler.sig.outputs() {
+                let diff = handler.sig.outputs() - tried.sig.outputs();
+                tried.sig.update_args_outputs(|a, o| (a + diff, o + diff));
+            }
+            // Handler must have at least as many args as tried
+            if handler.sig.args() < tried.sig.args() {
+                let arg_diff = tried.sig.args() - handler.sig.args();
+                if handler.sig.outputs() <= tried.sig.outputs() {
+                    let output_diff = tried.sig.outputs() - handler.sig.outputs();
+                    let diff_diff = arg_diff.saturating_sub(output_diff);
+                    if diff_diff > 0 {
+                        // Handler must pop arguments that are only for the tried
+                        let pre = SigNode::new(
+                            (diff_diff, 0),
+                            eco_vec![Node::Prim(Primitive::Pop, span); diff_diff],
+                        )
+                        .dipped(handler.sig.args() + arg_diff - diff_diff, span);
+                        (handler.sig).update_args_outputs(|a, o| (a + arg_diff, o + output_diff));
+                        handler.node.prepend(pre.node);
+                    } else {
+                        (handler.sig).update_args_outputs(|a, o| (a + arg_diff, o + arg_diff));
+                    }
+                } else {
+                    (handler.sig).update_args_outputs(|a, o| (a + arg_diff, o + arg_diff));
+                }
+            }
+            if handler.sig.args() == tried.sig.args()
+                && handler.sig.outputs() + 1 == tried.sig.outputs()
+            {
+                handler.sig.update_args_outputs(|a, o| (a + 1, o + 1));
+            }
+
+            if handler.sig.args() > tried.sig.args() + 1 {
+                self.add_error(
+                    handler_span,
+                    format!(
+                        "Handler function must have at most \
+                        one more argument than the tried function, \
+                        but their signatures are {} and \
+                        {} respectively.",
+                        handler.sig, tried.sig
+                    ),
+                );
+            }
+            ops.push(handler);
+        }
+        Ok(Node::Mod(Primitive::Try, ops, span))
+    }
     fn handle_primitive_deprecation(&mut self, prim: Primitive, span: &CodeSpan) {
         if let Some(suggestion) = prim.deprecation_suggestion() {
             if !self.deprecated_prim_errors.insert(prim) {

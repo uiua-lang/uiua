@@ -353,8 +353,10 @@ impl VirtualEnv {
                     }
                 }
                 Try => {
-                    let [mut f_sig, handler_sig] = get_args(args)?;
-                    f_sig.update_outputs(|o| o.max(handler_sig.outputs()));
+                    let mut f_sig = args[0].sig;
+                    for handler in &args[1..] {
+                        f_sig.update_outputs(|o| o.max(handler.sig.outputs()));
+                    }
                     self.handle_sig(f_sig);
                 }
                 Case => {

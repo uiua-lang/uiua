@@ -675,30 +675,30 @@ pub fn switch(
 }
 
 pub fn try_(ops: Ops, env: &mut Uiua) -> UiuaResult {
-    let [f, handler] = get_ops(ops, env)?;
-    let f_sig = f.sig;
-    let handler_sig = handler.sig;
-    if env.stack_height() < f_sig.args() {
-        for i in 0..f_sig.args() {
-            env.pop(i + 1)?;
+    let mut ops = ops.into_iter();
+    let mut f = ops.next().expect("try should have at least 2 args");
+    for handler in ops {
+        env.require_height(f.sig.args())?;
+        let (f_sig, handler_sig) = (f.sig, handler.sig);
+        let backup = env.clone_stack_top(f.sig.args().min(handler_sig.args()))?;
+        if let Err(mut err) = env.exec_clean_stack(f) {
+            if err.meta.is_case {
+                err.meta.is_case = false;
+                return Err(err);
+            }
+            if handler_sig.args() > f_sig.args() {
+                (env.rt.backend).save_error_color(err.to_string(), err.report().to_string());
+                env.push(err.value());
+            }
+            for val in backup {
+                env.push(val);
+            }
+            f = handler;
+        } else {
+            return Ok(());
         }
     }
-    let backup = env.clone_stack_top(f_sig.args().min(handler_sig.args()))?;
-    if let Err(mut err) = env.exec_clean_stack(f) {
-        if err.meta.is_case {
-            err.meta.is_case = false;
-            return Err(err);
-        }
-        if handler_sig.args() > f_sig.args() {
-            (env.rt.backend).save_error_color(err.to_string(), err.report().to_string());
-            env.push(err.value());
-        }
-        for val in backup {
-            env.push(val);
-        }
-        env.exec(handler)?;
-    }
-    Ok(())
+    env.exec(f)
 }
 
 pub fn format(parts: &[EcoString], env: &mut Uiua) -> UiuaResult {

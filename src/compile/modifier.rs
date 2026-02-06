@@ -1498,17 +1498,29 @@ impl Compiler {
                 }
                 if let Some(side) = sub.side
                     && let Some(n) = side.n
-                    && n >= sn.sig.args()
                 {
-                    self.emit_diagnostic(
-                        format!(
-                            "Specifying {n} fixed arrays for a function \
-                                    with signature {} is probably not what you want",
-                            sn.sig,
-                        ),
-                        DiagnosticKind::Advice,
-                        sub_span.clone(),
-                    );
+                    if n == 0 {
+                        self.emit_diagnostic(
+                            format!(
+                                "{p} with sided subscripts with a \
+                                0 quantifier can just be {p}",
+                                p = prim.format()
+                            ),
+                            DiagnosticKind::Advice,
+                            sub_span.clone(),
+                        );
+                    }
+                    if n >= sn.sig.args() {
+                        self.emit_diagnostic(
+                            format!(
+                                "Specifying {n} fixed arrays for a function \
+                                with signature {} is probably not what you want",
+                                sn.sig,
+                            ),
+                            DiagnosticKind::Advice,
+                            sub_span.clone(),
+                        );
+                    }
                 }
                 construct_extracted_monadic_modifier(
                     Node::ImplMod,

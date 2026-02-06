@@ -2764,37 +2764,27 @@ primitive!(
     /// ex: hsv [Yellow Cyan Magenta]
     /// ex: hsv [Orange Purple Black White]
     /// [un][hsv] converts from HSV to RGB. This means it can be used with [under] to do various color manipulations.
-    /// ex: ⍜(⊡0°⍉hsv|+π) ▽⟜≡▽0.5 Lena # Opposite hue
-    /// ex: ⍜(⊡1°⍉hsv|÷2) ▽⟜≡▽0.5 Lena # Half saturation
-    /// ex: ⍜(⊡2°⍉hsv|÷2) ▽⟜≡▽0.5 Lena # Half value
+    /// ex: ⍜(⊡0°⍉hsv|+π) ▽₂0.5 Lena # Opposite hue
+    /// ex: ⍜(⊡1°⍉hsv|÷2) ▽₂0.5 Lena # Half saturation
+    /// ex: ⍜(⊡2°⍉hsv|÷2) ▽₂0.5 Lena # Half value
     (1, Hsv, Algorithm, "hsv"),
     /// Convert a color array from RGB to Oklab
     ///
     /// The last axis of the array must be `3` or `4`. This axis is the color channels. If present, a fourth channel is interpreted as an alpha channel and will be ignored.
     /// Oklab is a perceptual color space designed for image processing. L (lightness) ranges from 0 to 1, while a and b are roughly in the range -0.4 to 0.4.
-    /// ex: oklab [1 0 0]
-    /// ex: oklab [0 1 0]
-    /// ex: oklab [0 0 1]
-    /// ex: oklab [Yellow Cyan Magenta]
-    /// ex: oklab [Orange Purple Black White]
+    /// ex: oklab [Red Orange Yellow Green]
+    /// ex: ⊢°⍉ oklab ▽₂0.5 Lena # Lightness map
     /// [un][oklab] converts from Oklab to RGB. This means it can be used with [under] to do various color manipulations.
-    /// ex: ⍜(⊡0°⍉oklab|×0.5) ▽⟜≡▽0.5 Lena # Half lightness
-    /// ex: ⍜(⊡1°⍉oklab|×1.5) ▽⟜≡▽0.5 Lena # Increase red-green
-    /// ex: ⍜(⊡2°⍉oklab|×1.5) ▽⟜≡▽0.5 Lena # Increase blue-yellow
+    /// ex: ⍜(⊡1°⍉oklab|×2) ▽₂0.5 Lena # Increase red-green contrast
+    /// ex: ⍜(⊡2°⍉oklab|×2) ▽₂0.5 Lena # Increase blue-yellow contrast
     (1, Oklab, Algorithm, "oklab"),
     /// Convert a color array from RGB to Oklch
     ///
     /// The last axis of the array must be `3` or `4`. This axis is the color channels. If present, a fourth channel is interpreted as an alpha channel and will be ignored.
     /// Oklch is a cylindrical representation of Oklab. L (lightness) ranges from 0 to 1, C (chroma) is typically 0 to 0.4, and H (hue) is in radians from 0 to tau.
-    /// ex: oklch [1 0 0]
-    /// ex: oklch [0 1 0]
-    /// ex: oklch [0 0 1]
-    /// ex: oklch [Yellow Cyan Magenta]
-    /// ex: oklch [Orange Purple Black White]
+    /// ex: oklch [Red Orange Yellow Green]
     /// [un][oklch] converts from Oklch to RGB. This means it can be used with [under] to do various color manipulations.
-    /// ex: ⍜(⊡0°⍉oklch|×0.5) ▽⟜≡▽0.5 Lena # Half lightness
-    /// ex: ⍜(⊡1°⍉oklch|×1.5) ▽⟜≡▽0.5 Lena # Increase chroma
-    /// ex: ⍜(⊡2°⍉oklch|+π) ▽⟜≡▽0.5 Lena # Rotate hue by 180 degrees
+    /// ex: ⍜(⊡0°⍉oklch|↥0.8↧0.9) ▽20≡(▽200¤)Rainbow # Clamp lightness to 0.8-0.9
     (1, Oklch, Algorithm, "oklch"),
     /// Convert a string to UTF-8 bytes
     ///

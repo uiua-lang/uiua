@@ -9,3 +9,6 @@ watch = [".", "../src", "../parser", "../pad/editor", "../changelog.md"]
 [serve]
 addresses = ["0.0.0.0"]
 port = 8080
+
+[rust]
+data-wasm-opt = "z"

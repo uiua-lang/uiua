@@ -82,6 +82,7 @@ fn stencil_array<T: ArrayValue>(
 where
     Array<T>: Into<Value>,
 {
+    // dbg!(dims);
     enum WindowAction<T> {
         Id(EcoVec<T>, Option<(ValueMonFn, usize)>),
         Box(EcoVec<Boxed>, EcoVec<T>),
@@ -97,8 +98,8 @@ where
         2
     };
     for (d, s) in dims.iter().zip(&arr.shape) {
-        let total_len = *s + fill_side_count * d.fill * d.stride;
-        shape_prefix.push((total_len + d.stride).saturating_sub(d.size) / d.stride);
+        let total_len = *s as f32 + (fill_side_count * d.fill) as f32 * d.stride;
+        shape_prefix.push(((total_len + d.stride - d.size as f32) / d.stride) as usize);
     }
     let window_shape = Shape::from_iter(
         dims.iter()
@@ -151,7 +152,7 @@ where
     if dims.len() == 1 && (fill.is_none() || dims[0].fill == 0) {
         // Linear optimization
         let dim = dims[0];
-        if dim.size == dim.stride
+        if dim.size as f32 == dim.stride
             && let WindowAction::Id(_, Some((f, d))) = &action
         {
             // Simple chunking
@@ -169,15 +170,13 @@ where
         } else {
             // General case
             let row_len = arr.row_len();
-            let win_count = arr
-                .row_count()
-                .saturating_sub(dim.size.saturating_sub(dim.stride))
-                / dim.stride;
+            let win_count =
+                ((arr.row_count() as f32 - dim.size as f32 + dim.stride) / dim.stride) as usize;
             match action {
                 WindowAction::Id(mut data, f) => {
                     for i in 0..win_count {
                         data.extend_from_slice(
-                            &arr.data[dim.start..][i * dim.stride * row_len..]
+                            &arr.data[dim.start..][((i * row_len) as f32 * dim.stride) as usize..]
                                 [..dim.size * row_len],
                         );
                     }
@@ -193,7 +192,7 @@ where
                 }
                 WindowAction::Box(mut boxes, _) => {
                     for i in 0..win_count {
-                        let start = dim.start + i * dim.stride;
+                        let start = dim.start + (i as f32 * dim.stride).round() as usize;
                         boxes.push(Boxed(arr.slice_rows(start, start + dim.size).into()));
                     }
                     env.push(Array::from(boxes));
@@ -204,7 +203,7 @@ where
         }
     }
 
-    let mut corner_starts: Vec<_> = dims.iter().map(|dim| dim.start as isize).collect();
+    let mut corner_starts: Vec<_> = dims.iter().map(|dim| dim.start as f32).collect();
     let (fill_is_left, fill_is_right) =
         fill.as_ref()
             .and_then(|fv| fv.side)
@@ -213,14 +212,14 @@ where
                 SubSide::Right => (0, 1),
             });
     for (c, d) in corner_starts.iter_mut().zip(dims) {
-        *c -= (d.fill * fill_is_left * d.stride) as isize;
+        *c -= (d.fill * fill_is_left) as f32 * d.stride;
     }
     let mut maxs = vec![0isize; dims.len()];
     for ((m, d), s) in maxs.iter_mut().zip(dims).zip(&arr.shape) {
-        *m = (*s + d.fill * fill_is_right * d.stride) as isize;
+        *m = (*s as f32 + (d.fill * fill_is_right) as f32 * d.stride) as isize;
     }
     let mut corner = corner_starts.clone();
-    let mut curr = corner.clone();
+    let mut curr: Vec<isize> = corner.iter().map(|&i| i.round() as isize).collect();
     let mut offset = vec![0usize; corner.len()];
     let cell_shape = Shape::from(&arr.shape[dims.len()..]);
     let cell_len = cell_shape.elements();
@@ -235,7 +234,7 @@ where
             'window: loop {
                 // Update curr
                 for (i, c) in curr.iter_mut().enumerate() {
-                    *c = corner[i] + offset[i] as isize;
+                    *c = (corner[i] + offset[i] as f32).round() as isize;
                 }
                 // Add cell
                 if let Some(i) = arr.shape.i_dims_to_flat(&curr) {
@@ -282,8 +281,8 @@ where
             }
             // Increment corner
             for (i, c) in corner.iter_mut().enumerate().rev() {
-                if *c < maxs[i] - dims[i].stride as isize - dims[i].size as isize + 1 {
-                    *c += dims[i].stride as isize;
+                if *c < maxs[i] as f32 - dims[i].stride - dims[i].size as f32 + 1.0 {
+                    *c += dims[i].stride;
                     continue 'windows;
                 } else {
                     *c = corner_starts[i];
@@ -324,25 +323,25 @@ where
 struct WindowDim {
     size: usize,
     start: usize,
-    stride: usize,
+    stride: f32,
     fill: usize,
 }
 
-fn derive_size(size: isize, dim: usize, chunk: bool, env: &Uiua) -> UiuaResult<usize> {
+fn derive_size(size: isize, dim: usize, chunk: bool, env: &Uiua) -> UiuaResult<f32> {
     if size == 0 {
         return Err(env.error("Window size cannot be zero"));
     }
     Ok(if size > 0 {
-        size
+        size as f32
     } else if size.unsigned_abs() > dim {
         return Err(env.error(format!(
             "Window size {size} is too large for array of shape {dim}"
         )));
     } else if chunk {
-        dim as isize / size.abs()
+        dim as f32 / size.abs() as f32
     } else {
-        dim as isize + 1 + size
-    } as usize)
+        (dim as isize + 1 + size) as f32
+    })
 }
 
 fn derive_dims(
@@ -358,11 +357,12 @@ fn derive_dims(
             if shape.is_empty() {
                 return Err(env.error("Cannot get windows from a scalar"));
             }
-            let size = derive_size(ints.data[0], shape.row_count(), side.is_some(), env)?;
+            let fsize = derive_size(ints.data[0], shape.row_count(), side.is_some(), env)?;
+            let size = fsize.floor() as usize;
             let (start, stride) = match side {
-                None => (0, 1),
-                Some(SubSide::Left) => (0, size),
-                Some(SubSide::Right) => (shape.row_count() % size, size),
+                None => (0, 1.0),
+                Some(SubSide::Left) => (0, fsize),
+                Some(SubSide::Right) => (shape.row_count() % size, fsize),
             };
             vec![WindowDim {
                 size,
@@ -380,11 +380,12 @@ fn derive_dims(
             }
             let mut dims = Vec::with_capacity(n);
             for (size, dim) in ints.data.iter().zip(shape) {
-                let size = derive_size(*size, *dim, side.is_some(), env)?;
+                let fsize = derive_size(*size, *dim, side.is_some(), env)?;
+                let size = fsize.floor() as usize;
                 let (start, stride) = match side {
-                    None => (0, 1),
-                    Some(SubSide::Left) => (0, size),
-                    Some(SubSide::Right) => (dim % size, size),
+                    None => (0, 1.0),
+                    Some(SubSide::Left) => (0, fsize),
+                    Some(SubSide::Right) => (dim % size, fsize),
                 };
                 dims.push(WindowDim {
                     size,
@@ -422,19 +423,16 @@ fn derive_dims(
             }
             let mut dims = Vec::with_capacity(n);
             for i in 0..n {
-                let size = derive_size(ints.data[i], shape[i], true, env)?;
-                let stride = ints.data.get(n + i).copied().unwrap_or(size as isize);
-                if stride <= 0 {
+                let fsize = derive_size(ints.data[i], shape[i], true, env)?;
+                let size = fsize.floor() as usize;
+                let stride = ints.data.get(n + i).map_or(fsize, |&n| n as f32);
+                if stride <= 0.0 {
                     return Err(env.error(format!(
                         "Window stride must be positive, \
                         but axis {i} has stride {stride}"
                     )));
                 }
-                let stride = stride as usize;
-                let fill = ints
-                    .data
-                    .get(2 * n + i)
-                    .copied()
+                let fill = (ints.data.get(2 * n + i).copied())
                     .unwrap_or((size as isize - 1) * has_fill as isize);
                 if fill < 0 {
                     return Err(env.error(format!(

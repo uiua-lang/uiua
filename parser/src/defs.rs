@@ -3887,7 +3887,7 @@ sys_op! {
     /// ex: &rs 4 ⊸&seek 47 &fo "example.txt"
     (2(0), Seek, Stream, "&seek", "seek", Mutating),
     /// Invoke a path with the system's default program
-    (1(1), Invoke, Command, "&invk", "invoke", Mutating),
+    (1(0), Invoke, Command, "&invk", "invoke", Mutating),
     /// Close a stream by its handle
     ///
     /// This will close files, tcp listeners, and tcp sockets.

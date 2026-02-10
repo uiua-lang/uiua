@@ -1737,6 +1737,7 @@ impl Compiler {
         operands: Vec<Sp<Word>>,
     ) -> UiuaResult<Node> {
         use crate::media::*;
+        self.handle_primitive_experimental(prim, &modifier_span);
         let (args_prim, args) = match prim {
             Primitive::Layout => (ImplPrimitive::LayoutArgs, LayoutParam::args()),
             Primitive::Voxels => (ImplPrimitive::VoxelsArgs, VoxelsParam::args()),

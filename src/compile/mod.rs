@@ -2127,13 +2127,7 @@ impl Compiler {
     }
     fn handle_primitive_experimental(&mut self, prim: Primitive, span: &CodeSpan) {
         if prim.is_experimental() {
-            self.experimental_error(span, || {
-                format!(
-                    "{} is experimental. To use it, add \
-                    `# Experimental!` to the top of the file.",
-                    prim.format()
-                )
-            });
+            self.experimental_error_it(span, || prim.format());
         }
     }
     fn validate_primitive(&mut self, prim: Primitive, span: &CodeSpan) {

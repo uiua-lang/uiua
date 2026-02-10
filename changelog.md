@@ -7,6 +7,10 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - Add [`oklch`](https://uiua.org/docs/oklch) function
 
+## 0.18.1 - 2026-02-??
+### Interpreter
+- Fix a crash in filled dyadic pervasives
+
 ## 0.18.0 - 2026-02-05
 ### Language
 - **Breaking Change** - Subscripted [`range ⇡`](https://uiua.org/docs/range) now makes the range inclusive up to the maximum while still changing the start, rather than offsetting the entire range

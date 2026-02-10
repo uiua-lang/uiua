@@ -854,7 +854,6 @@ pub fn Editor<'a>(
                     let last_index = range.len() - 1;
                     if range
                         .iter()
-                        .map(|line| line.trim())
                         .all(|line| (comment && line.is_empty()) || line.starts_with(prefix))
                     {
                         // Toggle comments off
@@ -863,8 +862,8 @@ pub fn Editor<'a>(
                             let space_count = line.chars().take_while(|c| *c == ' ').count();
                             *line = repeat_n(' ', space_count)
                                 .chain({
-                                    let line_ = line.trim().trim_start_matches(prefix);
-                                    line_.strip_prefix(' ').unwrap_or(line_).chars()
+                                    let line = line.trim_start().trim_start_matches(prefix);
+                                    line.strip_prefix(' ').unwrap_or(line).chars()
                                 })
                                 .collect();
 

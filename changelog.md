@@ -2,8 +2,12 @@
 
 Uiua is not yet stable.
 
-## 0.18.0 - 2026-02-05
+## 0.18.1 - 2026-02-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Interpreter
+- Fix a crash in filled dyadic pervasives
+
+## 0.18.0 - 2026-02-05
 ### Language
 - **Breaking Change** - Subscripted [`range ⇡`](https://uiua.org/docs/range) now makes the range inclusive up to the maximum while still changing the start, rather than offsetting the entire range
   - This breaks all uses of subscripted [`range ⇡`](https://uiua.org/docs/range) *other* than `⇡₁`

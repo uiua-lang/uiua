@@ -68,8 +68,8 @@ pub fn stencil(ops: Ops, side: Option<SubSide>, env: &mut Uiua) -> UiuaResult {
     let size = env.pop(1)?;
     let mut xs = env.pop(2)?;
     xs.match_fill(env);
-    let has_fill = env.fill().value_for(&xs).is_some();
-    let dims = derive_dims(&size, &xs.shape, has_fill, side, env)?;
+    let fill = env.fill().value_for(&xs).map(|fv| fv.side);
+    let dims = derive_dims(&size, &xs.shape, fill, side, env)?;
     val_as_arr!(xs, |arr| stencil_array(arr, &dims, f, env))
 }
 
@@ -347,28 +347,38 @@ fn derive_size(size: isize, dim: usize, chunk: bool, env: &Uiua) -> UiuaResult<f
 fn derive_dims(
     size: &Value,
     shape: &Shape,
-    has_fill: bool,
+    fill: Option<Option<SubSide>>,
     side: Option<SubSide>,
     env: &Uiua,
 ) -> UiuaResult<Vec<WindowDim>> {
-    let ints = size.as_integer_array(env, "Window size must be an array of integers")?;
-    let dims = match &*ints.shape {
+    let nums = size.as_number_array::<f64>(env, "Window size must be an array of numbers")?;
+    let dims = match &*nums.shape {
         [] => {
             if shape.is_empty() {
                 return Err(env.error("Cannot get windows from a scalar"));
             }
-            let fsize = derive_size(ints.data[0], shape.row_count(), side.is_some(), env)?;
+            let fsize = derive_size(
+                nums.data[0] as isize,
+                shape.row_count(),
+                side.is_some(),
+                env,
+            )?;
             let size = fsize.floor() as usize;
             let (start, stride) = match side {
                 None => (0, 1.0),
                 Some(SubSide::Left) => (0, fsize),
                 Some(SubSide::Right) => (shape.row_count() % size, fsize),
             };
+            let fill = match fill {
+                None => 0,
+                Some(None) => 1,
+                Some(Some(_)) => size - 1,
+            };
             vec![WindowDim {
                 size,
                 start,
                 stride,
-                fill: (size - 1) * has_fill as usize,
+                fill,
             }]
         }
         &[n] => {
@@ -379,19 +389,24 @@ fn derive_dims(
                 )));
             }
             let mut dims = Vec::with_capacity(n);
-            for (size, dim) in ints.data.iter().zip(shape) {
-                let fsize = derive_size(*size, *dim, side.is_some(), env)?;
+            for (size, dim) in nums.data.iter().zip(shape) {
+                let fsize = derive_size(*size as isize, *dim, side.is_some(), env)?;
                 let size = fsize.floor() as usize;
                 let (start, stride) = match side {
                     None => (0, 1.0),
                     Some(SubSide::Left) => (0, fsize),
                     Some(SubSide::Right) => (dim % size, fsize),
                 };
+                let fill = match fill {
+                    None => 0,
+                    Some(None) => 1,
+                    Some(Some(_)) => size - 1,
+                };
                 dims.push(WindowDim {
                     size,
                     start,
                     stride,
-                    fill: (size - 1) * has_fill as usize,
+                    fill,
                 });
             }
             dims
@@ -423,24 +438,30 @@ fn derive_dims(
             }
             let mut dims = Vec::with_capacity(n);
             for i in 0..n {
-                let fsize = derive_size(ints.data[i], shape[i], true, env)?;
+                let fsize = derive_size(nums.data[i] as isize, shape[i], true, env)?;
                 let size = fsize.floor() as usize;
-                let stride = ints.data.get(n + i).map_or(fsize, |&n| n as f32);
+                let stride = nums.data.get(n + i).map_or(fsize, |&n| n as f32);
                 if stride <= 0.0 {
                     return Err(env.error(format!(
                         "Window stride must be positive, \
                         but axis {i} has stride {stride}"
                     )));
                 }
-                let fill = (ints.data.get(2 * n + i).copied())
-                    .unwrap_or((size as isize - 1) * has_fill as isize);
+                let fill = (nums.data.get(2 * n + i)).map_or_else(
+                    || match fill {
+                        None => 0,
+                        Some(None) => 1,
+                        Some(Some(_)) => size as isize - 1,
+                    },
+                    |&n| n as isize,
+                );
                 if fill < 0 {
                     return Err(env.error(format!(
                         "Window fill size must be non-negative, \
                         but axis {i} has fill size {fill}"
                     )));
                 }
-                let fill = fill as usize * has_fill as usize;
+                let fill = fill as usize;
                 dims.push(WindowDim {
                     size,
                     start: 0,

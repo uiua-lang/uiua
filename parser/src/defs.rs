@@ -2764,10 +2764,18 @@ primitive!(
     /// ex: hsv [Yellow Cyan Magenta]
     /// ex: hsv [Orange Purple Black White]
     /// [un][hsv] converts from HSV to RGB. This means it can be used with [under] to do various color manipulations.
-    /// ex: ⍜(⊡0°⍉hsv|+π) ▽⟜≡▽0.5 Lena # Opposite hue
-    /// ex: ⍜(⊡1°⍉hsv|÷2) ▽⟜≡▽0.5 Lena # Half saturation
-    /// ex: ⍜(⊡2°⍉hsv|÷2) ▽⟜≡▽0.5 Lena # Half value
+    /// ex: ⍜(⊡0°⍉hsv|+π) ▽₂0.5 Lena # Opposite hue
+    /// ex: ⍜(⊡1°⍉hsv|÷2) ▽₂0.5 Lena # Half saturation
+    /// ex: ⍜(⊡2°⍉hsv|÷2) ▽₂0.5 Lena # Half value
     (1, Hsv, Algorithm, "hsv"),
+    /// Convert a color array from RGB to Oklch
+    ///
+    /// The last axis of the array must be `3` or `4`. This axis is the color channels. If present, a fourth channel is interpreted as an alpha channel and will be ignored.
+    /// Oklch is a cylindrical representation of Oklab. L (lightness) ranges from 0 to 1, C (chroma) is typically 0 to 0.4, and H (hue) is in radians from 0 to tau.
+    /// ex: oklch [Red Orange Yellow Green]
+    /// [un][oklch] converts from Oklch to RGB. This means it can be used with [under] to do various color manipulations.
+    /// ex: ⍜(⊡0°⍉oklch|↥0.8↧0.9) ▽20≡(▽200¤)Rainbow # Clamp lightness to 0.8-0.9
+    (1, Oklch, Algorithm, "oklch"),
     /// Convert a string to UTF-8 bytes
     ///
     /// ex: utf₈ "hello!"

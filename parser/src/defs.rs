@@ -2073,7 +2073,7 @@ primitive!(
     /// ex: ⧈□ 3_3 °△5_5
     ///
     /// [fill] will pad the sides of the windows
-    /// ex: ⬚0⧈∘ 3 [1 2 3]
+    /// ex: ⬚0⧈∘ 3 [1 2 3 4]
     /// ex: ⬚0⧈□ 2_3 +1°△3_3
     ///
     /// A numeric subscript sets the window size.
@@ -2089,7 +2089,7 @@ primitive!(
     /// ex: ⧈□¯2 °△4_4
     /// ex: ⧈□¯3 °△4_4
     /// This can be useful when you want to get horizontal windows.
-    /// ex: ⧈□¯1_2 °△4_4
+    /// ex: ⧈□¯2_2 °△4_4
     ///
     /// A sided subscript will "chunk" the array. The side indicates to which side of the array the chunks will be aligned.
     /// ex: ⧈⌞∘ 4 ⇡10
@@ -2110,13 +2110,12 @@ primitive!(
     /// ex: ⧈□ [¤3¤4] ⇡12
     /// ex: ⧈□ [¤4¤2] ⇡12
     /// ex: ⊸⧈□ [2_2 1_3] °△4_6
-    /// By default, [fill]ed [stencil] pads each side of an axis with a number equal to the axis's window size [subtract]`1`.
-    /// This number is then [multiply]d by the specified stride.
+    /// By default, [fill]ed [stencil] pads each side of an axis with an extra row containing fill values. The number of filled values is equal to the stride (`1` by default).
     /// ex: ⬚0⧈□ 2_2 +1°△2_2
     /// ex: ⬚0⧈□ ¤2_2 +1°△4_6
     /// Adding a third row to the array allows the fill amount to be specified for each axis.
-    /// ex: ⬚0⧈□ [2_2 1_1 0_1] +1°△2_2
-    /// ex: ⬚0⧈□ [2_2 2_2 0_1] +1°△4_6
+    /// ex: ⬚0⧈□ [2_2 1_1 0_1] +1°△3_3
+    /// ex: ⬚0⧈□ [2_2 1_2 0_1] +1°△4_6
     (2[1], Stencil, MappingModifier, ("stencil", '⧈')),
     /// Repeat a function a number of times
     ///

@@ -40,7 +40,7 @@ pub fn stencil(ops: Ops, side: Option<SubSide>, env: &mut Uiua) -> UiuaResult {
         } else if f.sig == (2, 1) {
             adjacent_impl(f, xs, n, env)
         } else {
-            val_as_arr!(&mut xs, |arr| pad_adjacent_fill(arr, n, env));
+            val_as_arr!(&mut xs, |arr| pad_adjacent_fill(arr, env));
             if xs.row_count() < n {
                 for _ in 0..f.sig.outputs() {
                     env.push(xs.first_dim_zero());
@@ -548,7 +548,7 @@ fn fast_adjacent<T>(
 where
     T: ArrayValue + Copy,
 {
-    pad_adjacent_fill(&mut arr, n, env);
+    pad_adjacent_fill(&mut arr, env);
     match arr.rank() {
         0 => Err(env.error("Cannot get adjacency of scalar")),
         1 => {
@@ -595,21 +595,21 @@ where
     }
 }
 
-fn pad_adjacent_fill<T: ArrayValue>(arr: &mut Array<T>, n: usize, env: &Uiua) {
+fn pad_adjacent_fill<T: ArrayValue>(arr: &mut Array<T>, env: &Uiua) {
     if let Ok(fv) = env.scalar_fill::<T>() {
         let row_len = arr.row_len();
         match fv.side {
             None => {
-                arr.data.extend_repeat(&fv.value, (n - 1) * row_len * 2);
-                arr.data.as_mut_slice().rotate_right((n - 1) * row_len);
-                *arr.shape.row_count_mut() += (n - 1) * 2;
+                arr.data.extend_repeat(&fv.value, row_len * 2);
+                arr.data.as_mut_slice().rotate_right(row_len);
+                *arr.shape.row_count_mut() += 2;
             }
             Some(side) => {
-                arr.data.extend_repeat(&fv.value, (n - 1) * row_len);
+                arr.data.extend_repeat(&fv.value, row_len);
                 if side == SubSide::Left {
-                    arr.data.as_mut_slice().rotate_right((n - 1) * row_len);
+                    arr.data.as_mut_slice().rotate_right(row_len);
                 }
-                *arr.shape.row_count_mut() += n - 1;
+                *arr.shape.row_count_mut() += 1;
             }
         }
     }
@@ -624,7 +624,7 @@ fn generic_adjacent(f: SigNode, mut xs: Value, n: usize, env: &mut Uiua) -> Uiua
             Primitive::Stencil.format()
         )));
     }
-    val_as_arr!(&mut xs, |arr| pad_adjacent_fill(arr, n, env));
+    val_as_arr!(&mut xs, |arr| pad_adjacent_fill(arr, env));
     if xs.row_count() < n {
         env.push(xs.first_dim_zero());
         return Ok(());

@@ -627,7 +627,10 @@ impl GridFmt for Boxed {
         let mut rows = Vec::new();
         let mut len = None;
         for Boxed(val) in &arr.data {
-            if val.rank() == 0 || val.rank() == 1 && matches!(val, Value::Char(_)) {
+            if val.rank() == 0
+                || val.rank() == 1 && matches!(val, Value::Char(_))
+                || value_requires_summary(val)
+            {
                 return None;
             }
             let label = val.meta.label.as_ref()?;
@@ -1137,6 +1140,16 @@ const MAX_RANK: usize = 8;
 
 fn requires_summary<T: ArrayValue>(shape: &[usize]) -> bool {
     shape.iter().product::<usize>() > T::summary_min_elems() || shape.len() > MAX_RANK
+}
+
+fn value_requires_summary(val: &Value) -> bool {
+    match val {
+        Value::Byte(a) => requires_summary::<f64>(&a.shape),
+        Value::Num(a) => requires_summary::<u8>(&a.shape),
+        Value::Complex(a) => requires_summary::<Complex>(&a.shape),
+        Value::Char(a) => requires_summary::<char>(&a.shape),
+        Value::Box(a) => requires_summary::<Boxed>(&a.shape),
+    }
 }
 
 fn fmt_array<T: GridFmt + ArrayValue>(

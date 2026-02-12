@@ -68,7 +68,7 @@ If we have several arrays and want to choose which ones are fixed and which are 
 ```
 
 ```uiua
-≡(⊂⊂⊂) ⊙∩¤ 1_2_3 4_5_6 7_8_9 10_11_12
+≡⊂₄ ⊙∩¤ 1_2_3 4_5_6 7_8_9 10_11_12
 ```
 
 [fix]() also works with pervasive dyadic functions without [rows]().

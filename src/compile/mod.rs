@@ -990,7 +990,7 @@ impl Compiler {
                     .position(|w| !matches!(w.value, Word::Primitive(Primitive::Join)))
                     .map(|j| i + 1 + j)
                     .unwrap_or(words.len());
-                if j - i >= 2 {
+                if j - i >= 3 {
                     let span = words[i].span.clone().merge(words[j - 1].span.clone());
                     let message = if j - i < 9 {
                         format!(

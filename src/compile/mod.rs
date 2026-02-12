@@ -982,6 +982,37 @@ impl Compiler {
             let com = com.clone();
             sem = Some(words.pop().unwrap().span.sp(com));
         }
+
+        // Diagnostics
+        for (i, word) in words.iter().enumerate() {
+            if let Word::Primitive(Primitive::Join) = word.value {
+                let j = (words[i + 1..].iter())
+                    .position(|w| !matches!(w.value, Word::Primitive(Primitive::Join)))
+                    .map(|j| i + 1 + j)
+                    .unwrap_or(words.len());
+                if j - i >= 2 {
+                    let span = words[i].span.clone().merge(words[j - 1].span.clone());
+                    let message = if j - i < 9 {
+                        format!(
+                            "Use {}{} instead of {} {}s here",
+                            Primitive::Join,
+                            SUBSCRIPT_DIGITS[j + i + 1],
+                            j - i,
+                            Primitive::Join.format()
+                        )
+                    } else {
+                        format!(
+                            "Use subscripted {p} instead of {} {p}s here",
+                            j - i,
+                            p = Primitive::Join.format()
+                        )
+                    };
+                    self.emit_diagnostic(message, DiagnosticKind::Style, span);
+                    break;
+                }
+            }
+        }
+
         // Right-to-left
         words.reverse();
 

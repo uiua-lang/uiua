@@ -1229,7 +1229,7 @@ impl Compiler {
             Word::IncompleteRef(path) => 'blk: {
                 if let Some((_, locals)) = self.ref_path(&path)? {
                     self.add_error(
-                        path.last().unwrap().tilde_span.clone(),
+                        path.last().unwrap().dot_span.clone(),
                         "Incomplete module reference",
                     );
                     for (local, comp) in locals.iter().zip(path) {

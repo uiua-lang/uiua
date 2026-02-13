@@ -503,15 +503,15 @@ pub struct Ref {
 pub struct RefComponent {
     /// The name of the module
     pub module: Sp<Ident>,
-    /// The span of the ~
-    pub tilde_span: CodeSpan,
+    /// The span of the .
+    pub dot_span: CodeSpan,
 }
 
 /// A component of a reference
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChainComponent {
-    /// The span of the ≈
-    pub tilde_span: CodeSpan,
+    /// The span of the ‥
+    pub dot_span: CodeSpan,
     /// The ref of the item
     pub item: Ref,
 }
@@ -542,7 +542,7 @@ impl Ref {
         once(self).chain(chained.into_iter().map(move |comp| {
             let mut path = vec![RefComponent {
                 module: prev.clone(),
-                tilde_span: comp.tilde_span,
+                dot_span: comp.dot_span,
             }];
             path.extend(comp.item.path);
             let r = Ref {

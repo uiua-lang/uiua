@@ -606,7 +606,7 @@ impl Spanner {
                 Word::Ref(r, chained) => {
                     spans.extend(self.ref_spans(r));
                     for comp in chained {
-                        spans.push(comp.tilde_span.clone().sp(SpanKind::Delimiter));
+                        spans.push(comp.dot_span.clone().sp(SpanKind::Delimiter));
                         spans.extend(self.ref_spans(&comp.item));
                     }
                 }
@@ -823,7 +823,7 @@ impl Spanner {
                 docs,
                 original: false,
             }));
-            spans.push(comp.tilde_span.clone().sp(SpanKind::Delimiter));
+            spans.push(comp.dot_span.clone().sp(SpanKind::Delimiter));
         }
         spans
     }

@@ -37,8 +37,8 @@ F! ← -^0 i
   B! ← (^0)
 └─╴
 X ← "Outer"
-⍤⤙≍ "Outer" M~A!X
-⍤⤙≍ "Outer" M~B!X
+⍤⤙≍ "Outer" M.A!X
+⍤⤙≍ "Outer" M.B!X
 
 ┌─╴Mod
   X     ← "Inner"
@@ -46,8 +46,8 @@ X ← "Outer"
   Mac₂! ← Mac₁!^0
 └─╴
 X ← "Outer"
-⍤⤙≍ "Outer" Mod~Mac₁!X
-⍤⤙≍ "Outer" Mod~Mac₂!X
+⍤⤙≍ "Outer" Mod.Mac₁!X
+⍤⤙≍ "Outer" Mod.Mac₂!X
 
 ┌─╴Module
   Func ← (5)
@@ -66,20 +66,20 @@ Mac! ← ^0
   F! ← +X ^0
 └─╴
 X ← 3
-⍤⤙≍ 8 M~F!X
+⍤⤙≍ 8 M.F!X
 
 ┌─╴Mod
   Func ↚ +1
   Mac! ← ^0 Func
 └─╴
-⍤⤙≍ 14 Mod~Mac!×₂ 6
+⍤⤙≍ 14 Mod.Mac!×₂ 6
 
 ┌─╴M
   Ex ~ "example"
-  G‼ ← ×^1 Ex~Increment ^0
+  G‼ ← ×^1 Ex.Increment ^0
   G! ← G‼^0 2
 └─╴
-⍤⤙≍ 12 M~G!5
+⍤⤙≍ 12 M.G!5
 
 ┌─╴M ~ B!
   X  ← 15
@@ -134,7 +134,7 @@ Struct‼ ←^ $"---_\n_\n---" ⊙(
 )°{⊙∘}
 
 Struct‼Person[Name Age][] # Ensure that a word on the same line as binding generation works
-◌◌Person~New "Dave" 15
+◌◌Person.New "Dave" 15
 
 F‼ ←^
 ⍤⤙≍ [1 2 3] [F‼(1|2|3)]

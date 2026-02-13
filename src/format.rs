@@ -988,7 +988,7 @@ impl Formatter<'_> {
         }
         for comp in comps {
             self.push(&comp.module.span, &comp.module.value);
-            self.push(&comp.tilde_span, "~");
+            self.push(&comp.dot_span, ".");
         }
     }
     fn format_words(&mut self, words: &[Sp<Word>], trim_end: bool, depth: usize) {
@@ -1094,7 +1094,7 @@ impl Formatter<'_> {
             Word::Ref(r, chained) => {
                 self.format_ref(r);
                 for comp in chained {
-                    self.push(&comp.tilde_span, "≈");
+                    self.push(&comp.dot_span, "‥");
                     self.format_ref(&comp.item);
                 }
             }

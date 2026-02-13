@@ -842,7 +842,7 @@ fn blade_sign_and_metric(dims: u8, metrics: Metrics, dot: bool, a: usize, b: usi
             }
         }
     }
-    let mut metric = (!dot || a == 0 || b == 0 || a & b != 0) as u8 as f64;
+    let mut metric = (!dot || a == 0 || b == 0 || a & b == a || a & b == b) as u8 as f64;
     for i in 0..dims {
         let bit_i = 1 << i;
         if a & bit_i != 0 {

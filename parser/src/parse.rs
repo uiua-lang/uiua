@@ -907,10 +907,15 @@ impl Parser<'_> {
         let mut checkpoint = self.index;
         let mut name = self.ident()?;
         let mut path = Vec::new();
-        while let Some(tilde_span) = self.exact(Tilde.into()) {
+        while let Some(dot_span) = (self.tokens.get(self.index + 1))
+            .is_none_or(|t| t.value != Glyph(Primitive::Dup))
+            .then(|| self.exact(Glyph(Primitive::Dup)))
+            .flatten()
+            .or_else(|| self.exact(Tilde.into()))
+        {
             let comp = RefComponent {
                 module: name,
-                tilde_span,
+                dot_span,
             };
             let Some(next) = self.ident() else {
                 self.spaces();
@@ -936,21 +941,34 @@ impl Parser<'_> {
             Ok(r) => r,
             Err(path) => {
                 let span = (path.first().unwrap().module.span.clone())
-                    .merge(path.last().unwrap().tilde_span.clone());
+                    .merge(path.last().unwrap().dot_span.clone());
                 return Some(span.sp(Word::IncompleteRef(path)));
             }
         };
         let mut chained = Vec::new();
-        while let Some(tilde_span) = self
+        while let Some(dot_span) = self
             .exact(DoubleTilde.into())
             .or_else(|| self.exact(AlmostEqual))
+            .or_else(|| self.exact(Ellipses))
+            .or_else(|| {
+                let reset = self.index;
+                if let Some((first, second)) = self
+                    .exact(Glyph(Primitive::Dup))
+                    .zip(self.exact(Glyph(Primitive::Dup)))
+                {
+                    Some(first.merge(second))
+                } else {
+                    self.index = reset;
+                    None
+                }
+            })
         {
             let reset = self.index;
             let Some(Ok(item)) = self.ref_inner() else {
                 self.index = reset;
                 break;
             };
-            chained.push(ChainComponent { tilde_span, item })
+            chained.push(ChainComponent { dot_span, item })
         }
         let mut span = first.span();
         if let Some(comp) = chained.last() {
@@ -1253,10 +1271,10 @@ impl Parser<'_> {
         }
         let mut word = if let Some(n) = self.num() {
             n.map(|(n, s)| Word::Number(n, s))
-        } else if let Some(prim) = self.prim() {
-            prim.map(Word::Primitive)
         } else if let Some(refer) = self.chained_ref() {
             refer
+        } else if let Some(prim) = self.prim() {
+            prim.map(Word::Primitive)
         } else if let Some(n) = self.num() {
             n.map(|(n, s)| Word::Number(n, s))
         } else if let Some(c) = self.next_token_map(Token::as_char) {

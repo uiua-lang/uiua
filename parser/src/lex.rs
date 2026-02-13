@@ -638,6 +638,7 @@ pub enum Token {
     TildeStroke,
     AlmostEqual,
     DownArrow,
+    Ellipses,
     OpenAngle,
     CloseAngle,
     OpenModule,
@@ -755,6 +756,7 @@ impl fmt::Display for Token {
             Token::TildeStroke => write!(f, "≁"),
             Token::AlmostEqual => write!(f, "≈"),
             Token::DownArrow => write!(f, "↓"),
+            Token::Ellipses => write!(f, "‥"),
             Token::OpenAngle => write!(f, "⟨"),
             Token::CloseAngle => write!(f, "⟩"),
             Token::Newline => write!(f, "newline"),
@@ -790,6 +792,7 @@ pub enum AsciiToken {
     Equal,
     Backtick,
     Tilde,
+    DoubleDot,
     DoubleTilde,
     Quote,
 }
@@ -814,6 +817,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::Backtick => write!(f, "`"),
             AsciiToken::Tilde => write!(f, "~"),
             AsciiToken::DoubleTilde => write!(f, "~~"),
+            AsciiToken::DoubleDot => write!(f, ".."),
             AsciiToken::Quote => write!(f, "'"),
         }
     }
@@ -1087,6 +1091,7 @@ impl<'a> Lexer<'a> {
                 "|" if self.next_char_exact(",") => self.end(DownArrow, start),
                 "|" => self.end(Bar, start),
                 "↓" => self.end(DownArrow, start),
+                "‥" => self.end(Ellipses, start),
                 ":" => self.end(Colon, start),
                 ";" if self.next_char_exact(";") => self.end(DoubleSemicolon, start),
                 ";" => self.end(Semicolon, start),

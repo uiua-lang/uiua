@@ -6,27 +6,27 @@ ThisFileDir
 
 # Imports
 Ex ~ "example.ua"
-  Foo  ← Ex~Foo
-  Incr ← Ex~Increment
-  Dub  ← Ex~Double
+  Foo  ← Ex.Foo
+  Incr ← Ex.Increment
+  Dub  ← Ex.Double
 ⍤⤙≍ 12 Dub Incr Foo
 ~ "example" ~ Square
 ⍤⤙≍ 25 Square 5
-⍤⤙≍ 15 Ex~Mac!+
+⍤⤙≍ 15 Ex.Mac!+
 
 ~ "example.ua" ~ Increment
 ~ "example.ua" ~ Increment
 ~ "example.ua" ~ Increment
 ⍤⤙≍ 7 Increment Increment 5
 F! ← ^0
-⍤⤙≍ 15 Ex~Mac!F!+
+⍤⤙≍ 15 Ex.Mac!F!+
 
 # Scoped
 ┌─╴M
   F ← +1
 └─╴
 N ↚ M
-⍤⤙≍ 6 N~F 5
+⍤⤙≍ 6 N.F 5
 ⍤⤙≍ 6 N!F 5
 
 ┌─╴M ~ X
@@ -43,8 +43,8 @@ N ↚ M
   └─╴
   D ← C
 └─╴
-⍤⤙≍ 5 A~B~C
-⍤⤙≍ 5 A~D
+⍤⤙≍ 5 A.B.C
+⍤⤙≍ 5 A.D
 
 ┌─╴Foo
   New ← 5
@@ -56,14 +56,14 @@ M! ← ^0 Foo!New
 └─╴
 M ← +1
 
-⍤⤙≍ 5 M~X
+⍤⤙≍ 5 M.X
 ⍤⤙≍ 11 M 10
 
 # Smart lookup
 ~Foo {A}
 Foo ← ¯
 ⍤⤙≍ ¯1 Foo 1
-⍤⤙≍ 2 Foo~A {2}
+⍤⤙≍ 2 Foo.A {2}
 ~Foo {A}
 ⍤⤙≍ {3} Foo 3
 Foo ← ⇡
@@ -71,7 +71,7 @@ Foo ← ⇡
   X ← 4
 └─╴
 ⍤⤙≍ [0 1 2] Foo 3
-⍤⤙≍ 4 Foo~X
+⍤⤙≍ 4 Foo.X
 
 # Rebinding
 ┌─╴A

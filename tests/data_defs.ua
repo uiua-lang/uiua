@@ -11,10 +11,10 @@
   | "Wir!" °Wir
   )
 └─╴
-⍤⤙≍ "2 and 5" M~Format M~Foo 2 5
-⍤⤙≍ "⟨0 4 1⟩" M~Format M~Qux 0 4 1
-⍤⤙≍ "Name: Dan" M~Format M~Sed "Name" "Dan"
-⍤⤙≍ "Wir!" M~Format M~Wir
+⍤⤙≍ "2 and 5" M.Format M.Foo 2 5
+⍤⤙≍ "⟨0 4 1⟩" M.Format M.Qux 0 4 1
+⍤⤙≍ "Name: Dan" M.Format M.Sed "Name" "Dan"
+⍤⤙≍ "Wir!" M.Format M.Wir
 
 ~Foo [Bar Baz ← +]
 ⍤⤙≍ [5 5] Foo 5 2 3
@@ -23,14 +23,14 @@
   |Bar {a}
   |Baz {a}
 └─╴
-⍤⤙≍ 5 Foo~Bar~a Foo~Bar 5
+⍤⤙≍ 5 Foo.Bar.a Foo.Bar 5
 
 ┌─╴Foo
   |Bar
   |Baz {A B}
   |Uiua [C]
 └─╴
-⍤⤙≍ {"Bar" "Baz" "Uiua"} Foo~Variants
+⍤⤙≍ {"Bar" "Baz" "Uiua"} Foo.Variants
 
 ┌─╴S
   ~ {A B C}
@@ -38,8 +38,8 @@
   PushB ← ⍜⊙B˜⊂
 └─╴
 S [1 2 3] [4 5 6] [7 8 9]
-S~PopA
-S~PushB
+S.PopA
+S.PushB
 ⍤⤙≍ S [1 2] [4 5 6 3] [7 8 9]
 
 ┌─╴Foo
@@ -47,11 +47,11 @@ S~PushB
   |Baz [A]
   |Qux
 └─╴
-⍤⤙≍ 1 /↥⌕"Non-boxed variant" ⍣Foo~Bar⋅∘ @a
-⍤⤙≍ 1 /↥⌕"Non-boxed variant" ⍣Foo~Baz⋅∘ [1 2 3]
-⍤⤙≍ [0 5] Foo~Bar 5
-⍤⤙≍ [1 5] Foo~Baz 5
-⍤⤙≍ 2 Foo~Qux
+⍤⤙≍ 1 /↥⌕"Non-boxed variant" ⍣Foo.Bar⋅∘ @a
+⍤⤙≍ 1 /↥⌕"Non-boxed variant" ⍣Foo.Baz⋅∘ [1 2 3]
+⍤⤙≍ [0 5] Foo.Bar 5
+⍤⤙≍ [1 5] Foo.Baz 5
+⍤⤙≍ 2 Foo.Qux
 
 ~Foo [Bar]
 ⍤⤙≍ ¤[1 2 3] Foo [1 2 3]
@@ -81,37 +81,37 @@ Foo 1 2 3
   ~B {D}
   ~C {E F}
   Ax ← A B 5 C 12 "Hi!"
-  ⍤⤙≍ 5 A~B≈D Ax
-  ⍤⤙≍ 12 A~C≈E Ax
-  ⍤⤙≍ "Hi!" A~C≈F Ax
-  ⍤⤙≍ A B 6 C 12 "Hi!" ⍜A~B≈D+₁ Ax
-  F! ← A~C≈E A B ^ C⊃+₂×₁₀^
+  ⍤⤙≍ 5 A.B‥D Ax
+  ⍤⤙≍ 12 A.C‥E Ax
+  ⍤⤙≍ "Hi!" A.C‥F Ax
+  ⍤⤙≍ A B 6 C 12 "Hi!" ⍜A.B‥D+₁ Ax
+  F! ← A.C‥E A B ^ C⊃+₂×₁₀^
 └─╴
-⍤⤙≍ 7 M~F!5
+⍤⤙≍ 7 M.F!5
 
 ┌─╴Enum
   |A
   |B {Test}
 └─╴
 ~Struct {Enum}
-Struct Enum~B 4
-⍤⤙≍ 4 Struct~Enum≈B~Test
+Struct Enum.B 4
+⍤⤙≍ 4 Struct.Enum‥B.Test
 
 ~Foo {A}
 ┌─╴Bar
   ~ {Foo}
-  Func₁ ← Foo~A Foo
-  Func₂ ← Foo≈A
+  Func₁ ← Foo.A Foo
+  Func₂ ← Foo‥A
 └─╴
 Bar Foo 5
-⍤⤙≍5 Bar~Func₂
+⍤⤙≍5 Bar.Func₂
 
 # Experimental!
 
 # Field validators
 ~Foo {Bar: °1type|Baz: ×2 ← +1}
 ⍤⤙≍ {@a 6} {Foo!⊃Bar Baz} Foo @a 5
-⍤⤙≍ Foo @a 9 °⊸Foo~Baz 10 Foo @a 5
+⍤⤙≍ Foo @a 9 °⊸Foo.Baz 10 Foo @a 5
 
 ~Foo {A: °0type|B: °0type}
 ⍤⤙≍ [7 42] ⊟ °Foo Foo 7 42
@@ -119,7 +119,7 @@ Bar Foo 5
 ⍤⤙≍ [7 42] ⊟ °Foo Foo 7 42
 
 ~A {Field: °[3]△ ← 1_1_1}
-⍤⤙≍ 1_1_1 A~Field A
+⍤⤙≍ 1_1_1 A.Field A
 
 # Data functions
 ~Foo [X ← 0] ⊟ ⊓X(/+ 1_2_3)
@@ -153,12 +153,12 @@ M! ← F!^
 
 ⍤⤙≍ ⇡5 Range 5
 ⍤⤙≍ ⇡₄9 Range!°⊸Min 4 10
-⍤⤙≍ ⇡₁5 Range~APL 5
-⍤⤙≍ ⇡6 Range~Incl 5
+⍤⤙≍ ⇡₁5 Range.APL 5
+⍤⤙≍ ⇡6 Range.Incl 5
 
 ~Run {A ← 0|B ← 1|C} ≡°□
 ⍤⤙≍ [0 1 2] Run 2
-⍤⤙≍ {2 1 5} °⊸Run~A 2 Run~New 5
+⍤⤙≍ {2 1 5} °⊸Run.A 2 Run.New 5
 ⍤⤙≍ [0 8 5] Run!°⊸B8 5
 ⍤⤙≍ [2 8 5] Run!(°⊸A2 °⊸B8) 5
 

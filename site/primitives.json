@@ -179,7 +179,7 @@
   },
   "&invk": {
     "args": 1,
-    "outputs": 1,
+    "outputs": 0,
     "class": "Command",
     "description": "Invoke a path with the system's default program"
   },

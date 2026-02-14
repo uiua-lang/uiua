@@ -2,11 +2,13 @@
 
 Uiua is not yet stable.
 
-## 0.18.1 - 2026-02-??
+## 0.18.1 - 2026-02-14
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Interpreter
 - Fix a crash in filled dyadic pervasives
 - Fix signature of [`&invk`](https://uiua.org/docs/&invk)
+- Fix parsing of `=` followed by subscript
+- Fix some built-in macros not being experimental
 
 ## 0.18.0 - 2026-02-05
 ### Language

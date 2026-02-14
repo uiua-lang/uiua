@@ -7,6 +7,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - Add experimental [custom subscript functions](<https://www.uiua.org/docs/experimental#custom-subscript-functions>)
   - Remove deprecated `log ₙ` function, which syntactically conflicted
+- Change module member access syntax from `~`/`≈` to `.`/`‥`, which is easier to type and looks nicer
 - Add [`oklch`](https://uiua.org/docs/oklch) function
 - Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape
 ### Interpreter

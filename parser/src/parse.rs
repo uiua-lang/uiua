@@ -452,15 +452,21 @@ impl Parser<'_> {
         let name = self.ident()?;
         // Left arrow
         let arrow_span = self.spaces().map(|w| w.span);
-        let (glyph_span, public) =
-            if let Some(span) = self.exact(Equal.into()).or_else(|| self.exact(LeftArrow)) {
-                (span, true)
-            } else if let Some(span) = self.exact(LeftStrokeArrow) {
-                (span, false)
-            } else {
-                self.index = start;
-                return None;
-            };
+        let (glyph_span, public) = if let Some(span) = self
+            .tokens
+            .get(self.index + 1)
+            .is_none_or(|t| !matches!(t.value, Subscr(_)))
+            .then(|| self.exact(Equal.into()))
+            .flatten()
+            .or_else(|| self.exact(LeftArrow))
+        {
+            (span, true)
+        } else if let Some(span) = self.exact(LeftStrokeArrow) {
+            (span, false)
+        } else {
+            self.index = start;
+            return None;
+        };
         let mut arrow_span = if let Some(arrow_span) = arrow_span {
             arrow_span.merge(glyph_span)
         } else {

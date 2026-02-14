@@ -50,10 +50,17 @@ This defines a [module](/tutorial/Modules) called `Person`. In this case, the mo
 ```uiua
 ~Person {Name Age}
 Person "Dave" 31
-⊸Person~Age
 ```
 
 As you can see, the generated constructor function also adds [labels](/tutorial/codetactility#labels) to aid in reading the data.
+
+You can use a `.` between the name of the module and the name of a field.
+
+```uiua
+~Person {Name Age}
+Person "Dave" 31
+⊸Person.Age
+```
 
 Notice the `{}` brackets in the example above. If we expect all fields to have the same type and shape, we can use `[]` brackets instead. This prevents the fields from being boxed, but disables labels.
 
@@ -72,7 +79,7 @@ Fields with a default value will not be arguments to the constructor.
 ```uiua
 ~Person {Name Age Items ← {}}
 Person "Hannah" 19
-⊸⍜⊙Person~Items⊂ {"Book" "Spatula"}
+⊸⍜⊙Person.Items⊂ {"Book" "Spatula"}
 ```
 
 Multiple default values can be separated with `|`s.
@@ -125,7 +132,7 @@ Like imports, data definitions can be made private by using `≁` instead of `~`
   ~~C {A}
   ≁D {A}
 └─╴
-M~D 5
+M.D 5
 ```
 
 ## Definitions in Modules
@@ -165,9 +172,9 @@ Variants can have any number of fields, including none. Unlike normal data defin
   |Rectangle {Width Height}
   |Point 
 └─╴
-Shape~Circle 4
-Shape~Rectangle 3 5
-Shape~Point
+Shape.Circle 4
+Shape.Rectangle 3 5
+Shape.Point
 ```
 
 If we expect a data array to be a specific variant, we can access its fields directly. This throws an error if the variant is not the expected one.
@@ -177,8 +184,8 @@ If we expect a data array to be a specific variant, we can access its fields dir
   |Circle {Radius}
   |Rectangle {Width Height}
 └─╴
-Shape~Circle 5
-Shape~Circle~Radius
+Shape.Circle 5
+Shape.Circle.Radius
 ```
 
 ```uiua should fail
@@ -186,8 +193,8 @@ Shape~Circle~Radius
   |Circle {Radius}
   |Rectangle {Width Height}
 └─╴
-Shape~Circle 5
-Shape~Rectangle~Height
+Shape.Circle 5
+Shape.Rectangle.Height
 ```
 
 We can use [pattern matching](</tutorial/Pattern Matching>) to do something different depending on which variant we have.
@@ -230,7 +237,7 @@ A module that contains variants has a `Variants` binding that lists their names.
   |V₄ [A B C D]
   |V₆ [A B C D E F]
 └─╴
-IpAddr~Variants
+IpAddr.Variants
 ```
 
 ## Chained Access
@@ -250,16 +257,16 @@ If we wanted to get the player's HP, we would have to use two different field ac
 ~Bars [Hp ← 100|Mp ← 100|Sta ← 100]
 ~Player {Name Bars ← Bars}
 Player "Roni"
-Bars~Hp Player~Bars
+Bars.Hp Player.Bars
 ```
 
-We can use the `≈` symbol, which formats from `~~`, to simplify this common pattern. This is syntactic sugar for the example above, so it is compatible with other [`under`]() and the like.
+We can use the `‥` symbol, which formats from `..`, to simplify this common pattern. This is syntactic sugar for the example above, so it is compatible with other [`under`]() and the like.
 
 ```uiua
 ~Bars [Hp ← 100|Mp ← 100|Sta ← 100]
 ~Player {Name Bars ← Bars}
 Player "Roni"
-⍜Player~Bars≈Hp(-10)
+⍜Player.Bars‥Hp(-10)
 ```
 
 These are arbitrarily chainable and work as long as the name of the field and the name of the data definition in that field are the same.
@@ -270,7 +277,7 @@ These are arbitrarily chainable and work as long as the name of the field and th
 ~C {D S ← []}
 ~D {E F}
 A⊙[1 2 3] B C⊙0 D "EE" @f
-⊸A~B≈C≈D≈E
+⊸A.B‥C‥D‥E
 ```
 
 ## Structs of Arrays
@@ -303,7 +310,7 @@ For example, we could find the average age.
 ```uiua
 ~Person {Name Age Score}
 Person {"Alice" "Bob" "Carol"} [21 54 49] [5 0 12]
-÷⊃⧻/+ Person~Age
+÷⊃⧻/+ Person.Age
 ```
 
 Or we could find the name of the person with the highest score.
@@ -394,7 +401,7 @@ Every data definition has a generated `Fields` constant which is a list of the f
 ~Person {Name Age Score}
 Person "Dave" 31 5
 "Age" # Imagine this is user input
-°□⊏˜⨂⊓□Person~Fields
+°□⊏˜⨂⊓□Person.Fields
 ```
 
 The `Fields` constant can also be used to turn a data structure into a [`map`]().
@@ -402,7 +409,7 @@ The `Fields` constant can also be used to turn a data structure into a [`map`]()
 ```uiua
 ~Person {Name Age Score}
 Person "Dave" 31 5
-mapPerson~Fields
+mapPerson.Fields
 ```
 
 With a bit of finesse, we can also do the opposite.
@@ -410,7 +417,7 @@ With a bit of finesse, we can also do the opposite.
 ```uiua
 ~Person {Name Age Score}
 map {"Name" "Age" "Score"} {"Dave" 31 5}
-°{°Person}getPerson~Fields
+°{°Person}getPerson.Fields
 ```
 
 Using `map` may be necessary if you want to use a function like `json` that expects a map.
@@ -418,5 +425,5 @@ Using `map` may be necessary if you want to use a function like `json` that expe
 ```uiua
 ~Person {Name Age Score}
 Person "Dave" 31 5
-&p json mapPerson~Fields
+&p json mapPerson.Fields
 ```

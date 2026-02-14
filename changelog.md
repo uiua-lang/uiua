@@ -5,6 +5,7 @@ Uiua is not yet stable.
 ## 0.19.0 - 2026-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- Change module member access syntax from `~`/`≈` to `.`/`‥`, which is easier to type and looks nicer
 - Add [`oklch`](https://uiua.org/docs/oklch) function
 
 ## 0.18.0 - 2026-02-05

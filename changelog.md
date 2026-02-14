@@ -7,10 +7,12 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - Add [`oklch`](https://uiua.org/docs/oklch) function
 
-## 0.18.1 - 2026-02-??
+## 0.18.1 - 2026-02-14
 ### Interpreter
 - Fix a crash in filled dyadic pervasives
 - Fix signature of [`&invk`](https://uiua.org/docs/&invk)
+- Fix parsing of `=` followed by subscript
+- Fix some built-in macros not being experimental
 
 ## 0.18.0 - 2026-02-05
 ### Language

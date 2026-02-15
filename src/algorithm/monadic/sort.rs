@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, ptr};
 
 use ecow::EcoVec;
-use rand::Rng;
+use rand::RngExt;
 use rayon::prelude::*;
 
 use crate::{Array, ArrayValue, Value, algorithm::ArrayCmpSlice, random_with, val_as_arr};

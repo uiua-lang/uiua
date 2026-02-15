@@ -25,7 +25,7 @@ print_stdout = "warn"
 
 [workspace.dependencies]
 base64 = "0.22.0"
-bytemuck = "1.17"
+bytemuck = "1.25"
 colored = "2"
 dashmap = {version = "6", features = ["serde"]}
 ecow = {version = "0.2.3", features = ["serde"]}

@@ -19,7 +19,7 @@ comrak = "0.39.0"
 console_error_panic_hook = "0.1.7"
 enum-iterator.workspace = true
 flate2.workspace = true
-getrandom = {version = "=0.3.4", features = ["wasm_js"]}
+getrandom = {version = "=0.4.1", features = ["wasm_js"]}
 js-sys.workspace = true
 leptos.workspace = true
 leptos_meta.workspace = true

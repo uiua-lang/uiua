@@ -63,9 +63,7 @@ where
 }
 
 pub(crate) fn pervade_dim(a: usize, b: usize) -> usize {
-    if a == b {
-        a
-    } else if a == 1 {
+    if a == 1 {
         b
     } else if b == 1 {
         a

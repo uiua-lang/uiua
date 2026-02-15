@@ -885,7 +885,9 @@ impl<T: ArrayValue> Hash for Array<T> {
             value.hash(hasher);
             return;
         }
-        self.shape.hash(hasher);
+        // Hashing usize is not portable, use a u64
+        (self.shape.len() as u64).hash(hasher);
+        self.shape.iter().for_each(|&x| (x as u64).hash(hasher));
         self.data.iter().for_each(|x| x.array_hash(hasher));
     }
 }

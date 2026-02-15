@@ -1927,7 +1927,7 @@ fn undo_regex(env: &mut Uiua) -> UiuaResult {
 }
 
 thread_local! {
-    pub(crate) static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_os_rng());
+    pub(crate) static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_rng(&mut rand::rng()));
 }
 
 /// Generate a random number, equivalent to [`Primitive::Rand`]

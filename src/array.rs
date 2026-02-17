@@ -641,7 +641,26 @@ impl<T: ArrayValue> Array<T> {
     }
     /// Consume the array and get an iterator over its rows
     pub fn into_rows(self) -> impl ExactDoubleIterator<Item = Self> {
-        (0..self.row_count()).map(move |i| self.row(i))
+        let value_flags = self.meta.flags & ArrayFlags::VALUE;
+        let set_value_flags = value_flags != ArrayFlags::NONE;
+        let row_len = self.row_len();
+        let rank = self.rank();
+        (0..self.row_count()).map(move |row| {
+            if rank == 0 {
+                let mut row = self.clone();
+                row.meta.take_map_keys();
+                row.meta.take_label();
+                row
+            } else {
+                let start = row * row_len;
+                let end = start + row_len;
+                let mut row = Self::new(&self.shape[1..], self.data.slice(start..end));
+                if set_value_flags {
+                    row.meta.flags = value_flags;
+                }
+                row
+            }
+        })
     }
     pub(crate) fn first_dim_zero(&self) -> Self {
         if self.rank() == 0 {

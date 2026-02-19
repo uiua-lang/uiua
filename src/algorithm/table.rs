@@ -323,6 +323,12 @@ pub fn table_list(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
             fast_table_list_join_or_couple(xs.coerce_to_boxes(), ys, flipped, env)?,
         ),
         // Chars
+        (Some((Primitive::Eq, _)), Value::Char(xs), Value::Char(ys)) => {
+            env.push(fast_table_list(xs, ys, is_eq::generic, env)?)
+        }
+        (Some((Primitive::Ne, _)), Value::Char(xs), Value::Char(ys)) => {
+            env.push(fast_table_list(xs, ys, is_ne::generic, env)?)
+        }
         (
             Some((Primitive::Join | Primitive::Couple, flipped)),
             Value::Char(xs),

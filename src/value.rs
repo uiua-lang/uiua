@@ -1805,7 +1805,13 @@ value_mon_impl!(exp10, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(log2, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(log10, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(square_abs, [Num, num], (Byte, byte), (Complex, com));
-value_mon_impl!(neg_abs, [Num, num], (Byte, byte), (Complex, com), (Char, char));
+value_mon_impl!(
+    neg_abs,
+    [Num, num],
+    (Byte, byte),
+    (Complex, com),
+    (Char, char)
+);
 
 impl Value {
     /// Get the `absolute value` of a value

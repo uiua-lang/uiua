@@ -1880,9 +1880,21 @@ impl Value {
     pub fn pow(self, base: Self, env: &Uiua) -> UiuaResult<Self> {
         if let Ok(pow) = self.as_int(env, None) {
             match pow {
+                -1 => return base.div(Value::from(1), env),
                 1 => return Ok(base),
                 2 => return base.clone().mul(base, env),
-                -1 => return base.div(Value::from(1), env),
+                3 => {
+                    return base
+                        .clone()
+                        .mul(base.clone(), env)
+                        .and_then(|square| square.mul(base, env));
+                }
+                4 => {
+                    return base
+                        .clone()
+                        .mul(base, env)
+                        .and_then(|square| square.clone().mul(square, env));
+                }
                 _ => {}
             }
         }

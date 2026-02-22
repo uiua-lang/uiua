@@ -1809,7 +1809,7 @@ value_mon_impl!(
     neg_abs,
     [Num, num],
     (Byte, byte),
-    [Complex, com],
+    (Complex, com),
     [Char, char]
 );
 

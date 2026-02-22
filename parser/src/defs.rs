@@ -2918,6 +2918,8 @@ primitive!(
     ///   : )
     ///   : ˜ⁿ10+1⇡5
     ///   : ⊸≡Times
+    /// A numeric subscript preallocates space for that many keys
+    /// ex: ˙map₃ [3 2 1]
     (2, Map, Map, "map"),
     /// Insert a key-value pair into a map array
     ///

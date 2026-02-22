@@ -2396,6 +2396,11 @@ impl Compiler {
                         }
                         Node::ImplPrim(ImplPrimitive::ParseSub(n as usize), self.add_span(span))
                     }
+                    Map => {
+                        let n = self.positive_subscript(n, prim, &span);
+                        let span = self.add_span(span);
+                        Node::ImplPrim(ImplPrimitive::MapSub(n), span)
+                    }
                     Args => Node::ImplPrim(
                         ImplPrimitive::StackN {
                             n: self.positive_subscript(n, Args, &span),

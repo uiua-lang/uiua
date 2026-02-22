@@ -259,6 +259,7 @@ impl_primitive!(
     (1, ParseSub(usize)),
     (1, TransposeN(i32)),
     (2, MultiKeep(usize)),
+    (2, MapSub(usize)),
     (2, SidedJoin(SubSide)),
     ([1], SidedStencil(SubSide)),
     ((1), MultiJoin(usize)),

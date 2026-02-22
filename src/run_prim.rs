@@ -1264,6 +1264,12 @@ impl ImplPrimitive {
                 let res = count.multikeep(val, dims, env)?;
                 env.push(res);
             }
+            &ImplPrimitive::MapSub(preallocate_count) => {
+                let keys = env.pop(1)?;
+                let mut vals = env.pop(2)?;
+                vals.map_sub(keys, preallocate_count, env)?;
+                env.push(vals);
+            }
             &ImplPrimitive::SidedJoin(side) => {
                 let a = env.pop(1)?;
                 let b = env.pop(2)?;

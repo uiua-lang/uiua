@@ -84,6 +84,61 @@ impl<T: ArrayValue> Array<T> {
         values.meta.map_keys = Some(map_keys);
         Ok(())
     }
+    /// Subscripted map to preallocate
+    pub fn map_sub<C: ErrorContext>(
+        &mut self,
+        keys: Value,
+        preallocate_count: usize,
+        ctx: &C,
+    ) -> Result<(), C::Error> {
+        let values = self;
+        if keys.row_count() != values.row_count() {
+            return Err(ctx.error(format!(
+                "Map array's keys and values must have the same length, but they have lengths {} and {}",
+                keys.row_count(),
+                values.row_count()
+            )));
+        }
+
+        fn get_final_capacity(len: usize) -> usize {
+            let min_cap = (len as f64 / LOAD_FACTOR).ceil() as usize;
+            min_cap.next_power_of_two()
+        }
+
+        if keys.rank() == 0 {
+            let mut map_keys = MapKeys {
+                keys,
+                indices: vec![0],
+                len: 1,
+                fix_stack: Vec::new(),
+            };
+            map_keys.grow_to(get_final_capacity(preallocate_count));
+            values.meta.map_keys = Some(map_keys);
+            return Ok(());
+        }
+        let mut map_keys = MapKeys {
+            keys: keys.clone(),
+            indices: Vec::new(),
+            len: 0,
+            fix_stack: Vec::new(),
+        };
+        map_keys.grow_to(get_final_capacity(preallocate_count));
+        let mut to_remove = Vec::new();
+        for (i, key) in keys.into_rows().enumerate() {
+            let replaced = map_keys.insert(key, i, ctx)?;
+            to_remove.extend(replaced);
+        }
+        for i in to_remove.into_iter().rev() {
+            values.remove_row(i);
+            for index in &mut map_keys.indices {
+                if *index > i {
+                    *index -= 1;
+                }
+            }
+        }
+        values.meta.map_keys = Some(map_keys);
+        Ok(())
+    }
 }
 
 impl Value {
@@ -101,6 +156,10 @@ impl Value {
     /// Create a map array
     pub fn map(&mut self, keys: Self, env: &Uiua) -> UiuaResult {
         val_as_arr!(self, |arr| arr.map(keys, env))
+    }
+    /// Create a map array, with preallocation
+    pub fn map_sub(&mut self, keys: Self, preallocate_count: usize, env: &Uiua) -> UiuaResult {
+        val_as_arr!(self, |arr| arr.map_sub(keys, preallocate_count, env))
     }
     /// Turn a map array into its keys and values
     pub fn unmap(mut self, env: &Uiua) -> UiuaResult<(Value, Value)> {

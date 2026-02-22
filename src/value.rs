@@ -1809,8 +1809,8 @@ value_mon_impl!(
     neg_abs,
     [Num, num],
     (Byte, byte),
-    (Complex, com),
-    (Char, char)
+    [Complex, com],
+    [Char, char]
 );
 
 impl Value {

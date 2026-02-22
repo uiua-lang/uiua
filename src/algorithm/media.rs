@@ -1168,6 +1168,8 @@ pub(crate) fn value_to_apng_bytes(value: &Value, frame_rate: f64) -> Result<EcoV
     Ok(buffer)
 }
 
+/// Create optional parameters that can be passed in to primitives
+#[macro_export]
 macro_rules! builtin_params {
     ($name:ident, $(($param:ident, $comment:literal, $default:expr)),* $(,)?) => {
         #[derive(Sequence)]

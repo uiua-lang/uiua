@@ -7,14 +7,20 @@ use std::{
 
 use bytemuck::must_cast;
 use ecow::EcoVec;
+use enum_iterator::{Sequence, all};
 use serde::*;
 
 use crate::{
-    Array, ArrayValue, Boxed, Complex, FormatShape, Uiua, UiuaResult, Value,
-    algorithm::ArrayCmpSlice, val_as_arr,
+    Array, ArrayValue, Boxed, Complex, FormatShape, OptionalArg, Uiua, UiuaResult, Value,
+    algorithm::ArrayCmpSlice, builtin_params, val_as_arr,
 };
 
 use super::{ErrorContext, FillContext};
+
+builtin_params!(
+    MapParam,
+    (ReserveCount, "Number of values to reserve space for", 0),
+);
 
 impl<T: ArrayValue> Array<T> {
     /// Check if the array is a map
@@ -84,20 +90,30 @@ impl<T: ArrayValue> Array<T> {
         values.meta.map_keys = Some(map_keys);
         Ok(())
     }
-    /// Subscripted map to preallocate
-    pub fn map_sub<C: ErrorContext>(
-        &mut self,
-        keys: Value,
-        preallocate_count: usize,
-        ctx: &C,
-    ) -> Result<(), C::Error> {
+
+    /// Map with extra args (e.g. reserve count)
+    pub fn map_args(&mut self, keys: Value, args: Option<Value>, env: &Uiua) -> UiuaResult<()> {
         let values = self;
         if keys.row_count() != values.row_count() {
-            return Err(ctx.error(format!(
+            return Err(env.error(format!(
                 "Map array's keys and values must have the same length, but they have lengths {} and {}",
                 keys.row_count(),
                 values.row_count()
             )));
+        }
+        let mut reserve_count = 0;
+        for (i, arg) in args
+            .into_iter()
+            .flat_map(Value::into_rows)
+            .map(Value::unboxed)
+            .enumerate()
+        {
+            match all::<MapParam>().nth(i) {
+                Some(MapParam::ReserveCount) => {
+                    reserve_count = arg.as_nat(env, "Reserve count must be a number")?
+                }
+                None => return Err(env.error(format!("Invalid map params index {i}"))),
+            }
         }
 
         fn get_final_capacity(len: usize) -> usize {
@@ -112,7 +128,7 @@ impl<T: ArrayValue> Array<T> {
                 len: 1,
                 fix_stack: Vec::new(),
             };
-            map_keys.grow_to(get_final_capacity(preallocate_count));
+            map_keys.grow_to(get_final_capacity(reserve_count));
             values.meta.map_keys = Some(map_keys);
             return Ok(());
         }
@@ -122,10 +138,10 @@ impl<T: ArrayValue> Array<T> {
             len: 0,
             fix_stack: Vec::new(),
         };
-        map_keys.grow_to(get_final_capacity(preallocate_count));
+        map_keys.grow_to(get_final_capacity(reserve_count));
         let mut to_remove = Vec::new();
         for (i, key) in keys.into_rows().enumerate() {
-            let replaced = map_keys.insert(key, i, ctx)?;
+            let replaced = map_keys.insert(key, i, env)?;
             to_remove.extend(replaced);
         }
         for i in to_remove.into_iter().rev() {
@@ -157,9 +173,9 @@ impl Value {
     pub fn map(&mut self, keys: Self, env: &Uiua) -> UiuaResult {
         val_as_arr!(self, |arr| arr.map(keys, env))
     }
-    /// Create a map array, with preallocation
-    pub fn map_sub(&mut self, keys: Self, preallocate_count: usize, env: &Uiua) -> UiuaResult {
-        val_as_arr!(self, |arr| arr.map_sub(keys, preallocate_count, env))
+    /// Create a map array, with additional arguments
+    pub fn map_args(&mut self, keys: Self, args: Option<Value>, env: &Uiua) -> UiuaResult {
+        val_as_arr!(self, |arr| arr.map_args(keys, args, env))
     }
     /// Turn a map array into its keys and values
     pub fn unmap(mut self, env: &Uiua) -> UiuaResult<(Value, Value)> {

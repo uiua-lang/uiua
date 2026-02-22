@@ -1264,12 +1264,6 @@ impl ImplPrimitive {
                 let res = count.multikeep(val, dims, env)?;
                 env.push(res);
             }
-            &ImplPrimitive::MapSub(preallocate_count) => {
-                let keys = env.pop(1)?;
-                let mut vals = env.pop(2)?;
-                vals.map_sub(keys, preallocate_count, env)?;
-                env.push(vals);
-            }
             &ImplPrimitive::SidedJoin(side) => {
                 let a = env.pop(1)?;
                 let b = env.pop(2)?;
@@ -1325,6 +1319,13 @@ impl ImplPrimitive {
                 let val = env.pop(2)?;
                 let res = media::voxels(val, Some(args), env)?;
                 env.push(res);
+            }
+            &ImplPrimitive::MapArgs => {
+                let args = env.pop(1)?;
+                let keys = env.pop(2)?;
+                let mut vals = env.pop(3)?;
+                vals.map_args(keys, Some(args), env)?;
+                env.push(vals);
             }
             &ImplPrimitive::Ga(op, spec) => match op {
                 GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,

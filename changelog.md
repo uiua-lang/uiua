@@ -54,7 +54,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`json`](https://uiua.org/docs/json)`₅` for serializing to pretty JSON5
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
-- Add numeric subscripts for [`map`](https://uiua.org/docs/map) to preallocate space for n keys 
+- Add ReserveCount optional argument for [`map`](https://uiua.org/docs/map) to preallocate space for n keys 
 - Add modifier version of [`gif`](https://uiua.org/docs/gif), written as `gif!`
   - Operates similar to [`fold ∧`](https://uiua.org/docs/fold)
   - Encodes frames as they are generated

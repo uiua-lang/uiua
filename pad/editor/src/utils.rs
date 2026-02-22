@@ -11,6 +11,7 @@ use std::{
     cell::Cell,
     collections::HashMap,
     mem::{replace, take},
+    rc::Rc,
     str::FromStr,
     time::Duration,
 };
@@ -1325,7 +1326,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaEr
     (output, error)
 }
 
-pub fn report_view(report: &Report) -> impl IntoView {
+pub fn report_view(report: &Report, insert_experimental: Rc<dyn Fn()>) -> impl IntoView {
     let mut newline_indices = Vec::new();
     for (i, frag) in report.fragments.iter().enumerate() {
         if matches!(frag, ReportFragment::Newline) {
@@ -1351,30 +1352,44 @@ pub fn report_view(report: &Report) -> impl IntoView {
             }
             continue;
         }
+        let linked = |classes: &str, text: &str| {
+            let classes = classes.to_string();
+            if let Some((before, after)) = text.split_once("`# Experimental!`") {
+                let ie = Rc::clone(&insert_experimental);
+                view! {
+                    <span class={classes.clone()}>{before.to_string()}</span>
+                    <a class="output-report" href="#" on:click=move |_| ie()>"# Experimental!"</a>
+                    <span class={classes}>{after.to_string()}</span>
+                }
+                .into_view()
+            } else {
+                view! { <span class={classes}>{text.to_string()}</span> }.into_view()
+            }
+        };
+
         frags.push(match frag {
-            ReportFragment::Plain(s) => {
-                view! { <span class="output-report">{s}</span> }.into_view()
-            }
-            ReportFragment::Faint(s) => {
-                view! { <span class="output-report output-faint">{s}</span> }.into_view()
-            }
-            ReportFragment::Fainter(s) => {
-                view! { <span class="output-report output-fainter">{s}</span> }.into_view()
-            }
+            ReportFragment::Plain(s) => linked("output-report", s),
+            ReportFragment::Faint(s) => linked("output-report output-faint", s),
+            ReportFragment::Fainter(s) => linked("output-report output-fainter", s),
             ReportFragment::Colored(s, kind) => {
                 if frags.is_empty() {
                     *wrap = true;
                 }
-                let class = match kind {
-                    ReportKind::Error => "output-report output-error",
+                match kind {
+                    ReportKind::Error => linked("output-report output-error", s),
                     ReportKind::Diagnostic(DiagnosticKind::Warning) => {
-                        "output-report output-warning"
+                        linked("output-report output-warning", s)
                     }
-                    ReportKind::Diagnostic(DiagnosticKind::Advice) => "output-report output-advice",
-                    ReportKind::Diagnostic(DiagnosticKind::Style) => "output-report output-style",
-                    ReportKind::Diagnostic(DiagnosticKind::Info) => "output-report output-info",
-                };
-                view! { <span class=class>{s}</span> }.into_view()
+                    ReportKind::Diagnostic(DiagnosticKind::Advice) => {
+                        linked("output-report output-advice", s)
+                    }
+                    ReportKind::Diagnostic(DiagnosticKind::Style) => {
+                        linked("output-report output-style", s)
+                    }
+                    ReportKind::Diagnostic(DiagnosticKind::Info) => {
+                        linked("output-report output-info", s)
+                    }
+                }
             }
             ReportFragment::Newline => {
                 frag_lines.push((Vec::new(), false));

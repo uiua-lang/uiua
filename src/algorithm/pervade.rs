@@ -1242,6 +1242,34 @@ pub mod square_abs {
     }
 }
 
+pub mod neg_abs {
+    use super::*;
+    pub fn num(a: f64) -> f64 {
+        -a.abs()
+    }
+    pub fn byte(a: u8) -> f64 {
+        -f64::from(a)
+    }
+    pub fn char(a: char) -> char {
+        if a.is_uppercase() {
+            let mut upper = a.to_lowercase();
+            if upper.len() == 1 {
+                upper.next().unwrap()
+            } else {
+                a
+            }
+        } else {
+            a
+        }
+    }
+    pub fn com(a: Complex) -> f64 {
+        -a.abs()
+    }
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot take the absolute value of {a}"))
+    }
+}
+
 macro_rules! eq_impl {
     ($name:ident $eq:tt $ordering:expr) => {
         pub mod $name {

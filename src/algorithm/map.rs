@@ -19,7 +19,7 @@ use super::{ErrorContext, FillContext};
 
 builtin_params!(
     MapParam,
-    (ReserveCount, "Number of values to reserve space for", 0),
+    (Capacity, "Number of values to reserve space for", 0),
 );
 
 impl<T: ArrayValue> Array<T> {
@@ -101,7 +101,7 @@ impl<T: ArrayValue> Array<T> {
                 values.row_count()
             )));
         }
-        let mut reserve_count = 0;
+        let mut requested_capacity = 0;
         for (i, arg) in args
             .into_iter()
             .flat_map(Value::into_rows)
@@ -109,8 +109,8 @@ impl<T: ArrayValue> Array<T> {
             .enumerate()
         {
             match all::<MapParam>().nth(i) {
-                Some(MapParam::ReserveCount) => {
-                    reserve_count = arg.as_nat(env, "Reserve count must be a number")?
+                Some(MapParam::Capacity) => {
+                    requested_capacity = arg.as_nat(env, "Capacity must be a number")?
                 }
                 None => return Err(env.error(format!("Invalid map params index {i}"))),
             }
@@ -128,7 +128,7 @@ impl<T: ArrayValue> Array<T> {
                 len: 1,
                 fix_stack: Vec::new(),
             };
-            map_keys.grow_to(get_final_capacity(reserve_count));
+            map_keys.grow_to(get_final_capacity(requested_capacity));
             values.meta.map_keys = Some(map_keys);
             return Ok(());
         }
@@ -138,7 +138,7 @@ impl<T: ArrayValue> Array<T> {
             len: 0,
             fix_stack: Vec::new(),
         };
-        map_keys.grow_to(get_final_capacity(reserve_count));
+        map_keys.grow_to(get_final_capacity(requested_capacity));
         let mut to_remove = Vec::new();
         for (i, key) in keys.into_rows().enumerate() {
             let replaced = map_keys.insert(key, i, env)?;

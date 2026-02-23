@@ -122,13 +122,13 @@ C     ← Entry "C"
 ⍤⤙≍ 0 ⍣(get5)0 map 1 1
 
 # Optional map arguments
-⍤⤙≍ map 1_2_3 10_5_6 insert 1 10 map!°⊸ReserveCount 3 1_2_3 4_5_6
+⍤⤙≍ map 1_2_3 10_5_6 insert 1 10 map!°⊸Capacity 3 1_2_3 4_5_6
 
-⍤⤙≍ [2 3 4 1] ≡get[2 3 4 5]¤ ∧(insert) [5 2 3 4] [1 2 3 4] map!°⊸ReserveCount 4 [][]
-⍤⤙≍ map"abc" [1_2 9_9 5_6] insert @b [9 9] map!°⊸ReserveCount 3 "abc" [1_2 3_4 5_6]
+⍤⤙≍ [2 3 4 1] ≡get[2 3 4 5]¤ ∧(insert) [5 2 3 4] [1 2 3 4] map!°⊸Capacity 4 [][]
+⍤⤙≍ map"abc" [1_2 9_9 5_6] insert @b [9 9] map!°⊸Capacity 3 "abc" [1_2 3_4 5_6]
 
-⍤⤙≍ map 1_2_3 6_10_15 ≡(/+⇡) map!°⊸ReserveCount 3 1_2_3 4_5_6
-⍤⤙≍ map 1_2_3 6_10_15 ≡₀(/+⇡) map!°⊸ReserveCount 3 1_2_3 4_5_6
-⍤⤙≍ map 1_2_3 14_25_36 ≡+ 10_20_30 map!°⊸ReserveCount 3 1_2_3 4_5_6
+⍤⤙≍ map 1_2_3 6_10_15 ≡(/+⇡) map!°⊸Capacity 3 1_2_3 4_5_6
+⍤⤙≍ map 1_2_3 6_10_15 ≡₀(/+⇡) map!°⊸Capacity 3 1_2_3 4_5_6
+⍤⤙≍ map 1_2_3 14_25_36 ≡+ 10_20_30 map!°⊸Capacity 3 1_2_3 4_5_6
 
-⍤⤙≍ {+@0°△0_2 []} {°map} remove "df"_"as" map!°⊸ReserveCount 2 "as"_"df" 1_2
+⍤⤙≍ {+@0°△0_2 []} {°map} remove "df"_"as" map!°⊸Capacity 2 "as"_"df" 1_2

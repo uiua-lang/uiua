@@ -2909,7 +2909,7 @@ primitive!(
     /// Map keys are stored as metadata on the values array. For this reason, they cannot be put in arrays together without being [box]ed, as the metadata for each map would be lost.
     ///
     /// Maps can take in an optional argument specifying (at least) how much space to reserve ahead of time, to reduce rehashing/resizing cost.
-    /// ex: map!°⊸ReserveCount 3 ⇡ 3 ⇡ 3
+    /// ex: map!°⊸Capacity 3 ⇡ 3 ⇡ 3
     ///
     /// Regardless of the size of the map, operations on it have O(1) amortized time complexity.
     /// In this example, we time [get] and [insert] operations on maps from 10 entries up to 100,000 entries.

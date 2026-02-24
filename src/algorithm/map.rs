@@ -12,7 +12,7 @@ use serde::*;
 
 use crate::{
     Array, ArrayValue, Boxed, Complex, FormatShape, OptionalArg, Uiua, UiuaResult, Value,
-    algorithm::ArrayCmpSlice, val_as_arr, media::builtin_params
+    algorithm::ArrayCmpSlice, media::builtin_params, val_as_arr,
 };
 
 use super::{ErrorContext, FillContext};

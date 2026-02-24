@@ -348,7 +348,7 @@ impl SysBackend for WebBackend {
             .windows(delim.len())
             .position(|w| w == delim)
             .unwrap_or(stream.contents.len());
-        let end = stream.pos + offset;
+        let end = (stream.pos + offset).min(stream.contents.len());
         let data = stream.contents[stream.pos..end].to_vec();
         stream.pos = (end + delim.len()).min(stream.contents.len());
         Ok(data)

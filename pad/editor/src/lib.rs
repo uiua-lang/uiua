@@ -852,10 +852,9 @@ pub fn Editor<'a>(
                     let mut end_diff = 0;
 
                     let last_index = range.len() - 1;
-                    if range
-                        .iter()
-                        .all(|line| (comment && line.is_empty()) || line.starts_with(prefix))
-                    {
+                    if range.iter().all(|line| {
+                        (comment && line.is_empty()) || line.trim_start().starts_with(prefix)
+                    }) {
                         // Toggle comments off
                         for (i, line) in range.iter_mut().enumerate() {
                             let old_len = line.len() as i32;

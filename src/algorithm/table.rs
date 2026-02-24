@@ -315,13 +315,6 @@ pub fn table_list(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
                 return generic_table(f, Value::Complex(xs), Value::Complex(ys), env);
             }
         }
-        // Boxes
-        (Some((Primitive::Join | Primitive::Couple, flipped)), Value::Box(xs), ys) => env.push(
-            fast_table_list_join_or_couple(xs, ys.coerce_to_boxes(), flipped, env)?,
-        ),
-        (Some((Primitive::Join | Primitive::Couple, flipped)), xs, Value::Box(ys)) => env.push(
-            fast_table_list_join_or_couple(xs.coerce_to_boxes(), ys, flipped, env)?,
-        ),
         // Chars
         (Some((Primitive::Eq, _)), Value::Char(xs), Value::Char(ys)) => {
             env.push(fast_table_list(xs, ys, is_eq::generic, env)?)
@@ -329,6 +322,19 @@ pub fn table_list(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
         (Some((Primitive::Ne, _)), Value::Char(xs), Value::Char(ys)) => {
             env.push(fast_table_list(xs, ys, is_ne::generic, env)?)
         }
+        // Boxes
+        (Some((Primitive::Eq, _)), Value::Box(xs), Value::Box(ys)) => {
+            env.push(fast_table_list(xs, ys, is_eq::generic, env)?)
+        }
+        (Some((Primitive::Ne, _)), Value::Box(xs), Value::Box(ys)) => {
+            env.push(fast_table_list(xs, ys, is_ne::generic, env)?)
+        }
+        (Some((Primitive::Join | Primitive::Couple, flipped)), Value::Box(xs), ys) => env.push(
+            fast_table_list_join_or_couple(xs, ys.coerce_to_boxes(), flipped, env)?,
+        ),
+        (Some((Primitive::Join | Primitive::Couple, flipped)), xs, Value::Box(ys)) => env.push(
+            fast_table_list_join_or_couple(xs.coerce_to_boxes(), ys, flipped, env)?,
+        ),
         (
             Some((Primitive::Join | Primitive::Couple, flipped)),
             Value::Char(xs),

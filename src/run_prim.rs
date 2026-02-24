@@ -1321,6 +1321,13 @@ impl ImplPrimitive {
                 let res = media::voxels(val, Some(args), env)?;
                 env.push(res);
             }
+            &ImplPrimitive::MapArgs => {
+                let args = env.pop(1)?;
+                let keys = env.pop(2)?;
+                let mut vals = env.pop(3)?;
+                vals.map_args(keys, Some(args), env)?;
+                env.push(vals);
+            }
             &ImplPrimitive::Ga(op, spec) => match op {
                 GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,
                 GaOp::GeometricInner => env.dyadic_oo_env_with(spec, ga::inner_product)?,

@@ -276,6 +276,7 @@ impl_primitive!(
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),
     (2(1), TagVariant),
+    (2, MapArgs),
     (3, LayoutArgs),
     (2, VoxelsArgs),
     ([1], FoldGif),

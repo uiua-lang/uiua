@@ -6,6 +6,8 @@ use algebra::{derivative, integral};
 use invert::InversionError;
 use pre_eval::PreEvalMode;
 
+use crate::algorithm::map::MapParam;
+
 const MAX_COMPTIME_DEPTH: usize = if cfg!(debug_assertions) { 5 } else { 20 };
 
 macro_rules! func {
@@ -1751,6 +1753,7 @@ impl Compiler {
         use crate::media::*;
         self.handle_primitive_experimental(prim, &modifier_span);
         let (args_prim, args) = match prim {
+            Primitive::Map => (ImplPrimitive::MapArgs, MapParam::args()),
             Primitive::Layout => (ImplPrimitive::LayoutArgs, LayoutParam::args()),
             Primitive::Voxels => (ImplPrimitive::VoxelsArgs, VoxelsParam::args()),
             Primitive::GifEncode => {

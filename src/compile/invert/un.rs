@@ -1367,6 +1367,7 @@ inverse!(PrimPat, input, _, Prim(prim, span), {
         Parse => ImplPrim(UnParse, span),
         Fix => ImplPrim(UnFix, span),
         Shape => ImplPrim(UnShape, span),
+        Reshape => Node::Mod(Fork, eco_vec![SigNode { node: Prim(Len, span), sig: Signature::new(1, 1) }, SigNode { node: Prim(Shape, span), sig: Signature::new(1, 1) }], span),
         Map => ImplPrim(UnMap, span),
         Args => ImplPrim(UnStack, span),
         Keep => ImplPrim(UnKeep, span),

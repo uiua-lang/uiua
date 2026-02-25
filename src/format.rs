@@ -1111,7 +1111,7 @@ impl Formatter<'_> {
                 }
             }
             Word::Array(arr) => {
-                let double_nest = self.output.rsplit('\n').next().is_some_and(unclosed);
+                let unclosed = self.output.rsplit('\n').next().map_or(0, count_unclosed);
                 if let Some(down_span) = &arr.down_span {
                     self.push(down_span, "↓");
                 }
@@ -1121,7 +1121,10 @@ impl Formatter<'_> {
                     self.output.push('[');
                 }
 
-                self.format_inner_items(&arr.lines, true, depth + 1 - double_nest as usize);
+                let depth = depth + 1
+                    - unclosed
+                        * arr.word_lines().next().is_some_and(|line| line.is_empty()) as usize;
+                self.format_inner_items(&arr.lines, true, depth);
                 if arr.boxes {
                     self.output.push('}');
                 } else {
@@ -1498,7 +1501,7 @@ impl Formatter<'_> {
         let start_indent =
             (self.output.rsplit('\n').next()).map_or(0, |line| line.graphemes(true).count());
 
-        let double_nest = self.output.rsplit('\n').next().is_some_and(unclosed);
+        let unclosed = self.output.rsplit('\n').next().map_or(0, count_unclosed);
         self.output.push('(');
 
         // Signature
@@ -1519,10 +1522,9 @@ impl Formatter<'_> {
         }
 
         let depth = depth + 1
-            - ((double_nest && func.word_lines().next().is_some_and(|line| line.is_empty()))
-                as usize);
+            - unclosed * func.word_lines().next().is_some_and(|line| line.is_empty()) as usize;
         self.format_inner_items(&func.lines, true, depth);
-        if double_nest {
+        if unclosed > 0 {
             while self.output.chars().rev().take_while(|&c| c == ' ').count() >= start_indent {
                 self.output.pop();
             }
@@ -1773,8 +1775,8 @@ fn end_loc(s: &str) -> Loc {
     }
 }
 
-/// Check if a string contains an unclosed opening delimiter
-fn unclosed(s: &str) -> bool {
+/// Count the number of unclosed open delimiters in a string
+fn count_unclosed(s: &str) -> usize {
     let [mut parens, mut brackets, mut curlies] = [0i32; 3];
     for c in s.chars() {
         match c {
@@ -1787,7 +1789,10 @@ fn unclosed(s: &str) -> bool {
             _ => {}
         }
     }
-    parens > 0 || brackets > 0 || curlies > 0
+    [parens, brackets, curlies]
+        .map(|i| i.max(0) as usize)
+        .into_iter()
+        .sum()
 }
 
 #[derive(Default)]
@@ -1941,9 +1946,19 @@ F(F(
 F(F{
   F
 })
+F{F{
+  F
+}}
 F{F(
   F
 )}
+F((F((
+  F
+))))
+F{{F{{
+  F
+}}}}
+
 ⊃(+
 | - # x
 )

@@ -22,9 +22,9 @@ use leptos_router::*;
 use rand::prelude::*;
 use uiua::{ConstantDef, Primitive, SysOp, now};
 use uiua_editor::{
-    EDITOR_SHORTCUTS, Editor, EditorMode, Prim, binding_name_class, lang,
+    Editor, EditorMode, Prim, binding_name_class, editor_shortcuts, lang,
     utils::{
-        ChallengeDef, get_april_fools_setting, get_april_fools_time, its_called_weewuh,
+        ChallengeDef, get_april_fools_setting, get_april_fools_time, its_called_weewuh, on_mac,
         set_april_fools,
     },
 };
@@ -78,7 +78,7 @@ pub fn Site() -> impl IntoView {
         "Abandon nominativity. Embrace relativity.".into_view(),
         view!(<div style="font-style: normal"><Prim prim=Under glyph_only=true/>"🗄️🍴"</div>).into_view(),
         "It's got um...I um...arrays".into_view(),
-        view!(<p style="font-size: 0.9em; max-width: 25em;">
+        view!(<p style="font-size: 0.9em; max-width: 25em; margin: 0;">
             "A monad is "
             <s>"a monoid in the category of endofunctors"</s>
             " a function with 1 argument"
@@ -164,7 +164,7 @@ pub fn Site() -> impl IntoView {
                                             None
                                         }
                                     }
-                                    <a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">"Support "{lang}"'s development"</a>
+                                    <a class="pls-no-block desktop-only" href="https://github.com/sponsors/uiua-lang">"Support "{lang}"'s development"</a>
                                 </div>
                             </div>
                             <Outlet/>
@@ -285,20 +285,34 @@ pub fn MainPage() -> impl IntoView {
     let prim2 = [Rise, Where, Deduplicate, Classify, Occurrences][rng.random_range(0..5)];
     let prim3 = [Reshape, Under, Fill][rng.random_range(0..3)];
 
+    let help_text = [
+        "Type a glyph's name, then run to format the names into glyphs.",
+        if on_mac() {
+            "You can run with ⌘/shift + enter."
+        } else {
+            "You can run with ctrl/shift + enter."
+        },
+    ];
+
     view! {
         <Title text=lang()/>
-        <div id="links">
-            <div>
-                <A href="/install">"Installation"</A>
-                <A href="/docs">"Documentation"</A>
-                <A href="/tour">"Language Tour"</A>
-            </div>
-            <div>
-                <A href="/tutorial/Introduction" class="slow-pulse">"Tutorial"</A>
-                <A href="/pad">"Pad"</A>
-                <A href="/blog">"Blog"</A>
-                <a href="https://discord.gg/3r9nrfYhCc">"Discord"</a>
-                <a href="https://github.com/uiua-lang/uiua">"GitHub"</a>
+        <input type="checkbox" id="mobile-menu-toggle"/>
+        <label id="mobile-menu-label" class="mobile-only" for="mobile-menu-toggle" aria-label="Menu">"☰"</label>
+        <div id="links-grid">
+            <div id="links">
+                <div>
+                    <a class="mobile-only" href="https://github.com/sponsors/uiua-lang">"Support "{lang}"'s development"</a>
+                    <A href="/install">"Installation"</A>
+                    <A href="/docs">"Documentation"</A>
+                    <A href="/tour">"Language Tour"</A>
+                </div>
+                <div>
+                    <A href="/tutorial/Introduction" class="slow-pulse">"Tutorial"</A>
+                    <A href="/pad">"Pad"</A>
+                    <A href="/blog">"Blog"</A>
+                    <a href="https://discord.gg/3r9nrfYhCc">"Discord"</a>
+                    <a href="https://github.com/uiua-lang/uiua">"GitHub"</a>
+                </div>
             </div>
         </div>
         <Editor
@@ -319,10 +333,7 @@ pub fn MainPage() -> impl IntoView {
                 )
                 .map(ToString::to_string)
                 .collect()
-            help={&[
-                "Type a glyph's name, then run to format the names into glyphs.",
-                "You can run with ctrl/shift + enter.",
-            ]}/>
+            help={&help_text}/>
         <br/>
         <div class="what-is-uiua">
             <div class="what-is-uiua-item">
@@ -387,7 +398,7 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <Hd id="unicode-formatter">"Unicode Formatter"</Hd>
                     <p>{lang}" has the terseness and expressivity afforded by Unicode glyphs without the need for special keyboard or editor support. Instead, the language comes with a formatter that converts the names of built-in functions into glyphs."</p>
-                    <Editor example="floor*10repeatrand5" help={&["", "Click to format ⇡⇡⇡            "]}/>
+                    <Editor example="floor*10repeatrand5" format_hint={true} />
                 </div>
                 <div>
                     <Hd id="multimedia-output">"Multimedia Output"</Hd>
@@ -576,7 +587,7 @@ pub fn PadPage() -> impl IntoView {
         <p>"Replace "<code>"pad"</code>" in links with "<code>"embed"</code>" or "<code>"embedpad"</code>" to embed the editor."</p>
         <p>"Keyboard shortcuts:"</p>
         <code class="code-block">
-            { EDITOR_SHORTCUTS }
+            { editor_shortcuts() }
         </code>
         <p>"Want a pad-like experience in the native interpreter? Try the "<code>"uiua -w"</code>" command to show output in a window."</p>
         <p>"You can download the newest version of the native interpreter "<a href="https://github.com/uiua-lang/uiua/releases">"here"</a>"."</p>

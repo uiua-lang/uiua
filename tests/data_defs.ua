@@ -118,6 +118,9 @@ Bar Foo 5
 ~Foo [A: °0type|B: °0type]
 ⍤⤙≍ [7 42] ⊟ °Foo Foo 7 42
 
+~A {Field: °[3]△ ← 1_1_1}
+⍤⤙≍ 1_1_1 A~Field A
+
 # Data functions
 ~Foo [X ← 0] ⊟ ⊓X(/+ 1_2_3)
 ⍤⤙≍ [0 6] Foo

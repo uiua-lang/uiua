@@ -35,8 +35,10 @@ impl Compiler {
             external: prelude.external,
         };
 
-        // Alias re-bound imports
         let name = binding.name.value;
+        self.validate_binding_name(&name, &binding.name.span);
+
+        // Alias re-bound imports
         let ident_margs = ident_modifier_args(&name);
         if ident_margs == 0
             && meta.comment.is_none()
@@ -486,6 +488,7 @@ impl Compiler {
         let m = m.value;
         let (scope_kind, name_and_local) = match m.kind {
             ModuleKind::Named(name) => {
+                self.validate_binding_name(&name.value, &name.span);
                 let global_index = self.next_global;
                 self.next_global += 1;
                 let local = LocalIndex {

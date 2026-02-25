@@ -167,7 +167,7 @@ impl Compiler {
                     && let Ok(asm) = Assembly::from_uasm(&String::from_utf8_lossy(&uasm))
                         .inspect_err(|e| {
                             self.emit_diagnostic(
-                                format!("Error loading cached assemebly: {e}"),
+                                format!("Error loading cached assemebly: {e}.\nModule will be recompiled."),
                                 DiagnosticKind::Warning,
                                 span.clone(),
                             )
@@ -287,7 +287,7 @@ impl Compiler {
                 .for_each(|n| offset_indices(n, span_offset, bind_offset, func_offset));
         }
         // Offset root and functions
-        let span_offset = self.asm.spans.len();
+        let span_offset = self.asm.spans.len().saturating_sub(1);
         let func_offset = self.asm.functions.len();
         let bind_offset = self.asm.bindings.len();
         offset_indices(&mut asm.root, span_offset, bind_offset, func_offset);
@@ -333,7 +333,7 @@ impl Compiler {
         // Append everything else
         self.next_global += asm.bindings.len();
         self.asm.root.extend(asm.root);
-        self.asm.spans.extend(asm.spans);
+        self.asm.spans.extend(asm.spans.into_iter().skip(1));
         self.asm.functions.extend(asm.functions);
         self.asm.bindings.extend(asm.bindings);
         self.asm.inputs.files.extend(asm.inputs.files);

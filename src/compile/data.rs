@@ -35,6 +35,8 @@ impl Compiler {
             .map(|text| DocComment::from(text.as_str()));
         if top_level {
             if let Some(name) = data.name.clone() {
+                self.validate_binding_name(&name.value, &name.span);
+
                 let global_index = self.next_global;
                 self.next_global += 1;
                 let local = LocalIndex {
@@ -100,10 +102,9 @@ impl Compiler {
             boxed = data_fields.boxed;
             has_fields = true;
             for mut data_field in data_fields.fields {
+                self.validate_binding_name(&data_field.name.value, &data_field.name.span);
                 let span = self.add_span(data_field.name.span.clone());
-                let mut comment = data_field
-                    .comments
-                    .as_ref()
+                let mut comment = (data_field.comments.as_ref())
                     .map(|comments| {
                         (comments.lines.iter().enumerate())
                             .flat_map(|(i, com)| {
@@ -124,7 +125,9 @@ impl Compiler {
                         `# Experimental!` to the top of the file."
                     });
                     let mut validator = self.words_sig(validator.words)?;
+                    let mut error = false;
                     if validator.sig.args() != 1 {
+                        error = true;
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
@@ -135,6 +138,7 @@ impl Compiler {
                         );
                     }
                     if validator.sig.outputs() > 1 {
+                        error = true;
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
@@ -152,10 +156,32 @@ impl Compiler {
                     }
 
                     let inverse = validator.node.un_inverse(&self.asm);
-                    Some(match inverse {
+                    match inverse {
+                        _ if error => None,
+                        _ if validation_only => Some((
+                            Node::CustomInverse(
+                                CustomInverse {
+                                    normal: Ok(validator.clone()),
+                                    un: Some(SigNode::default()),
+                                    under: Some((validator.clone(), SigNode::default())),
+                                    ..Default::default()
+                                }
+                                .into(),
+                                span,
+                            ),
+                            Node::CustomInverse(
+                                CustomInverse {
+                                    un: Some(validator.clone()),
+                                    under: Some((SigNode::default(), validator)),
+                                    ..Default::default()
+                                }
+                                .into(),
+                                span,
+                            ),
+                        )),
                         Ok(inverse) => {
                             let inverse = SigNode::new(Signature::new(1, 1), inverse);
-                            (
+                            Some((
                                 Node::CustomInverse(
                                     CustomInverse {
                                         normal: Ok(validator.clone()),
@@ -176,37 +202,16 @@ impl Compiler {
                                     .into(),
                                     span,
                                 ),
-                            )
+                            ))
                         }
-                        Err(_) if validation_only => (
-                            Node::CustomInverse(
-                                CustomInverse {
-                                    normal: Ok(validator.clone()),
-                                    un: Some(SigNode::default()),
-                                    under: Some((validator.clone(), SigNode::default())),
-                                    ..Default::default()
-                                }
-                                .into(),
-                                span,
-                            ),
-                            Node::CustomInverse(
-                                CustomInverse {
-                                    un: Some(validator.clone()),
-                                    under: Some((SigNode::default(), validator)),
-                                    ..Default::default()
-                                }
-                                .into(),
-                                span,
-                            ),
-                        ),
                         Err(e) => {
                             self.add_error(
                                 data_field.name.span.clone(),
                                 format!("Transforming validator has no inverse: {e}"),
                             );
-                            (validator.node, Node::empty())
+                            Some((validator.node, Node::empty()))
                         }
-                    })
+                    }
                 } else {
                     None
                 };
@@ -450,10 +455,6 @@ impl Compiler {
         let mut args_function_stuff = None;
         // Data functions
         if let Some(words) = data.func {
-            self.experimental_error(&data.init_span, || {
-                "Data functions are experimental. To use them, add \
-                `# Experimental!` to the top of the file."
-            });
             self.in_scope(ScopeKind::Binding, |comp| {
                 let word_span =
                     (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());

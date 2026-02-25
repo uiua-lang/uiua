@@ -129,7 +129,15 @@ impl GridFmt for f64 {
         let positive = f.abs();
         let is_neg = f.is_sign_negative();
         let minus = if is_neg { "¯" } else { "" };
-        let s = if (positive - PI).abs() <= f64::EPSILON {
+        let s = if f.to_bits() == EMPTY_NAN.to_bits() {
+            "∅".into()
+        } else if f.to_bits() == TOMBSTONE_NAN.to_bits() {
+            "⊥".into()
+        } else if f.to_bits() == WILDCARD_NAN.to_bits() {
+            "W".into()
+        } else if positive.fract() == 0.0 || positive.is_nan() {
+            format!("{minus}{positive}")
+        } else if (positive - PI).abs() <= f64::EPSILON {
             format!("{minus}π")
         } else if (positive - TAU).abs() <= f64::EPSILON {
             format!("{minus}τ")
@@ -139,14 +147,6 @@ impl GridFmt for f64 {
             format!("{minus}e")
         } else if positive == f64::INFINITY {
             format!("{minus}∞")
-        } else if f.to_bits() == EMPTY_NAN.to_bits() {
-            "∅".into()
-        } else if f.to_bits() == TOMBSTONE_NAN.to_bits() {
-            "⊥".into()
-        } else if f.to_bits() == WILDCARD_NAN.to_bits() {
-            "W".into()
-        } else if positive.fract() == 0.0 || positive.is_nan() {
-            format!("{minus}{positive}")
         } else if let Some((num, denom, approx)) =
             [1u8, 2, 3, 4, 5, 6, 8, 9, 12].iter().find_map(|&denom| {
                 let num = (positive * denom as f64) / TAU;
@@ -627,7 +627,10 @@ impl GridFmt for Boxed {
         let mut rows = Vec::new();
         let mut len = None;
         for Boxed(val) in &arr.data {
-            if val.rank() == 0 || val.rank() == 1 && matches!(val, Value::Char(_)) {
+            if val.rank() == 0
+                || val.rank() == 1 && matches!(val, Value::Char(_))
+                || value_requires_summary(val)
+            {
                 return None;
             }
             let label = val.meta.label.as_ref()?;
@@ -1137,6 +1140,16 @@ const MAX_RANK: usize = 8;
 
 fn requires_summary<T: ArrayValue>(shape: &[usize]) -> bool {
     shape.iter().product::<usize>() > T::summary_min_elems() || shape.len() > MAX_RANK
+}
+
+fn value_requires_summary(val: &Value) -> bool {
+    match val {
+        Value::Byte(a) => requires_summary::<f64>(&a.shape),
+        Value::Num(a) => requires_summary::<u8>(&a.shape),
+        Value::Complex(a) => requires_summary::<Complex>(&a.shape),
+        Value::Char(a) => requires_summary::<char>(&a.shape),
+        Value::Box(a) => requires_summary::<Boxed>(&a.shape),
+    }
 }
 
 fn fmt_array<T: GridFmt + ArrayValue>(

@@ -1023,11 +1023,14 @@ where
     use gif::{Encoder, Frame};
     if width > u16::MAX as usize || height > u16::MAX as usize {
         return Err(format!(
-            "GIF dimensions must be at most {}x{}, but the frames are {}x{}",
+            "GIF dimensions must be at most {}x{}, but the frames are {width}x{height}",
             u16::MAX,
-            u16::MAX,
-            width,
-            height
+            u16::MAX
+        ));
+    }
+    if width == 0 || height == 0 {
+        return Err(format!(
+            "GIF dimensions cannot be 0, but the frames are {width}x{height}"
         ));
     }
     let mut bytes = std::io::Cursor::new(Vec::new());
@@ -1165,6 +1168,7 @@ pub(crate) fn value_to_apng_bytes(value: &Value, frame_rate: f64) -> Result<EcoV
     Ok(buffer)
 }
 
+/// Create optional parameters that can be passed in to primitives
 macro_rules! builtin_params {
     ($name:ident, $(($param:ident, $comment:literal, $default:expr)),* $(,)?) => {
         #[derive(Sequence)]
@@ -1185,6 +1189,7 @@ macro_rules! builtin_params {
         }
     }
 }
+pub(crate) use builtin_params;
 
 builtin_params!(
     VoxelsParam,

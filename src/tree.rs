@@ -74,7 +74,6 @@ node!(
     /// Track the caller of this node
     TrackCaller(inner(Arc<SigNode>)),
     /// Push a value onto the stack
-    (#[serde(untagged)] rep),
     Push(val(Value)),
     /// Run a primitive function
     (#[serde(untagged)] rep),
@@ -1150,7 +1149,6 @@ macro_rules! node {
             pub fn span_mut(&mut self) -> Option<&mut usize> {
                 match self {
                     $(
-                        Self::Run(nodes) => nodes.make_mut().iter_mut().find_map(Node::span_mut),
                         Self::$name $(($($tup_name),*))? $({$($field_name),*})? => {
                             $($(field_span!($tup_name, $tup_name);)*)*
                             $($(field_span!($field_name, $field_name);)*)*

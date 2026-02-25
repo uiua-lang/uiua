@@ -344,8 +344,8 @@ impl TypeRt<'_> {
                 }
                 Reduce => {
                     let [f] = get_args(args)?;
-                    match f.node.as_primitive() {
-                        Some(Join) => {
+                    match f.node.as_flipped_primitive() {
+                        Some((Join, _)) => {
                             let mut x = self.pop()?;
                             if x.shape.len() >= 2 {
                                 let b = x.shape.remove(1);
@@ -354,7 +354,7 @@ impl TypeRt<'_> {
                             }
                             self.stack.push(x);
                         }
-                        Some(prim) if prim.class() == PrimClass::DyadicPervasive => {
+                        Some((prim, _)) if prim.class() == PrimClass::DyadicPervasive => {
                             let mut x = self.pop()?;
                             x.shape.make_row();
                             self.stack.push(x);

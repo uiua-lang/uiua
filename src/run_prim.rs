@@ -301,6 +301,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             env.pop("regex locations")?;
         }
         Primitive::Hsv => env.monadic_env(Value::rgb_to_hsv)?,
+        Primitive::Oklch => env.monadic_env(Value::rgb_to_oklch)?,
         Primitive::Json => env.monadic_ref_env(Value::to_json_string)?,
         Primitive::Binary => env.monadic_ref_env(Value::to_binary)?,
         Primitive::Compress => {
@@ -742,6 +743,7 @@ impl ImplPrimitive {
             }
             ImplPrimitive::UnSort => env.monadic_mut(Value::shuffle)?,
             ImplPrimitive::UnHsv => env.monadic_env(Value::hsv_to_rgb)?,
+            ImplPrimitive::UnOklch => env.monadic_env(Value::oklch_to_rgb)?,
             ImplPrimitive::UnJson | ImplPrimitive::UnJson5 => {
                 let json = env.pop(1)?.as_string(env, "json expects a string")?;
                 let val = Value::from_json_string(&json, env)?;
@@ -843,7 +845,7 @@ impl ImplPrimitive {
                 let depth = amount.rank().saturating_sub(1);
                 if n == 1 {
                     let mut val = env.pop(2)?;
-                    if amount.rank() > 0 && amount.row_count() > val.rank() {
+                    if amount.rank() == 1 && amount.row_count() > val.rank() {
                         amount.drop_n(amount.row_count() - val.rank());
                     }
                     amount.rotate_depth(&mut val, depth, false, env)?;
@@ -852,13 +854,13 @@ impl ImplPrimitive {
                     let end = env.stack_height() - n;
                     let mut vals = env.truncate_stack(end);
                     let max_rank = vals.iter().map(|v| v.rank()).max().unwrap_or(0);
-                    if amount.rank() > 0 && amount.row_count() > max_rank {
+                    if amount.rank() == 1 && amount.row_count() > max_rank {
                         amount.drop_n(amount.row_count() - max_rank);
                     }
                     for val in &mut vals {
                         let mut amount = amount.clone();
                         if amount.row_count() > 1 {
-                            if amount.rank() > 0 && amount.row_count() > val.rank() {
+                            if amount.rank() == 1 && amount.row_count() > val.rank() {
                                 amount.drop_n(amount.row_count() - val.rank());
                             }
                             amount.rotate_depth(val, depth, false, env)?;
@@ -1009,6 +1011,7 @@ impl ImplPrimitive {
             // Optimizations
             ImplPrimitive::AbsComplex => env.dyadic_oo_env(Value::abs_complex)?,
             ImplPrimitive::SquareAbs => env.monadic_env(Value::square_abs)?,
+            ImplPrimitive::NegAbs => env.monadic_env(Value::neg_abs)?,
             ImplPrimitive::FirstMinIndex => env.monadic_ref_env(Value::first_min_index)?,
             ImplPrimitive::FirstMaxIndex => env.monadic_ref_env(Value::first_max_index)?,
             ImplPrimitive::LastMinIndex => env.monadic_ref_env(Value::last_min_index)?,
@@ -1317,6 +1320,13 @@ impl ImplPrimitive {
                 let val = env.pop(2)?;
                 let res = media::voxels(val, Some(args), env)?;
                 env.push(res);
+            }
+            &ImplPrimitive::MapArgs => {
+                let args = env.pop(1)?;
+                let keys = env.pop(2)?;
+                let mut vals = env.pop(3)?;
+                vals.map_args(keys, Some(args), env)?;
+                env.push(vals);
             }
             &ImplPrimitive::Ga(op, spec) => match op {
                 GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,
@@ -1925,7 +1935,7 @@ fn undo_regex(env: &mut Uiua) -> UiuaResult {
 }
 
 thread_local! {
-    pub(crate) static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_os_rng());
+    pub(crate) static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_rng(&mut rand::rng()));
 }
 
 /// Generate a random number, equivalent to [`Primitive::Rand`]

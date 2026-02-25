@@ -45,7 +45,7 @@ This is so you can think of the operator and the second number as a single unit.
 
 Remember that you can type the names of operators and then run to format them.
 
-```uiua help(⇡⇡⇡⇡ Click   )
+```uiua format_hint
 # Click Run to format!
 max sqrt2 mod10 abs`31
 ```

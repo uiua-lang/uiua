@@ -63,9 +63,7 @@ where
 }
 
 pub(crate) fn pervade_dim(a: usize, b: usize) -> usize {
-    if a == b {
-        a
-    } else if a == 1 {
+    if a == 1 {
         b
     } else if b == 1 {
         a
@@ -509,8 +507,8 @@ where
                 }
             }
             ([al, ash @ ..], [bl, bsh @ ..]) => {
-                let a_row_len = a.len() / al;
-                let b_row_len = b.len() / bl;
+                let a_row_len = ash.iter().product();
+                let b_row_len = bsh.iter().product();
                 let c_row_len = c.len() / al.max(bl);
                 match al.cmp(bl) {
                     Ordering::Equal => {
@@ -543,11 +541,18 @@ where
                             let a_iter = a
                                 .chunks_exact(a_row_len)
                                 .chain(repeat(a_fill_row.as_slice()));
-                            for ((a, b), c) in a_iter
-                                .zip(b.chunks_exact(b_row_len))
-                                .zip(c.chunks_exact_mut(c_row_len))
-                            {
-                                use_new_fill(a, b, c, ash, bsh, fill, f);
+                            if b_row_len == 0 {
+                                let b = vec![fill.value; a_row_len];
+                                for (a, c) in a_iter.zip(c.chunks_exact_mut(c_row_len)) {
+                                    use_new_fill(a, &b, c, ash, bsh, fill, f);
+                                }
+                            } else {
+                                for ((a, b), c) in a_iter
+                                    .zip(b.chunks_exact(b_row_len))
+                                    .zip(c.chunks_exact_mut(c_row_len))
+                                {
+                                    use_new_fill(a, b, c, ash, bsh, fill, f);
+                                }
                             }
                         }
                     }
@@ -567,12 +572,19 @@ where
                             let b_iter = b
                                 .chunks_exact(b_row_len)
                                 .chain(repeat(b_fill_row.as_slice()));
-                            for ((a, b), c) in a
-                                .chunks_exact(a_row_len)
-                                .zip(b_iter)
-                                .zip(c.chunks_exact_mut(c_row_len))
-                            {
-                                use_new_fill(a, b, c, ash, bsh, fill, f);
+                            if a_row_len == 0 {
+                                let a = vec![fill.value; b_row_len];
+                                for (b, c) in b_iter.zip(c.chunks_exact_mut(c_row_len)) {
+                                    use_new_fill(&a, b, c, ash, bsh, fill, f);
+                                }
+                            } else {
+                                for ((a, b), c) in a
+                                    .chunks_exact(a_row_len)
+                                    .zip(b_iter)
+                                    .zip(c.chunks_exact_mut(c_row_len))
+                                {
+                                    use_new_fill(a, b, c, ash, bsh, fill, f);
+                                }
                             }
                         }
                     }
@@ -1227,6 +1239,34 @@ pub mod square_abs {
 
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot square {a}"))
+    }
+}
+
+pub mod neg_abs {
+    use super::*;
+    pub fn num(a: f64) -> f64 {
+        -a.abs()
+    }
+    pub fn byte(a: u8) -> f64 {
+        -f64::from(a)
+    }
+    pub fn char(a: char) -> char {
+        if a.is_uppercase() {
+            let mut upper = a.to_lowercase();
+            if upper.len() == 1 {
+                upper.next().unwrap()
+            } else {
+                a
+            }
+        } else {
+            a
+        }
+    }
+    pub fn com(a: Complex) -> f64 {
+        -a.abs()
+    }
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot take the absolute value of {a}"))
     }
 }
 

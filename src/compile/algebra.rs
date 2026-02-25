@@ -258,39 +258,37 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
             }
             let is_first_term = !identity && node.is_empty();
             let mut mul_coef = coef != ONE;
+            if !is_first_term {
+                *node = if node.is_empty() {
+                    Prim(Dup, span)
+                } else {
+                    Mod(On, eco_vec![take(node).sig_node().unwrap()], span)
+                };
+            }
             match term {
-                Term::X(pow) => {
-                    if !is_first_term {
-                        *node = if node.is_empty() {
-                            Prim(Dup, span)
+                Term::X(pow) => match pow {
+                    0.0 => {
+                        node.push(Node::new_push(0));
+                        node.push(Prim(Mul, span));
+                        node.push(if any_complex {
+                            Node::new_push(coef)
                         } else {
-                            Mod(On, eco_vec![take(node).sig_node().unwrap()], span)
-                        };
+                            Node::new_push(coef.into_real().unwrap_or(f64::NAN))
+                        });
+                        node.push(Prim(Add, span));
+                        mul_coef = false;
                     }
-                    match pow {
-                        0.0 => {
-                            node.push(Node::new_push(0));
-                            node.push(Prim(Mul, span));
-                            node.push(if any_complex {
-                                Node::new_push(coef)
-                            } else {
-                                Node::new_push(coef.into_real().unwrap_or(f64::NAN))
-                            });
-                            node.push(Prim(Add, span));
-                            mul_coef = false;
-                        }
-                        0.5 => node.push(Prim(Sqrt, span)),
-                        1.0 => identity = true,
-                        2.0 => {
-                            node.push(Prim(Dup, span));
-                            node.push(Prim(Mul, span));
-                        }
-                        _ => {
-                            node.push(Node::new_push(pow));
-                            node.push(Prim(Pow, span));
-                        }
+                    0.5 => node.push(Prim(Sqrt, span)),
+                    1.0 => identity = true,
+                    2.0 => {
+                        node.push(Prim(Dup, span));
+                        node.push(Prim(Mul, span));
                     }
-                }
+                    _ => {
+                        node.push(Node::new_push(pow));
+                        node.push(Prim(Pow, span));
+                    }
+                },
                 Term::Div(expr) if coef == Complex::ONE => {
                     recur(node, expr, any_complex, span);
                     node.push(Prim(Reciprocal, span));

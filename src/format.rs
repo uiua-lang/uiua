@@ -1497,8 +1497,23 @@ impl Formatter<'_> {
         let start_indent =
             (self.output.rsplit('\n').next()).map_or(0, |line| line.graphemes(true).count());
 
-        let double_nest = self.output.ends_with(['(', '{', '[']);
+        fn unclosed(s: &str) -> bool {
+            let [mut parens, mut brackets, mut curlies] = [0i32; 3];
+            for c in s.chars() {
+                match c {
+                    '(' => parens += 1,
+                    ')' => parens -= 1,
+                    '[' => brackets += 1,
+                    ']' => brackets -= 1,
+                    '{' => curlies += 1,
+                    '}' => curlies -= 1,
+                    _ => {}
+                }
+            }
+            parens > 0 || brackets > 0 || curlies > 0
+        }
 
+        let double_nest = self.output.rsplit('\n').next().is_some_and(unclosed);
         self.output.push('(');
 
         // Signature
@@ -1918,6 +1933,9 @@ G ← (
   ∘
   ∘ # hi
 )
+F(F(
+  F
+))
 ⊃(+
 | - # x
 )

@@ -327,9 +327,8 @@ impl Assembly {
         }
 
         // Spans
-        let mut spans = EcoVec::new();
-        spans.push(Span::Builtin);
-        for line in spans_src.lines() {
+        let mut spans = eco_vec![Span::Builtin];
+        for line in spans_src.split('\n') {
             if line.trim().is_empty() {
                 spans.push(Span::Builtin);
             } else {
@@ -351,6 +350,7 @@ impl Assembly {
                 spans.push(Span::Code(CodeSpan { src, start, end }));
             }
         }
+        assert_eq!(spans.pop(), Some(Span::Builtin)); // Remove extra empty line
 
         // Bindings
         let mut bindings = EcoVec::new();
@@ -378,9 +378,19 @@ impl Assembly {
                     Err("No key".into())
                 }
             })?;
-            let span: usize = span.parse().map_err(|_| "Invalid binding span")?;
-            let span = (spans.get(span + 1).cloned())
-                .unwrap_or_else(|| panic!("Invalid span for binding {kind:?}"))
+            let span: usize = span
+                .parse()
+                .map_err(|_| format!("Invalid binding span {span:?}"))?;
+            let span = spans
+                .get(span)
+                .ok_or_else(|| {
+                    format!(
+                        "Span index {} for binding {line:?} is out of bounds of {} spans",
+                        span,
+                        spans.len()
+                    )
+                })?
+                .clone()
                 .code()
                 .unwrap_or_else(CodeSpan::dummy);
             let comment = (lines.peek())
@@ -493,7 +503,7 @@ impl Assembly {
         }
 
         uasm.push_str("\nBINDINGS\n");
-        let span_indices: HashMap<&CodeSpan, usize> = (self.spans.iter().skip(1).enumerate())
+        let span_indices: HashMap<&CodeSpan, usize> = (self.spans.iter().enumerate())
             .filter_map(|(i, span)| span.code_ref().map(|s| (s, i)))
             .collect();
         for binding in &self.bindings {
@@ -513,11 +523,8 @@ impl Assembly {
                 uasm.push_str(&serde_json::to_string(&binding.kind).unwrap());
             }
             uasm.push(' ');
-            uasm.push_str(
-                &(span_indices.get(&binding.span).copied())
-                    .unwrap_or(0)
-                    .to_string(),
-            );
+            let span = (span_indices.get(&binding.span).copied().unwrap_or(0)).to_string();
+            uasm.push_str(&span);
             uasm.push('\n');
             if let Some(com) = &binding.meta.comment {
                 uasm.push_str("  comment: ");
@@ -753,10 +760,13 @@ pub struct DocComment {
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct DocCommentSig {
     /// Whether this is a labelling signature
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub label: bool,
     /// The arguments of the signature
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub args: Option<Vec<DocCommentArg>>,
     /// The outputs of the signature
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub outputs: Option<Vec<DocCommentArg>>,
 }
 
@@ -824,6 +834,7 @@ pub struct DocCommentArg {
     /// The name of the argument
     pub name: EcoString,
     /// A type descriptor for the argument
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ty: Option<EcoString>,
 }
 

@@ -2,38 +2,6 @@
 
 [Data definitions](</tutorial/Data Definitions>) have a few experimental features.
 
-### Data Functions
-
-If the fields of a data definition are immediately followed by some code, the data definition becomes a *data function*. Data functions have a `Call` function defined which is invoked instead of the normal `New` constructor when the data definition's name is used as a function.
-
-The normal constructor is called, then the constructed data is passed to the function.
-
-```uiua
-# Experimental!
-~Person {Name Surname ← ""} $"_ _"⊃(Name|Surname)
-Person "Dave"
-```
-
-But if the function is called immediately, how do we set `Surname`?
-
-In this case `Surname` is an *optional argument*. When the data function's name is used as a macro, we can set optional arguments within the macro's function. We can set optional arguments with the [un](/docs/un) [by](/docs/by) idiom followed by their name.
-
-```uiua
-# Experimental!
-~Person {Name Surname ← ""} $"_ _"⊃(Name|Surname)
-Person!°⊸Surname "Daveson" "Dave"
-```
-
-Setters for multiple optional arguments can occur in any order.
-
-```uiua
-# Experimental!
-~F {A ← 0|B ← 0|C ← 0|D ← 0|E} ∘
-F!(°⊸D1 °⊸A4 °⊸C2 °⊸B3) 5
-```
-
----
-
 ### Validators
 
 You can add validation functions to a field. This function will be called both upon construction (after the initializer) and upon mutation.
@@ -113,6 +81,23 @@ The lexical ordering symbol `↓` can also be used on stack array notation to ma
 # Experimental!
 ↓[1 2
   3 4]
+```
+
+## [fold](/docs/fold) Function Packs
+
+Using [fold](/docs/fold) with a function pack of 2 functions acts like a cross between [fold](/docs/fold) and [do](/docs/do).
+
+The second function is a condition check. If it returns false, iteration ends early.
+
+This simple example folds while the number is `<` `10`. Note that in most cases, it is likely faster to simply filter the array first and do a [reduce](/docs/reduce)
+```uiua
+# Experimental!
+∧(+|<10) ⊙0 [1 2 3 10 4 5]
+```
+This example folds while the *sum* is `<` `10`. The only other way to do this is with [do](/docs/do) with manual accumulation.
+```uiua
+# Experimental!
+∧(+|<⋅10) ⊙0 [1 2 3 10 4 5]
 ```
 
 ## [derivative](/docs/derivative) and [integral](/docs/integral)

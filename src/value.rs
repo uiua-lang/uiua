@@ -94,6 +94,7 @@ impl Value {
         arr.meta.pointer = Some(MetaPtr::null());
         Value::from(arr)
     }
+    #[allow(dead_code)]
     pub(crate) fn ffi_pointer(ptr: &MetaPtr) -> Self {
         let mut arr = Array::<u8>::default();
         arr.meta.pointer = Some(ptr.clone());
@@ -1804,6 +1805,13 @@ value_mon_impl!(exp10, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(log2, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(log10, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(square_abs, [Num, num], (Byte, byte), (Complex, com));
+value_mon_impl!(
+    neg_abs,
+    [Num, num],
+    (Byte, byte),
+    (Complex, com),
+    [Char, char]
+);
 
 impl Value {
     /// Get the `absolute value` of a value
@@ -1879,9 +1887,21 @@ impl Value {
     pub fn pow(self, base: Self, env: &Uiua) -> UiuaResult<Self> {
         if let Ok(pow) = self.as_int(env, None) {
             match pow {
+                -1 => return base.div(Value::from(1), env),
                 1 => return Ok(base),
                 2 => return base.clone().mul(base, env),
-                -1 => return base.div(Value::from(1), env),
+                3 => {
+                    return base
+                        .clone()
+                        .mul(base.clone(), env)
+                        .and_then(|square| square.mul(base, env));
+                }
+                4 => {
+                    return base
+                        .clone()
+                        .mul(base, env)
+                        .and_then(|square| square.clone().mul(square, env));
+                }
                 _ => {}
             }
         }

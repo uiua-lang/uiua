@@ -498,7 +498,7 @@ impl Value {
                     return Err(env.error(format!("Cannot unparse {n} to base {base}")));
                 }
                 let _ = validate_size::<char>([n as usize], env)?;
-                Ok(iter::repeat_n('1', n as usize).collect())
+                Ok("1".repeat(n as usize))
             }
             10 => Ok(n.to_string()),
             64 => {
@@ -1398,7 +1398,7 @@ impl<T: ArrayValue> Array<T> {
             return vec![0; self.row_count()];
         }
         let mut classified = Vec::with_capacity(self.row_count());
-        if self.meta.is_sorted_up() {
+        if self.meta.is_sorted_up() || self.meta.is_sorted_down() {
             let mut rows = self.row_slices().map(ArrayCmpSlice);
             if let Some(mut prev) = rows.next() {
                 let mut curr_class = 0;
@@ -2341,15 +2341,16 @@ impl Array<f64> {
             // Sieve of Eratosthenes
             let mut spf = vec![1; max + 1];
             for i in 2..=max {
-                spf[i] = i;
+                spf[i] = i as u32;
             }
             for i in 2..=max {
-                if spf[i] == i {
+                if spf[i] == i as u32 {
                     let (ii, overflow) = i.overflowing_mul(i);
+
                     if !overflow && ii <= max {
                         for j in (ii..=max).step_by(i) {
-                            if spf[j] == j {
-                                spf[j] = i;
+                            if spf[j] == j as u32 {
+                                spf[j] = i as u32;
                             }
                         }
                     }
@@ -2367,8 +2368,9 @@ impl Array<f64> {
                 }
                 let mut len = 0;
                 while m != 1 {
-                    factors.push(spf[m]);
-                    m /= spf[m];
+                    let factor = spf[m] as usize;
+                    factors.push(factor);
+                    m /= factor;
                     len += 1;
                 }
                 lengths.push(len);
@@ -2406,6 +2408,25 @@ impl Value {
         match self {
             Value::Num(arr) => arr.hsv_to_rgb(env).map(Into::into),
             Value::Byte(arr) => arr.convert_ref::<f64>().hsv_to_rgb(env).map(Into::into),
+            val => Err(env.error(format!("Cannot convert {} to RGB", val.type_name_plural()))),
+        }
+    }
+    /// Convert a value from RGB to Oklch
+    pub fn rgb_to_oklch(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Num(arr) => arr.rgb_to_oklch(env).map(Into::into),
+            Value::Byte(arr) => arr.convert_ref::<f64>().rgb_to_oklch(env).map(Into::into),
+            val => Err(env.error(format!(
+                "Cannot convert {} to Oklch",
+                val.type_name_plural()
+            ))),
+        }
+    }
+    /// Convert a value from Oklch to RGB
+    pub fn oklch_to_rgb(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Num(arr) => arr.oklch_to_rgb(env).map(Into::into),
+            Value::Byte(arr) => arr.convert_ref::<f64>().oklch_to_rgb(env).map(Into::into),
             val => Err(env.error(format!("Cannot convert {} to RGB", val.type_name_plural()))),
         }
     }
@@ -2474,6 +2495,46 @@ impl Array<f64> {
         self.validate();
         Ok(self)
     }
+    /// Convert an array from RGB to Oklch
+    pub fn rgb_to_oklch(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
+            return Err(env.error(format!(
+                "Array to convert to Oklch must have a shape \
+                ending with 3 or 4, but its shape is {}",
+                self.shape
+            )));
+        }
+        let channels = *self.shape.last().unwrap();
+        for rgb in self.data.as_mut_slice().chunks_exact_mut(channels) {
+            let [l, c, h] = rgb_to_oklch(rgb[0], rgb[1], rgb[2]);
+            rgb[0] = l;
+            rgb[1] = c;
+            rgb[2] = h;
+        }
+        self.meta.take_sorted_flags();
+        self.validate();
+        Ok(self)
+    }
+    /// Convert an array from Oklch to RGB
+    pub fn oklch_to_rgb(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
+            return Err(env.error(format!(
+                "Array to convert to RGB must have a shape \
+                ending with 3 or 4, but its shape is {}",
+                self.shape
+            )));
+        }
+        let channels = *self.shape.last().unwrap();
+        for oklch in self.data.as_mut_slice().chunks_exact_mut(channels) {
+            let [r, g, b] = oklch_to_rgb(oklch[0], oklch[1], oklch[2]);
+            oklch[0] = r;
+            oklch[1] = g;
+            oklch[2] = b;
+        }
+        self.meta.take_sorted_flags();
+        self.validate();
+        Ok(self)
+    }
 }
 
 pub(crate) fn hsv_to_rgb(h: f64, s: f64, v: f64) -> [f64; 3] {
@@ -2491,6 +2552,24 @@ pub(crate) fn hsv_to_rgb(h: f64, s: f64, v: f64) -> [f64; 3] {
         4 => [t, p, v],
         _ => [v, p, q],
     }
+}
+
+pub(crate) fn rgb_to_oklch(r: f64, g: f64, b: f64) -> [f64; 3] {
+    use palette::{Oklch, Srgb, convert::FromColorUnclamped};
+    let rgb = Srgb::new(r as f32, g as f32, b as f32);
+    let oklch = Oklch::from_color_unclamped(rgb);
+    [
+        oklch.l as f64,
+        oklch.chroma as f64,
+        oklch.hue.into_positive_radians() as f64,
+    ]
+}
+
+pub(crate) fn oklch_to_rgb(l: f64, c: f64, h: f64) -> [f64; 3] {
+    use palette::{OklabHue, Oklch, Srgb, convert::IntoColorUnclamped};
+    let oklch = Oklch::new(l as f32, c as f32, OklabHue::from_radians(h as f32));
+    let rgb: Srgb = oklch.into_color_unclamped();
+    [rgb.red as f64, rgb.green as f64, rgb.blue as f64]
 }
 
 fn f64_repr(n: f64) -> String {

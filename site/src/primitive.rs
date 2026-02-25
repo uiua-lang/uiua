@@ -324,14 +324,13 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Last], No, "", "⍜⊣(×10) [1 2 3 4 5]") }
             { inverse_row([Shape], No, "Tiles", "⍜△(×2) [1_2_3 4_5_6]") }
             { inverse_row([Len], No, view!(<Prim prim=Reshape/>), "⍜⧻(+1) [1_2_3 4_5_6]") }
-            { inverse_row([Deshape], No, "", "⍜♭⇌ ↯3_3⇡9") }
+            { inverse_row([Deshape], No, "Works with subscripts", "⍜♭⇌ ↯2_2_4⇡16") }
             { inverse_row([Rise], No, "", "⊸⍜⍏(↻¯1) [1 4 2 3 5]") }
             { inverse_row([Fall], No, "", "⊸⍜⍖(↻¯1) [1 4 2 3 5]") }
             { inverse_row([Sort], No, "", "⊸⍜⍆(↻¯1) [1 4 2 3 5]") }
             { inverse_row([Where], No, "Maintains minumum shape", "⍜⊚⊂ [1 0 0 0 0] 3") }
             { inverse_row([Classify], No, "", "⍜⊛⇌ \"hello\"") }
             { inverse_row([Deduplicate], No, "", "⍜◴⇌ \"hello\"") }
-            { inverse_row([Deshape], No, "Works with subscripts", "⍜♭⇌ ↯2_2_4⇡16") }
             { inverse_row([Reshape], Optional, "", "⍜↯⇌ 2_3 ⇡6") }
             { inverse_row([Take], Optional, "", "⍜↙(×10) 2 [1 2 3 4 5]") }
             { inverse_row([Drop], Optional, "", "⍜↘(×10) 2 [1 2 3 4 5]") }

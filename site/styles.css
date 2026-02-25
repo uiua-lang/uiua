@@ -20,6 +20,10 @@ p {
     line-height: 1.5em;
 }
 
+#header h1 {
+    margin-bottom: 0;
+}
+
 h2 {
     margin: 1.8em 0 0.5em 0;
     padding-bottom: 0.3em;
@@ -66,7 +70,7 @@ button {
     position: relative;
 }
 
-button:active {
+button:enabled:active {
     transform: translateY(0.1em);
 }
 
@@ -325,6 +329,7 @@ li {
 #subtitle {
     margin-left: 1.5em;
     font-size: 1em;
+    font-synthesis: none;
     font-weight: bold;
     font-style: italic;
 }
@@ -361,6 +366,7 @@ li {
     gap: 1em;
     margin-bottom: 1em;
     align-content: flex-start;
+    overflow: hidden;
 }
 
 #links>* {
@@ -377,9 +383,66 @@ li {
     gap: 1rem;
 }
 
+#mobile-menu-toggle {
+    display: none;
+}
+
+#mobile-menu-label {
+    cursor: pointer;
+    padding: 0.5em 1em;
+    border-radius: 0.25em;
+    display: block;
+    text-align: center;
+    background-color: light-dark(#fff8, #0004);
+    width: fit-content;
+    position: absolute;
+    right: 2.5em;
+    top: 2.25em;
+}
+
+#links-grid {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.3s ease-in-out;
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
+}
+
+@media screen and (min-width: 768px) {
+    .mobile-only {
+        display: none !important;
+    }
+}
+
 @media screen and (max-width: 768px) {
+    .desktop-only {
+        display: none !important;
+    }
+
+    #header-left {
+        flex-direction: column;
+    }
+
+    #subtitle {
+        margin: 0em 5em 1em 1em;
+    }
+
+    #links,
+    #links>* {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        gap: 0.5em;
+        font-size: 1em;
+        text-align: center;
+    }
+
     .what-is-uiua {
         flex-direction: column;
+    }
+
+    #mobile-menu-toggle:not(:checked)~#links-grid {
+        grid-template-rows: 0fr;
     }
 }
 
@@ -405,7 +468,8 @@ li {
     transform: scale(1.3);
 }
 
-.main-text { margin: 0;
+.main-text {
+    margin: 0;
     margin-left: -0.5rem;
     margin-top: -0.25rem;
     padding: 0.4rem 1rem;
@@ -501,41 +565,90 @@ li {
     font-size: 1.4em;
 }
 
-#settings {
+#settings-container-outer {
     grid-area: settings;
+    display: block;
+}
+
+#settings-container-inner {
+    display: grid;
+    overflow: hidden;
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition: grid-template-rows 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
+}
+
+#settings {
     display: flex;
-    justify-content: space-between;
+    min-height: 0;
     font-size: 0.6em;
-    padding: 0.2em;
+    justify-content: center;
+    gap: 1em 2em;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
+    margin-bottom: 0.5em;
+}
+
+.settings-group hr {
+    min-width: 1em;
+}
+
+.settings-group h3 {
+    margin: 0;
+}
+
+.settings-group button {
+    padding: 0.1rem 0.5rem;
+    height: 1.6em;
+    width: 100%;
+}
+
+.settings-group label {
+    margin-left: -0.2em;
+}
+
+.settings-group label input[type=checkbox] {
+    margin-right: 0.5em;
+}
+
+.settings-group-grid {
+    display: grid;
+    grid-template-columns: auto auto;
     gap: 0.5em;
 }
 
-#settings>* {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.2em 1em;
+.settings-group-grid select {
+    margin-left: 0;
+    max-width: 8.5em;
 }
 
-#settings-left {
-    width: 85%;
-    justify-content: space-between;
+.settings-group-grid>div {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: span 2;
 }
 
-#settings-right {
-    flex-direction: column;
-    align-items: flex-end;
+.settings-group-grid>div>* {
+    grid-column: 2;
 }
 
-#settings>*>* {
-    display: inline-block;
-    white-space: nowrap;
-    width: max(20%, 10em)
+.settings-group-grid>div>*:first-child {
+    grid-column: 1;
 }
 
 input[type=number] {
     appearance: textfield;
     -moz-appearance: textfield;
+    max-width: 2.5em;
 }
 
 .code-block {
@@ -548,13 +661,10 @@ select,
 option,
 #settings>*>*>input,
 #settings>*>*>select {
-    border-radius: 0.5em;
+    border-radius: 0.1em;
     border: none;
     margin-left: 0.5em;
-}
-
-#settings>*>*>input[type=number] {
-    width: 3em;
+    padding: 0.1em 0.4em;
 }
 
 .editor-area {
@@ -570,15 +680,19 @@ option,
 
 .code-outer {
     text-align: left;
-    border-radius: 0.5em;
+    border-radius: 0.5em 0.5em 0 0;
     width: 100%;
     box-sizing: border-box;
     outline: none;
     border: none;
-    padding: 0.3em;
+    padding: 0.3rem 0.5rem;
     height: 100%;
     display: flex;
     gap: 0.5em;
+}
+
+.medium-editor .code-outer {
+    border-radius: 0;
 }
 
 .code-and-overlay {
@@ -750,11 +864,19 @@ option,
     margin: 0 0 0 0.2em;
     height: auto;
     text-align: center;
-    text-justify: center;
+    padding: 0 0.4em;
+    border-radius: 0.3em;
+    display: flex;
+    align-items: center;
 }
 
 .important-button {
     animation: fadeAnimation 2s infinite;
+}
+
+.click-me::after {
+    content: " (click me!)";
+    white-space: pre;
 }
 
 .output-line {
@@ -865,7 +987,7 @@ option,
     content: attr(data-title);
     position: absolute;
     font-family: "Code Font", monospace;
-    font-size: 0.75em;
+    font-size: 0.8em;
     right: 0;
     top: 100%;
     bottom: 1.5em;
@@ -874,6 +996,7 @@ option,
     border-radius: 0.2em;
     pointer-events: none;
     height: fit-content;
+    z-index: 1;
 }
 
 .editor-right-button:hover::after,
@@ -887,6 +1010,7 @@ option,
     width: 24em;
     white-space: pre-wrap;
     text-align: left;
+    padding: 0.5em 1em;
 }
 
 .experimental-icon {
@@ -904,7 +1028,7 @@ option,
 }
 
 .glyph-buttons {
-    padding: 0.1em;
+    padding: 0.25rem 0.5rem;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
@@ -924,7 +1048,7 @@ option,
 .glyph-button {
     font-family: "Code Font", monospace;
     font-size: 0.85em;
-    padding: 0.045em;
+    padding: 0.043em;
     margin: 0em;
     background-color: transparent;
 }
@@ -1336,6 +1460,13 @@ input[type=text] {
 
 .slow-pulse {
     animation: pulseAnimation 2s infinite;
+}
+
+.skeleton {
+    border-radius: 1em;
+    animation: fadeAnimation 2s infinite;
+    background: light-dark(#fff6, #fff2);
+    flex: 1;
 }
 
 @keyframes fadeAnimation {
@@ -1899,8 +2030,6 @@ a.clean {
         resize: none;
         min-height: 100%;
         height: fit-content;
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
         overflow-y: unset;
         overflow-x: unset;
     }

@@ -297,7 +297,6 @@ impl Primitive {
             Each => || format!("use {} instead", Rows.format()),
             Unique => || format!("use {Occurrences}₁"),
             IndexOf => || format!("use {} {} instead", Backward.format(), IndexIn.format()),
-            Above => || format!("use {} or {} instead", Fork.format(), On.format()),
             _ => return None,
         })
     }

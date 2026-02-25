@@ -22,7 +22,7 @@ static ALIASES: LazyLock<HashMap<Primitive, &[&str]>> = LazyLock::new(|| {
         (Primitive::Floor, &["flr", "flor"]),
         (Primitive::Range, &["ran"]),
         (Primitive::Partition, &["par"]),
-        (Primitive::Deshape, &["flat"]),
+        (Primitive::Deshape, &["flat", "fla"]),
         (Primitive::Ne, &["ne", "neq"]),
         (Primitive::Eq, &["eq"]),
         (Primitive::Lt, &["lt", "less"]),
@@ -70,6 +70,8 @@ pub enum PrimComponent {
     OpenParen,
     /// )
     CloseParen,
+    /// ε
+    Epsilon,
 }
 
 impl From<Primitive> for PrimComponent {
@@ -95,6 +97,7 @@ impl PrimComponent {
             PrimComponent::Sub2 => "₂",
             PrimComponent::OpenParen => "(",
             PrimComponent::CloseParen => ")",
+            PrimComponent::Epsilon => "ε",
         }
     }
     /// Try to parse a component from a name prefix
@@ -265,6 +268,9 @@ impl Primitive {
             alias!((eac, Rows), (h, PrimComponent::Sub0)),
             alias!((in, Add), (c, PrimComponent::Sub1)),
             alias!((de, Sub), (c, PrimComponent::Sub1)),
+            alias!((eps, PrimComponent::Epsilon)),
+            alias!((epsil, PrimComponent::Epsilon)),
+            alias!((epsilon, PrimComponent::Epsilon)),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

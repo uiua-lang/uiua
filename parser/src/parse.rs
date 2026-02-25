@@ -27,7 +27,6 @@ pub enum ParseError {
     Unexpected(Token),
     InvalidArgCount(String),
     InvalidOutCount(String),
-    AmpersandBindingName,
     ModifierImportName,
     SplitInModifier,
     FlipInModifier,
@@ -90,7 +89,6 @@ impl fmt::Display for ParseError {
             ParseError::Unexpected(token) => write!(f, "Unexpected token {token}"),
             ParseError::InvalidArgCount(n) => write!(f, "Invalid argument count `{n}`"),
             ParseError::InvalidOutCount(n) => write!(f, "Invalid output count `{n}`"),
-            ParseError::AmpersandBindingName => write!(f, "Binding names may not contain `&`"),
             ParseError::ModifierImportName => {
                 write!(f, "Modifier names may not be used as import names")
             }
@@ -454,15 +452,21 @@ impl Parser<'_> {
         let name = self.ident()?;
         // Left arrow
         let arrow_span = self.spaces().map(|w| w.span);
-        let (glyph_span, public) =
-            if let Some(span) = self.exact(Equal.into()).or_else(|| self.exact(LeftArrow)) {
-                (span, true)
-            } else if let Some(span) = self.exact(LeftStrokeArrow) {
-                (span, false)
-            } else {
-                self.index = start;
-                return None;
-            };
+        let (glyph_span, public) = if let Some(span) = self
+            .tokens
+            .get(self.index + 1)
+            .is_none_or(|t| !matches!(t.value, Subscr(_)))
+            .then(|| self.exact(Equal.into()))
+            .flatten()
+            .or_else(|| self.exact(LeftArrow))
+        {
+            (span, true)
+        } else if let Some(span) = self.exact(LeftStrokeArrow) {
+            (span, false)
+        } else {
+            self.index = start;
+            return None;
+        };
         let mut arrow_span = if let Some(arrow_span) = arrow_span {
             arrow_span.merge(glyph_span)
         } else {
@@ -746,10 +750,6 @@ impl Parser<'_> {
         })
     }
     fn validate_binding_name(&mut self, name: &Sp<Ident>) {
-        if name.value.contains('&') {
-            self.errors
-                .push(name.span.clone().sp(ParseError::AmpersandBindingName));
-        }
         if name
             .value
             .trim_end_matches(['!', '‼', '\'', '′', '″', '‴'])

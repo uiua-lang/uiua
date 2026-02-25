@@ -2,20 +2,32 @@
 
 Uiua is not yet stable.
 
-## 0.18.0 - 2026-??-??
+## 0.19.0 - 2026-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Language
+- Add [`oklch`](https://uiua.org/docs/oklch) function
+
+## 0.18.1 - 2026-02-14
+### Interpreter
+- Fix a crash in filled dyadic pervasives
+- Fix signature of [`&invk`](https://uiua.org/docs/&invk)
+- Fix parsing of `=` followed by subscript
+- Fix some built-in macros not being experimental
+
+## 0.18.0 - 2026-02-05
 ### Language
 - **Breaking Change** - Subscripted [`range ⇡`](https://uiua.org/docs/range) now makes the range inclusive up to the maximum while still changing the start, rather than offsetting the entire range
   - This breaks all uses of subscripted [`range ⇡`](https://uiua.org/docs/range) *other* than `⇡₁`
+- Stabilize [data functions](<https://uiua.org/tutorial/Data Definitions#data-functions>)
 - Allow for multiple [`fill ⬚`](https://uiua.org/docs/fill) values by returning multiple values from the fill function.
 - Add [`anti ⌝`](https://uiua.org/docs/anti)[`by ⊸`](https://uiua.org/docs/by) for dyadic functions
 - Add digit separators for number literals with `,`. Ex: `123,456.078,9`
-- Add `shuf` and `shuffle` aliases for [`un °`](https://uiua.org/docs/un)[`sort ⍆`](https://uiua.org/docs/sort)
 - Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
+- Enable mutually recursive functions if one function is defined inside another
 - Make sided [`fill ⬚`](https://uiua.org/docs/fill) work with [`stencil ⧈`](https://uiua.org/docs/stencil)
 - Add sided subscripts for [`join ⊂`](https://uiua.org/docs/join), which joins with one side as the list
 - Add numeric subscripts for [`classify ⊛`](https://uiua.org/docs/classify), which classifies all subrows of a given rank
-- Add numeric subscripts for [`table ⊛`](https://uiua.org/docs/table), which operates on all combinations of subrows of a given rank
+- Add numeric subscripts for [`table ⊞`](https://uiua.org/docs/table), which operates on all combinations of subrows of a given rank
 - Add sided subscripts for [`stencil ⧈`](https://uiua.org/docs/stencil) for simpler chunking
 - Add [chained field accessors](<https://uiua.org/tutorial/Data Definitions#chained-access>) for data definitions
 - [`anti ⌝`](https://uiua.org/docs/anti) [`keep ▽`](https://uiua.org/docs/keep) now accepts non-boolean integers
@@ -24,18 +36,25 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`reciprocal ⨪`](https://uiua.org/docs/reciprocal) function
 - Add [`compress`](https://uiua.org/docs/compress) function to compress arrays of bytes
 - A function/constant and a module with the same name can now be in scope at the same time
+- Allow `≁` for private imports/exports from modules
 - Change [`reach ∪`](https://uiua.org/docs/reach)'s glyph
 - Change how sided [`reach ∪`](https://uiua.org/docs/reach) works
+- Add `shuf` and `shuffle` aliases for [`un °`](https://uiua.org/docs/un)[`sort ⍆`](https://uiua.org/docs/sort)
 - Remove the 2-character ASCII aliases for comparison functions in favor of 2-letter aliases
   - These symbolic aliases created conflicts with other language syntax
   - `!=` for [`not equals ≠`](<https://uiua.org/docs/not equals>) is now `ne`
   - `<=` for [`less or equal ≤`](<https://uiua.org/docs/less or equal>) is now `le`
-  - `>=` for [`greater or equal ≤`](<https://uiua.org/docs/greater or equal>) is now `ge`
-- Allow `≁` for private imports/exports from modules
+  - `>=` for [`greater or equal ≥`](<https://uiua.org/docs/greater or equal>) is now `ge`
+- Add `inc` and `dec` aliases
+- Add `bw` alias for [`backward ˜`](https://uiua.org/docs/backward)
+- Add `fla` alias for [`deshape ♭`](https://uiua.org/docs/deshape), which is a prefix of `flat`
+- Add `eps`/`epsilon` alias for `ε`, for easy access to the machine epsilon
 - Stabilize [`un °`](https://uiua.org/docs/un) [`under ⍜`](https://uiua.org/docs/under)
+- Add [`hsv`](https://uiua.org/docs/hsv) function
 - Add [`json`](https://uiua.org/docs/json)`₅` for serializing to pretty JSON5
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
+- Add Capacity optional argument for [`map`](https://uiua.org/docs/map) to preallocate space for n keys 
 - Add modifier version of [`gif`](https://uiua.org/docs/gif), written as `gif!`
   - Operates similar to [`fold ∧`](https://uiua.org/docs/fold)
   - Encodes frames as they are generated
@@ -44,19 +63,20 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [`&fetch`](https://uiua.org/docs/&fetch) function to easily fetch data from a url
 - Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
 - Add experimental sided subscripts for [`under ⍜`](https://uiua.org/docs/under), which automatically [`dip ⊙`](https://uiua.org/docs/dip) on net-positive second functions
+- Add experimental [`fold ∧`](https://uiua.org/docs/fold) function packs, which allows a condition to be specified for early termination. You can read more [here](https://uiua.org/docs/experimental#fold-function-packs)
 - Add mathematical constants `φ` (golden ratio) and `γ` (Euler-Mascheroni)
 - Add `PlanetSymbols` and `ZodiacSymbols` constants, symbolic versions of `Planets` and `Zodiac`
 - Add `Elements` and `ElementSymbols` constants listing the chemical elements
 - Change experimental subscripted [`transpose ⍉`](https://uiua.org/docs/transpose) to transpose the first N axes
 - Deprecate [`duplicate .`](https://uiua.org/docs/duplicate)
 - Deprecate [`flip :`](https://uiua.org/docs/flip)
-- Deprecate [`above ◠`](https://uiua.org/docs/above)
 - Remove the previously deprecated signature promoting behavior of [`with ⤙`](https://uiua.org/docs/with) and [`off ⤚`](https://uiua.org/docs/off), allowing them to work on monadic functions
 - Remove previously deprecated `progressive indexof ⊘` function
 - Remove previously deprecated `tag` function
 ### Interpreter
 - Upgrade to Rust 2024 edition
 - Increase minimum Rust version to `1.88.0`
+- Many bug/crash fixes
 - Compiled dependecies are now cached, increasing performance with large dependencies in the online pad and local LSP
 - Gifs now use Floyd-Steinberg dithering rather than color quantization
   - It's both faster and looks better
@@ -67,8 +87,6 @@ This version is not yet released. If you are reading this on the website, then t
 - Optimize `°ₑ₂` and `°ₑ₁₀` to be both faster and more correct
 - Optimize `˙×⌵` on complex numbers to not do a square root
 - Optimize `⊢⍆` and `⊣⍆` to be O(n)
-- Add `inc` and `dec` aliases
-- Add `bw` alias for [`backward ˜`](https://uiua.org/docs/backward)
 - Extend [`table ⊞`](https://uiua.org/docs/table) list optimizations to non-lists
 - Values generated on the same line in code will appear on the same line in output
 - Add `-i/--stdin` flag to `uiua run` and `uiua eval` to pipe stdin to the first argument in a program

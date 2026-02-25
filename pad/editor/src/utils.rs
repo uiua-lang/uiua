@@ -379,7 +379,7 @@ impl CodeLines {
 pub fn on_mac() -> bool {
     window()
         .navigator()
-        .user_agent()
+        .platform()
         .unwrap()
         .to_lowercase()
         .contains("mac")
@@ -496,7 +496,10 @@ fn build_code_lines(id: &str, code: &str, hidden: &str) -> CodeLines {
     }
 
     if get_inlay_values() {
-        let line_lengths: Vec<usize> = code.split('\n').map(|line| line.chars().count()).collect();
+        let line_lengths: Vec<usize> = full_code
+            .split('\n')
+            .map(|line| line.chars().count())
+            .collect();
         let max_val_line_len = line_lengths
             .iter()
             .enumerate()

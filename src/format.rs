@@ -1111,6 +1111,7 @@ impl Formatter<'_> {
                 }
             }
             Word::Array(arr) => {
+                let double_nest = self.output.rsplit('\n').next().is_some_and(unclosed);
                 if let Some(down_span) = &arr.down_span {
                     self.push(down_span, "↓");
                 }
@@ -1120,7 +1121,7 @@ impl Formatter<'_> {
                     self.output.push('[');
                 }
 
-                self.format_inner_items(&arr.lines, true, depth + 1);
+                self.format_inner_items(&arr.lines, true, depth + 1 - double_nest as usize);
                 if arr.boxes {
                     self.output.push('}');
                 } else {
@@ -1497,22 +1498,6 @@ impl Formatter<'_> {
         let start_indent =
             (self.output.rsplit('\n').next()).map_or(0, |line| line.graphemes(true).count());
 
-        fn unclosed(s: &str) -> bool {
-            let [mut parens, mut brackets, mut curlies] = [0i32; 3];
-            for c in s.chars() {
-                match c {
-                    '(' => parens += 1,
-                    ')' => parens -= 1,
-                    '[' => brackets += 1,
-                    ']' => brackets -= 1,
-                    '{' => curlies += 1,
-                    '}' => curlies -= 1,
-                    _ => {}
-                }
-            }
-            parens > 0 || brackets > 0 || curlies > 0
-        }
-
         let double_nest = self.output.rsplit('\n').next().is_some_and(unclosed);
         self.output.push('(');
 
@@ -1788,6 +1773,23 @@ fn end_loc(s: &str) -> Loc {
     }
 }
 
+/// Check if a string contains an unclosed opening delimiter
+fn unclosed(s: &str) -> bool {
+    let [mut parens, mut brackets, mut curlies] = [0i32; 3];
+    for c in s.chars() {
+        match c {
+            '(' => parens += 1,
+            ')' => parens -= 1,
+            '[' => brackets += 1,
+            ']' => brackets -= 1,
+            '{' => curlies += 1,
+            '}' => curlies -= 1,
+            _ => {}
+        }
+    }
+    parens > 0 || brackets > 0 || curlies > 0
+}
+
 #[derive(Default)]
 struct FormatterBackend(pub Option<Arc<dyn SysBackend>>);
 
@@ -1936,6 +1938,12 @@ G ← (
 F(F(
   F
 ))
+F(F{
+  F
+})
+F{F(
+  F
+)}
 ⊃(+
 | - # x
 )

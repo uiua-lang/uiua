@@ -204,11 +204,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
         (Dup, Shape, PushUnd(1), Deshape),
         (PopUnd(1), UndoDeshape(None)),
     ),
-    &MaybeVal((
-        UnReshape,
-        (UnReshape),
-        (Reshape),
-    )),
+    &MaybeVal((UnReshape, UnReshape, Reshape)),
     &DeshapeSubPat,
     &ReduceJoinPat,
     &JoinPat,

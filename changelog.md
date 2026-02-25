@@ -6,6 +6,7 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - Add [`oklch`](https://uiua.org/docs/oklch) function
+- Add [`un °`](https://uiua.org/docs/un)[`reshape ⍆`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape
 
 ## 0.18.1 - 2026-02-14
 ### Interpreter

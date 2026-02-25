@@ -1424,6 +1424,12 @@ primitive!(
     /// ex: ↯¯3 [1 2 3 4]
     /// ex: ↯¯∞ [1 2 3 4 5]
     ///
+    /// [un][reshape] works equivalently to [fork][shape][deshape]
+    /// ex: °↯ °△ 3_3
+    /// [un][reshape] also works with [under]
+    /// This is useful for merging together axes. Unlike [under][shape], this will not cycle the data, but will use the entire array.
+    /// ex: ⍜°↯ ⍜↙₂/× °△ 3_3_3
+    ///
     /// See also: [deshape]
     (2, Reshape, DyadicArray, ("reshape", '↯')),
     /// Change the rank of an array's rows

@@ -576,7 +576,7 @@ pub fn Subscripts() -> impl IntoView {
     let sided = vec![
         subscript(
             Join,
-            "Use the left or right argument as the list",
+            "Use the left or right argument as the item joined to the list",
             "⊂⌟ 1 2_3 ⊂⌟ 1_2 3 ⊂⌟ 1_2 3_4\n⊂⌞ 1 2_3 ⊂⌞ 1_2 3 ⊂⌞ 1_2 3_4",
         ),
         subscript(

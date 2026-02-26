@@ -521,49 +521,56 @@ impl Node {
             .filter(|(_, flipped)| !flipped)
             .map(|(prim, _)| prim)
     }
-    /// Call a function on the last node in the tree, recursing into function calls
-    pub fn last_mut_recursive<T>(
+    pub(crate) fn last_mut_recursive_replace(
         &mut self,
-        asm: &mut Assembly,
-        f: impl Fn(&mut Node) -> T + Copy,
-    ) -> Option<T> {
-        fn recurse<T>(
-            target: Option<usize>,
-            sub: Option<usize>,
-            node: &mut Node,
-            asm: &mut Assembly,
-            f: impl FnOnce(&mut Node) -> T + Copy,
-        ) -> Option<T> {
-            let mut this_node = match target {
-                Some(i) => asm.functions[i].inner(),
-                None => node.inner(),
-            };
-            if let Some(i) = sub {
-                this_node = this_node.get(i)?;
+        asm: &Assembly,
+        check: impl Fn(&Node) -> bool + Copy,
+        replace: impl Fn(&mut Node),
+    ) -> bool {
+        let mut curr = self.inner();
+        let should_replace = loop {
+            if check(curr) {
+                break true;
             }
-            match this_node {
-                Node::Run(nodes) if sub.is_none() => {
-                    for i in (0..nodes.len()).rev() {
-                        if let Some(res) = recurse(target, Some(i), node, asm, f) {
-                            return Some(res);
+            match curr {
+                Node::Run(nodes) => {
+                    if let Some(node) = nodes.last() {
+                        curr = node.inner()
+                    } else {
+                        break false;
+                    }
+                }
+                Node::Call(f, _) => curr = asm[f].inner(),
+                _ => break false,
+            }
+        };
+        if should_replace {
+            let mut curr = self.inner_mut();
+            loop {
+                if check(curr) {
+                    replace(curr);
+                    break;
+                }
+                match curr {
+                    Node::Run(nodes) => {
+                        if nodes.last().map(Node::inner).is_some_and(check) {
+                            replace(nodes.make_mut().last_mut().unwrap().inner_mut());
+                            break;
+                        } else if let Some(node) = nodes.make_mut().last_mut() {
+                            curr = node.inner_mut();
+                        } else {
+                            break;
                         }
                     }
-                    None
-                }
-                Node::Call(func, _) => recurse(Some(func.index), None, node, asm, f),
-                _ => {
-                    let mut node = match target {
-                        Some(i) => asm.functions.make_mut()[i].inner_mut(),
-                        None => node.inner_mut(),
-                    };
-                    if let Some(i) = sub {
-                        node = node.as_mut_slice().get_mut(i)?.inner_mut();
+                    Node::Call(f, _) => *curr = asm[f].clone(),
+                    _ => {
+                        replace(curr.inner_mut());
+                        break;
                     }
-                    Some(f(node))
                 }
             }
         }
-        recurse(None, None, self, asm, f)
+        should_replace
     }
     pub(crate) fn inner(&self) -> &Node {
         match self {

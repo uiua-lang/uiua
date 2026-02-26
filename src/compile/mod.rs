@@ -585,7 +585,7 @@ code:
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ItemCompMode {
     TopLevel,
     Function,
@@ -750,7 +750,6 @@ impl Compiler {
         let binding_count_before = self.asm.bindings.len();
         let root_len_before = self.asm.root.len();
         let error_count_before = self.errors.len();
-
         let mut line_node = self.line(line)?;
 
         if matches!(self.scope.kind, ScopeKind::File(_)) {
@@ -786,22 +785,23 @@ impl Compiler {
         match line_node.sig() {
             Ok(sig) => {
                 // Compile test assert
-                if self.mode != RunMode::Normal
+                if !self.in_try
+                    && self.current_bindings.is_empty()
+                    && self.mode != RunMode::Normal
                     && mode != ItemCompMode::Function
                     && !self
                         .scopes()
                         .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))
                 {
-                    let test_assert = line_node
-                        .last_mut_recursive(&mut self.asm, |node| {
+                    let test_assert = line_node.last_mut_recursive_replace(
+                        &self.asm,
+                        |node| matches!(node, Node::Prim(Primitive::Assert, _)),
+                        |node| {
                             if let &mut Node::Prim(Primitive::Assert, span) = node {
                                 *node = Node::ImplPrim(ImplPrimitive::TestAssert, span);
-                                true
-                            } else {
-                                false
                             }
-                        })
-                        .unwrap_or(false);
+                        },
+                    );
                     if test_assert {
                         self.asm.test_assert_count += 1;
                     }

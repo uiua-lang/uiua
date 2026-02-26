@@ -623,6 +623,14 @@ impl ImplPrimitive {
                 env.push(vals);
                 env.push(keys);
             }
+            ImplPrimitive::UnReshape => {
+                let val = env.pop(1)?;
+                let mut deshape = val.clone();
+                deshape.deshape();
+                let shape = val.shape.iter().copied().collect::<Value>();
+                env.push(deshape);
+                env.push(shape);
+            }
             ImplPrimitive::UnWhere => env.monadic_ref_env(Value::unwhere)?,
             ImplPrimitive::Json5 => env.monadic_ref_env(Value::to_json5_string)?,
             ImplPrimitive::Utf16 => env.monadic_ref_env(Value::utf16)?,

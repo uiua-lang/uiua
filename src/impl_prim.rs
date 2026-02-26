@@ -151,6 +151,7 @@ impl_primitive!(
     (1(2), UnTake),
     (1(2)[1], UnGroup),
     (1(2)[1], UnPartition),
+    (1(2), UnReshape),
     (1, UnSort, Impure),
     (1, UnHsv),
     (1, UnOklch),

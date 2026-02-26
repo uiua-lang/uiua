@@ -826,7 +826,7 @@ pub fn Editor<'a>(
             // Insert # Experimental! comment
             "e" if os_ctrl(event) => insert_experimental(),
             // Toggle line comment or multiline string
-            "/" | "4" if os_ctrl(event) => {
+            "/" | "4" | ";" if os_ctrl(event) => {
                 state.update(|state| {
                     let code = get_code();
                     let (start, end) = get_code_cursor().unwrap();
@@ -845,7 +845,12 @@ pub fn Editor<'a>(
                     let mut lines: Vec<String> = code.split('\n').map(Into::into).collect();
                     let range = &mut lines[start_line - 1..end_line];
                     let comment = key == "/";
-                    let prefix = if comment { '#' } else { '$' };
+                    let prefix = match key {
+                        "/" => '#',
+                        "4" => '$',
+                        ";" => ';',
+                        _ => unreachable!(),
+                    };
 
                     // How much to offset the ends of the selection by to account for the change in the number of characters
                     let mut start_diff = 0;
@@ -2661,6 +2666,7 @@ pub fn editor_shortcuts() -> String {
     "shift Enter   - Run + Format
  ctrl Click   - Open glyph docs
  ctrl /       - Toggle line comment
+ ctrl ;       - Toggle merging selected lines
  ctrl 4       - Toggle multiline string
   alt Up/Down - Swap lines
 shift Delete  - Delete lines

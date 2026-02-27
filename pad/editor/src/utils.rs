@@ -11,7 +11,6 @@ use std::{
     cell::Cell,
     collections::HashMap,
     mem::{replace, take},
-    rc::Rc,
     str::FromStr,
     time::Duration,
 };
@@ -1326,7 +1325,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaEr
     (output, error)
 }
 
-pub fn report_view(report: &Report, insert_experimental: Rc<dyn Fn()>) -> impl IntoView {
+pub fn report_view(report: &Report, state: WriteSignal<State>) -> impl IntoView {
     let mut newline_indices = Vec::new();
     for (i, frag) in report.fragments.iter().enumerate() {
         if matches!(frag, ReportFragment::Newline) {
@@ -1355,10 +1354,18 @@ pub fn report_view(report: &Report, insert_experimental: Rc<dyn Fn()>) -> impl I
         let linked = |classes: &str, text: &str| {
             let classes = classes.to_string();
             if let Some((before, after)) = text.split_once("`# Experimental!`") {
-                let ie = Rc::clone(&insert_experimental);
                 view! {
                     <span class={classes.clone()}>{before.to_string()}</span>
-                    <a class="output-report" href="#" on:click=move |_| ie()>"# Experimental!"</a>
+                    <a class="output-report" href="#" on:click=move |_| {
+                        state.update(|state| {
+                            let code = get_code(&state.code_id);
+                            if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
+                                return;
+                            }
+                            let new_code = format!("# Experimental!\n{code}");
+                            state.set_code(&new_code, Cursor::Ignore);
+                        });
+                    }>"# Experimental!"</a>
                     <span class={classes}>{after.to_string()}</span>
                 }
                 .into_view()

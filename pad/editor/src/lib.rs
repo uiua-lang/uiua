@@ -391,9 +391,7 @@ pub fn Editor<'a>(
                 </div>
             }
             .into_view(),
-            OutputItem::Report(report) => {
-                report_view(&report, Rc::new(insert_experimental)).into_view()
-            }
+            OutputItem::Report(report) => report_view(&report, state).into_view(),
             OutputItem::Separator => view! {
                 <div class="output-item">
                     <hr />

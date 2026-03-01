@@ -2,7 +2,7 @@
 
 use serde::*;
 
-use crate::{Purity, SubSide, Subscript, algorithm::ga};
+use crate::{Purity, SidedSubscript, SubSide, Subscript, algorithm::ga};
 
 macro_rules! impl_primitive {
     ($(
@@ -264,6 +264,7 @@ impl_primitive!(
     (2, SidedJoin(SubSide)),
     ([1], SidedStencil(SubSide)),
     ((1), MultiJoin(usize)),
+    ([2], SidedBracket(SidedSubscript)),
     (1, Json5),
     (1, Utf16),
     (1, Retropose),

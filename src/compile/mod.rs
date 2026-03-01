@@ -31,8 +31,9 @@ use crate::{
     CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
     ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GitTarget, Ident, ImplPrimitive,
     IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass,
-    Primitive, Purity, RunMode, SUBSCRIPT_DIGITS, SemanticComment, SigNode, Signature, Sp, Span,
-    SubSide, Subscript, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
+    Primitive, Purity, RunMode, SUBSCRIPT_DIGITS, SemanticComment, SidedSubscript, SigNode,
+    Signature, Sp, Span, SubSide, Subscript, SysBackend, Uiua, UiuaError, UiuaErrorKind,
+    UiuaResult, VERSION, Value,
     algorithm::ga::{self, Spec},
     ast::*,
     check::nodes_sig,
@@ -952,6 +953,7 @@ impl Compiler {
             }
         }
     }
+    /// Compile modifier args
     fn args(&mut self, words: Vec<Sp<Word>>) -> UiuaResult<EcoVec<SigNode>> {
         (words.into_iter())
             .filter(|w| w.value.is_code())
@@ -2569,6 +2571,19 @@ impl Compiler {
                 None
             }
         }
+    }
+    fn subscript_sided_only(
+        &mut self,
+        sub: &Sp<Subscript>,
+        for_what: impl fmt::Display + Copy,
+    ) -> Option<SidedSubscript> {
+        if sub.value.num.is_some() {
+            self.add_error(
+                sub.span.clone(),
+                format!("Numerics subscripts are not allowed for {for_what}"),
+            );
+        }
+        sub.value.side
     }
     fn subscript_side_only(
         &mut self,

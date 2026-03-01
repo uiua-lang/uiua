@@ -528,6 +528,13 @@ impl VirtualEnv {
                     });
                     self.handle_args_outputs(args, outputs);
                 }
+                SidedBracket(sided) => {
+                    let n = sided.n.unwrap_or(1);
+                    let (args, outputs) = args.iter().fold((n, 0), |(a, o), sn| {
+                        (a + sn.sig.args().saturating_sub(n), o + sn.sig.outputs())
+                    });
+                    self.handle_args_outputs(args, outputs);
+                }
                 BothImpl(sub) | UnBothImpl(sub) => {
                     let [f] = get_args(args)?;
                     let reused = sub.side.map(|side| side.n.unwrap_or(1)).unwrap_or(0);

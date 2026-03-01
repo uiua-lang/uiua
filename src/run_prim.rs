@@ -1479,6 +1479,38 @@ impl ImplPrimitive {
                     env.push_all(outputs);
                 }
             }
+            ImplPrimitive::SidedBracket(sided) => {
+                let n = sided.n.unwrap_or(1);
+                let mut args: SmallVec<[Vec<Value>; 3]> = SmallVec::new();
+                let saved;
+                match sided.side {
+                    SubSide::Left => {
+                        saved = env.pop_n(n)?;
+                        for sn in ops.iter() {
+                            args.push(env.pop_n(sn.sig.args().saturating_sub(n))?);
+                        }
+                    }
+                    SubSide::Right => {
+                        for sn in ops.iter() {
+                            args.push(env.pop_n(sn.sig.args().saturating_sub(n))?);
+                        }
+                        saved = env.pop_n(n)?;
+                    }
+                }
+                for (f, args) in ops.into_iter().zip(args).rev() {
+                    match sided.side {
+                        SubSide::Left => {
+                            env.push_all(args);
+                            env.push_all(saved.iter().cloned());
+                        }
+                        SubSide::Right => {
+                            env.push_all(saved.iter().cloned());
+                            env.push_all(args);
+                        }
+                    }
+                    env.exec(f)?;
+                }
+            }
             ImplPrimitive::SplitByScalar => {
                 let [f] = get_ops(ops, env)?;
                 groups::split_by(f, true, false, env)?;

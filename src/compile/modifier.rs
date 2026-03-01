@@ -466,6 +466,8 @@ impl Compiler {
                         if op_count == 1 { "was" } else { "were" }
                     ),
                 ));
+            } else if let Some(node) = self.inline_modifier(&modified, subscript)? {
+                return Ok(node);
             }
         }
 
@@ -506,6 +508,7 @@ impl Compiler {
         &mut self,
         m: &Modified,
     ) -> UiuaResult<(SigNode, SigNode, CodeSpan, CodeSpan)> {
+        assert_eq!(2, m.code_operands().count());
         let mut operands = m.code_operands().cloned();
         let a_op = operands.next().unwrap();
         let b_op = operands.next().unwrap();
@@ -685,7 +688,7 @@ impl Compiler {
                     _ => Node::Mod(Dip, eco_vec![f], self.add_span(span)),
                 }
             }),
-            Fork => {
+            Fork if modified.code_operands().count() == 2 => {
                 let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
                 if !modified.pack_expansion && f.node.as_primitive() == Some(Primitive::Identity) {
                     self.emit_diagnostic(
@@ -743,44 +746,52 @@ impl Compiler {
                 let Some(sub) = subscript else {
                     return Ok(None);
                 };
-                let Some(side) = self.subscript_side_only(&sub, Bracket.format()) else {
+                let Some(sided) = self.subscript_sided_only(&sub, Bracket.format()) else {
                     return Ok(None);
                 };
+                if sided.n == Some(0) {
+                    return Ok(None);
+                }
                 func!({
                     let span = self.add_span(modified.modifier.span.clone());
-                    let (a, b, _, _) = self.dyadic_modifier_ops(modified)?;
-                    if a.sig.args() != 2 || b.sig.args() != 2 {
-                        self.add_error(
-                            modified.modifier.span.clone().merge(sub.span),
-                            format!(
-                                "Sided {}'s functions must both have 2 arguments, \
-                                but their signatures are {} and {}.",
-                                Primitive::Bracket.format(),
-                                a.sig,
-                                b.sig
-                            ),
-                        );
-                        Node::Mod(Bracket, eco_vec![a, b], span)
+                    if modified.code_operands().count() == 2 && sided.n.unwrap_or(1) == 1 {
+                        let (a, b, _, _) = self.dyadic_modifier_ops(modified)?;
+                        if a.sig.args() != 2 || b.sig.args() != 2 {
+                            self.add_error(
+                                modified.modifier.span.clone().merge(sub.span),
+                                format!(
+                                    "Sided {}'s functions must both have 2 arguments, \
+                                    but their signatures are {} and {}.",
+                                    Primitive::Bracket.format(),
+                                    a.sig,
+                                    b.sig
+                                ),
+                            );
+                            Node::Mod(Bracket, eco_vec![a, b], span)
+                        } else {
+                            let sub_span = self.add_span(sub.span);
+                            let mut node = match sided.side {
+                                SubSide::Left => Node::Mod(
+                                    On,
+                                    eco_vec![Node::Prim(Flip, sub_span).sig_node().unwrap()],
+                                    sub_span,
+                                ),
+                                SubSide::Right => Node::Mod(
+                                    Dip,
+                                    eco_vec![
+                                        Node::ImplPrim(ImplPrimitive::Over, sub_span)
+                                            .sig_node()
+                                            .unwrap()
+                                    ],
+                                    sub_span,
+                                ),
+                            };
+                            node.push(Node::Mod(Bracket, eco_vec![a, b], span));
+                            node
+                        }
                     } else {
-                        let sub_span = self.add_span(sub.span);
-                        let mut node = match side {
-                            SubSide::Left => Node::Mod(
-                                On,
-                                eco_vec![Node::Prim(Flip, sub_span).sig_node().unwrap()],
-                                sub_span,
-                            ),
-                            SubSide::Right => Node::Mod(
-                                Dip,
-                                eco_vec![
-                                    Node::ImplPrim(ImplPrimitive::Over, sub_span)
-                                        .sig_node()
-                                        .unwrap()
-                                ],
-                                sub_span,
-                            ),
-                        };
-                        node.push(Node::Mod(Bracket, eco_vec![a, b], span));
-                        node
+                        let ops = self.args(modified.operands.clone())?;
+                        Node::ImplMod(ImplPrimitive::SidedBracket(sided), ops, span)
                     }
                 })
             }

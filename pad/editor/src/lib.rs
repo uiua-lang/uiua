@@ -288,6 +288,23 @@ pub fn Editor<'a>(
         (input, seed)
     };
 
+    // Insert an # Experimental! comment at the top of the code
+    let insert_experimental = move || {
+        state.update(|state| {
+            let code = get_code();
+            if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
+                return;
+            }
+            let new_code = format!("# Experimental!\n{code}");
+            let cursor = if let Some((start, end)) = get_code_cursor() {
+                Cursor::Set(start + 16, end + 16)
+            } else {
+                Cursor::Ignore
+            };
+            state.set_code(&new_code, cursor);
+        });
+    };
+
     // Run the code
     let run = move |do_format: bool, set_cursor: bool| {
         // Format code
@@ -374,7 +391,7 @@ pub fn Editor<'a>(
                 </div>
             }
             .into_view(),
-            OutputItem::Report(report) => report_view(&report).into_view(),
+            OutputItem::Report(report) => report_view(&report, state).into_view(),
             OutputItem::Separator => view! {
                 <div class="output-item">
                     <hr />
@@ -510,23 +527,6 @@ pub fn Editor<'a>(
         new_code.extend(chars);
         state.set_code(&new_code, Cursor::Set(start + 1, end + 1));
         _ = code_element().focus();
-    };
-
-    // Insert an # Experimental! comment at the top of the code
-    let insert_experimental = move || {
-        state.update(|state| {
-            let code = get_code();
-            if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
-                return;
-            }
-            let new_code = format!("# Experimental!\n{code}");
-            let cursor = if let Some((start, end)) = get_code_cursor() {
-                Cursor::Set(start + 16, end + 16)
-            } else {
-                Cursor::Ignore
-            };
-            state.set_code(&new_code, cursor);
-        });
     };
 
     // Remove an # Experimental! comment from the top of the code

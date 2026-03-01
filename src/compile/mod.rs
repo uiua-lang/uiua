@@ -1898,6 +1898,27 @@ impl Compiler {
                     Value::default()
                 });
             Node::Push(value)
+        } else if let Some(base) = ident
+            .split_once('₋')
+            .map(|(b, _)| b)
+            .or_else(|| ident.strip_suffix(SUBSCRIPT_DIGITS))
+        {
+            let mut node = self.ident(base.into(), span.clone());
+            let mut n = 0i64;
+            for c in ident[base.len()..].chars() {
+                if c != '₋' {
+                    n *= 10
+                }
+                n += SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i64;
+            }
+            if ident[base.len()..].starts_with('₋') {
+                if &ident[base.len()..] == "₋" {
+                    self.add_error(span, "Subscript is incomplete");
+                }
+                n = -n;
+            }
+            node.prepend(Node::new_push(n));
+            node
         } else {
             self.add_error(span, format!("Unknown identifier `{ident}`"));
             Node::new_push(Value::default())

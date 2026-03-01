@@ -1463,7 +1463,7 @@ impl Compiler {
                 Node::empty()
             }
             Word::OutputComment { i, n } => Node::SetOutputComment { i, n },
-            Word::Subscripted(sub) => self.subscript(*sub, word.span)?,
+            Word::Subscripted(sub) => self.subscripted(*sub, word.span)?,
             Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::FlipLine => Node::empty(),
             Word::InlineMacro(_) => {
                 self.add_error(
@@ -2199,7 +2199,7 @@ impl Compiler {
         }
     }
     #[allow(clippy::match_single_binding)]
-    fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
+    fn subscripted(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
         let scr = sub.script;
         Ok(match sub.word.value {
             Word::Modified(m) => match m.modifier.value {

@@ -5,7 +5,7 @@ use std::{
 
 use enum_iterator::{Sequence, all};
 
-use crate::{AsciiToken, NumericSubscript, Primitive, Signature, Subscript};
+use crate::{AsciiToken, NumericSubscript, Primitive, Signature, Subscript, SubscriptToken};
 
 /// Categories of primitives
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Sequence)]
@@ -227,11 +227,11 @@ impl Primitive {
         FormatPrimitive(*self)
     }
     /// The modified signature of the primitive given a subscript
-    pub fn subscript_sig(&self, sub: Option<&Subscript>) -> Option<Signature> {
+    pub fn subscript_sig(&self, sub: Option<&SubscriptToken>) -> Option<Signature> {
         use Primitive::*;
         let sub = sub?;
         let n = match sub.num.as_ref()? {
-            NumericSubscript::N(n) => Some(*n),
+            NumericSubscript::N(Some(n)) => Some(*n),
             _ => None,
         };
         Some(match (self, n) {
@@ -254,7 +254,7 @@ impl Primitive {
         })
     }
     #[allow(unused_parens)]
-    pub fn subscript_margs(&self, sub: Option<&Subscript>) -> Option<usize> {
+    pub fn subscript_margs<N>(&self, sub: Option<&Subscript<N>>) -> Option<usize> {
         use Primitive::*;
         let Some(sub) = sub else {
             return self.modifier_args();

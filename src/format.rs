@@ -15,12 +15,12 @@ use std::{
 use InlineMacro;
 use ecow::EcoString;
 use paste::paste;
+use uiua_parser::SubscriptToken;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     CodeSpan, Compiler, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode, Primitive, RunMode,
-    SUBSCRIPT_DIGITS, SafeSys, Signature, Sp, Subscript, SysBackend, Uiua, UiuaErrorKind,
-    UiuaResult, Value,
+    SUBSCRIPT_DIGITS, SafeSys, Signature, Sp, SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value,
     ast::*,
     is_ident_char,
     parse::{flip_unsplit_items, flip_unsplit_lines, parse, split_words, trim_spaces},
@@ -1534,7 +1534,7 @@ impl Formatter<'_> {
         }
         self.output.push(')');
     }
-    fn subscript(&mut self, sub: &Sp<Subscript>) {
+    fn subscript(&mut self, sub: &Sp<SubscriptToken>) {
         self.push(&sub.span, &sub.value.to_string());
     }
     fn pack(&mut self, pack: &FunctionPack, depth: usize) {

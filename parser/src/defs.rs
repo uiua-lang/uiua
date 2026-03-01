@@ -3850,27 +3850,24 @@ sys_op! {
     /// On the web, this example will hang for 1 second.
     /// ex: ⚂ &sl 1
     (1(0), Sleep, Misc, "&sl", "sleep", Mutating),
-    /// Read characters formed by at most n bytes from a stream
-    ///
-    /// Expects a count and a stream handle.
+    /// Read characters formed by *n* bytes from a stream
+    /// 
+    /// Expects a count *n* and a stream handle, reads *n* bytes from the specified stream handle. The bytes read are expected to be valid UTF-8 and are returned as a string.
+    /// **Note:** [&rs] will attempt to read the given number of *bytes* from the stream. If the read bytes are not valid UTF-8, up to 3 additional bytes will be read in an attempt to finish a valid UTF-8 character.
     /// The stream handle `0` is stdin.
     /// ex: &rs 4 &fo "example.txt"
     /// Using [infinity] as the count will read until the end of the stream.
     /// ex: &rs ∞ &fo "example.txt"
-    ///
-    /// [&rs] will attempt to read the given number of *bytes* from the stream.
-    /// If the read bytes are not valid UTF-8, up to 3 additional bytes will be read in an attempt to finish a valid UTF-8 character.
-    ///
     /// See also: [&rb]
     (2, ReadStr, Stream, "&rs", "read to string", Mutating),
-    /// Read at most n bytes from a stream
-    ///
-    /// Expects a count and a stream handle.
+    /// Read *n* bytes from a stream
+    /// 
+    /// Expects a count *n* and a stream handle, reads *n* bytes from the specified stream handle and returns them as a rank-1 byte array.
+    /// **Note:** the array may be shorter than *n* bytes only if the end of the stream is reached before *n* bytes can be read.
     /// The stream handle `0` is stdin.
     /// ex: &rb 4 &fo "example.txt"
     /// Using [infinity] as the count will read until the end of the stream.
     /// ex: &rb ∞ &fo "example.txt"
-    ///
     /// See also: [&rs]
     (2, ReadBytes, Stream, "&rb", "read to bytes", Mutating),
     /// Read from a stream until a delimiter is reached

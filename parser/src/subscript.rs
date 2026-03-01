@@ -8,7 +8,7 @@ use crate::SUBSCRIPT_DIGITS;
 /// A subscripts
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(default)]
-pub struct Subscript<N = NumericSubscript> {
+pub struct Subscript<N = NumericSubscript<i32>> {
     /// The numeric part of the subscript
     #[serde(skip_serializing_if = "Option::is_none")]
     pub num: Option<N>,
@@ -16,6 +16,8 @@ pub struct Subscript<N = NumericSubscript> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub side: Option<SidedSubscript>,
 }
+
+pub type SubscriptToken = Subscript<NumericSubscriptToken>;
 
 impl<N> Default for Subscript<N> {
     fn default() -> Self {
@@ -53,6 +55,21 @@ impl From<u32> for Subscript<u32> {
     }
 }
 
+impl From<i32> for SubscriptToken {
+    fn from(i: i32) -> Self {
+        Some(i).into()
+    }
+}
+
+impl From<Option<i32>> for SubscriptToken {
+    fn from(i: Option<i32>) -> Self {
+        Subscript {
+            num: Some(i.into()),
+            side: None,
+        }
+    }
+}
+
 impl<N> From<SubSide> for Subscript<N> {
     fn from(side: SubSide) -> Self {
         Subscript {
@@ -65,18 +82,20 @@ impl<N> From<SubSide> for Subscript<N> {
 /// The numeric part of a subscript
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
-pub enum NumericSubscript {
+pub enum NumericSubscript<I = i32> {
     /// Only a negative sign
     NegOnly,
     /// The number is too large to be represented
     TooLarge(EcoString),
     /// A valid number
     #[serde(untagged)]
-    N(i32),
+    N(I),
 }
 
-impl From<i32> for NumericSubscript {
-    fn from(i: i32) -> Self {
+pub type NumericSubscriptToken = NumericSubscript<Option<i32>>;
+
+impl<I> From<I> for NumericSubscript<I> {
+    fn from(i: I) -> Self {
         NumericSubscript::N(i)
     }
 }
@@ -99,9 +118,9 @@ pub enum SubSide {
     Right,
 }
 
-impl Subscript {
+impl<I: Clone> Subscript<NumericSubscript<I>> {
     /// Make a pure numeric subscript
-    pub fn numeric(i: i32) -> Self {
+    pub fn numeric(i: I) -> Self {
         Self {
             num: Some(NumericSubscript::N(i)),
             side: None,
@@ -112,9 +131,9 @@ impl Subscript {
         matches!(self.num, Some(NumericSubscript::N(_))) || self.side.is_some()
     }
     /// Get the numeric part of the subscript as an integer, if it exists
-    pub fn n(&self) -> Option<i32> {
+    pub fn n(&self) -> Option<I> {
         self.num.as_ref().and_then(|n| match n {
-            NumericSubscript::N(n) => Some(*n),
+            NumericSubscript::N(n) => Some(n.clone()),
             _ => None,
         })
     }
@@ -151,6 +170,28 @@ impl fmt::Display for NumericSubscript {
                     write!(f, "{}", SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])?;
                 }
                 Ok(())
+            }
+            NumericSubscript::TooLarge(s) => s.fmt(f),
+        }
+    }
+}
+
+impl fmt::Display for NumericSubscriptToken {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            NumericSubscript::NegOnly => write!(f, "₋"),
+            NumericSubscript::N(n) => {
+                if let Some(n) = n {
+                    if *n < 0 {
+                        write!(f, "₋")?;
+                    }
+                    for c in n.abs().to_string().chars() {
+                        write!(f, "{}", SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])?;
+                    }
+                    Ok(())
+                } else {
+                    write!(f, "ₙ")
+                }
             }
             NumericSubscript::TooLarge(s) => s.fmt(f),
         }

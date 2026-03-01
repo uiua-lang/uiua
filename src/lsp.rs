@@ -12,8 +12,9 @@ use std::{
 
 use crate::{
     Assembly, BindingInfo, BindingKind, BindingMeta, CONSTANTS, CodeSpan, Compiler, Ident,
-    InputSrc, Inputs, LocalIndex, PreEvalMode, Primitive, SafeSys, Shape, Signature, Sp, Subscript,
-    SysBackend, UiuaError, Value, ast::*, is_custom_glyph, parse, parse::ident_modifier_args,
+    InputSrc, Inputs, LocalIndex, PreEvalMode, Primitive, SafeSys, Shape, Signature, Sp,
+    SubscriptToken, SysBackend, UiuaError, Value, ast::*, is_custom_glyph, parse,
+    parse::ident_modifier_args,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -21,7 +22,7 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SpanKind {
     /// A primitive, with an optional subscript which may affect coloring
-    Primitive(Primitive, Option<Subscript>),
+    Primitive(Primitive, Option<SubscriptToken>),
     /// An optional argument macro for a primitive. Should be colored like a module.
     PrimArgs(Primitive),
     String,
@@ -44,7 +45,7 @@ pub enum SpanKind {
     FuncDelim(Signature, SetInverses),
     MacroDelim(usize),
     ImportSrc(ImportSrc),
-    Subscript(Option<Primitive>, Option<Subscript>),
+    Subscript(Option<Primitive>, Option<SubscriptToken>),
     /// `obverse` primitive. Contains which inverses are set.
     Obverse(SetInverses),
     ArgSetter(Option<EcoString>),
@@ -1614,7 +1615,7 @@ mod server {
             let mut tokens = Vec::new();
             let mut prev_line = 0;
             let mut prev_char = 0;
-            let for_prim = |p: Primitive, sub: Option<&Subscript>| {
+            let for_prim = |p: Primitive, sub: Option<&SubscriptToken>| {
                 let args = p.subscript_sig(sub).map(|sig| sig.args()).or(p.args());
                 let margs = p.subscript_margs(sub).or_else(|| p.modifier_args());
                 Some(match p.class() {

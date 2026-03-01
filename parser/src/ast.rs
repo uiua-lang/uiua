@@ -7,7 +7,7 @@ use serde::*;
 
 use crate::{
     BindingCounts, CodeSpan, Complex, Ident, Primitive, SemanticComment, Signature, Sp, Subscript,
-    parse::ident_modifier_args,
+    SubscriptToken, parse::ident_modifier_args,
 };
 
 /// A top-level item
@@ -823,7 +823,7 @@ impl Modifier {
         }
     }
     /// Get the number of arguments this modifier takes given a subscript
-    pub fn subscript_margs(&self, sub: Option<&Subscript>) -> usize {
+    pub fn subscript_margs<N>(&self, sub: Option<&Subscript<N>>) -> usize {
         match self {
             Modifier::Primitive(prim) => prim.subscript_margs(sub).unwrap_or_else(|| self.args()),
             m => m.args(),
@@ -857,7 +857,7 @@ impl ArgSetter {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Subscripted {
     /// The subscript
-    pub script: Sp<Subscript>,
+    pub script: Sp<SubscriptToken>,
     /// The modified word
     pub word: Sp<Word>,
 }

@@ -3851,7 +3851,7 @@ sys_op! {
     /// ex: ⚂ &sl 1
     (1(0), Sleep, Misc, "&sl", "sleep", Mutating),
     /// Read characters formed by *n* bytes from a stream
-    /// 
+    ///
     /// Expects a count *n* and a stream handle, reads *n* bytes from the specified stream handle. The bytes read are expected to be valid UTF-8 and are returned as a string.
     /// **Note:** [&rs] will attempt to read the given number of *bytes* from the stream. If the read bytes are not valid UTF-8, up to 3 additional bytes will be read in an attempt to finish a valid UTF-8 character.
     /// The stream handle `0` is stdin.
@@ -3861,7 +3861,7 @@ sys_op! {
     /// See also: [&rb]
     (2, ReadStr, Stream, "&rs", "read to string", Mutating),
     /// Read *n* bytes from a stream
-    /// 
+    ///
     /// Expects a count *n* and a stream handle, reads *n* bytes from the specified stream handle and returns them as a rank-1 byte array.
     /// **Note:** the array may be shorter than *n* bytes only if the end of the stream is reached before *n* bytes can be read.
     /// The stream handle `0` is stdin.

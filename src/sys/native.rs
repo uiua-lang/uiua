@@ -494,39 +494,39 @@ impl SysBackend for NativeSys {
         trash::delete(path).map_err(|e| e.to_string())
     }
     fn read(&self, handle: Handle, len: usize) -> Result<Vec<u8>, String> {
-        Ok(match NATIVE_SYS.get_stream(handle)? {
-            SysStream::File(mut file) => {
-                let mut buf = vec![0; len];
-                let n = file.read(&mut buf).map_err(|e| e.to_string())?;
-                buf.truncate(n);
-                buf
+        /// reader.read() is not guaranteed to read the full amount of bytes requested,
+        /// so we loop until we get all the bytes or hit EOF.
+        fn read_len<R: Read>(reader: &mut R, len: usize) -> Result<Vec<u8>, String> {
+            let mut buf = vec![0; len];
+            let mut size = 0;
+
+            while size < len {
+                match reader.read(&mut buf[size..]) {
+                    Ok(0) => break, // EOF
+                    Ok(n) => size += n,
+                    Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+                    Err(e) => return Err(e.to_string()),
+                }
             }
-            SysStream::ChildStdin(_) => return Err("Cannot read from child stdin".into()),
-            SysStream::ChildStdout(mut child) => {
-                let mut buf = vec![0; len];
-                let n = child.stream.read(&mut buf).map_err(|e| e.to_string())?;
-                buf.truncate(n);
-                buf
-            }
-            SysStream::ChildStderr(mut child) => {
-                let mut buf = vec![0; len];
-                let n = child.stream.read(&mut buf).map_err(|e| e.to_string())?;
-                buf.truncate(n);
-                buf
-            }
+
+            buf.truncate(size);
+            Ok(buf)
+        }
+
+        match NATIVE_SYS.get_stream(handle)? {
+            SysStream::File(mut file) => read_len(&mut *file, len),
+            SysStream::ChildStdin(_) => Err("Cannot read from child stdin".into()),
+            SysStream::ChildStdout(mut child) => read_len(&mut child.stream, len),
+            SysStream::ChildStderr(mut child) => read_len(&mut child.stream, len),
             SysStream::TcpSocket(socket) => {
-                let mut buf = vec![0; len];
-                let n = (&mut &*socket).read(&mut buf).map_err(|e| e.to_string())?;
-                buf.truncate(n);
-                buf
+                let mut stream = &*socket;
+                read_len(&mut stream, len)
             }
             SysStream::TlsSocket(socket) => {
-                let mut buf = vec![0; len];
-                let n = (&mut &*socket).read(&mut buf).map_err(|e| e.to_string())?;
-                buf.truncate(n);
-                buf
+                let mut stream = &*socket;
+                read_len(&mut stream, len)
             }
-        })
+        }
     }
     fn read_all(&self, handle: Handle) -> Result<Vec<u8>, String> {
         Ok(match NATIVE_SYS.get_stream(handle)? {

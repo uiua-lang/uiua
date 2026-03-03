@@ -106,7 +106,7 @@ primitive!(
     /// ex: [. 1 2 3 4]
     ///
     /// [duplicate] is deprecated and no longer recommended in modern Uiua. It is a relic of when Uiua was a different language.
-    /// Consider whether [by] or [fork] suits your needs instead. For example, [range][duplicate][5] can be written [by][range][5].
+    /// Consider whether [by] or [fork] suits your needs instead. For example, [range][duplicate]`5` can be written [by][range]`5`.
     (1(2), Dup, Arguments, ("duplicate", '.')),
     /// Swap the top two values on the stack
     ///

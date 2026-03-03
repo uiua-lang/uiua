@@ -105,23 +105,14 @@ primitive!(
     ///
     /// ex: [. 1 2 3 4]
     ///
-    /// There is usually a better alternative to [duplicate]. Consider whether [by] or [fork] solves your stack manipulation needs instead.
-    ///
-    /// [duplicate] is often used in examples to show both the input and output of a function.
-    /// ex: √.144
-    /// ex: .[1 2 3 4]
-    ///   : +1⇌
-    ///
-    /// [duplicate] works well with [table]:
-    /// ex: ⊞=.⇡4
-    /// Sometimes it is also good with [group] or [partition]
-    /// ex: ⊜⧻.[1 1 0 0 2 2 2 2 0 1 0 3 3]
+    /// [duplicate] is deprecated and no longer recommended in modern Uiua. It is a relic of when Uiua was a different language.
+    /// Consider whether [by] or [fork] suits your needs instead. For example, [range][duplicate]`5` can be written [by][range]`5`.
     (1(2), Dup, Arguments, ("duplicate", '.')),
     /// Swap the top two values on the stack
     ///
     /// ex: [: 1 2 3 4 5]
     ///
-    /// [flip] is generally recommend against. It is largely a relic of when Uiua was a different language.
+    /// [flip] is deprecated and no longer recommended in modern Uiua. It is a relic of when Uiua was a different language.
     /// Many cases can be replaced with [backward]. Others can be replaced with [dip], [fork], [both], [on], [by], [with], or [off].
     (2(2), Flip, Arguments, ("flip", AsciiToken::Colon, ':')),
     /// Do nothing with one value
@@ -264,7 +255,7 @@ primitive!(
     /// Subscripted [off] keeps the first N arguments after the outputs.
     /// ex: {⤚₂[⊙⊙∘] 1 2 3}
     ([1], Off, Arguments, ("off", '⤚')),
-    /// Keep all arguments to a function above the outputs on the stack
+    /// Keep all arguments to a function before the outputs
     ///
     /// ex: # Experimental!
     ///   : [◠+ 1 2]
@@ -1121,6 +1112,8 @@ primitive!(
     /// ex: ⧆₂ "aaaabcbcbcbc"
     (1, Occurrences, MonadicArray, ("occurrences", '⧆')),
     /// Get a mask of first occurrences of items in an array
+    ///
+    /// [unique] has been deprecated. Use [occurrences] instead.
     ///
     /// ex: ◰ 7_7_8_0_1_2_0
     /// ex: ◰ "Hello, World!"

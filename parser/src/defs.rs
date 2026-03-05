@@ -2246,7 +2246,7 @@ primitive!(
     ///
     /// [under][partition] works if [partition]'s function is [under]able.
     /// ex: ⍜⊜□⇌  ⊸≠@  $ These are some words
-    /// ex: ⍜⊜□≡⇌ ⊸≠@  $ These are some words
+    /// ex: ⍜⊜□⍚⇌ ⊸≠@  $ These are some words
     /// ex: ⍜⊜⊢⌵  ⊸≠@  $ These are some words
     ///
     /// [partition] is closely related to [group].

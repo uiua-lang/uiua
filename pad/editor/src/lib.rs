@@ -2337,6 +2337,17 @@ pub fn Editor<'a>(
                         </div>
                     </div>
                     <div id="code-buttons">
+                        {matches!(mode, EditorMode::Showcase).then(|| view! {
+                            <button
+                                class="code-button"
+                                on:click=move |_| {
+                                    state.update(|state| state.set_code("", Cursor::Set(0, 0)));
+                                    set_output.set(View::default());
+                                }
+                            >
+                                {"Clear"}
+                            </button>
+                        })}
                         <button
                             class="code-button format-button run-format-button"
                             on:click=move |_| {

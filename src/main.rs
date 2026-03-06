@@ -27,8 +27,8 @@ use rustyline::{DefaultEditor, error::ReadlineError};
 use terminal_size::terminal_size;
 use uiua::{
     Assembly, CONSTANTS, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDoc,
-    PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Subscript, Token,
-    Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
+    PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, SubscriptToken,
+    Token, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
     format::{FormatConfig, FormatConfigSource, format_file, format_str},
     lex,
     lsp::BindingDocsKind,
@@ -1266,7 +1266,7 @@ const DYADIC: Color = Color::Blue;
 const MONADIC_MOD: Color = Color::Yellow;
 const DYADIC_MOD: Color = Color::Magenta;
 
-fn color_prim(prim: Primitive, sub: Option<&Subscript>) -> Option<Color> {
+fn color_prim(prim: Primitive, sub: Option<&SubscriptToken>) -> Option<Color> {
     match prim.class() {
         PrimClass::Arguments | PrimClass::Debug if prim.modifier_args().is_none() => None,
         PrimClass::Constant => None,

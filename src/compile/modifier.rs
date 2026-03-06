@@ -154,7 +154,7 @@ impl Compiler {
                     }));
                     if let Some(sub) = &subscript {
                         word = Word::Subscripted(Box::new(Subscripted {
-                            script: sub.clone(),
+                            script: sub.clone().map(Into::into),
                             word: branch.span.clone().sp(word),
                         }))
                     }

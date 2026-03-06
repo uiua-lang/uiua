@@ -100,6 +100,22 @@ impl<I> From<I> for NumericSubscript<I> {
     }
 }
 
+impl From<Subscript> for SubscriptToken {
+    fn from(sub: Subscript) -> Self {
+        sub.map_num(|n| n.map(Some))
+    }
+}
+
+impl<I> NumericSubscript<I> {
+    pub fn map<J>(self, f: impl FnOnce(I) -> J) -> NumericSubscript<J> {
+        match self {
+            NumericSubscript::NegOnly => NumericSubscript::NegOnly,
+            NumericSubscript::TooLarge(s) => NumericSubscript::TooLarge(s),
+            NumericSubscript::N(n) => NumericSubscript::N(f(n)),
+        }
+    }
+}
+
 /// The sided part of a subscript
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct SidedSubscript {

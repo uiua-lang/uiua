@@ -32,8 +32,8 @@ use crate::{
     ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GitTarget, Ident, ImplPrimitive,
     IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass,
     Primitive, Purity, RunMode, SUBSCRIPT_DIGITS, SemanticComment, SidedSubscript, SigNode,
-    Signature, Sp, Span, SubSide, Subscript, SysBackend, Uiua, UiuaError, UiuaErrorKind,
-    UiuaResult, VERSION, Value,
+    Signature, Sp, Span, SubSide, Subscript, SubscriptToken, SysBackend, Uiua, UiuaError,
+    UiuaErrorKind, UiuaResult, VERSION, Value,
     algorithm::ga::{self, Spec},
     ast::*,
     check::nodes_sig,
@@ -2201,6 +2201,17 @@ impl Compiler {
     #[allow(clippy::match_single_binding)]
     fn subscripted(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
         let scr = sub.script;
+        let scr = scr.span.clone().sp(scr.value.map_num(|n| {
+            n.map(|n| {
+                n.unwrap_or_else(|| {
+                    self.add_error(
+                        scr.span,
+                        "ₙ is not valid outside a custom subscript function",
+                    );
+                    2
+                })
+            })
+        }));
         Ok(match sub.word.value {
             Word::Modified(m) => match m.modifier.value {
                 Modifier::Ref(_) | Modifier::Macro(..) => {
@@ -2294,7 +2305,7 @@ impl Compiler {
                 match prim {
                     prim if prim.sig().is_some_and(|sig| sig == (2, 1))
                         && prim
-                            .subscript_sig(Some(&Subscript::numeric(2)))
+                            .subscript_sig(Some(&SubscriptToken::numeric(Some(2))))
                             .is_some_and(|sig| sig == (1, 1)) =>
                     {
                         Node::from_iter([Node::new_push(n), self.primitive(prim, span)])

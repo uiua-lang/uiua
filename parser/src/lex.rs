@@ -1803,7 +1803,7 @@ pub fn is_custom_glyph(c: &str) -> bool {
 }
 
 fn is_formatted_subscript(c: &str) -> bool {
-    "₋⌞⌟".contains(c) || c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c))
+    "₋⌞⌟ₙ".contains(c) || c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c))
 }
 
 pub(crate) fn canonicalize_ident(ident: &str) -> Ident {

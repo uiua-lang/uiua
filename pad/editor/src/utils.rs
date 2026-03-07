@@ -609,7 +609,6 @@ pub fn gen_code_view(id: &str, code: &str, hidden: &str) -> View {
             ((Un, By), "unby: Set a property given by a function"),
             ((Anti, Drop), "antidrop: Pad an array"),
             ((Anti, Pow), "antipower: Get the nth root of a number"),
-            ((Anti, Log), "antilogarithm: Get the nth power of a number"),
             (
                 (Anti, Select),
                 "antiselect: Puts rows into the corresponding indices",

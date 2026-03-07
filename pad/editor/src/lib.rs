@@ -16,7 +16,7 @@ use leptos::{
 
 use leptos_router::{BrowserIntegration, History, LocationChange, NavigateOptions, use_navigate};
 use uiua::{
-    IgnoreError, PrimClass, PrimDoc, Primitive, Signature, Subscript, SysOp, Token,
+    IgnoreError, PrimClass, PrimDoc, Primitive, Signature, Subscript, SubscriptToken, SysOp, Token,
     format::{FormatConfig, format_str},
     is_ident_char, lex,
     lsp::{BindingDocs, BindingDocsKind},
@@ -2560,7 +2560,7 @@ fn modifier_class(margs: usize) -> &'static str {
     }
 }
 
-fn prim_sig_class(prim: Primitive, subscript: Option<&Subscript>) -> &'static str {
+fn prim_sig_class(prim: Primitive, subscript: Option<&SubscriptToken>) -> &'static str {
     if get_gayness() == Gayness::Gray {
         return code_font!("");
     }
@@ -2570,14 +2570,14 @@ fn prim_sig_class(prim: Primitive, subscript: Option<&Subscript>) -> &'static st
             code_font!("monadic-function trans text-gradient")
         }
         Primitive::Both if at_least_a_little_gay() => {
-            match subscript.and_then(Subscript::n).unwrap_or(2) {
+            match subscript.and_then(Subscript::n).flatten().unwrap_or(2) {
                 0 => code_font!("monadic-function aroace text-gradient"),
                 1 => code_font!("monadic-function aro text-gradient"),
                 2 => code_font!("monadic-modifier bi text-gradient"),
                 _ => code_font!("dyadic-function pan text-gradient"),
             }
         }
-        Primitive::Couple => match subscript.and_then(Subscript::n).unwrap_or(2) {
+        Primitive::Couple => match subscript.and_then(Subscript::n).flatten().unwrap_or(2) {
             0 if at_least_a_little_gay() => {
                 code_font!("monadic-function aroace text-gradient")
             }

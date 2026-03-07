@@ -101,7 +101,6 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::Modulo => env.dyadic_oo_env(Value::modulo)?,
         Primitive::Or => env.dyadic_oo_env(Value::or)?,
         Primitive::Pow => env.dyadic_oo_env(Value::pow)?,
-        Primitive::Log => env.dyadic_oo_env(Value::log)?,
         Primitive::Min => env.dyadic_oo_env(Value::min)?,
         Primitive::Max => env.dyadic_oo_env(Value::max)?,
         Primitive::Atan => env.dyadic_oo_env(Value::atan2)?,
@@ -599,6 +598,7 @@ impl ImplPrimitive {
                 env.push(bits);
             }
             ImplPrimitive::Root => env.dyadic_oo_env(Value::root)?,
+            ImplPrimitive::Log => env.dyadic_oo_env(Value::log)?,
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
             ImplPrimitive::Acos => env.monadic_env(Value::acos)?,

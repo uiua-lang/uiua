@@ -286,7 +286,6 @@ impl Primitive {
             },
             Flip => || format!("use {} instead", Backward.format()),
             OldReach => || format!("use {} instead", Reach.format()),
-            Log => || format!("use subscripted {} or {Anti}{Backward}{Pow}", Exp.format()),
             Rerank => || {
                 format!(
                     "use subscripted {} or {Un}{By}({Len}{Shape}) instead",

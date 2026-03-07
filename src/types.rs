@@ -189,7 +189,7 @@ impl TypeRt<'_> {
                     let x = self.pop()?;
                     self.stack.push(x);
                 }
-                Add | Sub | Mul | Div | Pow | Modulo | Log => {
+                Add | Sub | Mul | Div | Pow | Modulo => {
                     let a = self.pop()?;
                     let b = self.pop()?;
                     let shape = if a.shape.len() > b.shape.len() {
@@ -327,6 +327,17 @@ impl TypeRt<'_> {
                     self.stack.push(b.clone());
                     self.stack.push(a);
                     self.stack.push(b);
+                }
+                ImplPrimitive::Log => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    let shape = if a.shape.len() > b.shape.len() {
+                        a.shape
+                    } else {
+                        b.shape
+                    };
+                    let scalar = a.scalar.max(b.scalar);
+                    self.stack.push(Ty::new(scalar, shape));
                 }
                 ImplPrimitive::StackN { .. } => {}
                 _ => return Err(TypeError::NotSupported),

@@ -629,13 +629,6 @@ primitive!(
     /// ex: ⁿ2 [1 2 3]
     /// ex: ⁿ [1 2 3] [4 5 6]
     (2, Pow, DyadicPervasive, ("power", 'ⁿ')),
-    /// Get the based logarithm of a number
-    ///
-    /// The first value is the base, and the second value is the power.
-    /// ex: ₙ2 8
-    /// ex: ₙ2 [8 16 32]
-    /// ex: ₙ [2 3 4] [16 27 1024]
-    (2, Log, DyadicPervasive, ("logarithm", 'ₙ')),
     /// Take the minimum of two arrays
     ///
     /// ex: ↧ 3 5

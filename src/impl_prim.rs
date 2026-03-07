@@ -109,6 +109,7 @@ macro_rules! impl_primitive {
 impl_primitive!(
     // Inverses
     (2, Root),
+    (2, Log),
     (1, Cos),
     (1, Asin),
     (1, Acos),

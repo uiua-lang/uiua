@@ -686,7 +686,7 @@ pub fn Subscripts() -> impl IntoView {
         <Hd3 id="implicit">"Implicit Subscripts"</Hd3>
         <p>"Adding a numeric subscript to a named function will pass that number as the first argument to the function."</p>
         <Editor example="F ← ⊂\nF₁ 2_3"/>
-        <p>"You can define special cases as functions after the original"</p>
+        <p>"You can define special cases as functions after the original."</p>
         <Editor example="F  ← ×10+\nF₀ ← ×100\nF₁ ← $\"It's _\"\nF₀ 5\nF₁ 5\nF₂ 5\nF₃ 5\n"/>
 
         <Hd id="sided">"Sided Subscripts"</Hd>

@@ -1864,7 +1864,7 @@ impl Compiler {
             }
             _ => {
                 // Expand
-                self.expand_index_macro(
+                let full_span = self.expand_index_macro(
                     Some(name.value.clone()),
                     &mut mac.words,
                     operands,
@@ -1897,13 +1897,17 @@ impl Compiler {
                     expansion_index,
                 };
                 // Compile
-                let node = self.suppress_diagnostics(|comp| {
+                let SigNode { node, sig } = self.suppress_diagnostics(|comp| {
                     comp.macro_scope(LocalNames::default(), Some(macro_local), |comp| {
-                        comp.words(mac.words)
+                        comp.words_sig(mac.words)
                     })
                 })?;
+                self.code_meta
+                    .macro_expansions
+                    .get_mut(&full_span)
+                    .unwrap()
+                    .2 = Some(sig);
                 // Add
-                let sig = self.sig_of(&node, &ref_span)?;
                 let id = FunctionId::Macro(Some(name.value), name.span);
                 let func = self.asm.add_function(id, sig, node, FunctionOrigin::Macro);
                 if let Some(exp_index) = macro_local.expansion_index {
@@ -2043,7 +2047,8 @@ impl Compiler {
 
         // Quote
         if let Some(code) = code {
-            (self.code_meta.macro_expansions).insert(full_span, (mac_name.clone(), code.clone()));
+            (self.code_meta.macro_expansions)
+                .insert(full_span, (mac_name.clone(), code.clone(), None));
             self.suppress_diagnostics(|comp| {
                 comp.macro_scope((*mac.names).clone(), None, |comp| {
                     comp.quote(&code, mac_name, &modifier_span)
@@ -2087,7 +2092,7 @@ impl Compiler {
         operands: Vec<Sp<Word>>,
         subscript: Option<i32>,
         mut span: CodeSpan,
-    ) -> UiuaResult {
+    ) -> UiuaResult<CodeSpan> {
         if let Some(last) = operands.last() {
             span.merge_with(last.span.clone());
         }
@@ -2095,8 +2100,8 @@ impl Compiler {
         self.replace_placeholders(macro_words, &operands, subscript)?;
         // Format and store the expansion for the LSP
         let formatted = format_words(&*macro_words, &self.asm.inputs);
-        (self.code_meta.macro_expansions).insert(span, (name, formatted));
-        Ok(())
+        (self.code_meta.macro_expansions).insert(span.clone(), (name, formatted, None));
+        Ok(span)
     }
     fn replace_placeholders(
         &self,

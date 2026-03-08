@@ -7,9 +7,9 @@ Functions can be given custom numeric subscript behavior by ending their name wi
 ```uiua
 # Experimental!
 Fₙ ← ∩ₙ¯
-[F₁1 2 3]
-[F₂1 2 3]
-[F₃1 2 3]
+[F₁ 1 2 3]
+[F₂ 1 2 3]
+[F₃ 1 2 3]
 ```
 
 ```uiua

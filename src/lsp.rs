@@ -170,7 +170,7 @@ pub struct CodeMeta {
     /// Spans of functions and their signatures and whether they are explicit
     pub function_sigs: SigDecls,
     /// A map of macro invocations to their expansions
-    pub macro_expansions: HashMap<CodeSpan, (Option<Ident>, String)>,
+    pub macro_expansions: HashMap<CodeSpan, (Option<Ident>, String, Option<Signature>)>,
     /// A map of inline macro functions to their number of arguments
     pub inline_macros: HashMap<CodeSpan, usize>,
     /// A map of top-level binding names to their indices
@@ -469,7 +469,17 @@ impl Spanner {
             .get(span)
             .and_then(|i| self.asm.bindings.get(*i))
         {
-            return Some(self.make_binding_docs(binding).into());
+            let mut docs = self.make_binding_docs(binding);
+            // Look in macro expansions
+            if let Some(&(_, _, Some(sig))) = self.code_meta.macro_expansions.get(span) {
+                docs.kind = BindingDocsKind::Function {
+                    sig,
+                    invertible: false,
+                    underable: false,
+                    pure: false,
+                }
+            }
+            return Some(docs.into());
         }
         // Look in constant references
         for name in &self.code_meta.constant_references {
@@ -532,6 +542,7 @@ impl Spanner {
                 BindingKind::Module(_) | BindingKind::Scope(_) => {
                     meta.comment = Some("module".into())
                 }
+                BindingKind::IndexMacro(0) => {}
                 BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
                     meta.comment = Some("macro".into())
                 }
@@ -1764,8 +1775,8 @@ mod server {
             }
 
             // Expand macro
-            for (span, (name, expanded)) in &doc.code_meta.macro_expansions {
-                if !span.contains_line_col(line, col) || span.src != path {
+            for (span, (name, expanded, _)) in &doc.code_meta.macro_expansions {
+                if expanded.is_empty() || !span.contains_line_col(line, col) || span.src != path {
                     continue;
                 }
                 actions.push(CodeActionOrCommand::CodeAction(CodeAction {

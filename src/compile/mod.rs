@@ -415,7 +415,7 @@ impl Compiler {
         let input: EcoString = fs::read_to_string(path)
             .map_err(|e| UiuaErrorKind::Load(path.into(), e.into()))?
             .into();
-        // _ = crate::lsp::Spans::from_input(&input);
+        _ = crate::lsp::Spans::from_input(&input);
         self.asm.inputs.files.insert(path.into(), input.clone());
         self.load_impl(&input, InputSrc::File(path.into()))
     }
@@ -1944,11 +1944,20 @@ impl Compiler {
                 local,
                 span.clone(),
             ) {
-                Ok(node) => return node,
+                Ok(node) => {
+                    self.code_meta.global_references.insert(span, local.index);
+                    return node;
+                }
                 Err(e) => self.errors.push(e),
             }
         }
-        let mut node = self.ident(name.into(), span);
+        let mut node = self.ident(name.into(), span.clone());
+        if let Ok(mut sig) = self.sig_of(&node, &span) {
+            sig.update_args(|a| a.saturating_sub(1));
+            self.code_meta
+                .macro_expansions
+                .insert(span, (None, name.into(), Some(sig)));
+        }
         node.prepend(Node::new_push(sub));
         node
     }

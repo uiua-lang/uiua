@@ -97,6 +97,12 @@ impl Compiler {
 
         // Handle macro
         let max_placeholder = max_placeholder(&binding.words);
+        if ident_margs > 0 && custom_subscript {
+            self.add_error(
+                span.clone(),
+                "Custom subscripts in macros are not supported",
+            );
+        }
         if binding.code_macro {
             if prelude.external {
                 self.add_error(span.clone(), "Macros cannot be external");

@@ -743,6 +743,14 @@ impl BindingKind {
             _ => false,
         }
     }
+    /// Check if the binding is a constant or function or macro
+    pub fn is_callable(&self) -> bool {
+        match self {
+            Self::Const(_) | Self::Func(_) | Self::IndexMacro(_) | Self::CodeMacro(_) => true,
+            Self::Module(m) => m.names.contains_key("Call") || m.names.contains_key("New"),
+            _ => false,
+        }
+    }
 }
 
 /// A comment that documents a binding

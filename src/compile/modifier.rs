@@ -1656,7 +1656,7 @@ impl Compiler {
                     }
                 }
             }
-            self.expand_index_macro(None, &mut words, operands, span.clone())?;
+            self.expand_index_macro(None, &mut words, operands, None, span.clone())?;
             // Compile
             let node = self.suppress_diagnostics(|comp| comp.words(words))?;
             // Add
@@ -1706,7 +1706,7 @@ impl Compiler {
         }
         let node = if let Some(mac) = self.asm.index_macros.get(&local.index).cloned() {
             // Index macros
-            self.index_macro(mac, operands, r.name, local, modifier_span)?
+            self.index_macro(mac, operands, None, r.name, local, modifier_span)?
         } else if let Some(mac) = self.asm.code_macros.get(&local.index).cloned() {
             // Code macros
             self.code_macro(Some(r.name.value), modifier_span, operands, mac)?
@@ -1840,10 +1840,11 @@ impl Compiler {
         node.push(Node::ImplPrim(args_prim, span));
         Ok(node)
     }
-    fn index_macro(
+    pub(crate) fn index_macro(
         &mut self,
         mut mac: IndexMacro,
         operands: Vec<Sp<Word>>,
+        subscript: Option<i32>,
         name: Sp<Ident>,
         local: LocalIndex,
         ref_span: CodeSpan,
@@ -1867,6 +1868,7 @@ impl Compiler {
                     Some(name.value.clone()),
                     &mut mac.words,
                     operands,
+                    subscript,
                     ref_span.clone(),
                 )?;
                 // Handle recursion
@@ -2083,17 +2085,25 @@ impl Compiler {
         name: Option<Ident>,
         macro_words: &mut Vec<Sp<Word>>,
         operands: Vec<Sp<Word>>,
-        span: CodeSpan,
+        subscript: Option<i32>,
+        mut span: CodeSpan,
     ) -> UiuaResult {
-        let span = span.merge(operands.last().unwrap().span.clone());
+        if let Some(last) = operands.last() {
+            span.merge_with(last.span.clone());
+        }
         let operands: Vec<Sp<Word>> = operands.into_iter().filter(|w| w.value.is_code()).collect();
-        self.replace_placeholders(macro_words, &operands)?;
+        self.replace_placeholders(macro_words, &operands, subscript)?;
         // Format and store the expansion for the LSP
         let formatted = format_words(&*macro_words, &self.asm.inputs);
         (self.code_meta.macro_expansions).insert(span, (name, formatted));
         Ok(())
     }
-    fn replace_placeholders(&self, words: &mut Vec<Sp<Word>>, initial: &[Sp<Word>]) -> UiuaResult {
+    fn replace_placeholders(
+        &self,
+        words: &mut Vec<Sp<Word>>,
+        initial: &[Sp<Word>],
+        subscript: Option<i32>,
+    ) -> UiuaResult {
         let mut error = None;
         recurse_words_mut(words, &mut |word| match &mut word.value {
             Word::Placeholder(n) => {
@@ -2109,6 +2119,32 @@ impl Compiler {
                             if initial.len() == 1 { "" } else { "s" }
                         ),
                     ))
+                }
+            }
+            Word::Subscripted(sub) => {
+                if let Some(NumericSubscript::N(n @ None)) = &mut sub.script.value.num {
+                    *n = subscript;
+                }
+            }
+            Word::Ref(r, _) if r.name.value.contains('ₙ') => {
+                if let Some(mut n) = subscript {
+                    let mut new_num = String::new();
+                    if n < 0 {
+                        new_num.push('₋');
+                    }
+                    n = n.abs();
+                    let pow = (n as f64).log10() as u32;
+                    for i in (0..=pow).rev() {
+                        new_num.push(SUBSCRIPT_DIGITS[(n / 10i32.pow(i)) as usize]);
+                        n /= 10;
+                    }
+                    r.name.value = (r.name.value.chars())
+                        .map(|c| match c {
+                            'ₙ' => new_num.clone(),
+                            c => c.to_string(),
+                        })
+                        .collect::<String>()
+                        .into();
                 }
             }
             _ => {}

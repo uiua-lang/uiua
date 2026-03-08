@@ -41,8 +41,8 @@ use crate::{
     function::DynamicFunction,
     lsp::{CodeMeta, Completion, ImportSrc, SetInverses, SigDecl},
     parse::{
-        flip_unsplit_items, flip_unsplit_lines, ident_modifier_args, max_placeholder, parse,
-        split_items, split_words,
+        flip_unsplit_items, flip_unsplit_lines, has_subn, ident_modifier_args, max_placeholder,
+        parse, split_items, split_words,
     },
 };
 pub(crate) use modifier::*;
@@ -161,18 +161,18 @@ impl LocalNames {
             .find(|local| asm.bindings[local.index].kind.is_module())
             .copied()
     }
-    pub fn get_only_function(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
+    pub fn get_only_callable(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
         let locals = self.0.get(name)?;
         (locals.iter().rev())
-            .find(|local| asm.bindings[local.index].kind.has_sig())
+            .find(|local| asm.bindings[local.index].kind.is_callable())
             .copied()
     }
     pub fn get_prefer_module(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
         self.get_only_module(name, asm)
             .or_else(|| self.get_last(name))
     }
-    pub fn get_prefer_function(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
-        self.get_only_function(name, asm)
+    pub fn get_prefer_callable(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
+        self.get_only_callable(name, asm)
             .or_else(|| self.get_last(name))
     }
     pub fn get_last(&self, name: &str) -> Option<LocalIndex> {
@@ -1596,7 +1596,7 @@ impl Compiler {
     fn ref_local(&self, r: &Ref) -> UiuaResult<Option<(Vec<LocalIndex>, LocalIndex)>> {
         if let Some((names, path_locals)) = self.ref_path(&r.path)? {
             if let Some(local) = names
-                .get_prefer_function(&r.name.value, &self.asm)
+                .get_prefer_callable(&r.name.value, &self.asm)
                 .or_else(|| {
                     (r.name.value.strip_suffix('!')).and_then(|name| {
                         names.get_prefer_module(name, &self.asm).filter(|local| {
@@ -1619,7 +1619,7 @@ impl Compiler {
                     format!("Item `{}` not found", r.name.value),
                 ))
             }
-        } else if let Some(local) = self.find_name_function(&r.name.value, &r.name.span) {
+        } else if let Some(local) = self.find_name_callable(&r.name.value, &r.name.span) {
             Ok(Some((Vec::new(), local)))
         } else if r.path.is_empty() && CONSTANTS.iter().any(|def| def.name == r.name.value) {
             Ok(None)
@@ -1633,7 +1633,7 @@ impl Compiler {
     fn find_name_module(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
         self.find_name_impl(name, span, true, false)
     }
-    fn find_name_function(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
+    fn find_name_callable(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
         self.find_name_impl(name, span, false, false)
     }
     fn find_name_impl(
@@ -1666,7 +1666,7 @@ impl Compiler {
                 let local = if only_modules {
                     scope.names.get_only_module(name, &self.asm)
                 } else {
-                    scope.names.get_prefer_function(name, &self.asm)
+                    scope.names.get_prefer_callable(name, &self.asm)
                 };
                 if let Some(local) = local {
                     return Some(local);
@@ -1867,7 +1867,7 @@ impl Compiler {
             } else {
                 Node::empty()
             }
-        } else if let Some(local) = self.find_name_function(&ident, &span) {
+        } else if let Some(local) = self.find_name_callable(&ident, &span) {
             // Name exists in scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
@@ -1903,26 +1903,54 @@ impl Compiler {
             .map(|(b, _)| b)
             .or_else(|| ident.strip_suffix(SUBSCRIPT_DIGITS))
         {
-            let mut node = self.ident(base.into(), span.clone());
-            let mut n = 0i64;
+            // Name has a subscript
+            let mut n = 0i32;
             for c in ident[base.len()..].chars() {
                 if c != '₋' {
                     n *= 10
                 }
-                n += SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i64;
+                n += SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32;
             }
             if ident[base.len()..].starts_with('₋') {
                 if &ident[base.len()..] == "₋" {
-                    self.add_error(span, "Subscript is incomplete");
+                    self.add_error(span.clone(), "Subscript is incomplete");
                 }
                 n = -n;
             }
-            node.prepend(Node::new_push(n));
-            node
+            self.sub_name(base, n, span)
+        } else if ident.contains('ₙ') {
+            self.add_error(
+                span,
+                format!(
+                    "ₙ is not valid outside a custom subscript function, \
+                    and `{ident}` is not defined as a normal function"
+                ),
+            );
+            Node::new_push(Value::default())
         } else {
             self.add_error(span, format!("Unknown identifier `{ident}`"));
             Node::new_push(Value::default())
         }
+    }
+    fn sub_name(&mut self, name: &str, sub: i32, span: CodeSpan) -> Node {
+        if let Some(local) = self.find_name_callable(name, &span)
+            && let Some(index_macro) = self.asm.index_macros.get(&local.index).cloned()
+        {
+            match self.index_macro(
+                index_macro,
+                Vec::new(),
+                Some(sub),
+                span.clone().sp(name.into()),
+                local,
+                span.clone(),
+            ) {
+                Ok(node) => return node,
+                Err(e) => self.errors.push(e),
+            }
+        }
+        let mut node = self.ident(name.into(), span);
+        node.prepend(Node::new_push(sub));
+        node
     }
     fn scope_file_path(&self) -> Option<&Path> {
         for scope in self.scopes() {
@@ -2705,6 +2733,18 @@ impl Compiler {
             format!(
                 "{} is experimental. Add `# Experimental!` \
                 to the top of the file to use it.",
+                thing()
+            )
+        })
+    }
+    fn experimental_error_them<S>(&mut self, span: &CodeSpan, thing: impl FnOnce() -> S)
+    where
+        S: fmt::Display,
+    {
+        self.experimental_error(span, || {
+            format!(
+                "{} are experimental. Add `# Experimental!` \
+                to the top of the file to use them.",
                 thing()
             )
         })

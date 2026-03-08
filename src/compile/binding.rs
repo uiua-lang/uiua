@@ -35,12 +35,23 @@ impl Compiler {
             external: prelude.external,
         };
 
-        let name = binding.name.value;
+        let subn_in_body = has_subn(&binding.words);
+        let (name, custom_subscript) = if subn_in_body && binding.name.value.contains('ₙ') {
+            let name = binding.name.value.chars().filter(|&c| c != 'ₙ').collect();
+            (name, true)
+        } else {
+            (binding.name.value, false)
+        };
         self.validate_binding_name(&name, &binding.name.span);
+
+        if custom_subscript {
+            self.experimental_error_them(&binding.name.span, || "Custom subscript functions")
+        }
 
         // Alias re-bound imports
         let ident_margs = ident_modifier_args(&name);
         if ident_margs == 0
+            && !subn_in_body
             && meta.comment.is_none()
             && !prelude.track_caller
             && binding.words.iter().filter(|w| w.value.is_code()).count() == 1
@@ -210,7 +221,7 @@ impl Compiler {
                 }
             }
         }
-        if max_placeholder.is_some() || ident_margs > 0 {
+        if max_placeholder.is_some() || ident_margs > 0 || custom_subscript {
             if prelude.external {
                 self.add_error(span.clone(), "Macros cannot be external");
             }
@@ -225,7 +236,14 @@ impl Compiler {
             let words = binding.words.clone();
             let mut recursive = false;
             let mut locals = EcoVec::new();
-            self.analyze_macro_body(&name, &words, false, &mut recursive, &mut locals);
+            self.analyze_macro_body(
+                &name,
+                &words,
+                false,
+                custom_subscript,
+                &mut recursive,
+                &mut locals,
+            );
             if recursive {
                 self.experimental_error(span, || {
                     "Recursive index macros are experimental. \
@@ -554,6 +572,7 @@ impl Compiler {
         mac_name: &str,
         words: &[Sp<Word>],
         mut code_macro: bool,
+        subn: bool,
         recursive: &mut bool,
         mod_locals: &mut EcoVec<(CodeSpan, usize)>,
     ) {
@@ -563,15 +582,24 @@ impl Compiler {
             let mut name_local = None;
             match &word.value {
                 Word::Strand(items) => {
-                    self.analyze_macro_body(mac_name, items, code_macro, recursive, loc)
+                    self.analyze_macro_body(mac_name, items, code_macro, subn, recursive, loc)
                 }
                 Word::Array(arr) => {
-                    if self.analyze_macro_items(mac_name, &arr.lines, code_macro, recursive, loc) {
+                    if self
+                        .analyze_macro_items(mac_name, &arr.lines, code_macro, subn, recursive, loc)
+                    {
                         return;
                     }
                 }
                 Word::Func(func) => {
-                    if self.analyze_macro_items(mac_name, &func.lines, code_macro, recursive, loc) {
+                    if self.analyze_macro_items(
+                        mac_name,
+                        &func.lines,
+                        code_macro,
+                        subn,
+                        recursive,
+                        loc,
+                    ) {
                         return;
                     }
                 }
@@ -581,6 +609,7 @@ impl Compiler {
                             mac_name,
                             &branch.value.lines,
                             code_macro,
+                            subn,
                             recursive,
                             loc,
                         ) {
@@ -588,6 +617,7 @@ impl Compiler {
                         }
                     }
                 }
+                Word::Ref(r, _) if r.name.value.contains('ₙ') && subn => {}
                 Word::Ref(r, chained) if chained.is_empty() => match self.ref_local(r) {
                     Ok(Some((pl, l))) => {
                         path_locals = Some((&r.path, pl));
@@ -602,7 +632,9 @@ impl Compiler {
                         .chain_refs(chained.iter().cloned())
                         .map(|r| r.span().sp(Word::Ref(r, Vec::new())))
                         .collect();
-                    self.analyze_macro_body(mac_name, &words, code_macro, recursive, mod_locals);
+                    self.analyze_macro_body(
+                        mac_name, &words, code_macro, subn, recursive, mod_locals,
+                    );
                 }
                 Word::IncompleteRef(path) => match self.ref_path(path) {
                     Ok(Some((_, pl))) => path_locals = Some((path, pl)),
@@ -633,6 +665,7 @@ impl Compiler {
                                     mac_name,
                                     &m.operands,
                                     false,
+                                    subn,
                                     recursive,
                                     loc,
                                 );
@@ -647,6 +680,7 @@ impl Compiler {
                                 mac_name,
                                 &m.operands,
                                 code_macro,
+                                subn,
                                 recursive,
                                 loc,
                             );
@@ -655,13 +689,21 @@ impl Compiler {
                             }
                         }
                     } else {
-                        self.analyze_macro_body(mac_name, &m.operands, code_macro, recursive, loc)
+                        self.analyze_macro_body(
+                            mac_name,
+                            &m.operands,
+                            code_macro,
+                            subn,
+                            recursive,
+                            loc,
+                        )
                     }
                 }
                 Word::Subscripted(sub) => self.analyze_macro_body(
                     mac_name,
                     slice::from_ref(&sub.word),
                     code_macro,
+                    subn,
                     recursive,
                     loc,
                 ),
@@ -691,13 +733,14 @@ impl Compiler {
         macro_name: &str,
         items: &[Item],
         code_macro: bool,
+        subn: bool,
         recursive: &mut bool,
         locals: &mut EcoVec<(CodeSpan, usize)>,
     ) -> bool {
         for item in items {
             match item {
                 Item::Words(words) => {
-                    self.analyze_macro_body(macro_name, words, code_macro, recursive, locals)
+                    self.analyze_macro_body(macro_name, words, code_macro, subn, recursive, locals)
                 }
                 item => {
                     self.add_error(

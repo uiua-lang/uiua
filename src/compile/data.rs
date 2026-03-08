@@ -546,7 +546,7 @@ impl Compiler {
         // Add Variants binding
         if !self.scope.data_variants.is_empty()
             && !(self.scope.names)
-                .get_prefer_function("Variants", &self.asm)
+                .get_prefer_callable("Variants", &self.asm)
                 .is_some_and(|ln| ln.public)
         {
             let index = self.next_global;

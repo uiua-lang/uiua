@@ -12,8 +12,8 @@ use std::{
 use ecow::EcoString;
 
 use crate::{
-    BindingCounts, Complex, Diagnostic, DiagnosticKind, Ident, Inputs, NumComponent, Primitive,
-    Signature,
+    BindingCounts, Complex, Diagnostic, DiagnosticKind, Ident, Inputs, NumComponent,
+    NumericSubscript, Primitive, Signature,
     ast::*,
     lex::{AsciiToken::*, Token::*, *},
 };
@@ -2094,6 +2094,46 @@ pub fn max_placeholder(words: &[Sp<Word>]) -> Option<(usize, Option<CodeSpan>)> 
         }
     }
     max.map(|i| (i, shorthand_span))
+}
+
+pub fn has_subn(words: &[Sp<Word>]) -> bool {
+    for word in words {
+        match &word.value {
+            Word::Ref(r, _) if r.name.value.contains('ₙ') => return true,
+            Word::Strand(items) if has_subn(items) => return true,
+            Word::Array(arr) => {
+                for line in arr.word_lines() {
+                    if has_subn(line) {
+                        return true;
+                    }
+                }
+            }
+            Word::Func(func) => {
+                for line in func.word_lines() {
+                    if has_subn(line) {
+                        return true;
+                    }
+                }
+            }
+            Word::Modified(m) if has_subn(&m.operands) => return true,
+            Word::Pack(pack) => {
+                for branch in &pack.branches {
+                    for line in branch.value.word_lines() {
+                        if has_subn(line) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            Word::Subscripted(s) => {
+                if let Some(NumericSubscript::N(None)) = s.script.value.num {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
 }
 
 /// Trim space words

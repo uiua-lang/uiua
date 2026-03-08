@@ -188,7 +188,7 @@ impl Compiler {
                     span.clone(),
                     format!(
                         "`{name}`'s name suggests it is a macro, \
-                        but it has no placeholders"
+                        but it has no numeric placeholders"
                     ),
                 );
             }

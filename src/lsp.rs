@@ -40,6 +40,7 @@ pub enum SpanKind {
     Signature,
     Whitespace,
     Placeholder(Option<usize>),
+    PlaceholderN,
     Delimiter,
     LexOrder,
     FuncDelim(Signature, SetInverses),
@@ -732,6 +733,7 @@ impl Spanner {
                 Word::Placeholder(op) => {
                     spans.push(word.span.clone().sp(SpanKind::Placeholder(*op)))
                 }
+                Word::PlaceholderN => spans.push(word.span.clone().sp(SpanKind::PlaceholderN)),
                 #[allow(clippy::match_single_binding)]
                 Word::Subscripted(sub) => {
                     let n = Some(sub.script.value.clone());

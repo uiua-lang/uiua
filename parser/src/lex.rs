@@ -617,6 +617,7 @@ pub enum Token {
     Simple(AsciiToken),
     Glyph(Primitive),
     Placeholder(Option<usize>),
+    PlaceholderN,
     Subscr(SubscriptToken),
     LeftArrow,
     LeftStrokeArrow,
@@ -750,6 +751,7 @@ impl fmt::Display for Token {
             Token::CloseModule => write!(f, "└─╴"),
             Token::Placeholder(Some(i)) => write!(f, "^{i}"),
             Token::Placeholder(None) => write!(f, "^"),
+            Token::PlaceholderN => write!(f, "^n"),
         }
     }
 }
@@ -1097,7 +1099,11 @@ impl<'a> Lexer<'a> {
                 "*" => self.end(Star, start),
                 "%" => self.end(Percent, start),
                 "^" => {
-                    if let Some(x) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_digit())) {
+                    if self.next_char_exact("n") {
+                        self.end(PlaceholderN, start)
+                    } else if let Some(x) =
+                        self.next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
+                    {
                         self.end(Placeholder(Some(x.parse().unwrap())), start)
                     } else {
                         self.end(Placeholder(None), start)

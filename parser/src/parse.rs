@@ -1259,6 +1259,8 @@ impl Parser<'_> {
             s.map(Into::into).map(Word::String)
         } else if let Some(op) = self.next_token_map(Token::as_placeholder) {
             op.map(Word::Placeholder)
+        } else if let Some(span) = self.exact(PlaceholderN) {
+            span.sp(Word::PlaceholderN)
         } else if let Some(label) = self.next_token_map(Token::as_label) {
             if let Some(sub) = self.next_token_map(Token::as_subscript) {
                 (label.span.merge(sub.span))
@@ -2099,36 +2101,23 @@ pub fn max_placeholder(words: &[Sp<Word>]) -> Option<(usize, Option<CodeSpan>)> 
 pub fn has_subn(words: &[Sp<Word>]) -> bool {
     for word in words {
         match &word.value {
+            Word::PlaceholderN => return true,
             Word::Ref(r, _) if r.name.value.contains('ₙ') => return true,
             Word::Strand(items) if has_subn(items) => return true,
-            Word::Array(arr) => {
-                for line in arr.word_lines() {
-                    if has_subn(line) {
-                        return true;
-                    }
-                }
-            }
-            Word::Func(func) => {
-                for line in func.word_lines() {
-                    if has_subn(line) {
-                        return true;
-                    }
-                }
-            }
+            Word::Array(arr) if arr.word_lines().any(has_subn) => return true,
+            Word::Func(func) if func.word_lines().any(has_subn) => return true,
             Word::Modified(m) if has_subn(&m.operands) => return true,
-            Word::Pack(pack) => {
-                for branch in &pack.branches {
-                    for line in branch.value.word_lines() {
-                        if has_subn(line) {
-                            return true;
-                        }
-                    }
-                }
+            Word::Pack(pack)
+                if (pack.branches.iter())
+                    .flat_map(|b| b.value.word_lines())
+                    .any(has_subn) =>
+            {
+                return true;
             }
-            Word::Subscripted(s) => {
-                if let Some(NumericSubscript::N(None)) = s.script.value.num {
-                    return true;
-                }
+            Word::Subscripted(s)
+                if matches!(s.script.value.num, Some(NumericSubscript::N(None))) =>
+            {
+                return true;
             }
             _ => {}
         }

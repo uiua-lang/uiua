@@ -1454,7 +1454,7 @@ impl Compiler {
             }
             Word::Primitive(p) => self.primitive(p, word.span),
             Word::Modified(m) => self.modified(*m, None)?,
-            Word::Placeholder(_) => {
+            Word::Placeholder(_) | Word::PlaceholderN => {
                 // We could error here, but it's easier to handle it higher up
                 Node::empty()
             }
@@ -1905,7 +1905,7 @@ impl Compiler {
         {
             // Name has a subscript
             let mut n = 0i32;
-            for c in ident[base.len()..].chars() {
+            for c in (ident[base.len()..].chars()).skip(ident.contains('₋') as usize) {
                 if c != '₋' {
                     n *= 10
                 }

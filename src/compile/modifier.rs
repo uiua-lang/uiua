@@ -2121,6 +2121,12 @@ impl Compiler {
                     ))
                 }
             }
+            Word::PlaceholderN => {
+                if let Some(i) = subscript {
+                    word.value =
+                        Word::Number(NumWord::Real(i.into()), i.to_string().replace('-', "¯"));
+                }
+            }
             Word::Subscripted(sub) => {
                 if let Some(NumericSubscript::N(n @ None)) = &mut sub.script.value.num {
                     *n = subscript;

@@ -566,7 +566,7 @@ impl Parser<'_> {
                     chars.extend(Primitive::non_deprecated().filter_map(|p| p.glyph()));
                     chars.extend(' '..='~');
                     chars.extend(SUBSCRIPT_DIGITS);
-                    chars.extend("←↚‼′″‴₋⌞⌟↓".chars());
+                    chars.extend("←↚‼′″‴₋⌞⌟ₙ↓".chars());
                     chars.sort_unstable();
                     chars
                 };

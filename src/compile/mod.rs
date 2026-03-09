@@ -1953,7 +1953,7 @@ impl Compiler {
         }
         let mut node = self.ident(name.into(), span.clone());
         if let Ok(mut sig) = self.sig_of(&node, &span) {
-            sig.update_args(|a| a.saturating_sub(1));
+            sig = sig.compose(Signature::new(0, 1));
             self.code_meta
                 .macro_expansions
                 .insert(span, (None, name.into(), Some(sig)));

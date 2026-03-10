@@ -208,7 +208,7 @@ primitive!(
     /// ex: ⊸¯ 4
     /// ex: ⊸+ 2 5
     /// [by] expresses the common pattern of performing an operation but preserving the last argument so that it can be used again.
-    /// With [by], the filtering function above can be written more simply.
+    /// For example [by] can be used with [keep] to do simple filtering.
     /// ex: F ← ▽⊸<
     ///   : F 10 [1 27 8 3 14 9]
     /// Here are some more examples of [by] in action.

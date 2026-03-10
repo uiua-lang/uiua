@@ -329,12 +329,25 @@ pub fn table_list(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
         (Some((Primitive::Ne, _)), Value::Box(xs), Value::Box(ys)) => {
             env.push(fast_table_list(xs, ys, is_ne::generic, env)?)
         }
-        (Some((Primitive::Join | Primitive::Couple, flipped)), Value::Box(xs), ys) => env.push(
-            fast_table_list_join_or_couple(xs, ys.coerce_to_boxes(), flipped, env)?,
-        ),
-        (Some((Primitive::Join | Primitive::Couple, flipped)), xs, Value::Box(ys)) => env.push(
-            fast_table_list_join_or_couple(xs.coerce_to_boxes(), ys, flipped, env)?,
-        ),
+        (Some((Primitive::Join | Primitive::Couple, flipped)), Value::Box(xs), Value::Box(ys)) => {
+            if xs.rank() <= 1 && ys.rank() <= 1 {
+                env.push(fast_table_list_join_or_couple(xs, ys, flipped, env)?)
+            } else {
+                generic_table(f, xs.into(), ys.into(), env)?
+            }
+        }
+        (Some((Primitive::Join | Primitive::Couple, flipped)), Value::Box(xs), ys)
+            if xs.rank() <= 1 =>
+        {
+            let ys = ys.coerce_to_boxes();
+            env.push(fast_table_list_join_or_couple(xs, ys, flipped, env)?)
+        }
+        (Some((Primitive::Join | Primitive::Couple, flipped)), xs, Value::Box(ys))
+            if ys.rank() <= 1 =>
+        {
+            let xs = xs.coerce_to_boxes();
+            env.push(fast_table_list_join_or_couple(xs, ys, flipped, env)?)
+        }
         (
             Some((Primitive::Join | Primitive::Couple, flipped)),
             Value::Char(xs),

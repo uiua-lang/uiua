@@ -1878,14 +1878,17 @@ impl Compiler {
                 // a macro with the same index.
                 let expansion_index = mac.recursive.then(|| {
                     let expansion_index = self.next_global;
-                    let count = ident_modifier_args(&name.value);
+                    let args = ident_modifier_args(&name.value);
                     // Add temporary binding
                     self.asm.add_binding_at(
                         LocalIndex {
                             index: expansion_index,
                             public: false,
                         },
-                        BindingKind::IndexMacro(count),
+                        BindingKind::IndexMacro {
+                            args,
+                            subscript: false,
+                        },
                         Some(ref_span.clone()),
                         BindingMeta::default(),
                     );

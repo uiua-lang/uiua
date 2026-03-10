@@ -1733,7 +1733,19 @@ impl Compiler {
                     format!("`{}` is a constant, not a module", first.module.value),
                 ));
             }
-            BindingKind::IndexMacro(_) => {
+            BindingKind::IndexMacro {
+                args: 0,
+                subscript: true,
+            } => {
+                return Err(self.error(
+                    first.module.span.clone(),
+                    format!(
+                        "`{}` is a custom subscript function, not a module",
+                        first.module.value
+                    ),
+                ));
+            }
+            BindingKind::IndexMacro { .. } => {
                 return Err(self.error(
                     first.module.span.clone(),
                     format!("`{}` is an index macro, not a module", first.module.value),
@@ -1773,7 +1785,19 @@ impl Compiler {
                         format!("`{}` is a constant, not a module", comp.module.value),
                     ));
                 }
-                BindingKind::IndexMacro(_) => {
+                BindingKind::IndexMacro {
+                    args: 0,
+                    subscript: true,
+                } => {
+                    return Err(self.error(
+                        first.module.span.clone(),
+                        format!(
+                            "`{}` is a custom subscript function, not a module",
+                            first.module.value
+                        ),
+                    ));
+                }
+                BindingKind::IndexMacro { .. } => {
                     return Err(self.error(
                         comp.module.span.clone(),
                         format!("`{}` is an index macro, not a module", comp.module.value),
@@ -1853,6 +1877,19 @@ impl Compiler {
             // Name exists in binding scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
+            if let BindingKind::IndexMacro { args, subscript } = self.asm.bindings[local.index].kind
+            {
+                if args > 0 {
+                    self.add_error(
+                        span.clone(),
+                        "Attempted to call macro without arguments. \
+                        This is a bug in the compiler.",
+                    );
+                }
+                if subscript {
+                    self.add_error(span.clone(), format!("`{ident}` requires a subscript"));
+                }
+            }
             self.global_index(local.index, span)
         } else if let Some(i) = (self.current_bindings.iter()).position(|curr| curr.name == ident) {
             // Name is a recursive call
@@ -1999,7 +2036,7 @@ impl Compiler {
                     Node::empty()
                 }
             }
-            BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
+            BindingKind::IndexMacro { .. } | BindingKind::CodeMacro(_) => {
                 // We could error here, but it's easier to handle it higher up
                 Node::empty()
             }

@@ -543,7 +543,7 @@ impl Uiua {
                         "Called module global. \
                         This is a bug in the interpreter.",
                     )),
-                    BindingKind::IndexMacro(_) => Err(self.error(
+                    BindingKind::IndexMacro { .. } => Err(self.error(
                         "Called index macro global. \
                         This is a bug in the interpreter.",
                     )),

@@ -698,13 +698,25 @@ pub enum BindingKind {
     /// A scope being compiled
     Scope(usize),
     /// An index macro
-    ///
-    /// Contains the number of arguments
-    IndexMacro(usize),
+    IndexMacro {
+        /// The number of function arguments the index macro takes
+        #[serde(default = "one", skip_serializing_if = "is_one")]
+        args: usize,
+        /// Whether the macro is a custom subscript
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        subscript: bool,
+    },
     /// A code macro
     CodeMacro(Node),
     /// An error
     Error,
+}
+
+fn one() -> usize {
+    1
+}
+fn is_one(n: &usize) -> bool {
+    *n == 1
 }
 
 impl BindingKind {
@@ -715,7 +727,7 @@ impl BindingKind {
             Self::Func(func) => Some(func.sig),
             Self::Module(_) => None,
             Self::Scope(_) => None,
-            Self::IndexMacro(_) => None,
+            Self::IndexMacro { .. } => None,
             Self::CodeMacro(_) => None,
             Self::Error => None,
         }
@@ -746,7 +758,7 @@ impl BindingKind {
     /// Check if the binding is a constant or function or macro
     pub fn is_callable(&self) -> bool {
         match self {
-            Self::Const(_) | Self::Func(_) | Self::IndexMacro(_) | Self::CodeMacro(_) => true,
+            Self::Const(_) | Self::Func(_) | Self::IndexMacro { .. } | Self::CodeMacro(_) => true,
             Self::Module(m) => m.names.contains_key("Call") || m.names.contains_key("New"),
             _ => false,
         }

@@ -542,8 +542,12 @@ impl Spanner {
                 BindingKind::Module(_) | BindingKind::Scope(_) => {
                     meta.comment = Some("module".into())
                 }
-                BindingKind::IndexMacro(0) => {}
-                BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
+                BindingKind::IndexMacro {
+                    args: 0,
+                    subscript: true,
+                } => meta.comment = Some("custom subscript function".into()),
+                BindingKind::IndexMacro { args: 0, .. } => {}
+                BindingKind::IndexMacro { .. } | BindingKind::CodeMacro(_) => {
                     meta.comment = Some("macro".into())
                 }
                 BindingKind::Func(_) => {}
@@ -561,7 +565,7 @@ impl Spanner {
                     .is_ok(),
                 pure: !meta.external && self.asm[f].is_pure(&self.asm),
             },
-            BindingKind::IndexMacro(args) => BindingDocsKind::Modifier(*args),
+            BindingKind::IndexMacro { args, .. } => BindingDocsKind::Modifier(*args),
             BindingKind::CodeMacro(_) => {
                 BindingDocsKind::Modifier(binfo.span.as_str(self.inputs(), ident_modifier_args))
             }
@@ -1310,7 +1314,7 @@ mod server {
                     }
                     BindingKind::Const(_) => CompletionItemKind::CONSTANT,
                     BindingKind::Func(_) => CompletionItemKind::FUNCTION,
-                    BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
+                    BindingKind::IndexMacro { .. } | BindingKind::CodeMacro(_) => {
                         CompletionItemKind::FUNCTION
                     }
                     BindingKind::Module(_) | BindingKind::Scope(_) => CompletionItemKind::MODULE,

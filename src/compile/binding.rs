@@ -235,7 +235,10 @@ impl Compiler {
             self.scope.names.insert(name.clone(), local);
             self.asm.add_binding_at(
                 local,
-                BindingKind::IndexMacro(ident_margs),
+                BindingKind::IndexMacro {
+                    args: ident_margs,
+                    subscript: custom_subscript,
+                },
                 Some(span.clone()),
                 meta,
             );

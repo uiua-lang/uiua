@@ -1,6 +1,7 @@
 # Uiua Todo
 
 # 0.19
+- Fix `table` on boxes bug
 - Optimize `rows match`
 - Case packs for pattern matching?
 - Improve GA API

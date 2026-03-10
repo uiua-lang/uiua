@@ -1433,8 +1433,9 @@ impl<'a> Lexer<'a> {
             };
         }
 
+        // println!("tokens:");
         // for tok in &self.tokens {
-        //     println!("{}", tok.value);
+        //     println!("  {}", tok.value);
         // }
 
         (self.tokens, self.errors)

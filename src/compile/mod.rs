@@ -1898,26 +1898,26 @@ impl Compiler {
                     Value::default()
                 });
             Node::Push(value)
-        } else if let Some(base) = ident
-            .split_once('₋')
-            .map(|(b, _)| b)
-            .or_else(|| ident.strip_suffix(SUBSCRIPT_DIGITS))
+        } else if let Some(i) = ident
+            .find('₋')
+            .or_else(|| ident.find(SUBSCRIPT_DIGITS))
+            .filter(|&i| !ident[i..].contains(['⌞', '⌟']))
         {
             // Name has a subscript
             let mut n = 0i32;
-            for c in (ident[base.len()..].chars()).skip(ident.contains('₋') as usize) {
+            for c in (ident[i..].chars()).skip(ident.contains('₋') as usize) {
                 if c != '₋' {
                     n *= 10
                 }
                 n += SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32;
             }
-            if ident[base.len()..].starts_with('₋') {
-                if &ident[base.len()..] == "₋" {
+            if ident[i..].starts_with('₋') {
+                if &ident[i..] == "₋" {
                     self.add_error(span.clone(), "Subscript is incomplete");
                 }
                 n = -n;
             }
-            self.sub_name(base, n, span)
+            self.sub_name(&ident[..i], n, span)
         } else if ident.contains('ₙ') {
             self.add_error(
                 span,

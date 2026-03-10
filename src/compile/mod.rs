@@ -1591,21 +1591,32 @@ impl Compiler {
             }
         }
     }
-    /// Find the [`LocalName`]s of both the name and all parts of the path of a [`Ref`]
+    /// Find the [`LocalIndex`]es of both the name and all parts of the path of a [`Ref`]
     ///
     /// Returns [`None`] if the reference is to a constant
     fn ref_local(&self, r: &Ref) -> UiuaResult<Option<(Vec<LocalIndex>, LocalIndex)>> {
+        self.ref_local_impl(r, false)
+    }
+    fn ref_local_impl(
+        &self,
+        r: &Ref,
+        prefer_module: bool,
+    ) -> UiuaResult<Option<(Vec<LocalIndex>, LocalIndex)>> {
         if let Some((names, path_locals)) = self.ref_path(&r.path)? {
-            if let Some(local) = names
-                .get_prefer_callable(&r.name.value, &self.asm)
-                .or_else(|| {
-                    (r.name.value.strip_suffix('!')).and_then(|name| {
-                        names.get_prefer_module(name, &self.asm).filter(|local| {
-                            matches!(&self.asm.bindings[local.index].kind, BindingKind::Module(_))
-                        })
+            let callable = || names.get_prefer_callable(&r.name.value, &self.asm);
+            let module = || {
+                r.name.value.strip_suffix('!').and_then(|name| {
+                    names.get_prefer_module(name, &self.asm).filter(|local| {
+                        matches!(&self.asm.bindings[local.index].kind, BindingKind::Module(_))
                     })
                 })
-            {
+            };
+            let local = if prefer_module {
+                module().or_else(callable)
+            } else {
+                callable().or_else(module)
+            };
+            if let Some(local) = local {
                 if local.public {
                     Ok(Some((path_locals, local)))
                 } else {

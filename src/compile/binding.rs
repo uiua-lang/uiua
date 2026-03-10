@@ -49,10 +49,10 @@ impl Compiler {
         }
 
         // Alias re-bound imports
+        let span = &binding.name.span;
         let ident_margs = ident_modifier_args(&name);
         if ident_margs == 0
             && !subn_in_body
-            && meta.comment.is_none()
             && !prelude.track_caller
             && binding.words.iter().filter(|w| w.value.is_code()).count() == 1
             && let Some(r) = binding.words.iter().find_map(|w| match &w.value {
@@ -80,13 +80,32 @@ impl Compiler {
                         .insert(comp.module.span.clone(), local.index);
                 }
                 (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
-                let local = LocalIndex { public, ..local };
+                let local = if let Some(comment) = meta.comment {
+                    // If a comment is present on the new binding, we must copy the old one
+                    let kind = self.asm.bindings[local.index].kind.clone();
+                    let old_meta = self.asm.bindings[local.index].meta.clone();
+                    let meta = BindingMeta {
+                        comment: Some(comment),
+                        counts: old_meta.counts.or(meta.counts),
+                        deprecation: meta.deprecation.or(old_meta.deprecation),
+                        external: old_meta.external || meta.external,
+                    };
+                    let local = LocalIndex {
+                        public,
+                        index: self.next_global,
+                    };
+                    self.next_global += 1;
+                    self.asm
+                        .add_binding_at(local, kind, Some(span.clone()), meta);
+                    local
+                } else {
+                    // If there is no comment, it's a simple name insertion
+                    LocalIndex { public, ..local }
+                };
                 self.scope.names.insert(name, local);
                 return Ok(());
             }
         }
-
-        let span = &binding.name.span;
 
         let spandex = self.add_span(span.clone());
         let local = LocalIndex {

@@ -73,6 +73,14 @@ Foo ← ⇡
 ⍤⤙≍ [0 1 2] Foo 3
 ⍤⤙≍ 4 Foo~X
 
+# Rebinding
+┌─╴A
+  F ← +1
+└─╴
+# Rebound
+B ← A
+⍤⤙≍ 6 B~F 5
+
 # Experimental!
 
 ┌─╴F ~ D‼ M!

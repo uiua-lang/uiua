@@ -1822,6 +1822,12 @@ impl SysBackend for FormatterBackend {
     fn print_str_stderr(&self, _: &str) -> Result<(), String> {
         Ok(())
     }
+    fn print_bytes_stdout(&self, _: &[u8]) -> Result<(), String> {
+        Ok(())
+    }
+    fn print_bytes_stderr(&self, _: &[u8]) -> Result<(), String> {
+        Ok(())
+    }
     fn print_str_trace(&self, _: &str) {}
     fn show(&self, _: Value) -> Result<(), String> {
         Ok(())

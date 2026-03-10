@@ -213,9 +213,17 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
         Err("Printing to stdout is not supported in this environment".into())
     }
+    /// Print raw bytes to stdout
+    fn print_bytes_stdout(&self, bytes: &[u8]) -> Result<(), String> {
+        self.print_str_stdout(&String::from_utf8_lossy(bytes))
+    }
     /// Print a string (without a newline) to stderr
     fn print_str_stderr(&self, s: &str) -> Result<(), String> {
         Err("Printing to stderr is not supported in this environment".into())
+    }
+    /// Print raw bytes to stderr
+    fn print_bytes_stderr(&self, bytes: &[u8]) -> Result<(), String> {
+        self.print_str_stderr(&String::from_utf8_lossy(bytes))
     }
     /// Print a string that was create by `trace`
     fn print_str_trace(&self, s: &str) {}
@@ -673,6 +681,14 @@ impl SysBackend for SafeSys {
         self.stderr.lock().extend_from_slice(s.as_bytes());
         Ok(())
     }
+    fn print_bytes_stdout(&self, bytes: &[u8]) -> Result<(), String> {
+        self.stdout.lock().extend_from_slice(bytes);
+        Ok(())
+    }
+    fn print_bytes_stderr(&self, bytes: &[u8]) -> Result<(), String> {
+        self.stderr.lock().extend_from_slice(bytes);
+        Ok(())
+    }
     fn allow_thread_spawning(&self) -> bool {
         self.allow_thread_spawning
     }
@@ -995,10 +1011,10 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             };
             match handle {
                 Handle::STDOUT => (env.rt.backend)
-                    .print_str_stdout(&String::from_utf8_lossy(&bytes))
+                    .print_bytes_stdout(&bytes)
                     .map_err(|e| env.error(e))?,
                 Handle::STDERR => (env.rt.backend)
-                    .print_str_stderr(&String::from_utf8_lossy(&bytes))
+                    .print_bytes_stderr(&bytes)
                     .map_err(|e| env.error(e))?,
                 Handle::STDIN => return Err(env.error("Cannot write to stdin")),
                 _ => (env.rt.backend.write(handle, &bytes)).map_err(|e| env.error(e))?,

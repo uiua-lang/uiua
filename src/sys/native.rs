@@ -353,6 +353,23 @@ impl SysBackend for NativeSys {
         stderr.write_all(s.as_bytes()).map_err(|e| e.to_string())?;
         stderr.flush().map_err(|e| e.to_string())
     }
+    fn print_bytes_stdout(&self, bytes: &[u8]) -> Result<(), String> {
+        if !self.output_enabled() {
+            return Ok(());
+        }
+        let mut stdout = stdout().lock();
+        stdout.write_all(bytes).map_err(|e| e.to_string())?;
+        stdout.flush().map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    fn print_bytes_stderr(&self, bytes: &[u8]) -> Result<(), String> {
+        if !self.output_enabled() {
+            return Ok(());
+        }
+        let mut stderr = stderr().lock();
+        stderr.write_all(bytes).map_err(|e| e.to_string())?;
+        stderr.flush().map_err(|e| e.to_string())
+    }
     fn print_str_trace(&self, s: &str) {
         if !self.output_enabled() {
             return;

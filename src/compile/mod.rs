@@ -1677,6 +1677,7 @@ impl Compiler {
     fn find_name_function(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
         self.find_name_impl(name, span, LookupPreference::Function, false)
     }
+    #[allow(dead_code)]
     fn find_name_macro(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
         self.find_name_impl(name, span, LookupPreference::Module, false)
     }

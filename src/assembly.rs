@@ -696,6 +696,8 @@ pub enum BindingKind {
     /// A module
     Module(Module),
     /// A scope being compiled
+    ///
+    /// Contains the scope index
     Scope(usize),
     /// An index macro
     IndexMacro {
@@ -736,16 +738,16 @@ impl BindingKind {
     pub fn is_constant(&self) -> bool {
         matches!(self, Self::Const(_))
     }
-    /// Check if the binding is a module
-    pub fn is_module(&self) -> bool {
-        self.as_module().is_some()
-    }
     /// Get the binding as a module
     pub fn as_module(&self) -> Option<&Module> {
         match self {
             BindingKind::Module(m) => Some(m),
             _ => None,
         }
+    }
+    /// Check if the binding is a module
+    pub fn is_module(&self) -> bool {
+        matches!(self, Self::Module(_) | Self::Scope(_))
     }
     /// Check if the binding is a constant or function
     pub fn has_sig(&self) -> bool {
@@ -755,13 +757,17 @@ impl BindingKind {
             _ => false,
         }
     }
-    /// Check if the binding is a constant or function or macro
-    pub fn is_callable(&self) -> bool {
+    /// Check if the binding is a constant or function
+    pub fn is_function(&self) -> bool {
         match self {
-            Self::Const(_) | Self::Func(_) | Self::IndexMacro { .. } | Self::CodeMacro(_) => true,
+            Self::Const(_) | Self::Func(_) => true,
             Self::Module(m) => m.names.contains_key("Call") || m.names.contains_key("New"),
             _ => false,
         }
+    }
+    /// Check if the bindings is a macro
+    pub fn is_macro(&self) -> bool {
+        matches!(self, Self::IndexMacro { .. } | Self::CodeMacro(_))
     }
 }
 

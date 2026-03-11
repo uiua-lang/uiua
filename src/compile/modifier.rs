@@ -1684,7 +1684,7 @@ impl Compiler {
             return self.prim_args_macro(prim, modifier_span, operands);
         }
 
-        let Some((path_locals, local)) = self.ref_local(&r)? else {
+        let Some((path_locals, local)) = self.ref_local_impl(&r, LookupPreference::Macro)? else {
             return Ok(Node::empty());
         };
         self.validate_local(&r.name.value, local, &r.name.span);

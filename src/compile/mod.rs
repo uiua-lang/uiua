@@ -138,6 +138,19 @@ struct BindingPrelude {
 /// Names in a scope
 pub struct LocalNames(IndexMap<Ident, Vec<LocalIndex>>);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Which kinds of binding to lookup first when doing name resolution
+pub enum LookupPreference {
+    /// Directly callable functions
+    Function,
+    /// Macros and custom subscript functions
+    Macro,
+    /// Modules
+    Module,
+    /// Functions or macros
+    Callable,
+}
+
 #[allow(missing_docs)]
 impl LocalNames {
     pub fn insert(&mut self, name: impl Into<Ident>, local: LocalIndex) {
@@ -155,25 +168,54 @@ impl LocalNames {
     pub fn all_iter(&self) -> impl Iterator<Item = (&Ident, LocalIndex)> {
         (self.0.iter()).flat_map(|(name, locals)| locals.iter().map(move |local| (name, *local)))
     }
-    pub fn get_only_module(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
-        let locals = self.0.get(name)?;
-        (locals.iter().rev())
-            .find(|local| asm.bindings[local.index].kind.is_module())
-            .copied()
+    pub fn get(&self, name: &str, pref: LookupPreference, asm: &Assembly) -> Option<LocalIndex> {
+        let locals = self
+            .0
+            .get(name)
+            .or_else(|| self.0.get(name.strip_suffix('!')?))?;
+        let iter = || locals.iter().rev();
+        let b = &asm.bindings;
+        match pref {
+            LookupPreference::Function => iter()
+                .find(|l| b[l.index].kind.is_function())
+                .or_else(|| iter().find(|l| b[l.index].kind.is_macro()))
+                .or_else(|| iter().find(|l| b[l.index].kind.is_module())),
+            LookupPreference::Macro => iter()
+                .find(|l| b[l.index].kind.is_macro())
+                .or_else(|| iter().find(|l| b[l.index].kind.is_module()))
+                .or_else(|| iter().find(|l| b[l.index].kind.is_function())),
+            LookupPreference::Module => iter()
+                .find(|l| b[l.index].kind.is_module())
+                .or_else(|| iter().find(|l| b[l.index].kind.is_macro()))
+                .or_else(|| iter().find(|l| b[l.index].kind.is_function())),
+            LookupPreference::Callable => iter()
+                .find(|l| b[l.index].kind.is_function() || b[l.index].kind.is_macro())
+                .or_else(|| iter().find(|l| b[l.index].kind.is_module())),
+        }
+        .copied()
     }
-    pub fn get_only_callable(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
-        let locals = self.0.get(name)?;
-        (locals.iter().rev())
-            .find(|local| asm.bindings[local.index].kind.is_callable())
-            .copied()
-    }
-    pub fn get_prefer_module(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
-        self.get_only_module(name, asm)
-            .or_else(|| self.get_last(name))
-    }
-    pub fn get_prefer_callable(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
-        self.get_only_callable(name, asm)
-            .or_else(|| self.get_last(name))
+    pub fn get_only(
+        &self,
+        name: &str,
+        pref: LookupPreference,
+        asm: &Assembly,
+    ) -> Option<LocalIndex> {
+        let mut iter = (self.0.get(name))
+            .or_else(|| self.0.get(name.strip_suffix('!')?))?
+            .iter()
+            .rev();
+        let b = &asm.bindings;
+        match pref {
+            LookupPreference::Function => iter.find(|l| b[l.index].kind.is_function()),
+            LookupPreference::Macro => iter
+                .find(|l| b[l.index].kind.is_macro())
+                .or_else(|| iter.find(|l| b[l.index].kind.is_module())),
+            LookupPreference::Module => iter.find(|l| b[l.index].kind.is_module()),
+            LookupPreference::Callable => {
+                iter.find(|l| b[l.index].kind.is_function() || b[l.index].kind.is_macro())
+            }
+        }
+        .copied()
     }
     pub fn get_last(&self, name: &str) -> Option<LocalIndex> {
         self.0.get(name)?.last().copied()
@@ -1595,28 +1637,15 @@ impl Compiler {
     ///
     /// Returns [`None`] if the reference is to a constant
     fn ref_local(&self, r: &Ref) -> UiuaResult<Option<(Vec<LocalIndex>, LocalIndex)>> {
-        self.ref_local_impl(r, false)
+        self.ref_local_impl(r, LookupPreference::Function)
     }
     fn ref_local_impl(
         &self,
         r: &Ref,
-        prefer_module: bool,
+        pref: LookupPreference,
     ) -> UiuaResult<Option<(Vec<LocalIndex>, LocalIndex)>> {
         if let Some((names, path_locals)) = self.ref_path(&r.path)? {
-            let callable = || names.get_prefer_callable(&r.name.value, &self.asm);
-            let module = || {
-                r.name.value.strip_suffix('!').and_then(|name| {
-                    names.get_prefer_module(name, &self.asm).filter(|local| {
-                        matches!(&self.asm.bindings[local.index].kind, BindingKind::Module(_))
-                    })
-                })
-            };
-            let local = if prefer_module {
-                module().or_else(callable)
-            } else {
-                callable().or_else(module)
-            };
-            if let Some(local) = local {
+            if let Some(local) = names.get(&r.name.value, pref, &self.asm) {
                 if local.public {
                     Ok(Some((path_locals, local)))
                 } else {
@@ -1631,7 +1660,7 @@ impl Compiler {
                     format!("Item `{}` not found", r.name.value),
                 ))
             }
-        } else if let Some(local) = self.find_name_callable(&r.name.value, &r.name.span) {
+        } else if let Some(local) = self.find_name_impl(&r.name.value, &r.name.span, pref, false) {
             Ok(Some((Vec::new(), local)))
         } else if r.path.is_empty() && CONSTANTS.iter().any(|def| def.name == r.name.value) {
             Ok(None)
@@ -1643,27 +1672,44 @@ impl Compiler {
         }
     }
     fn find_name_module(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
-        self.find_name_impl(name, span, true, false)
+        self.find_name_impl(name, span, LookupPreference::Module, false)
+    }
+    fn find_name_function(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
+        self.find_name_impl(name, span, LookupPreference::Function, false)
+    }
+    fn find_name_macro(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
+        self.find_name_impl(name, span, LookupPreference::Module, false)
     }
     fn find_name_callable(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
-        self.find_name_impl(name, span, false, false)
+        self.find_name_impl(name, span, LookupPreference::Callable, false)
     }
     fn find_name_impl(
         &self,
         name: &str,
         span: &CodeSpan,
-        prefer_module: bool,
+        pref: LookupPreference,
         stop_at_binding: bool,
     ) -> Option<LocalIndex> {
         // println!("name: {name:?} @ {}", span);
+        // println!("lookup preference: {pref:?}");
         // for scope in self.scopes() {
         //     println!("  {:?} {:?}", scope.kind, scope.names);
         // }
-        let mut only_modules = [false, true];
-        if prefer_module {
-            only_modules.reverse();
-        }
-        for only_modules in only_modules {
+        let prefs: &[_] = match pref {
+            LookupPreference::Function => &[
+                LookupPreference::Function,
+                LookupPreference::Macro,
+                LookupPreference::Module,
+            ],
+            LookupPreference::Macro => &[
+                LookupPreference::Macro,
+                LookupPreference::Module,
+                LookupPreference::Function,
+            ],
+            LookupPreference::Module => &[LookupPreference::Module, LookupPreference::Callable],
+            LookupPreference::Callable => &[LookupPreference::Callable, LookupPreference::Module],
+        };
+        for &pref in prefs {
             let mut hit_stop = false;
             for scope in self.scopes() {
                 if matches!(scope.kind, ScopeKind::File(_))
@@ -1675,11 +1721,7 @@ impl Compiler {
                     hit_stop = true;
                 }
                 // Look in the scope's names
-                let local = if only_modules {
-                    scope.names.get_only_module(name, &self.asm)
-                } else {
-                    scope.names.get_prefer_callable(name, &self.asm)
-                };
+                let local = scope.names.get_only(name, pref, &self.asm);
                 if let Some(local) = local {
                     return Some(local);
                 }
@@ -1700,17 +1742,7 @@ impl Compiler {
                 }
             }
         }
-        // Attempt to look up the identifier as a non-macro
-        let as_non_macro =
-            self.find_name_impl(name.strip_suffix('!')?, span, true, stop_at_binding)?;
-        if let BindingKind::Module(_) | BindingKind::Scope(_) =
-            self.asm.bindings[as_non_macro.index].kind
-        {
-            // Only allow it if it is a module
-            Some(as_non_macro)
-        } else {
-            None
-        }
+        None
     }
     fn ref_path(
         &self,
@@ -1773,7 +1805,7 @@ impl Compiler {
         };
         for comp in path.iter().skip(1) {
             let submod_local = names
-                .get_prefer_module(&comp.module.value, &self.asm)
+                .get(&comp.module.value, LookupPreference::Module, &self.asm)
                 .ok_or_else(|| {
                     self.error(
                         comp.module.span.clone(),
@@ -1885,7 +1917,7 @@ impl Compiler {
             self.code_meta.completions.insert(span.clone(), completions);
         }
 
-        if let Some(local) = self.find_name_impl(&ident, &span, false, true) {
+        if let Some(local) = self.find_name_impl(&ident, &span, LookupPreference::Function, true) {
             // Name exists in binding scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
@@ -1916,7 +1948,7 @@ impl Compiler {
             } else {
                 Node::empty()
             }
-        } else if let Some(local) = self.find_name_callable(&ident, &span) {
+        } else if let Some(local) = self.find_name_function(&ident, &span) {
             // Name exists in scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);

@@ -162,6 +162,12 @@ pub fn parse(
                             }
                             1
                         }
+                        MultilineFormatStr(_) => {
+                            while let Some(MultilineFormatStr(_)) = toks.peek().map(|t| &t.value) {
+                                toks.next();
+                            }
+                            1
+                        }
                         Number | Str(_) | Char(_) if array_depth > 0 => 0,
                         _ => 1,
                     };

@@ -85,10 +85,8 @@ fn main() {
         } else {
             match App::try_parse().ok().and_then(|app| app.command) {
                 Some(Comm::Watch { .. }) | None => clear_watching_with(" ", ""),
-                Some(Comm::Repl { .. }) => {
-                    if !PRESSED_CTRL_C.swap(true, Ordering::Relaxed) {
-                        return;
-                    }
+                Some(Comm::Repl { .. }) if !PRESSED_CTRL_C.swap(true, Ordering::Relaxed) => {
+                    return;
                 }
                 _ => {}
             }

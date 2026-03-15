@@ -2834,11 +2834,8 @@ impl Value {
         let [shape_pre @ .., n] = &*arr.shape else {
             return Err(env.error("Cannot decode datetime from scalar"));
         };
-        arr.data = if *n == 0 {
-            let size = validate_size::<f64>(shape_pre.iter().copied(), env)?;
-            eco_vec![0.0; size].into()
-        } else {
-            let mut new_data = eco_vec![0.0; arr.data.len() / *n];
+        arr.data = if let Some(data_len) = arr.data.len().checked_div(*n) {
+            let mut new_data = eco_vec![0.0; data_len];
             let slice = new_data.make_mut();
             if *n > 0 {
                 for (i, chunk) in arr.data.chunks_exact(*n).enumerate() {
@@ -2846,6 +2843,9 @@ impl Value {
                 }
             }
             new_data.into()
+        } else {
+            let size = validate_size::<f64>(shape_pre.iter().copied(), env)?;
+            eco_vec![0.0; size].into()
         };
         arr.shape.pop();
         arr.validate();

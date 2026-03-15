@@ -622,6 +622,7 @@ impl Default for WatchArgs {
 }
 
 impl WatchArgs {
+    #[allow(clippy::collapsible_if)]
     fn watch(self) -> Result<(), Box<dyn Error>> {
         let WatchArgs {
             initial_path,

@@ -302,6 +302,7 @@ impl TypeRt<'_> {
                     if let Some(n) = n.int {
                         let len = x.shape.row_count_mut();
                         *len = len.saturating_sub(n.unsigned_abs());
+                        self.stack.push(x);
                     } else {
                         return Err(TypeError::NotSupported);
                     }

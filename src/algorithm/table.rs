@@ -352,7 +352,9 @@ pub fn table_list(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
             Some((Primitive::Join | Primitive::Couple, flipped)),
             Value::Char(xs),
             Value::Char(ys),
-        ) if xs.rank() <=1 && ys.rank() <=1  => env.push(fast_table_list_join_or_couple(xs, ys, flipped, env)?),
+        ) if xs.rank() <= 1 && ys.rank() <= 1 => {
+            env.push(fast_table_list_join_or_couple(xs, ys, flipped, env)?)
+        }
         (_, xs, ys) => match f.node.as_flipped_impl_primitive() {
             // Random
             Some((ImplPrimitive::ReplaceRand2, _)) => {

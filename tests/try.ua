@@ -119,3 +119,16 @@ F ← °22
 G ← ⋅⍣°8 2
 H ← ⍣F G
 ⍤⤙≍ 2 H 7 19
+
+IsNumber ← ⍤"Not a number" ≍0 type
+Not!     ← ⍤"Expected to fail" ⍣(0^|1)
+
+InlineNotIsNumber₁ ← ⍤"Expected to fail" ⍣(0 IsNumber|1)
+InlineNotIsNumber₂ ← ⍤"Expected to fail" ⍣(0 ⍤"Not a number" ≍0 type|1)
+
+┌─╴test
+  IsNumber 1
+  Not!IsNumber @a
+  InlineNotIsNumber₁ @a
+  InlineNotIsNumber₂ @a
+└─╴

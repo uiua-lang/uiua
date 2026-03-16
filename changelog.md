@@ -5,7 +5,12 @@ Uiua is not yet stable.
 ## 0.19.0 - 2026-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- Add custom subscripts
+  - [Implicit Subscripts](<https://www.uiua.org/docs/subscripts#implicit>) are stable
+  - [Custom subscript functions](<https://www.uiua.org/docs/experimental#custom-subscript-functions>) are experimental
+  - Remove deprecated `log ₙ` function, which syntactically conflicted
 - Add [`oklch`](https://uiua.org/docs/oklch) function
+- Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape
 
 ## 0.18.1 - 2026-02-14
 ### Interpreter
@@ -54,6 +59,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`json`](https://uiua.org/docs/json)`₅` for serializing to pretty JSON5
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
+- Add Capacity optional argument for [`map`](https://uiua.org/docs/map) to preallocate space for n keys 
 - Add modifier version of [`gif`](https://uiua.org/docs/gif), written as `gif!`
   - Operates similar to [`fold ∧`](https://uiua.org/docs/fold)
   - Encodes frames as they are generated

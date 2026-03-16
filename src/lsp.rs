@@ -12,8 +12,9 @@ use std::{
 
 use crate::{
     Assembly, BindingInfo, BindingKind, BindingMeta, CONSTANTS, CodeSpan, Compiler, Ident,
-    InputSrc, Inputs, LocalIndex, PreEvalMode, Primitive, SafeSys, Shape, Signature, Sp, Subscript,
-    SysBackend, UiuaError, Value, ast::*, is_custom_glyph, parse, parse::ident_modifier_args,
+    InputSrc, Inputs, LocalIndex, PreEvalMode, Primitive, SafeSys, Shape, Signature, Sp,
+    SubscriptToken, SysBackend, UiuaError, Value, ast::*, is_custom_glyph, parse,
+    parse::ident_modifier_args,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -21,7 +22,7 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SpanKind {
     /// A primitive, with an optional subscript which may affect coloring
-    Primitive(Primitive, Option<Subscript>),
+    Primitive(Primitive, Option<SubscriptToken>),
     /// An optional argument macro for a primitive. Should be colored like a module.
     PrimArgs(Primitive),
     String,
@@ -39,12 +40,13 @@ pub enum SpanKind {
     Signature,
     Whitespace,
     Placeholder(Option<usize>),
+    PlaceholderN,
     Delimiter,
     LexOrder,
     FuncDelim(Signature, SetInverses),
     MacroDelim(usize),
     ImportSrc(ImportSrc),
-    Subscript(Option<Primitive>, Option<Subscript>),
+    Subscript(Option<Primitive>, Option<SubscriptToken>),
     /// `obverse` primitive. Contains which inverses are set.
     Obverse(SetInverses),
     ArgSetter(Option<EcoString>),
@@ -168,7 +170,7 @@ pub struct CodeMeta {
     /// Spans of functions and their signatures and whether they are explicit
     pub function_sigs: SigDecls,
     /// A map of macro invocations to their expansions
-    pub macro_expansions: HashMap<CodeSpan, (Option<Ident>, String)>,
+    pub macro_expansions: HashMap<CodeSpan, (Option<Ident>, String, Option<Signature>)>,
     /// A map of inline macro functions to their number of arguments
     pub inline_macros: HashMap<CodeSpan, usize>,
     /// A map of top-level binding names to their indices
@@ -467,7 +469,17 @@ impl Spanner {
             .get(span)
             .and_then(|i| self.asm.bindings.get(*i))
         {
-            return Some(self.make_binding_docs(binding).into());
+            let mut docs = self.make_binding_docs(binding);
+            // Look in macro expansions
+            if let Some(&(_, _, Some(sig))) = self.code_meta.macro_expansions.get(span) {
+                docs.kind = BindingDocsKind::Function {
+                    sig,
+                    invertible: false,
+                    underable: false,
+                    pure: false,
+                }
+            }
+            return Some(docs.into());
         }
         // Look in constant references
         for name in &self.code_meta.constant_references {
@@ -530,7 +542,12 @@ impl Spanner {
                 BindingKind::Module(_) | BindingKind::Scope(_) => {
                     meta.comment = Some("module".into())
                 }
-                BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
+                BindingKind::IndexMacro {
+                    args: 0,
+                    subscript: true,
+                } => meta.comment = Some("custom subscript function".into()),
+                BindingKind::IndexMacro { args: 0, .. } => {}
+                BindingKind::IndexMacro { .. } | BindingKind::CodeMacro(_) => {
                     meta.comment = Some("macro".into())
                 }
                 BindingKind::Func(_) => {}
@@ -548,7 +565,7 @@ impl Spanner {
                     .is_ok(),
                 pure: !meta.external && self.asm[f].is_pure(&self.asm),
             },
-            BindingKind::IndexMacro(args) => BindingDocsKind::Modifier(*args),
+            BindingKind::IndexMacro { args, .. } => BindingDocsKind::Modifier(*args),
             BindingKind::CodeMacro(_) => {
                 BindingDocsKind::Modifier(binfo.span.as_str(self.inputs(), ident_modifier_args))
             }
@@ -731,6 +748,7 @@ impl Spanner {
                 Word::Placeholder(op) => {
                     spans.push(word.span.clone().sp(SpanKind::Placeholder(*op)))
                 }
+                Word::PlaceholderN => spans.push(word.span.clone().sp(SpanKind::PlaceholderN)),
                 #[allow(clippy::match_single_binding)]
                 Word::Subscripted(sub) => {
                     let n = Some(sub.script.value.clone());
@@ -1296,7 +1314,7 @@ mod server {
                     }
                     BindingKind::Const(_) => CompletionItemKind::CONSTANT,
                     BindingKind::Func(_) => CompletionItemKind::FUNCTION,
-                    BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
+                    BindingKind::IndexMacro { .. } | BindingKind::CodeMacro(_) => {
                         CompletionItemKind::FUNCTION
                     }
                     BindingKind::Module(_) | BindingKind::Scope(_) => CompletionItemKind::MODULE,
@@ -1614,7 +1632,7 @@ mod server {
             let mut tokens = Vec::new();
             let mut prev_line = 0;
             let mut prev_char = 0;
-            let for_prim = |p: Primitive, sub: Option<&Subscript>| {
+            let for_prim = |p: Primitive, sub: Option<&SubscriptToken>| {
                 let args = p.subscript_sig(sub).map(|sig| sig.args()).or(p.args());
                 let margs = p.subscript_margs(sub).or_else(|| p.modifier_args());
                 Some(match p.class() {
@@ -1761,8 +1779,8 @@ mod server {
             }
 
             // Expand macro
-            for (span, (name, expanded)) in &doc.code_meta.macro_expansions {
-                if !span.contains_line_col(line, col) || span.src != path {
+            for (span, (name, expanded, _)) in &doc.code_meta.macro_expansions {
+                if expanded.is_empty() || !span.contains_line_col(line, col) || span.src != path {
                     continue;
                 }
                 actions.push(CodeActionOrCommand::CodeAction(CodeAction {

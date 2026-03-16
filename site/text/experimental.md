@@ -1,3 +1,33 @@
+## Custom Subscript Functions
+
+Functions can be given custom numeric subscript behavior by ending their name with a `ₙ` (which formats from `,n`).
+
+`ₙ` can then be used inside the function anywhere subscripts are permitted.
+
+```uiua
+# Experimental!
+Fₙ ← ∩ₙ¯
+[F₁ 1 2 3]
+[F₂ 1 2 3]
+[F₃ 1 2 3]
+```
+
+```uiua
+# Experimental!
+Gₙ ← ⊂ₙ ×ₙ
+G₂ 10 5
+G₃ 10 11 12
+```
+
+You can get the subscript as a constant anywhere in the function using a `^n` placeholder.
+
+```uiua
+# Experimental!
+Gₙ ← [1 ^n 3]
+G₂
+G₋₅
+```
+
 ## Data Definitions
 
 [Data definitions](</tutorial/Data Definitions>) have a few experimental features.

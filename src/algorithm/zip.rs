@@ -382,7 +382,6 @@ fn prim_dy_fast_fn(
         Div => spanned_dy_fn(span, Value::div),
         Pow => spanned_dy_fn(span, Value::pow),
         Modulo => spanned_dy_fn(span, Value::modulo),
-        Log => spanned_dy_fn(span, Value::log),
         Eq => spanned_dy_fn(span, Value::is_eq),
         Ne => spanned_dy_fn(span, Value::is_ne),
         Lt => spanned_dy_fn(span, Value::other_is_lt),
@@ -412,6 +411,7 @@ fn impl_prim_dy_fast_fn(
     use ImplPrimitive::*;
     use std::boxed::Box;
     Some(match prim {
+        Log => spanned_dy_fn(span, Value::log),
         AntiRotate if !b_filled => Box::new(move |a, mut b, depth, env| {
             env.with_span(span, |env| {
                 a.rotate_depth(&mut b, depth, false, env)?;

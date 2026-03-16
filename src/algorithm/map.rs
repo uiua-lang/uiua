@@ -7,14 +7,20 @@ use std::{
 
 use bytemuck::must_cast;
 use ecow::EcoVec;
+use enum_iterator::{Sequence, all};
 use serde::*;
 
 use crate::{
-    Array, ArrayValue, Boxed, Complex, FormatShape, Uiua, UiuaResult, Value,
-    algorithm::ArrayCmpSlice, val_as_arr,
+    Array, ArrayValue, Boxed, Complex, FormatShape, OptionalArg, Uiua, UiuaResult, Value,
+    algorithm::ArrayCmpSlice, media::builtin_params, val_as_arr,
 };
 
 use super::{ErrorContext, FillContext};
+
+builtin_params!(
+    MapParam,
+    (Capacity, "Number of values to reserve space for", 0),
+);
 
 impl<T: ArrayValue> Array<T> {
     /// Check if the array is a map
@@ -84,6 +90,71 @@ impl<T: ArrayValue> Array<T> {
         values.meta.map_keys = Some(map_keys);
         Ok(())
     }
+
+    /// Map with extra args (e.g. reserve count)
+    pub fn map_args(&mut self, keys: Value, args: Option<Value>, env: &Uiua) -> UiuaResult<()> {
+        let values = self;
+        if keys.row_count() != values.row_count() {
+            return Err(env.error(format!(
+                "Map array's keys and values must have the same length, but they have lengths {} and {}",
+                keys.row_count(),
+                values.row_count()
+            )));
+        }
+        let mut requested_capacity = 0;
+        for (i, arg) in args
+            .into_iter()
+            .flat_map(Value::into_rows)
+            .map(Value::unboxed)
+            .enumerate()
+        {
+            match all::<MapParam>().nth(i) {
+                Some(MapParam::Capacity) => {
+                    requested_capacity = arg.as_nat(env, "Capacity must be a number")?
+                }
+                None => return Err(env.error(format!("Invalid map params index {i}"))),
+            }
+        }
+
+        fn get_final_capacity(len: usize) -> usize {
+            let min_cap = (len as f64 / LOAD_FACTOR).ceil() as usize;
+            min_cap.next_power_of_two()
+        }
+
+        if keys.rank() == 0 {
+            let mut map_keys = MapKeys {
+                keys,
+                indices: vec![0],
+                len: 1,
+                fix_stack: Vec::new(),
+            };
+            map_keys.grow_to(get_final_capacity(requested_capacity));
+            values.meta.map_keys = Some(map_keys);
+            return Ok(());
+        }
+        let mut map_keys = MapKeys {
+            keys: keys.clone(),
+            indices: Vec::new(),
+            len: 0,
+            fix_stack: Vec::new(),
+        };
+        map_keys.grow_to(get_final_capacity(requested_capacity));
+        let mut to_remove = Vec::new();
+        for (i, key) in keys.into_rows().enumerate() {
+            let replaced = map_keys.insert(key, i, env)?;
+            to_remove.extend(replaced);
+        }
+        for i in to_remove.into_iter().rev() {
+            values.remove_row(i);
+            for index in &mut map_keys.indices {
+                if *index > i {
+                    *index -= 1;
+                }
+            }
+        }
+        values.meta.map_keys = Some(map_keys);
+        Ok(())
+    }
 }
 
 impl Value {
@@ -101,6 +172,10 @@ impl Value {
     /// Create a map array
     pub fn map(&mut self, keys: Self, env: &Uiua) -> UiuaResult {
         val_as_arr!(self, |arr| arr.map(keys, env))
+    }
+    /// Create a map array, with additional arguments
+    pub fn map_args(&mut self, keys: Self, args: Option<Value>, env: &Uiua) -> UiuaResult {
+        val_as_arr!(self, |arr| arr.map_args(keys, args, env))
     }
     /// Turn a map array into its keys and values
     pub fn unmap(mut self, env: &Uiua) -> UiuaResult<(Value, Value)> {

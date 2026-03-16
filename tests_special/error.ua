@@ -222,3 +222,7 @@ comptime((
 ~&A {B}
 
 ~A {&B}
+
+# Experimental!
+Gₙ ← ^n
+G

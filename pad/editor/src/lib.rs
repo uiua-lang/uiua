@@ -16,7 +16,7 @@ use leptos::{
 
 use leptos_router::{BrowserIntegration, History, LocationChange, NavigateOptions, use_navigate};
 use uiua::{
-    IgnoreError, PrimClass, PrimDoc, Primitive, Signature, Subscript, SysOp, Token,
+    IgnoreError, PrimClass, PrimDoc, Primitive, Signature, Subscript, SubscriptToken, SysOp, Token,
     format::{FormatConfig, format_str},
     is_ident_char, lex,
     lsp::{BindingDocs, BindingDocsKind},
@@ -288,6 +288,23 @@ pub fn Editor<'a>(
         (input, seed)
     };
 
+    // Insert an # Experimental! comment at the top of the code
+    let insert_experimental = move || {
+        state.update(|state| {
+            let code = get_code();
+            if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
+                return;
+            }
+            let new_code = format!("# Experimental!\n{code}");
+            let cursor = if let Some((start, end)) = get_code_cursor() {
+                Cursor::Set(start + 16, end + 16)
+            } else {
+                Cursor::Ignore
+            };
+            state.set_code(&new_code, cursor);
+        });
+    };
+
     // Run the code
     let run = move |do_format: bool, set_cursor: bool| {
         // Format code
@@ -374,7 +391,7 @@ pub fn Editor<'a>(
                 </div>
             }
             .into_view(),
-            OutputItem::Report(report) => report_view(&report).into_view(),
+            OutputItem::Report(report) => report_view(&report, state).into_view(),
             OutputItem::Separator => view! {
                 <div class="output-item">
                     <hr />
@@ -510,23 +527,6 @@ pub fn Editor<'a>(
         new_code.extend(chars);
         state.set_code(&new_code, Cursor::Set(start + 1, end + 1));
         _ = code_element().focus();
-    };
-
-    // Insert an # Experimental! comment at the top of the code
-    let insert_experimental = move || {
-        state.update(|state| {
-            let code = get_code();
-            if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
-                return;
-            }
-            let new_code = format!("# Experimental!\n{code}");
-            let cursor = if let Some((start, end)) = get_code_cursor() {
-                Cursor::Set(start + 16, end + 16)
-            } else {
-                Cursor::Ignore
-            };
-            state.set_code(&new_code, cursor);
-        });
     };
 
     // Remove an # Experimental! comment from the top of the code
@@ -826,7 +826,7 @@ pub fn Editor<'a>(
             // Insert # Experimental! comment
             "e" if os_ctrl(event) => insert_experimental(),
             // Toggle line comment or multiline string
-            "/" | "4" if os_ctrl(event) => {
+            "/" | "4" | ";" if os_ctrl(event) => {
                 state.update(|state| {
                     let code = get_code();
                     let (start, end) = get_code_cursor().unwrap();
@@ -845,17 +845,21 @@ pub fn Editor<'a>(
                     let mut lines: Vec<String> = code.split('\n').map(Into::into).collect();
                     let range = &mut lines[start_line - 1..end_line];
                     let comment = key == "/";
-                    let prefix = if comment { '#' } else { '$' };
+                    let prefix = match key {
+                        "/" => '#',
+                        "4" => '$',
+                        ";" => ';',
+                        _ => unreachable!(),
+                    };
 
                     // How much to offset the ends of the selection by to account for the change in the number of characters
                     let mut start_diff = 0;
                     let mut end_diff = 0;
 
                     let last_index = range.len() - 1;
-                    if range
-                        .iter()
-                        .all(|line| (comment && line.is_empty()) || line.starts_with(prefix))
-                    {
+                    if range.iter().all(|line| {
+                        (comment && line.is_empty()) || line.trim_start().starts_with(prefix)
+                    }) {
                         // Toggle comments off
                         for (i, line) in range.iter_mut().enumerate() {
                             let old_len = line.len() as i32;
@@ -2556,7 +2560,7 @@ fn modifier_class(margs: usize) -> &'static str {
     }
 }
 
-fn prim_sig_class(prim: Primitive, subscript: Option<&Subscript>) -> &'static str {
+fn prim_sig_class(prim: Primitive, subscript: Option<&SubscriptToken>) -> &'static str {
     if get_gayness() == Gayness::Gray {
         return code_font!("");
     }
@@ -2566,14 +2570,14 @@ fn prim_sig_class(prim: Primitive, subscript: Option<&Subscript>) -> &'static st
             code_font!("monadic-function trans text-gradient")
         }
         Primitive::Both if at_least_a_little_gay() => {
-            match subscript.and_then(Subscript::n).unwrap_or(2) {
+            match subscript.and_then(Subscript::n).flatten().unwrap_or(2) {
                 0 => code_font!("monadic-function aroace text-gradient"),
                 1 => code_font!("monadic-function aro text-gradient"),
                 2 => code_font!("monadic-modifier bi text-gradient"),
                 _ => code_font!("dyadic-function pan text-gradient"),
             }
         }
-        Primitive::Couple => match subscript.and_then(Subscript::n).unwrap_or(2) {
+        Primitive::Couple => match subscript.and_then(Subscript::n).flatten().unwrap_or(2) {
             0 if at_least_a_little_gay() => {
                 code_font!("monadic-function aroace text-gradient")
             }
@@ -2662,6 +2666,7 @@ pub fn editor_shortcuts() -> String {
     "shift Enter   - Run + Format
  ctrl Click   - Open glyph docs
  ctrl /       - Toggle line comment
+ ctrl ;       - Toggle merging selected lines
  ctrl 4       - Toggle multiline string
   alt Up/Down - Swap lines
 shift Delete  - Delete lines

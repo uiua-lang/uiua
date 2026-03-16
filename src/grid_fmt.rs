@@ -129,7 +129,15 @@ impl GridFmt for f64 {
         let positive = f.abs();
         let is_neg = f.is_sign_negative();
         let minus = if is_neg { "¯" } else { "" };
-        let s = if (positive - PI).abs() <= f64::EPSILON {
+        let s = if f.to_bits() == EMPTY_NAN.to_bits() {
+            "∅".into()
+        } else if f.to_bits() == TOMBSTONE_NAN.to_bits() {
+            "⊥".into()
+        } else if f.to_bits() == WILDCARD_NAN.to_bits() {
+            "W".into()
+        } else if positive.fract() == 0.0 || positive.is_nan() {
+            format!("{minus}{positive}")
+        } else if (positive - PI).abs() <= f64::EPSILON {
             format!("{minus}π")
         } else if (positive - TAU).abs() <= f64::EPSILON {
             format!("{minus}τ")
@@ -139,14 +147,6 @@ impl GridFmt for f64 {
             format!("{minus}e")
         } else if positive == f64::INFINITY {
             format!("{minus}∞")
-        } else if f.to_bits() == EMPTY_NAN.to_bits() {
-            "∅".into()
-        } else if f.to_bits() == TOMBSTONE_NAN.to_bits() {
-            "⊥".into()
-        } else if f.to_bits() == WILDCARD_NAN.to_bits() {
-            "W".into()
-        } else if positive.fract() == 0.0 || positive.is_nan() {
-            format!("{minus}{positive}")
         } else if let Some((num, denom, approx)) =
             [1u8, 2, 3, 4, 5, 6, 8, 9, 12].iter().find_map(|&denom| {
                 let num = (positive * denom as f64) / TAU;

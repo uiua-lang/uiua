@@ -31,8 +31,9 @@ use crate::{
     CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
     ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GitTarget, Ident, ImplPrimitive,
     IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass,
-    Primitive, Purity, RunMode, SUBSCRIPT_DIGITS, SemanticComment, SigNode, Signature, Sp, Span,
-    SubSide, Subscript, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
+    Primitive, Purity, RunMode, SUBSCRIPT_DIGITS, SemanticComment, SidedSubscript, SigNode,
+    Signature, Sp, Span, SubSide, Subscript, SubscriptToken, SysBackend, Uiua, UiuaError,
+    UiuaErrorKind, UiuaResult, VERSION, Value,
     algorithm::ga::{self, Spec},
     ast::*,
     check::nodes_sig,
@@ -40,8 +41,8 @@ use crate::{
     function::DynamicFunction,
     lsp::{CodeMeta, Completion, ImportSrc, SetInverses, SigDecl},
     parse::{
-        flip_unsplit_items, flip_unsplit_lines, ident_modifier_args, max_placeholder, parse,
-        split_items, split_words,
+        flip_unsplit_items, flip_unsplit_lines, has_subn, ident_modifier_args, max_placeholder,
+        parse, split_items, split_words,
     },
 };
 pub(crate) use modifier::*;
@@ -137,6 +138,19 @@ struct BindingPrelude {
 /// Names in a scope
 pub struct LocalNames(IndexMap<Ident, Vec<LocalIndex>>);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Which kinds of binding to lookup first when doing name resolution
+pub enum LookupPreference {
+    /// Directly callable functions
+    Function,
+    /// Macros and custom subscript functions
+    Macro,
+    /// Modules
+    Module,
+    /// Functions or macros
+    Callable,
+}
+
 #[allow(missing_docs)]
 impl LocalNames {
     pub fn insert(&mut self, name: impl Into<Ident>, local: LocalIndex) {
@@ -154,25 +168,54 @@ impl LocalNames {
     pub fn all_iter(&self) -> impl Iterator<Item = (&Ident, LocalIndex)> {
         (self.0.iter()).flat_map(|(name, locals)| locals.iter().map(move |local| (name, *local)))
     }
-    pub fn get_only_module(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
-        let locals = self.0.get(name)?;
-        (locals.iter().rev())
-            .find(|local| asm.bindings[local.index].kind.is_module())
-            .copied()
+    pub fn get(&self, name: &str, pref: LookupPreference, asm: &Assembly) -> Option<LocalIndex> {
+        let locals = self
+            .0
+            .get(name)
+            .or_else(|| self.0.get(name.strip_suffix('!')?))?;
+        let iter = || locals.iter().rev();
+        let b = &asm.bindings;
+        match pref {
+            LookupPreference::Function => iter()
+                .find(|l| b[l.index].kind.is_function())
+                .or_else(|| iter().find(|l| b[l.index].kind.is_macro()))
+                .or_else(|| iter().find(|l| b[l.index].kind.is_module())),
+            LookupPreference::Macro => iter()
+                .find(|l| b[l.index].kind.is_macro())
+                .or_else(|| iter().find(|l| b[l.index].kind.is_module()))
+                .or_else(|| iter().find(|l| b[l.index].kind.is_function())),
+            LookupPreference::Module => iter()
+                .find(|l| b[l.index].kind.is_module())
+                .or_else(|| iter().find(|l| b[l.index].kind.is_macro()))
+                .or_else(|| iter().find(|l| b[l.index].kind.is_function())),
+            LookupPreference::Callable => iter()
+                .find(|l| b[l.index].kind.is_function() || b[l.index].kind.is_macro())
+                .or_else(|| iter().find(|l| b[l.index].kind.is_module())),
+        }
+        .copied()
     }
-    pub fn get_only_function(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
-        let locals = self.0.get(name)?;
-        (locals.iter().rev())
-            .find(|local| asm.bindings[local.index].kind.has_sig())
-            .copied()
-    }
-    pub fn get_prefer_module(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
-        self.get_only_module(name, asm)
-            .or_else(|| self.get_last(name))
-    }
-    pub fn get_prefer_function(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
-        self.get_only_function(name, asm)
-            .or_else(|| self.get_last(name))
+    pub fn get_only(
+        &self,
+        name: &str,
+        pref: LookupPreference,
+        asm: &Assembly,
+    ) -> Option<LocalIndex> {
+        let mut iter = (self.0.get(name))
+            .or_else(|| self.0.get(name.strip_suffix('!')?))?
+            .iter()
+            .rev();
+        let b = &asm.bindings;
+        match pref {
+            LookupPreference::Function => iter.find(|l| b[l.index].kind.is_function()),
+            LookupPreference::Macro => iter
+                .find(|l| b[l.index].kind.is_macro())
+                .or_else(|| iter.find(|l| b[l.index].kind.is_module())),
+            LookupPreference::Module => iter.find(|l| b[l.index].kind.is_module()),
+            LookupPreference::Callable => {
+                iter.find(|l| b[l.index].kind.is_function() || b[l.index].kind.is_macro())
+            }
+        }
+        .copied()
     }
     pub fn get_last(&self, name: &str) -> Option<LocalIndex> {
         self.0.get(name)?.last().copied()
@@ -414,7 +457,7 @@ impl Compiler {
         let input: EcoString = fs::read_to_string(path)
             .map_err(|e| UiuaErrorKind::Load(path.into(), e.into()))?
             .into();
-        // _ = crate::lsp::Spans::from_input(&input);
+        _ = crate::lsp::Spans::from_input(&input);
         self.asm.inputs.files.insert(path.into(), input.clone());
         self.load_impl(&input, InputSrc::File(path.into()))
     }
@@ -585,7 +628,7 @@ code:
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ItemCompMode {
     TopLevel,
     Function,
@@ -725,7 +768,8 @@ impl Compiler {
                 anyway = anyway
                     || matches!(&w.value, Word::SemanticComment(_))
                     || matches!(&w.value, Word::Modified(m)
-                        if matches!(m.modifier.value, Modifier::Ref(_)))
+                        if matches!(m.modifier.value, Modifier::Ref(_) | Modifier::Macro(_)))
+                    || matches!(&w.value, Word::InlineMacro(_))
             });
             anyway
         }
@@ -750,7 +794,6 @@ impl Compiler {
         let binding_count_before = self.asm.bindings.len();
         let root_len_before = self.asm.root.len();
         let error_count_before = self.errors.len();
-
         let mut line_node = self.line(line)?;
 
         if matches!(self.scope.kind, ScopeKind::File(_)) {
@@ -786,22 +829,23 @@ impl Compiler {
         match line_node.sig() {
             Ok(sig) => {
                 // Compile test assert
-                if self.mode != RunMode::Normal
+                if !self.in_try
+                    && self.current_bindings.is_empty()
+                    && self.mode != RunMode::Normal
                     && mode != ItemCompMode::Function
                     && !self
                         .scopes()
                         .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))
                 {
-                    let test_assert = line_node
-                        .last_mut_recursive(&mut self.asm, |node| {
+                    let test_assert = line_node.last_mut_recursive_replace(
+                        &self.asm,
+                        |node| matches!(node, Node::Prim(Primitive::Assert, _)),
+                        |node| {
                             if let &mut Node::Prim(Primitive::Assert, span) = node {
                                 *node = Node::ImplPrim(ImplPrimitive::TestAssert, span);
-                                true
-                            } else {
-                                false
                             }
-                        })
-                        .unwrap_or(false);
+                        },
+                    );
                     if test_assert {
                         self.asm.test_assert_count += 1;
                     }
@@ -952,6 +996,7 @@ impl Compiler {
             }
         }
     }
+    /// Compile modifier args
     fn args(&mut self, words: Vec<Sp<Word>>) -> UiuaResult<EcoVec<SigNode>> {
         (words.into_iter())
             .filter(|w| w.value.is_code())
@@ -1452,7 +1497,7 @@ impl Compiler {
             }
             Word::Primitive(p) => self.primitive(p, word.span),
             Word::Modified(m) => self.modified(*m, None)?,
-            Word::Placeholder(_) => {
+            Word::Placeholder(_) | Word::PlaceholderN => {
                 // We could error here, but it's easier to handle it higher up
                 Node::empty()
             }
@@ -1461,7 +1506,7 @@ impl Compiler {
                 Node::empty()
             }
             Word::OutputComment { i, n } => Node::SetOutputComment { i, n },
-            Word::Subscripted(sub) => self.subscript(*sub, word.span)?,
+            Word::Subscripted(sub) => self.subscripted(*sub, word.span)?,
             Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::FlipLine => Node::empty(),
             Word::InlineMacro(_) => {
                 self.add_error(
@@ -1588,21 +1633,19 @@ impl Compiler {
             }
         }
     }
-    /// Find the [`LocalName`]s of both the name and all parts of the path of a [`Ref`]
+    /// Find the [`LocalIndex`]es of both the name and all parts of the path of a [`Ref`]
     ///
     /// Returns [`None`] if the reference is to a constant
     fn ref_local(&self, r: &Ref) -> UiuaResult<Option<(Vec<LocalIndex>, LocalIndex)>> {
+        self.ref_local_impl(r, LookupPreference::Function)
+    }
+    fn ref_local_impl(
+        &self,
+        r: &Ref,
+        pref: LookupPreference,
+    ) -> UiuaResult<Option<(Vec<LocalIndex>, LocalIndex)>> {
         if let Some((names, path_locals)) = self.ref_path(&r.path)? {
-            if let Some(local) = names
-                .get_prefer_function(&r.name.value, &self.asm)
-                .or_else(|| {
-                    (r.name.value.strip_suffix('!')).and_then(|name| {
-                        names.get_prefer_module(name, &self.asm).filter(|local| {
-                            matches!(&self.asm.bindings[local.index].kind, BindingKind::Module(_))
-                        })
-                    })
-                })
-            {
+            if let Some(local) = names.get(&r.name.value, pref, &self.asm) {
                 if local.public {
                     Ok(Some((path_locals, local)))
                 } else {
@@ -1617,7 +1660,7 @@ impl Compiler {
                     format!("Item `{}` not found", r.name.value),
                 ))
             }
-        } else if let Some(local) = self.find_name_function(&r.name.value, &r.name.span) {
+        } else if let Some(local) = self.find_name_impl(&r.name.value, &r.name.span, pref, false) {
             Ok(Some((Vec::new(), local)))
         } else if r.path.is_empty() && CONSTANTS.iter().any(|def| def.name == r.name.value) {
             Ok(None)
@@ -1629,27 +1672,45 @@ impl Compiler {
         }
     }
     fn find_name_module(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
-        self.find_name_impl(name, span, true, false)
+        self.find_name_impl(name, span, LookupPreference::Module, false)
     }
     fn find_name_function(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
-        self.find_name_impl(name, span, false, false)
+        self.find_name_impl(name, span, LookupPreference::Function, false)
+    }
+    #[allow(dead_code)]
+    fn find_name_macro(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
+        self.find_name_impl(name, span, LookupPreference::Module, false)
+    }
+    fn find_name_callable(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
+        self.find_name_impl(name, span, LookupPreference::Callable, false)
     }
     fn find_name_impl(
         &self,
         name: &str,
         span: &CodeSpan,
-        prefer_module: bool,
+        pref: LookupPreference,
         stop_at_binding: bool,
     ) -> Option<LocalIndex> {
         // println!("name: {name:?} @ {}", span);
+        // println!("lookup preference: {pref:?}");
         // for scope in self.scopes() {
         //     println!("  {:?} {:?}", scope.kind, scope.names);
         // }
-        let mut only_modules = [false, true];
-        if prefer_module {
-            only_modules.reverse();
-        }
-        for only_modules in only_modules {
+        let prefs: &[_] = match pref {
+            LookupPreference::Function => &[
+                LookupPreference::Function,
+                LookupPreference::Macro,
+                LookupPreference::Module,
+            ],
+            LookupPreference::Macro => &[
+                LookupPreference::Macro,
+                LookupPreference::Module,
+                LookupPreference::Function,
+            ],
+            LookupPreference::Module => &[LookupPreference::Module, LookupPreference::Callable],
+            LookupPreference::Callable => &[LookupPreference::Callable, LookupPreference::Module],
+        };
+        for &pref in prefs {
             let mut hit_stop = false;
             for scope in self.scopes() {
                 if matches!(scope.kind, ScopeKind::File(_))
@@ -1661,11 +1722,7 @@ impl Compiler {
                     hit_stop = true;
                 }
                 // Look in the scope's names
-                let local = if only_modules {
-                    scope.names.get_only_module(name, &self.asm)
-                } else {
-                    scope.names.get_prefer_function(name, &self.asm)
-                };
+                let local = scope.names.get_only(name, pref, &self.asm);
                 if let Some(local) = local {
                     return Some(local);
                 }
@@ -1686,17 +1743,7 @@ impl Compiler {
                 }
             }
         }
-        // Attempt to look up the identifier as a non-macro
-        let as_non_macro =
-            self.find_name_impl(name.strip_suffix('!')?, span, true, stop_at_binding)?;
-        if let BindingKind::Module(_) | BindingKind::Scope(_) =
-            self.asm.bindings[as_non_macro.index].kind
-        {
-            // Only allow it if it is a module
-            Some(as_non_macro)
-        } else {
-            None
-        }
+        None
     }
     fn ref_path(
         &self,
@@ -1731,7 +1778,19 @@ impl Compiler {
                     format!("`{}` is a constant, not a module", first.module.value),
                 ));
             }
-            BindingKind::IndexMacro(_) => {
+            BindingKind::IndexMacro {
+                args: 0,
+                subscript: true,
+            } => {
+                return Err(self.error(
+                    first.module.span.clone(),
+                    format!(
+                        "`{}` is a custom subscript function, not a module",
+                        first.module.value
+                    ),
+                ));
+            }
+            BindingKind::IndexMacro { .. } => {
                 return Err(self.error(
                     first.module.span.clone(),
                     format!("`{}` is an index macro, not a module", first.module.value),
@@ -1747,7 +1806,7 @@ impl Compiler {
         };
         for comp in path.iter().skip(1) {
             let submod_local = names
-                .get_prefer_module(&comp.module.value, &self.asm)
+                .get(&comp.module.value, LookupPreference::Module, &self.asm)
                 .ok_or_else(|| {
                     self.error(
                         comp.module.span.clone(),
@@ -1771,7 +1830,19 @@ impl Compiler {
                         format!("`{}` is a constant, not a module", comp.module.value),
                     ));
                 }
-                BindingKind::IndexMacro(_) => {
+                BindingKind::IndexMacro {
+                    args: 0,
+                    subscript: true,
+                } => {
+                    return Err(self.error(
+                        first.module.span.clone(),
+                        format!(
+                            "`{}` is a custom subscript function, not a module",
+                            first.module.value
+                        ),
+                    ));
+                }
+                BindingKind::IndexMacro { .. } => {
                     return Err(self.error(
                         comp.module.span.clone(),
                         format!("`{}` is an index macro, not a module", comp.module.value),
@@ -1847,10 +1918,23 @@ impl Compiler {
             self.code_meta.completions.insert(span.clone(), completions);
         }
 
-        if let Some(local) = self.find_name_impl(&ident, &span, false, true) {
+        if let Some(local) = self.find_name_impl(&ident, &span, LookupPreference::Function, true) {
             // Name exists in binding scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
+            if let BindingKind::IndexMacro { args, subscript } = self.asm.bindings[local.index].kind
+            {
+                if args > 0 {
+                    self.add_error(
+                        span.clone(),
+                        "Attempted to call macro without arguments. \
+                        This is a bug in the compiler.",
+                    );
+                }
+                if subscript {
+                    self.add_error(span.clone(), format!("`{ident}` requires a subscript"));
+                }
+            }
             self.global_index(local.index, span)
         } else if let Some(i) = (self.current_bindings.iter()).position(|curr| curr.name == ident) {
             // Name is a recursive call
@@ -1896,10 +1980,68 @@ impl Compiler {
                     Value::default()
                 });
             Node::Push(value)
+        } else if let Some(i) = ident
+            .find('₋')
+            .or_else(|| ident.find(SUBSCRIPT_DIGITS))
+            .filter(|&i| !ident[i..].contains(['⌞', '⌟']))
+        {
+            // Name has a subscript
+            let mut n = 0i32;
+            for c in (ident[i..].chars()).skip(ident.contains('₋') as usize) {
+                if c != '₋' {
+                    n *= 10
+                }
+                n += SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32;
+            }
+            if ident[i..].starts_with('₋') {
+                if &ident[i..] == "₋" {
+                    self.add_error(span.clone(), "Subscript is incomplete");
+                }
+                n = -n;
+            }
+            self.sub_name(&ident[..i], n, span)
+        } else if ident.contains('ₙ') {
+            self.add_error(
+                span,
+                format!(
+                    "ₙ is not valid outside a custom subscript function, \
+                    and `{ident}` is not defined as a normal function"
+                ),
+            );
+            Node::new_push(Value::default())
         } else {
             self.add_error(span, format!("Unknown identifier `{ident}`"));
             Node::new_push(Value::default())
         }
+    }
+    fn sub_name(&mut self, name: &str, sub: i32, span: CodeSpan) -> Node {
+        if let Some(local) = self.find_name_callable(name, &span)
+            && let Some(index_macro) = self.asm.index_macros.get(&local.index).cloned()
+        {
+            match self.index_macro(
+                index_macro,
+                Vec::new(),
+                Some(sub),
+                span.clone().sp(name.into()),
+                local,
+                span.clone(),
+            ) {
+                Ok(node) => {
+                    self.code_meta.global_references.insert(span, local.index);
+                    return node;
+                }
+                Err(e) => self.errors.push(e),
+            }
+        }
+        let mut node = self.ident(name.into(), span.clone());
+        if let Ok(mut sig) = self.sig_of(&node, &span) {
+            sig = sig.compose(Signature::new(0, 1));
+            self.code_meta
+                .macro_expansions
+                .insert(span, (None, name.into(), Some(sig)));
+        }
+        node.prepend(Node::new_push(sub));
+        node
     }
     fn scope_file_path(&self) -> Option<&Path> {
         for scope in self.scopes() {
@@ -1939,7 +2081,7 @@ impl Compiler {
                     Node::empty()
                 }
             }
-            BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
+            BindingKind::IndexMacro { .. } | BindingKind::CodeMacro(_) => {
                 // We could error here, but it's easier to handle it higher up
                 Node::empty()
             }
@@ -2176,8 +2318,19 @@ impl Compiler {
         }
     }
     #[allow(clippy::match_single_binding)]
-    fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
+    fn subscripted(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
         let scr = sub.script;
+        let scr = scr.span.clone().sp(scr.value.map_num(|n| {
+            n.map(|n| {
+                n.unwrap_or_else(|| {
+                    self.add_error(
+                        scr.span,
+                        "ₙ is not valid outside a custom subscript function",
+                    );
+                    2
+                })
+            })
+        }));
         Ok(match sub.word.value {
             Word::Modified(m) => match m.modifier.value {
                 Modifier::Ref(_) | Modifier::Macro(..) => {
@@ -2271,7 +2424,7 @@ impl Compiler {
                 match prim {
                     prim if prim.sig().is_some_and(|sig| sig == (2, 1))
                         && prim
-                            .subscript_sig(Some(&Subscript::numeric(2)))
+                            .subscript_sig(Some(&SubscriptToken::numeric(Some(2))))
                             .is_some_and(|sig| sig == (1, 1)) =>
                     {
                         Node::from_iter([Node::new_push(n), self.primitive(prim, span)])
@@ -2570,6 +2723,19 @@ impl Compiler {
             }
         }
     }
+    fn subscript_sided_only(
+        &mut self,
+        sub: &Sp<Subscript>,
+        for_what: impl fmt::Display + Copy,
+    ) -> Option<SidedSubscript> {
+        if sub.value.num.is_some() {
+            self.add_error(
+                sub.span.clone(),
+                format!("Numerics subscripts are not allowed for {for_what}"),
+            );
+        }
+        sub.value.side
+    }
     fn subscript_side_only(
         &mut self,
         sub: &Sp<Subscript>,
@@ -2658,6 +2824,18 @@ impl Compiler {
             format!(
                 "{} is experimental. Add `# Experimental!` \
                 to the top of the file to use it.",
+                thing()
+            )
+        })
+    }
+    fn experimental_error_them<S>(&mut self, span: &CodeSpan, thing: impl FnOnce() -> S)
+    where
+        S: fmt::Display,
+    {
+        self.experimental_error(span, || {
+            format!(
+                "{} are experimental. Add `# Experimental!` \
+                to the top of the file to use them.",
                 thing()
             )
         })

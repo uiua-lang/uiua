@@ -696,15 +696,29 @@ pub enum BindingKind {
     /// A module
     Module(Module),
     /// A scope being compiled
+    ///
+    /// Contains the scope index
     Scope(usize),
     /// An index macro
-    ///
-    /// Contains the number of arguments
-    IndexMacro(usize),
+    IndexMacro {
+        /// The number of function arguments the index macro takes
+        #[serde(default = "one", skip_serializing_if = "is_one")]
+        args: usize,
+        /// Whether the macro is a custom subscript
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        subscript: bool,
+    },
     /// A code macro
     CodeMacro(Node),
     /// An error
     Error,
+}
+
+fn one() -> usize {
+    1
+}
+fn is_one(n: &usize) -> bool {
+    *n == 1
 }
 
 impl BindingKind {
@@ -715,7 +729,7 @@ impl BindingKind {
             Self::Func(func) => Some(func.sig),
             Self::Module(_) => None,
             Self::Scope(_) => None,
-            Self::IndexMacro(_) => None,
+            Self::IndexMacro { .. } => None,
             Self::CodeMacro(_) => None,
             Self::Error => None,
         }
@@ -724,16 +738,16 @@ impl BindingKind {
     pub fn is_constant(&self) -> bool {
         matches!(self, Self::Const(_))
     }
-    /// Check if the binding is a module
-    pub fn is_module(&self) -> bool {
-        self.as_module().is_some()
-    }
     /// Get the binding as a module
     pub fn as_module(&self) -> Option<&Module> {
         match self {
             BindingKind::Module(m) => Some(m),
             _ => None,
         }
+    }
+    /// Check if the binding is a module
+    pub fn is_module(&self) -> bool {
+        matches!(self, Self::Module(_) | Self::Scope(_))
     }
     /// Check if the binding is a constant or function
     pub fn has_sig(&self) -> bool {
@@ -742,6 +756,18 @@ impl BindingKind {
             Self::Module(m) => m.names.contains_key("Call") || m.names.contains_key("New"),
             _ => false,
         }
+    }
+    /// Check if the binding is a constant or function
+    pub fn is_function(&self) -> bool {
+        match self {
+            Self::Const(_) | Self::Func(_) => true,
+            Self::Module(m) => m.names.contains_key("Call") || m.names.contains_key("New"),
+            _ => false,
+        }
+    }
+    /// Check if the bindings is a macro
+    pub fn is_macro(&self) -> bool {
+        matches!(self, Self::IndexMacro { .. } | Self::CodeMacro(_))
     }
 }
 

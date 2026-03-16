@@ -15,12 +15,12 @@ use std::{
 use InlineMacro;
 use ecow::EcoString;
 use paste::paste;
+use uiua_parser::SubscriptToken;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     CodeSpan, Compiler, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode, Primitive, RunMode,
-    SUBSCRIPT_DIGITS, SafeSys, Signature, Sp, Subscript, SysBackend, Uiua, UiuaErrorKind,
-    UiuaResult, Value,
+    SUBSCRIPT_DIGITS, SafeSys, Signature, Sp, SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value,
     ast::*,
     is_ident_char,
     parse::{flip_unsplit_items, flip_unsplit_lines, parse, split_words, trim_spaces},
@@ -1111,6 +1111,7 @@ impl Formatter<'_> {
                 }
             }
             Word::Array(arr) => {
+                let unclosed = self.output.rsplit('\n').next().map_or(0, count_unclosed);
                 if let Some(down_span) = &arr.down_span {
                     self.push(down_span, "↓");
                 }
@@ -1120,7 +1121,10 @@ impl Formatter<'_> {
                     self.output.push('[');
                 }
 
-                self.format_inner_items(&arr.lines, true, depth + 1);
+                let depth = depth + 1
+                    - unclosed
+                        * arr.word_lines().next().is_some_and(|line| line.is_empty()) as usize;
+                self.format_inner_items(&arr.lines, true, depth);
                 if arr.boxes {
                     self.output.push('}');
                 } else {
@@ -1143,6 +1147,7 @@ impl Formatter<'_> {
             }
             Word::Placeholder(Some(i)) => self.push(&word.span, &format!("^{i}")),
             Word::Placeholder(None) => self.push(&word.span, "^"),
+            Word::PlaceholderN => self.push(&word.span, "^n"),
             Word::Subscripted(sub) => match &sub.word.value {
                 Word::Modified(m) => {
                     if sub.script.value.num.is_some()
@@ -1497,8 +1502,7 @@ impl Formatter<'_> {
         let start_indent =
             (self.output.rsplit('\n').next()).map_or(0, |line| line.graphemes(true).count());
 
-        let double_nest = self.output.ends_with(['(', '{', '[']);
-
+        let unclosed = self.output.rsplit('\n').next().map_or(0, count_unclosed);
         self.output.push('(');
 
         // Signature
@@ -1519,10 +1523,9 @@ impl Formatter<'_> {
         }
 
         let depth = depth + 1
-            - ((double_nest && func.word_lines().next().is_some_and(|line| line.is_empty()))
-                as usize);
+            - unclosed * func.word_lines().next().is_some_and(|line| line.is_empty()) as usize;
         self.format_inner_items(&func.lines, true, depth);
-        if double_nest {
+        if unclosed > 0 {
             while self.output.chars().rev().take_while(|&c| c == ' ').count() >= start_indent {
                 self.output.pop();
             }
@@ -1532,7 +1535,7 @@ impl Formatter<'_> {
         }
         self.output.push(')');
     }
-    fn subscript(&mut self, sub: &Sp<Subscript>) {
+    fn subscript(&mut self, sub: &Sp<SubscriptToken>) {
         self.push(&sub.span, &sub.value.to_string());
     }
     fn pack(&mut self, pack: &FunctionPack, depth: usize) {
@@ -1723,7 +1726,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
                     _ => false,
                 }
         }
-        Word::Placeholder(_) => false,
+        Word::Placeholder(_) | Word::PlaceholderN => false,
         Word::Subscripted(sub) => word_is_multiline(&sub.word.value),
         Word::Comment(_) => true,
         Word::Spaces => false,
@@ -1773,6 +1776,26 @@ fn end_loc(s: &str) -> Loc {
     }
 }
 
+/// Count the number of unclosed open delimiters in a string
+fn count_unclosed(s: &str) -> usize {
+    let [mut parens, mut brackets, mut curlies] = [0i32; 3];
+    for c in s.chars() {
+        match c {
+            '(' => parens += 1,
+            ')' => parens -= 1,
+            '[' => brackets += 1,
+            ']' => brackets -= 1,
+            '{' => curlies += 1,
+            '}' => curlies -= 1,
+            _ => {}
+        }
+    }
+    [parens, brackets, curlies]
+        .map(|i| i.max(0) as usize)
+        .into_iter()
+        .sum()
+}
+
 #[derive(Default)]
 struct FormatterBackend(pub Option<Arc<dyn SysBackend>>);
 
@@ -1797,6 +1820,12 @@ impl SysBackend for FormatterBackend {
         Ok(())
     }
     fn print_str_stderr(&self, _: &str) -> Result<(), String> {
+        Ok(())
+    }
+    fn print_bytes_stdout(&self, _: &[u8]) -> Result<(), String> {
+        Ok(())
+    }
+    fn print_bytes_stderr(&self, _: &[u8]) -> Result<(), String> {
         Ok(())
     }
     fn print_str_trace(&self, _: &str) {}
@@ -1918,6 +1947,25 @@ G ← (
   ∘
   ∘ # hi
 )
+F(F(
+  F
+))
+F(F{
+  F
+})
+F{F{
+  F
+}}
+F{F(
+  F
+)}
+F((F((
+  F
+))))
+F{{F{{
+  F
+}}}}
+
 ⊃(+
 | - # x
 )

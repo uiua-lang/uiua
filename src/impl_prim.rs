@@ -2,7 +2,7 @@
 
 use serde::*;
 
-use crate::{Purity, SubSide, Subscript, algorithm::ga};
+use crate::{Purity, SidedSubscript, SubSide, Subscript, algorithm::ga};
 
 macro_rules! impl_primitive {
     ($(
@@ -109,6 +109,7 @@ macro_rules! impl_primitive {
 impl_primitive!(
     // Inverses
     (2, Root),
+    (2, Log),
     (1, Cos),
     (1, Asin),
     (1, Acos),
@@ -151,6 +152,7 @@ impl_primitive!(
     (1(2), UnTake),
     (1(2)[1], UnGroup),
     (1(2)[1], UnPartition),
+    (1(2), UnReshape),
     (1, UnSort, Impure),
     (1, UnHsv),
     (1, UnOklch),
@@ -242,6 +244,7 @@ impl_primitive!(
     (2[1], SplitByKeepEmpty),
     (2, AbsComplex),
     (1, SquareAbs),
+    (1, NegAbs),
     (2, MatrixDiv),
     (1, RangeSub(i32)),
     (1, Exp2),
@@ -262,6 +265,7 @@ impl_primitive!(
     (2, SidedJoin(SubSide)),
     ([1], SidedStencil(SubSide)),
     ((1), MultiJoin(usize)),
+    ([2], SidedBracket(SidedSubscript)),
     (1, Json5),
     (1, Utf16),
     (1, Retropose),
@@ -275,6 +279,7 @@ impl_primitive!(
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),
     (2(1), TagVariant),
+    (3, MapArgs),
     (3, LayoutArgs),
     (2, VoxelsArgs),
     ([1], FoldGif),

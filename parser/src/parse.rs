@@ -12,8 +12,8 @@ use std::{
 use ecow::EcoString;
 
 use crate::{
-    BindingCounts, Complex, Diagnostic, DiagnosticKind, Ident, Inputs, NumComponent, Primitive,
-    Signature,
+    BindingCounts, Complex, Diagnostic, DiagnosticKind, Ident, Inputs, NumComponent,
+    NumericSubscript, Primitive, Signature,
     ast::*,
     lex::{AsciiToken::*, Token::*, *},
 };
@@ -158,6 +158,12 @@ pub fn parse(
                         }
                         MultilineString(_) => {
                             while let Some(MultilineString(_)) = toks.peek().map(|t| &t.value) {
+                                toks.next();
+                            }
+                            1
+                        }
+                        MultilineFormatStr(_) => {
+                            while let Some(MultilineFormatStr(_)) = toks.peek().map(|t| &t.value) {
                                 toks.next();
                             }
                             1
@@ -566,7 +572,7 @@ impl Parser<'_> {
                     chars.extend(Primitive::non_deprecated().filter_map(|p| p.glyph()));
                     chars.extend(' '..='~');
                     chars.extend(SUBSCRIPT_DIGITS);
-                    chars.extend("←↚‼′″‴₋⌞⌟↓".chars());
+                    chars.extend("←↚‼′″‴₋⌞⌟ₙ↓".chars());
                     chars.sort_unstable();
                     chars
                 };
@@ -1259,6 +1265,8 @@ impl Parser<'_> {
             s.map(Into::into).map(Word::String)
         } else if let Some(op) = self.next_token_map(Token::as_placeholder) {
             op.map(Word::Placeholder)
+        } else if let Some(span) = self.exact(PlaceholderN) {
+            span.sp(Word::PlaceholderN)
         } else if let Some(label) = self.next_token_map(Token::as_label) {
             if let Some(sub) = self.next_token_map(Token::as_subscript) {
                 (label.span.merge(sub.span))
@@ -2094,6 +2102,33 @@ pub fn max_placeholder(words: &[Sp<Word>]) -> Option<(usize, Option<CodeSpan>)> 
         }
     }
     max.map(|i| (i, shorthand_span))
+}
+
+pub fn has_subn(words: &[Sp<Word>]) -> bool {
+    for word in words {
+        match &word.value {
+            Word::PlaceholderN => return true,
+            Word::Ref(r, _) if r.name.value.contains('ₙ') => return true,
+            Word::Strand(items) if has_subn(items) => return true,
+            Word::Array(arr) if arr.word_lines().any(has_subn) => return true,
+            Word::Func(func) if func.word_lines().any(has_subn) => return true,
+            Word::Modified(m) if has_subn(&m.operands) => return true,
+            Word::Pack(pack)
+                if (pack.branches.iter())
+                    .flat_map(|b| b.value.word_lines())
+                    .any(has_subn) =>
+            {
+                return true;
+            }
+            Word::Subscripted(s)
+                if matches!(s.script.value.num, Some(NumericSubscript::N(None))) =>
+            {
+                return true;
+            }
+            _ => {}
+        }
+    }
+    false
 }
 
 /// Trim space words

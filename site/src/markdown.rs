@@ -210,7 +210,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                     }
                     let math_table = primitive_rows(
                         [
-                            Add, Sub, Mul, Div, Modulo, Pow, Log, Neg, Abs, Sqrt, Sign, Sin, Atan,
+                            Add, Sub, Mul, Div, Modulo, Pow, Neg, Abs, Sqrt, Sign, Sin, Atan,
                         ],
                         false,
                     );

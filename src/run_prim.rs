@@ -101,7 +101,6 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::Modulo => env.dyadic_oo_env(Value::modulo)?,
         Primitive::Or => env.dyadic_oo_env(Value::or)?,
         Primitive::Pow => env.dyadic_oo_env(Value::pow)?,
-        Primitive::Log => env.dyadic_oo_env(Value::log)?,
         Primitive::Min => env.dyadic_oo_env(Value::min)?,
         Primitive::Max => env.dyadic_oo_env(Value::max)?,
         Primitive::Atan => env.dyadic_oo_env(Value::atan2)?,
@@ -599,6 +598,7 @@ impl ImplPrimitive {
                 env.push(bits);
             }
             ImplPrimitive::Root => env.dyadic_oo_env(Value::root)?,
+            ImplPrimitive::Log => env.dyadic_oo_env(Value::log)?,
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
             ImplPrimitive::Acos => env.monadic_env(Value::acos)?,
@@ -622,6 +622,14 @@ impl ImplPrimitive {
                 let (keys, vals) = map.unmap(env)?;
                 env.push(vals);
                 env.push(keys);
+            }
+            ImplPrimitive::UnReshape => {
+                let val = env.pop(1)?;
+                let mut deshape = val.clone();
+                deshape.deshape();
+                let shape = val.shape.iter().copied().collect::<Value>();
+                env.push(deshape);
+                env.push(shape);
             }
             ImplPrimitive::UnWhere => env.monadic_ref_env(Value::unwhere)?,
             ImplPrimitive::Json5 => env.monadic_ref_env(Value::to_json5_string)?,
@@ -1011,6 +1019,7 @@ impl ImplPrimitive {
             // Optimizations
             ImplPrimitive::AbsComplex => env.dyadic_oo_env(Value::abs_complex)?,
             ImplPrimitive::SquareAbs => env.monadic_env(Value::square_abs)?,
+            ImplPrimitive::NegAbs => env.monadic_env(Value::neg_abs)?,
             ImplPrimitive::FirstMinIndex => env.monadic_ref_env(Value::first_min_index)?,
             ImplPrimitive::FirstMaxIndex => env.monadic_ref_env(Value::first_max_index)?,
             ImplPrimitive::LastMinIndex => env.monadic_ref_env(Value::last_min_index)?,
@@ -1320,6 +1329,13 @@ impl ImplPrimitive {
                 let res = media::voxels(val, Some(args), env)?;
                 env.push(res);
             }
+            &ImplPrimitive::MapArgs => {
+                let args = env.pop(1)?;
+                let keys = env.pop(2)?;
+                let mut vals = env.pop(3)?;
+                vals.map_args(keys, Some(args), env)?;
+                env.push(vals);
+            }
             &ImplPrimitive::Ga(op, spec) => match op {
                 GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,
                 GaOp::GeometricInner => env.dyadic_oo_env_with(spec, ga::inner_product)?,
@@ -1461,6 +1477,38 @@ impl ImplPrimitive {
                 }
                 for outputs in outputs.into_iter().rev() {
                     env.push_all(outputs);
+                }
+            }
+            ImplPrimitive::SidedBracket(sided) => {
+                let n = sided.n.unwrap_or(1);
+                let mut args: SmallVec<[Vec<Value>; 3]> = SmallVec::new();
+                let saved;
+                match sided.side {
+                    SubSide::Left => {
+                        saved = env.pop_n(n)?;
+                        for sn in ops.iter() {
+                            args.push(env.pop_n(sn.sig.args().saturating_sub(n))?);
+                        }
+                    }
+                    SubSide::Right => {
+                        for sn in ops.iter() {
+                            args.push(env.pop_n(sn.sig.args().saturating_sub(n))?);
+                        }
+                        saved = env.pop_n(n)?;
+                    }
+                }
+                for (f, args) in ops.into_iter().zip(args).rev() {
+                    match sided.side {
+                        SubSide::Left => {
+                            env.push_all(args);
+                            env.push_all(saved.iter().cloned());
+                        }
+                        SubSide::Right => {
+                            env.push_all(saved.iter().cloned());
+                            env.push_all(args);
+                        }
+                    }
+                    env.exec(f)?;
                 }
             }
             ImplPrimitive::SplitByScalar => {

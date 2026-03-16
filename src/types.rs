@@ -189,7 +189,7 @@ impl TypeRt<'_> {
                     let x = self.pop()?;
                     self.stack.push(x);
                 }
-                Add | Sub | Mul | Div | Pow | Modulo | Log => {
+                Add | Sub | Mul | Div | Pow | Modulo => {
                     let a = self.pop()?;
                     let b = self.pop()?;
                     let shape = if a.shape.len() > b.shape.len() {
@@ -302,6 +302,7 @@ impl TypeRt<'_> {
                     if let Some(n) = n.int {
                         let len = x.shape.row_count_mut();
                         *len = len.saturating_sub(n.unsigned_abs());
+                        self.stack.push(x);
                     } else {
                         return Err(TypeError::NotSupported);
                     }
@@ -328,6 +329,17 @@ impl TypeRt<'_> {
                     self.stack.push(a);
                     self.stack.push(b);
                 }
+                ImplPrimitive::Log => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    let shape = if a.shape.len() > b.shape.len() {
+                        a.shape
+                    } else {
+                        b.shape
+                    };
+                    let scalar = a.scalar.max(b.scalar);
+                    self.stack.push(Ty::new(scalar, shape));
+                }
                 ImplPrimitive::StackN { .. } => {}
                 _ => return Err(TypeError::NotSupported),
             },
@@ -344,8 +356,8 @@ impl TypeRt<'_> {
                 }
                 Reduce => {
                     let [f] = get_args(args)?;
-                    match f.node.as_primitive() {
-                        Some(Join) => {
+                    match f.node.as_flipped_primitive() {
+                        Some((Join, _)) => {
                             let mut x = self.pop()?;
                             if x.shape.len() >= 2 {
                                 let b = x.shape.remove(1);
@@ -354,7 +366,7 @@ impl TypeRt<'_> {
                             }
                             self.stack.push(x);
                         }
-                        Some(prim) if prim.class() == PrimClass::DyadicPervasive => {
+                        Some((prim, _)) if prim.class() == PrimClass::DyadicPervasive => {
                             let mut x = self.pop()?;
                             x.shape.make_row();
                             self.stack.push(x);

@@ -105,23 +105,14 @@ primitive!(
     ///
     /// ex: [. 1 2 3 4]
     ///
-    /// There is usually a better alternative to [duplicate]. Consider whether [by] or [fork] solves your stack manipulation needs instead.
-    ///
-    /// [duplicate] is often used in examples to show both the input and output of a function.
-    /// ex: √.144
-    /// ex: .[1 2 3 4]
-    ///   : +1⇌
-    ///
-    /// [duplicate] works well with [table]:
-    /// ex: ⊞=.⇡4
-    /// Sometimes it is also good with [group] or [partition]
-    /// ex: ⊜⧻.[1 1 0 0 2 2 2 2 0 1 0 3 3]
+    /// [duplicate] is deprecated and no longer recommended in modern Uiua. It is a relic of when Uiua was a different language.
+    /// Consider whether [by] or [fork] suits your needs instead. For example, [range][duplicate]`5` can be written [by][range]`5`.
     (1(2), Dup, Arguments, ("duplicate", '.')),
     /// Swap the top two values on the stack
     ///
     /// ex: [: 1 2 3 4 5]
     ///
-    /// [flip] is generally recommend against. It is largely a relic of when Uiua was a different language.
+    /// [flip] is deprecated and no longer recommended in modern Uiua. It is a relic of when Uiua was a different language.
     /// Many cases can be replaced with [backward]. Others can be replaced with [dip], [fork], [both], [on], [by], [with], or [off].
     (2(2), Flip, Arguments, ("flip", AsciiToken::Colon, ':')),
     /// Do nothing with one value
@@ -217,7 +208,7 @@ primitive!(
     /// ex: ⊸¯ 4
     /// ex: ⊸+ 2 5
     /// [by] expresses the common pattern of performing an operation but preserving the last argument so that it can be used again.
-    /// With [by], the filtering function above can be written more simply.
+    /// For example [by] can be used with [keep] to do simple filtering.
     /// ex: F ← ▽⊸<
     ///   : F 10 [1 27 8 3 14 9]
     /// Here are some more examples of [by] in action.
@@ -264,7 +255,7 @@ primitive!(
     /// Subscripted [off] keeps the first N arguments after the outputs.
     /// ex: {⤚₂[⊙⊙∘] 1 2 3}
     ([1], Off, Arguments, ("off", '⤚')),
-    /// Keep all arguments to a function above the outputs on the stack
+    /// Keep all arguments to a function before the outputs
     ///
     /// ex: # Experimental!
     ///   : [◠+ 1 2]
@@ -638,13 +629,6 @@ primitive!(
     /// ex: ⁿ2 [1 2 3]
     /// ex: ⁿ [1 2 3] [4 5 6]
     (2, Pow, DyadicPervasive, ("power", 'ⁿ')),
-    /// Get the based logarithm of a number
-    ///
-    /// The first value is the base, and the second value is the power.
-    /// ex: ₙ2 8
-    /// ex: ₙ2 [8 16 32]
-    /// ex: ₙ [2 3 4] [16 27 1024]
-    (2, Log, DyadicPervasive, ("logarithm", 'ₙ')),
     /// Take the minimum of two arrays
     ///
     /// ex: ↧ 3 5
@@ -1122,6 +1106,8 @@ primitive!(
     (1, Occurrences, MonadicArray, ("occurrences", '⧆')),
     /// Get a mask of first occurrences of items in an array
     ///
+    /// [unique] has been deprecated. Use [occurrences] instead.
+    ///
     /// ex: ◰ 7_7_8_0_1_2_0
     /// ex: ◰ "Hello, World!"
     /// ex: ◰ [3_2 1_4 3_2 5_6 1_4 7_8]
@@ -1423,6 +1409,12 @@ primitive!(
     ///   : ⍜△⍜(⊏0_2)¯
     /// ex: ↯¯3 [1 2 3 4]
     /// ex: ↯¯∞ [1 2 3 4 5]
+    ///
+    /// [un][reshape] works equivalently to [fork][shape][deshape]
+    /// ex: °↯ °△ 3_3
+    /// [un][reshape] also works with [under]
+    /// This is useful for merging together axes. Unlike [under][shape], this will not cycle the data, but will use the entire array.
+    /// ex: ⍜°↯ ⍜↙₂/× °△ 3_3_3
     ///
     /// See also: [deshape]
     (2, Reshape, DyadicArray, ("reshape", '↯')),
@@ -2247,7 +2239,7 @@ primitive!(
     ///
     /// [under][partition] works if [partition]'s function is [under]able.
     /// ex: ⍜⊜□⇌  ⊸≠@  $ These are some words
-    /// ex: ⍜⊜□≡⇌ ⊸≠@  $ These are some words
+    /// ex: ⍜⊜□⍚⇌ ⊸≠@  $ These are some words
     /// ex: ⍜⊜⊢⌵  ⊸≠@  $ These are some words
     ///
     /// [partition] is closely related to [group].
@@ -2907,6 +2899,9 @@ primitive!(
     /// ex: get [1 3 3 2] map 1_2_3 4_5_6
     ///
     /// Map keys are stored as metadata on the values array. For this reason, they cannot be put in arrays together without being [box]ed, as the metadata for each map would be lost.
+    ///
+    /// Maps can take in an optional argument specifying (at least) how much space to reserve ahead of time, to reduce rehashing/resizing cost.
+    /// ex: map!°⊸Capacity 3 ⇡ 3 ⇡ 3
     ///
     /// Regardless of the size of the map, operations on it have O(1) amortized time complexity.
     /// In this example, we time [get] and [insert] operations on maps from 10 entries up to 100,000 entries.
@@ -3841,27 +3836,24 @@ sys_op! {
     /// On the web, this example will hang for 1 second.
     /// ex: ⚂ &sl 1
     (1(0), Sleep, Misc, "&sl", "sleep", Mutating),
-    /// Read characters formed by at most n bytes from a stream
+    /// Read characters formed by *n* bytes from a stream
     ///
-    /// Expects a count and a stream handle.
+    /// Expects a count *n* and a stream handle, reads *n* bytes from the specified stream handle. The bytes read are expected to be valid UTF-8 and are returned as a string.
+    /// **Note:** [&rs] will attempt to read the given number of *bytes* from the stream. If the read bytes are not valid UTF-8, up to 3 additional bytes will be read in an attempt to finish a valid UTF-8 character.
     /// The stream handle `0` is stdin.
     /// ex: &rs 4 &fo "example.txt"
     /// Using [infinity] as the count will read until the end of the stream.
     /// ex: &rs ∞ &fo "example.txt"
-    ///
-    /// [&rs] will attempt to read the given number of *bytes* from the stream.
-    /// If the read bytes are not valid UTF-8, up to 3 additional bytes will be read in an attempt to finish a valid UTF-8 character.
-    ///
     /// See also: [&rb]
     (2, ReadStr, Stream, "&rs", "read to string", Mutating),
-    /// Read at most n bytes from a stream
+    /// Read *n* bytes from a stream
     ///
-    /// Expects a count and a stream handle.
+    /// Expects a count *n* and a stream handle, reads *n* bytes from the specified stream handle and returns them as a rank-1 byte array.
+    /// **Note:** the array may be shorter than *n* bytes only if the end of the stream is reached before *n* bytes can be read.
     /// The stream handle `0` is stdin.
     /// ex: &rb 4 &fo "example.txt"
     /// Using [infinity] as the count will read until the end of the stream.
     /// ex: &rb ∞ &fo "example.txt"
-    ///
     /// See also: [&rs]
     (2, ReadBytes, Stream, "&rb", "read to bytes", Mutating),
     /// Read from a stream until a delimiter is reached

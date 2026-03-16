@@ -6,6 +6,8 @@ use algebra::{derivative, integral};
 use invert::InversionError;
 use pre_eval::PreEvalMode;
 
+use crate::algorithm::map::MapParam;
+
 const MAX_COMPTIME_DEPTH: usize = if cfg!(debug_assertions) { 5 } else { 20 };
 
 macro_rules! func {
@@ -152,7 +154,7 @@ impl Compiler {
                     }));
                     if let Some(sub) = &subscript {
                         word = Word::Subscripted(Box::new(Subscripted {
-                            script: sub.clone(),
+                            script: sub.clone().map(Into::into),
                             word: branch.span.clone().sp(word),
                         }))
                     }
@@ -464,6 +466,8 @@ impl Compiler {
                         if op_count == 1 { "was" } else { "were" }
                     ),
                 ));
+            } else if let Some(node) = self.inline_modifier(&modified, subscript)? {
+                return Ok(node);
             }
         }
 
@@ -504,6 +508,7 @@ impl Compiler {
         &mut self,
         m: &Modified,
     ) -> UiuaResult<(SigNode, SigNode, CodeSpan, CodeSpan)> {
+        assert_eq!(2, m.code_operands().count());
         let mut operands = m.code_operands().cloned();
         let a_op = operands.next().unwrap();
         let b_op = operands.next().unwrap();
@@ -683,7 +688,7 @@ impl Compiler {
                     _ => Node::Mod(Dip, eco_vec![f], self.add_span(span)),
                 }
             }),
-            Fork => {
+            Fork if modified.code_operands().count() == 2 => {
                 let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
                 if !modified.pack_expansion && f.node.as_primitive() == Some(Primitive::Identity) {
                     self.emit_diagnostic(
@@ -741,44 +746,52 @@ impl Compiler {
                 let Some(sub) = subscript else {
                     return Ok(None);
                 };
-                let Some(side) = self.subscript_side_only(&sub, Bracket.format()) else {
+                let Some(sided) = self.subscript_sided_only(&sub, Bracket.format()) else {
                     return Ok(None);
                 };
+                if sided.n == Some(0) {
+                    return Ok(None);
+                }
                 func!({
                     let span = self.add_span(modified.modifier.span.clone());
-                    let (a, b, _, _) = self.dyadic_modifier_ops(modified)?;
-                    if a.sig.args() != 2 || b.sig.args() != 2 {
-                        self.add_error(
-                            modified.modifier.span.clone().merge(sub.span),
-                            format!(
-                                "Sided {}'s functions must both have 2 arguments, \
-                                but their signatures are {} and {}.",
-                                Primitive::Bracket.format(),
-                                a.sig,
-                                b.sig
-                            ),
-                        );
-                        Node::Mod(Bracket, eco_vec![a, b], span)
+                    if modified.code_operands().count() == 2 && sided.n.unwrap_or(1) == 1 {
+                        let (a, b, _, _) = self.dyadic_modifier_ops(modified)?;
+                        if a.sig.args() != 2 || b.sig.args() != 2 {
+                            self.add_error(
+                                modified.modifier.span.clone().merge(sub.span),
+                                format!(
+                                    "Sided {}'s functions must both have 2 arguments, \
+                                    but their signatures are {} and {}.",
+                                    Primitive::Bracket.format(),
+                                    a.sig,
+                                    b.sig
+                                ),
+                            );
+                            Node::Mod(Bracket, eco_vec![a, b], span)
+                        } else {
+                            let sub_span = self.add_span(sub.span);
+                            let mut node = match sided.side {
+                                SubSide::Left => Node::Mod(
+                                    On,
+                                    eco_vec![Node::Prim(Flip, sub_span).sig_node().unwrap()],
+                                    sub_span,
+                                ),
+                                SubSide::Right => Node::Mod(
+                                    Dip,
+                                    eco_vec![
+                                        Node::ImplPrim(ImplPrimitive::Over, sub_span)
+                                            .sig_node()
+                                            .unwrap()
+                                    ],
+                                    sub_span,
+                                ),
+                            };
+                            node.push(Node::Mod(Bracket, eco_vec![a, b], span));
+                            node
+                        }
                     } else {
-                        let sub_span = self.add_span(sub.span);
-                        let mut node = match side {
-                            SubSide::Left => Node::Mod(
-                                On,
-                                eco_vec![Node::Prim(Flip, sub_span).sig_node().unwrap()],
-                                sub_span,
-                            ),
-                            SubSide::Right => Node::Mod(
-                                Dip,
-                                eco_vec![
-                                    Node::ImplPrim(ImplPrimitive::Over, sub_span)
-                                        .sig_node()
-                                        .unwrap()
-                                ],
-                                sub_span,
-                            ),
-                        };
-                        node.push(Node::Mod(Bracket, eco_vec![a, b], span));
-                        node
+                        let ops = self.args(modified.operands.clone())?;
+                        Node::ImplMod(ImplPrimitive::SidedBracket(sided), ops, span)
                     }
                 })
             }
@@ -1643,7 +1656,7 @@ impl Compiler {
                     }
                 }
             }
-            self.expand_index_macro(None, &mut words, operands, span.clone())?;
+            self.expand_index_macro(None, &mut words, operands, None, span.clone())?;
             // Compile
             let node = self.suppress_diagnostics(|comp| comp.words(words))?;
             // Add
@@ -1671,7 +1684,7 @@ impl Compiler {
             return self.prim_args_macro(prim, modifier_span, operands);
         }
 
-        let Some((path_locals, local)) = self.ref_local(&r)? else {
+        let Some((path_locals, local)) = self.ref_local_impl(&r, LookupPreference::Macro)? else {
             return Ok(Node::empty());
         };
         self.validate_local(&r.name.value, local, &r.name.span);
@@ -1693,7 +1706,7 @@ impl Compiler {
         }
         let node = if let Some(mac) = self.asm.index_macros.get(&local.index).cloned() {
             // Index macros
-            self.index_macro(mac, operands, r.name, local, modifier_span)?
+            self.index_macro(mac, operands, None, r.name, local, modifier_span)?
         } else if let Some(mac) = self.asm.code_macros.get(&local.index).cloned() {
             // Code macros
             self.code_macro(Some(r.name.value), modifier_span, operands, mac)?
@@ -1751,6 +1764,7 @@ impl Compiler {
         use crate::media::*;
         self.handle_primitive_experimental(prim, &modifier_span);
         let (args_prim, args) = match prim {
+            Primitive::Map => (ImplPrimitive::MapArgs, MapParam::args()),
             Primitive::Layout => (ImplPrimitive::LayoutArgs, LayoutParam::args()),
             Primitive::Voxels => (ImplPrimitive::VoxelsArgs, VoxelsParam::args()),
             Primitive::GifEncode => {
@@ -1826,10 +1840,11 @@ impl Compiler {
         node.push(Node::ImplPrim(args_prim, span));
         Ok(node)
     }
-    fn index_macro(
+    pub(crate) fn index_macro(
         &mut self,
         mut mac: IndexMacro,
         operands: Vec<Sp<Word>>,
+        subscript: Option<i32>,
         name: Sp<Ident>,
         local: LocalIndex,
         ref_span: CodeSpan,
@@ -1849,10 +1864,11 @@ impl Compiler {
             }
             _ => {
                 // Expand
-                self.expand_index_macro(
+                let full_span = self.expand_index_macro(
                     Some(name.value.clone()),
                     &mut mac.words,
                     operands,
+                    subscript,
                     ref_span.clone(),
                 )?;
                 // Handle recursion
@@ -1862,14 +1878,17 @@ impl Compiler {
                 // a macro with the same index.
                 let expansion_index = mac.recursive.then(|| {
                     let expansion_index = self.next_global;
-                    let count = ident_modifier_args(&name.value);
+                    let args = ident_modifier_args(&name.value);
                     // Add temporary binding
                     self.asm.add_binding_at(
                         LocalIndex {
                             index: expansion_index,
                             public: false,
                         },
-                        BindingKind::IndexMacro(count),
+                        BindingKind::IndexMacro {
+                            args,
+                            subscript: false,
+                        },
                         Some(ref_span.clone()),
                         BindingMeta::default(),
                     );
@@ -1881,13 +1900,17 @@ impl Compiler {
                     expansion_index,
                 };
                 // Compile
-                let node = self.suppress_diagnostics(|comp| {
+                let SigNode { node, sig } = self.suppress_diagnostics(|comp| {
                     comp.macro_scope(LocalNames::default(), Some(macro_local), |comp| {
-                        comp.words(mac.words)
+                        comp.words_sig(mac.words)
                     })
                 })?;
+                self.code_meta
+                    .macro_expansions
+                    .get_mut(&full_span)
+                    .unwrap()
+                    .2 = Some(sig);
                 // Add
-                let sig = self.sig_of(&node, &ref_span)?;
                 let id = FunctionId::Macro(Some(name.value), name.span);
                 let func = self.asm.add_function(id, sig, node, FunctionOrigin::Macro);
                 if let Some(exp_index) = macro_local.expansion_index {
@@ -2027,7 +2050,8 @@ impl Compiler {
 
         // Quote
         if let Some(code) = code {
-            (self.code_meta.macro_expansions).insert(full_span, (mac_name.clone(), code.clone()));
+            (self.code_meta.macro_expansions)
+                .insert(full_span, (mac_name.clone(), code.clone(), None));
             self.suppress_diagnostics(|comp| {
                 comp.macro_scope((*mac.names).clone(), None, |comp| {
                     comp.quote(&code, mac_name, &modifier_span)
@@ -2069,17 +2093,25 @@ impl Compiler {
         name: Option<Ident>,
         macro_words: &mut Vec<Sp<Word>>,
         operands: Vec<Sp<Word>>,
-        span: CodeSpan,
-    ) -> UiuaResult {
-        let span = span.merge(operands.last().unwrap().span.clone());
+        subscript: Option<i32>,
+        mut span: CodeSpan,
+    ) -> UiuaResult<CodeSpan> {
+        if let Some(last) = operands.last() {
+            span.merge_with(last.span.clone());
+        }
         let operands: Vec<Sp<Word>> = operands.into_iter().filter(|w| w.value.is_code()).collect();
-        self.replace_placeholders(macro_words, &operands)?;
+        self.replace_placeholders(macro_words, &operands, subscript)?;
         // Format and store the expansion for the LSP
         let formatted = format_words(&*macro_words, &self.asm.inputs);
-        (self.code_meta.macro_expansions).insert(span, (name, formatted));
-        Ok(())
+        (self.code_meta.macro_expansions).insert(span.clone(), (name, formatted, None));
+        Ok(span)
     }
-    fn replace_placeholders(&self, words: &mut Vec<Sp<Word>>, initial: &[Sp<Word>]) -> UiuaResult {
+    fn replace_placeholders(
+        &self,
+        words: &mut Vec<Sp<Word>>,
+        initial: &[Sp<Word>],
+        subscript: Option<i32>,
+    ) -> UiuaResult {
         let mut error = None;
         recurse_words_mut(words, &mut |word| match &mut word.value {
             Word::Placeholder(n) => {
@@ -2095,6 +2127,38 @@ impl Compiler {
                             if initial.len() == 1 { "" } else { "s" }
                         ),
                     ))
+                }
+            }
+            Word::PlaceholderN => {
+                if let Some(i) = subscript {
+                    word.value =
+                        Word::Number(NumWord::Real(i.into()), i.to_string().replace('-', "¯"));
+                }
+            }
+            Word::Subscripted(sub) => {
+                if let Some(NumericSubscript::N(n @ None)) = &mut sub.script.value.num {
+                    *n = subscript;
+                }
+            }
+            Word::Ref(r, _) if r.name.value.contains('ₙ') => {
+                if let Some(mut n) = subscript {
+                    let mut new_num = String::new();
+                    if n < 0 {
+                        new_num.push('₋');
+                    }
+                    n = n.abs();
+                    let pow = (n as f64).log10() as u32;
+                    for i in (0..=pow).rev() {
+                        new_num.push(SUBSCRIPT_DIGITS[(n / 10i32.pow(i)) as usize]);
+                        n /= 10;
+                    }
+                    r.name.value = (r.name.value.chars())
+                        .map(|c| match c {
+                            'ₙ' => new_num.clone(),
+                            c => c.to_string(),
+                        })
+                        .collect::<String>()
+                        .into();
                 }
             }
             _ => {}

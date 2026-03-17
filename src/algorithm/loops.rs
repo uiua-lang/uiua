@@ -6,6 +6,7 @@ use crate::{
     Ops, Primitive, Shape, SigNode, Signature, Uiua, UiuaResult,
     algorithm::{FixedRowsData, fixed_rows, get_ops, pervade::pervade_dim},
     array::Array,
+    types::push_empty_rows_value,
     value::Value,
 };
 
@@ -89,6 +90,11 @@ fn rep_recur(f: SigNode, inv: Option<SigNode>, mut args: Vec<Value>, env: &mut U
             env.push(arg);
         }
         repeat_impl(f, inv, n.data[0], env)?;
+        return Ok(());
+    }
+    if args[0].row_count() == 0
+        && push_empty_rows_value(&f, &args[1..], false, &mut Default::default(), env)
+    {
         return Ok(());
     }
     let FixedRowsData {

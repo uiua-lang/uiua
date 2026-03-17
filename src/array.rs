@@ -1019,7 +1019,7 @@ pub trait ArrayValue:
     /// Hash the value
     fn array_hash<H: Hasher>(&self, hasher: &mut H);
     /// Get the proxy value
-    fn proxy() -> Self;
+    fn default_scalar() -> Self;
     /// Get a nested value
     fn nested_value(&self) -> Option<&Value> {
         None
@@ -1074,7 +1074,7 @@ impl ArrayValue for f64 {
         };
         v.to_bits().hash(hasher)
     }
-    fn proxy() -> Self {
+    fn default_scalar() -> Self {
         0.0
     }
     fn has_wildcard(&self) -> bool {
@@ -1104,7 +1104,7 @@ impl ArrayValue for u8 {
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         (*self as f64).to_bits().hash(hasher)
     }
-    fn proxy() -> Self {
+    fn default_scalar() -> Self {
         0
     }
     fn sort_list(list: &mut [Self], up: bool) {
@@ -1155,7 +1155,7 @@ impl ArrayValue for char {
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
     }
-    fn proxy() -> Self {
+    fn default_scalar() -> Self {
         ' '
     }
     fn has_wildcard(&self) -> bool {
@@ -1176,7 +1176,7 @@ impl ArrayValue for Boxed {
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.0.hash(hasher);
     }
-    fn proxy() -> Self {
+    fn default_scalar() -> Self {
         Boxed(Array::<f64>::new(0, []).into())
     }
     fn nested_value(&self) -> Option<&Value> {
@@ -1202,7 +1202,7 @@ impl ArrayValue for Complex {
             n.array_hash(hasher);
         }
     }
-    fn proxy() -> Self {
+    fn default_scalar() -> Self {
         Complex::new(0.0, 0.0)
     }
 }

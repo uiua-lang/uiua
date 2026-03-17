@@ -115,6 +115,7 @@ where
     I: IntoIterator<Item = &'a Value>,
     I::IntoIter: DoubleEndedIterator,
 {
+    // dbg!(f);
     if inventory {
         let per_meta = take(per_meta);
         for _ in 0..f.sig.outputs().saturating_sub(1) {
@@ -135,7 +136,12 @@ where
     }
     let mut rt = TypeRt {
         stack,
-        under_stack: Vec::new(),
+        under_stack: (env.rt.under_stack.iter())
+            .rev()
+            .take(f.sig.under_args())
+            .rev()
+            .map(Value::row_ty)
+            .collect(),
         asm: &env.asm,
     };
     match rt.node(&f.node) {
@@ -264,6 +270,14 @@ impl TypeRt<'_> {
                     self.stack.push(x);
                 }
                 Identity => {}
+                Keep => {
+                    let counts = self.pop()?;
+                    let mut arr = self.pop()?;
+                    if let Some(n) = counts.int {
+                        *arr.shape.row_count_mut() *= n.unsigned_abs();
+                    }
+                    self.stack.push(arr);
+                }
                 Select => {
                     let index = self.pop()?;
                     let from = self.pop()?;
@@ -271,21 +285,21 @@ impl TypeRt<'_> {
                     shape.extend(from.shape.iter().copied().skip(1));
                     self.stack.push(Ty::new(from.scalar, shape));
                 }
-                // Pick => {
-                //     let index = self.pop()?;
-                //     let mut from = self.pop()?;
-                //     if let Some((last, outer)) = index.shape.split_last() {
-                //         let shape = Shape::from_iter(
-                //             (outer.iter().copied()).chain(from.shape.iter().copied().skip(*last)),
-                //         );
-                //         self.stack.push(Ty::new(from.scalar, shape));
-                //     } else {
-                //         if !from.shape.is_empty() {
-                //             from.shape.remove(0);
-                //         }
-                //         self.stack.push(from);
-                //     }
-                // }
+                Pick => {
+                    let index = self.pop()?;
+                    let mut from = self.pop()?;
+                    if let Some((last, outer)) = index.shape.split_last() {
+                        let shape = crate::Shape::from_iter(
+                            (outer.iter().copied()).chain(from.shape.iter().copied().skip(*last)),
+                        );
+                        self.stack.push(Ty::new(from.scalar, shape));
+                    } else {
+                        if !from.shape.is_empty() {
+                            from.shape.remove(0);
+                        }
+                        self.stack.push(from);
+                    }
+                }
                 Take => {
                     let n = self.pop()?;
                     let mut x = self.pop()?;
@@ -321,6 +335,23 @@ impl TypeRt<'_> {
                 ImplPrimitive::UnBox => {
                     let x = self.pop()?;
                     self.stack.push(x.unboxed());
+                }
+                ImplPrimitive::UnCouple => {
+                    let mut x = self.pop()?;
+                    x.shape.make_row();
+                    self.stack.push(x.clone());
+                    self.stack.push(x);
+                }
+                ImplPrimitive::UndoFirst | ImplPrimitive::UndoLast => {
+                    let a = self.pop()?;
+                    self.pop()?;
+                    self.stack.push(a);
+                }
+                ImplPrimitive::UndoKeep => {
+                    let _from = self.pop()?;
+                    let _counts = self.pop()?;
+                    let into = self.pop()?;
+                    self.stack.push(into);
                 }
                 ImplPrimitive::Over => {
                     let a = self.pop()?;
@@ -376,6 +407,15 @@ impl TypeRt<'_> {
                 }
                 _ => return Err(TypeError::NotSupported),
             },
+            Node::ImplMod(prim, args, _) => match prim {
+                &ImplPrimitive::DipN(n) => {
+                    let [f] = get_args(args)?;
+                    let dipped = self.stack.split_off(n);
+                    self.node(&f.node)?;
+                    self.stack.extend(dipped);
+                }
+                _ => return Err(TypeError::NotSupported),
+            },
             Node::NoInline(inner) => self.node(inner)?,
             Node::TrackCaller(inner) => self.node(&inner.node)?,
             &Node::PushUnder(n, _) => {
@@ -407,6 +447,13 @@ impl TypeRt<'_> {
                 }
                 for _ in 0..count {
                     self.stack.push(x.clone());
+                }
+            }
+            Node::CustomInverse(cust, _) => {
+                if let Ok(normal) = &cust.normal {
+                    self.node(&normal.node)?;
+                } else {
+                    return Err(TypeError::NotSupported);
                 }
             }
             _ => return Err(TypeError::NotSupported),

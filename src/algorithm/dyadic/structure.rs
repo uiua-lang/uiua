@@ -931,7 +931,7 @@ impl<T: ArrayValue> Array<T> {
         let fill = env
             .array_fill::<T>()
             .map(|fv| fv.value)
-            .unwrap_or_else(|_| T::proxy().into());
+            .unwrap_or_else(|_| T::default_scalar().into());
         if self.shape.len() < index.len() {
             return Err(env.error(format!(
                 "Index array specifies {} axes, \

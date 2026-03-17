@@ -54,27 +54,19 @@ fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
         xs.shape.prepend(0);
         if push_empty_rows_value(&f, [&xs], false, &mut per_meta, env) {
             return Ok(());
-        } else {
-            let mut proxy = xs.proxy_row(env);
-            proxy.fix();
-            env.push(proxy);
-            _ = env.exec_maintain_sig(f);
+        }
+        xs.shape.remove(0);
+    }
+    env.without_fill(|env| -> UiuaResult {
+        for n in 1..=xs.row_count() {
+            env.push(xs.slice_rows(0, n));
+            env.exec(f.clone())?;
             if has_output {
-                results.push(env.pop("tuples' function result")?);
+                results.push(env.pop("tuples's function result")?);
             }
         }
-    } else {
-        env.without_fill(|env| -> UiuaResult {
-            for n in 1..=xs.row_count() {
-                env.push(xs.slice_rows(0, n));
-                env.exec(f.clone())?;
-                if has_output {
-                    results.push(env.pop("tuples's function result")?);
-                }
-            }
-            Ok(())
-        })?;
-    }
+        Ok(())
+    })?;
     if has_output {
         let mut val = Value::from_row_values(results, env)?;
         if xs.row_count() == 0 {

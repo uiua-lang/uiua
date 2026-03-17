@@ -2,7 +2,6 @@
 
 use std::{
     cell::RefCell,
-    cmp::Ordering,
     collections::HashMap,
     hash::Hash,
     mem::{size_of, take},
@@ -796,48 +795,6 @@ impl Uiua {
         }
         res
     }
-    /// Call and maintain the stack delta if the call fails
-    pub(crate) fn exec_maintain_sig(&mut self, sn: SigNode) -> UiuaResult {
-        if !sn.node.is_pure(&self.asm) {
-            for i in 0..sn.sig.args() {
-                self.pop(i + 1)?;
-            }
-            for _ in 0..sn.sig.outputs() {
-                self.push(Value::default());
-            }
-            return Ok(());
-        }
-
-        let mut args = self.stack()[self.stack().len().saturating_sub(sn.sig.args())..].to_vec();
-        args.reverse();
-        let target_height = (self.stack_height() + sn.sig.outputs()).saturating_sub(sn.sig.args());
-        let under_target_height = (self.rt.under_stack.len() + sn.sig.under_outputs())
-            .saturating_sub(sn.sig.under_args());
-        let res = self.exec(sn);
-        match self.stack_height().cmp(&target_height) {
-            Ordering::Equal => {}
-            Ordering::Greater => {
-                self.truncate_stack(target_height);
-            }
-            Ordering::Less => {
-                let diff = target_height - self.stack_height();
-                for _ in 0..diff {
-                    self.push(args.pop().unwrap_or_default());
-                }
-            }
-        }
-        match self.rt.under_stack.len().cmp(&under_target_height) {
-            Ordering::Equal => {}
-            Ordering::Greater => self.truncate_under_stack(under_target_height),
-            Ordering::Less => {
-                let diff = under_target_height - self.rt.under_stack.len();
-                for _ in 0..diff {
-                    self.push_under(args.pop().unwrap_or_default());
-                }
-            }
-        }
-        res
-    }
     fn call_with_span(&mut self, f: &Function, call_span: usize) -> UiuaResult {
         self.without_fill(|env| {
             env.exec_with_frame_span(
@@ -1313,10 +1270,6 @@ impl Uiua {
     #[inline]
     pub(crate) fn truncate_stack(&mut self, size: usize) -> Vec<Value> {
         self.rt.stack.split_off(size.min(self.rt.stack.len()))
-    }
-    #[inline]
-    pub(crate) fn truncate_under_stack(&mut self, size: usize) {
-        self.rt.under_stack.truncate(size);
     }
     /// Pop `n` values from the stack
     pub fn pop_n(&mut self, n: usize) -> UiuaResult<Vec<Value>> {

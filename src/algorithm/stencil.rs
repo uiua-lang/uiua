@@ -224,7 +224,7 @@ where
     let mut offset = vec![0usize; corner.len()];
     let cell_shape = Shape::from(&arr.shape[dims.len()..]);
     let cell_len = cell_shape.elements();
-    let fill = fill.map(|fv| fv.value).unwrap_or_else(T::proxy);
+    let fill = fill.map(|fv| fv.value).unwrap_or_else(T::default_scalar);
     // dbg!(&arr.shape, &dims, &shape_prefix);
     // dbg!(&window_shape, &cell_shape, &maxs);
     env.without_fill(|env| -> UiuaResult {

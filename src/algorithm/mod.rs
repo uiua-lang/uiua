@@ -6,10 +6,8 @@ use std::{
     convert::Infallible,
     env, fmt,
     hash::{Hash, Hasher},
-    iter,
     mem::size_of,
     ops::Deref,
-    option,
 };
 
 use ecow::{EcoString, EcoVec};
@@ -19,6 +17,7 @@ use crate::{
     Array, ArrayValue, Boxed, CodeSpan, Complex, ExactDoubleIterator, Inputs, Ops, PersistentMeta,
     Shape, SigNode, Signature, Span, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
     cowslice::ecovec_extend_cowslice, fill::FillValue, grid_fmt::GridFmt,
+    types::push_empty_rows_value,
 };
 
 mod dyadic;
@@ -560,6 +559,17 @@ pub fn switch(
         {
             *new_shape.row_count_mut() = sh.row_count();
         }
+        if args.iter().any(|v| v.row_count() == 0)
+            && push_empty_rows_value(
+                &branches[0],
+                &args[1..],
+                false,
+                &mut Default::default(),
+                env,
+            )
+        {
+            return Ok(());
+        }
         let arg_shapes: Vec<Shape> = args[1..].iter().map(|v| v.shape.clone()).collect();
         let FixedRowsData {
             mut rows,
@@ -773,9 +783,7 @@ impl<T: ArrayValue> Hash for ArrayCmpSlice<'_, T> {
     }
 }
 
-type FixedRows = Vec<
-    Result<iter::Chain<Box<dyn ExactDoubleIterator<Item = Value>>, option::IntoIter<Value>>, Value>,
->;
+type FixedRows = Vec<Result<Box<dyn ExactDoubleIterator<Item = Value>>, Value>>;
 
 struct FixedRowsData {
     rows: FixedRows,
@@ -816,19 +824,19 @@ fn fixed_rows(
                 v.undo_fix();
                 Err(v)
             } else {
-                let proxy = is_empty.then(|| v.proxy_row(env));
                 row_count = row_count.max(v.row_count());
                 all_1 = false;
                 per_meta.push(v.meta.take_per_meta());
-                Ok(v.into_rows().chain(proxy))
+                Ok(v.into_rows())
             }
         })
         .collect();
-    if all_1 {
+    if is_empty {
+        row_count = 0;
+    } else if all_1 {
         row_count = 1;
     }
     let per_meta = PersistentMeta::xor_all(per_meta);
-    let row_count = row_count + is_empty as usize;
     Ok(FixedRowsData {
         rows: fixed_rows,
         row_count,

@@ -271,6 +271,8 @@ impl Primitive {
             alias!((eps, PrimComponent::Epsilon)),
             alias!((epsil, PrimComponent::Epsilon)),
             alias!((epsilon, PrimComponent::Epsilon)),
+            alias!((r, Reduce), (a, Content), (ze, Join)),
+            alias!((r, Reduce), (a, Content), (z, Join)),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

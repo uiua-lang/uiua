@@ -21,6 +21,20 @@ use crate::{
 
 /// Subscript digit characters
 pub const SUBSCRIPT_DIGITS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub(crate) struct FormatSubscript(pub i32);
+impl fmt::Display for FormatSubscript {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let &FormatSubscript(n) = self;
+        if n < 0 {
+            write!(f, "₋")?;
+        }
+        for c in n.abs().to_string().chars() {
+            write!(f, "{}", SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])?;
+        }
+        Ok(())
+    }
+}
 
 /// Lex a Uiua source file
 pub fn lex(

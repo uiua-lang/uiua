@@ -3,7 +3,7 @@ use std::fmt;
 use ecow::EcoString;
 use serde::*;
 
-use crate::SUBSCRIPT_DIGITS;
+use crate::{FormatSubscript, SUBSCRIPT_DIGITS};
 
 /// A subscripts
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -178,15 +178,7 @@ impl fmt::Display for NumericSubscript {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             NumericSubscript::NegOnly => write!(f, "₋"),
-            NumericSubscript::N(n) => {
-                if *n < 0 {
-                    write!(f, "₋")?;
-                }
-                for c in n.abs().to_string().chars() {
-                    write!(f, "{}", SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])?;
-                }
-                Ok(())
-            }
+            NumericSubscript::N(n) => FormatSubscript(*n).fmt(f),
             NumericSubscript::TooLarge(s) => s.fmt(f),
         }
     }
@@ -198,13 +190,7 @@ impl fmt::Display for NumericSubscriptToken {
             NumericSubscript::NegOnly => write!(f, "₋"),
             NumericSubscript::N(n) => {
                 if let Some(n) = n {
-                    if *n < 0 {
-                        write!(f, "₋")?;
-                    }
-                    for c in n.abs().to_string().chars() {
-                        write!(f, "{}", SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])?;
-                    }
-                    Ok(())
+                    FormatSubscript(*n).fmt(f)
                 } else {
                     write!(f, "ₙ")
                 }

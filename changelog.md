@@ -5,9 +5,7 @@ Uiua is not yet stable.
 ## 0.19.0 - 2026-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
-- Add custom subscripts
-  - [Implicit Subscripts](<https://www.uiua.org/docs/subscripts#implicit>) are stable
-  - [Custom subscript functions](<https://www.uiua.org/docs/experimental#custom-subscript-functions>) are experimental
+- Add experimental [custom subscript functions](<https://www.uiua.org/docs/experimental#custom-subscript-functions>)
   - Remove deprecated `log ₙ` function, which syntactically conflicted
 - Add [`oklch`](https://uiua.org/docs/oklch) function
 - Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape

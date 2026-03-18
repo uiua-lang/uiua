@@ -1677,10 +1677,10 @@ impl Compiler {
     fn find_name_function(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
         self.find_name_impl(name, span, LookupPreference::Function, false)
     }
-    #[allow(dead_code)]
     fn find_name_macro(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
-        self.find_name_impl(name, span, LookupPreference::Module, false)
+        self.find_name_impl(name, span, LookupPreference::Macro, false)
     }
+    #[allow(dead_code)]
     fn find_name_callable(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
         self.find_name_impl(name, span, LookupPreference::Callable, false)
     }
@@ -2015,33 +2015,32 @@ impl Compiler {
         }
     }
     fn sub_name(&mut self, name: &str, sub: i32, span: CodeSpan) -> Node {
-        if let Some(local) = self.find_name_callable(name, &span)
-            && let Some(index_macro) = self.asm.index_macros.get(&local.index).cloned()
-        {
-            match self.index_macro(
-                index_macro,
-                Vec::new(),
-                Some(sub),
-                span.clone().sp(name.into()),
-                local,
-                span.clone(),
-            ) {
-                Ok(node) => {
-                    self.code_meta.global_references.insert(span, local.index);
-                    return node;
+        if let Some(local) = self.find_name_macro(name, &span) {
+            if let Some(index_macro) = self.asm.index_macros.get(&local.index).cloned() {
+                match self.index_macro(
+                    index_macro,
+                    Vec::new(),
+                    Some(sub),
+                    span.clone().sp(name.into()),
+                    local,
+                    span.clone(),
+                ) {
+                    Ok(node) => {
+                        self.code_meta.global_references.insert(span, local.index);
+                        return node;
+                    }
+                    Err(e) => self.errors.push(e),
                 }
-                Err(e) => self.errors.push(e),
             }
+            self.add_error(
+                span.clone(),
+                format!("`{name}` exists, but it is not a custom subscript function"),
+            );
+            self.global_index(local.index, span)
+        } else {
+            self.add_error(span, format!("Unknown identifier `{name}`"));
+            Node::new_push(Value::default())
         }
-        let mut node = self.ident(name.into(), span.clone());
-        if let Ok(mut sig) = self.sig_of(&node, &span) {
-            sig = sig.compose(Signature::new(0, 1));
-            self.code_meta
-                .macro_expansions
-                .insert(span, (None, name.into(), Some(sig)));
-        }
-        node.prepend(Node::new_push(sub));
-        node
     }
     fn scope_file_path(&self) -> Option<&Path> {
         for scope in self.scopes() {

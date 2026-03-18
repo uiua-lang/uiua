@@ -4,7 +4,7 @@ use uiua_parser::PrimClass;
 
 use crate::{
     Array, Assembly, Boxed, Complex, ImplPrimitive, Node, PersistentMeta, Primitive, Shape,
-    SigNode, Uiua, Value, cowslice::CowSlice,
+    SigNode, SysOp, Uiua, Value, cowslice::CowSlice,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -179,6 +179,11 @@ impl TypeRt<'_> {
             Node::Run(nodes) => nodes.iter().try_for_each(|node| self.node(node))?,
             Node::Push(val) => self.stack.push(val.row_ty()),
             Node::Call(f, _) => self.node(&self.asm[f])?,
+            Node::Prim(prim, _) if prim.outputs() == Some(0) && prim.args().is_some() => {
+                for _ in 0..prim.args().unwrap() {
+                    self.pop()?;
+                }
+            }
             Node::Prim(prim, _) => match prim {
                 Dup => {
                     let val = self.pop()?;
@@ -322,6 +327,14 @@ impl TypeRt<'_> {
                     }
                 }
                 Args => {}
+                Sys(SysOp::FReadAllStr) => {
+                    self.pop()?;
+                    self.stack.push(Ty::new(ScalarType::Char, 0));
+                }
+                Sys(SysOp::FReadAllBytes) => {
+                    self.pop()?;
+                    self.stack.push(Ty::new(ScalarType::Real, 0));
+                }
                 prim if prim.outputs() == Some(0) => {
                     if let Some(args) = prim.args() {
                         for _ in 0..args {

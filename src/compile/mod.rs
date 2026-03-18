@@ -1936,7 +1936,11 @@ impl Compiler {
                 }
             }
             self.global_index(local.index, span)
-        } else if let Some(i) = (self.current_bindings.iter()).position(|curr| curr.name == ident) {
+        } else if let Some(i) = (self.current_bindings.iter()).position(|curr| {
+            curr.name == ident
+                && (self.asm.bindings.get(curr.global_index))
+                    .is_none_or(|binfo| !binfo.kind.is_custom_subscript())
+        }) {
             // Name is a recursive call
             for curr_binding in &mut self.current_bindings[i..] {
                 curr_binding.recurses += 1;

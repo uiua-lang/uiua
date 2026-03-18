@@ -765,9 +765,19 @@ impl BindingKind {
             _ => false,
         }
     }
-    /// Check if the bindings is a macro
+    /// Check if the binding is a macro
     pub fn is_macro(&self) -> bool {
         matches!(self, Self::IndexMacro { .. } | Self::CodeMacro(_))
+    }
+    /// Check if the binding is a custom subscript function
+    pub fn is_custom_subscript(&self) -> bool {
+        matches!(
+            self,
+            BindingKind::IndexMacro {
+                subscript: true,
+                ..
+            }
+        )
     }
 }
 

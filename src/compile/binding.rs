@@ -738,7 +738,9 @@ impl Compiler {
                 _ => {}
             }
             if let Some((nm, name_span, local)) = name_local {
-                if nm.value == mac_name && path_locals.as_ref().is_none_or(|(pl, _)| pl.is_empty())
+                if !subn
+                    && nm.value == mac_name
+                    && path_locals.as_ref().is_none_or(|(pl, _)| pl.is_empty())
                 {
                     *recursive = true;
                 }

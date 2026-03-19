@@ -342,7 +342,7 @@ fn reduce_identity_impl(
 }
 
 fn reduce_singleton(node: &Node, val: Value, process: impl Fn(Value) -> Value) -> Value {
-    use {Node::*, Primitive::*};
+    use {ImplPrimitive::*, Node::*, Primitive::*};
     if val.rank() == 0 {
         return val;
     }
@@ -354,6 +354,9 @@ fn reduce_singleton(node: &Node, val: Value, process: impl Fn(Value) -> Value) -
             at_least_rank(1, row.unboxed_if(any_nodes_are_unboxes(init)))
         }
         [init @ .., Prim(Join, _)] if net_0_args(2, init) => {
+            at_least_rank(1, row.unboxed_if(any_nodes_are_unboxes(init)))
+        }
+        [init @ .., ImplPrim(MultiJoin(n), _)] if net_0_args(*n, init) => {
             at_least_rank(1, row.unboxed_if(any_nodes_are_unboxes(init)))
         }
         [init @ .., Format(parts, _)] if net_0_args(parts.len().saturating_sub(1), init) => {

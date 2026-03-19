@@ -762,7 +762,7 @@ mod enabled {
             for ((offset, field_ty), row) in zip(offsets, fields).zip(value.into_rows()) {
                 let row = row.unpacked();
                 let (field_repr, buffer) = field_ty.repr(row)?;
-                buffers.extend(buffer.into_iter());
+                buffers.extend(buffer);
 
                 struct_repr[offset..offset + field_repr.len()].copy_from_slice(&field_repr);
             }

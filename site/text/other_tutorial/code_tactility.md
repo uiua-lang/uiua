@@ -68,6 +68,12 @@ Labeled arrays cannot be put into arrays together unless they are boxed.
 {$a 1 $b 2 $c 3} # Right
 ```
 
+Labels can be removed with `$_`.
+
+```uiua
+⊸$_ $Label [1 2]
+```
+
 Labels are nice for keeping track of different values as they move around.
 
 It is not possible to retrieve the label of a value using code. Labels are only for debugging, not for carrying data.

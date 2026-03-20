@@ -343,7 +343,7 @@ pub enum Word {
     MultilineString(Vec<Sp<String>>),
     FormatString(Vec<String>),
     MultilineFormatString(Vec<Sp<Vec<String>>>),
-    Label(String),
+    Label(Option<String>),
     Ref(Ref, Vec<ChainComponent>),
     IncompleteRef(Vec<RefComponent>),
     Strand(Vec<Sp<Word>>),
@@ -457,7 +457,8 @@ impl fmt::Debug for Word {
                 }
                 Ok(())
             }
-            Word::Label(label) => write!(f, "${label}"),
+            Word::Label(Some(label)) => write!(f, "${label}"),
+            Word::Label(None) => write!(f, "$_"),
             Word::Ref(r, chained) => {
                 write!(f, "ref({r}")?;
                 for comp in chained {

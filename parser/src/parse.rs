@@ -1286,11 +1286,15 @@ impl Parser<'_> {
         } else if let Some(span) = self.exact(PlaceholderN) {
             span.sp(Word::PlaceholderN)
         } else if let Some(label) = self.next_token_map(Token::as_label) {
-            if let Some(sub) = self.next_token_map(Token::as_subscript) {
-                (label.span.merge(sub.span))
-                    .sp(Word::Label(format!("{}{}", label.value, sub.value)))
+            let span = label.span;
+            if let Some(label) = label.value {
+                if let Some(sub) = self.next_token_map(Token::as_subscript) {
+                    (span.merge(sub.span)).sp(Word::Label(Some(format!("{}{}", label, sub.value))))
+                } else {
+                    span.sp(Word::Label(Some(label.into())))
+                }
             } else {
-                label.map(Into::into).map(Word::Label)
+                span.sp(Word::Label(None))
             }
         } else if let Some(frags) = self.next_token_map(Token::as_format_string) {
             frags.map(Word::FormatString)

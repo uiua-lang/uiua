@@ -1246,7 +1246,8 @@ impl Compiler {
                 }
                 Node::new_push(s)
             }
-            Word::Label(label) => Node::Label(label.into(), self.add_span(word.span.clone())),
+            Word::Label(Some(label)) => Node::Label(label.into(), self.add_span(word.span.clone())),
+            Word::Label(None) => Node::RemoveLabel(None, self.add_span(word.span.clone())),
             Word::FormatString(frags) => {
                 let parts = frags.into_iter().map(Into::into).collect();
                 let span = self.add_span(word.span.clone());

@@ -564,6 +564,13 @@ impl<T, S> From<Sp<T, S>> for (T, S) {
     }
 }
 
+impl<T> Sp<Option<T>> {
+    /// Move out an `Option`
+    pub fn transpose(self) -> Option<Sp<T>> {
+        self.value.map(|x| self.span.sp(x))
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct SpRep<T, S>(T, S);
 
@@ -624,7 +631,7 @@ pub enum Token {
     Number,
     Char(String),
     Str(String),
-    Label(Ident),
+    Label(Option<Ident>),
     FormatStr(Vec<String>),
     MultilineString(String),
     MultilineFormatStr(Vec<String>),
@@ -691,7 +698,7 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_label(&self) -> Option<EcoString> {
+    pub(crate) fn as_label(&self) -> Option<Option<EcoString>> {
         match self {
             Token::Label(label) => Some(label.clone()),
             _ => None,
@@ -738,7 +745,8 @@ impl fmt::Display for Token {
                 }
                 Ok(())
             }
-            Token::Label(s) => write!(f, "${s}"),
+            Token::Label(Some(s)) => write!(f, "${s}"),
+            Token::Label(None) => write!(f, "$_"),
             Token::FormatStr(parts) | Token::MultilineFormatStr(parts) => {
                 write!(f, "format string")?;
                 for (i, part) in parts.iter().enumerate() {
@@ -1287,6 +1295,10 @@ impl<'a> Lexer<'a> {
                 // Strings
                 "\"" | "$" => {
                     let first_dollar = c == "$";
+                    if first_dollar && self.next_char_exact("_") {
+                        self.end(Label(None), start);
+                        continue;
+                    }
                     let reset = self.loc;
                     let format_raw = first_dollar && self.next_char_exact("$");
                     if first_dollar
@@ -1336,7 +1348,7 @@ impl<'a> Lexer<'a> {
                     self.loc = reset;
                     if first_dollar && !self.next_char_exact("\"") {
                         let label = canonicalize_ident(&self.ident(self.loc, ""));
-                        self.end(Label(label), start);
+                        self.end(Label(Some(label)), start);
                         continue;
                     }
                     // Single-line strings

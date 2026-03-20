@@ -1029,14 +1029,14 @@ mod server {
                     )),
                     hover_provider: Some(HoverProviderCapability::Simple(true)),
                     completion_provider: Some(CompletionOptions {
-                        trigger_characters: Some(vec!["~".into(), "&".into()]),
+                        trigger_characters: Some(vec![".".into(), "&".into(), ".".into()]),
                         ..Default::default()
                     }),
                     document_formatting_provider: Some(OneOf::Left(true)),
                     document_on_type_formatting_provider: Some(DocumentOnTypeFormattingOptions {
                         first_trigger_character: ' '.to_string(),
                         more_trigger_character: Some(
-                            "[{()}]|1234567890~!@#$%^&*_-+=.,<>/?\\\nABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                            "[{()}]|1234567890.!@#$%^&*_-+=.,<>/?\\\nABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                 .chars()
                                 .map(|c| c.to_string())
                                 .collect(),
@@ -1328,8 +1328,8 @@ mod server {
                             .map(|sig| format!("{:<4}", sig.to_string())),
                         ..Default::default()
                     }),
-                    sort_text: text.split('~').next_back().map(Into::into),
-                    filter_text: text.split('~').next_back().map(Into::into),
+                    sort_text: text.split('.').next_back().map(Into::into),
+                    filter_text: text.split('.').next_back().map(Into::into),
                     documentation: binding.meta.comment.as_ref().map(|c| {
                         Documentation::MarkupContent(MarkupContent {
                             kind: MarkupKind::Markdown,

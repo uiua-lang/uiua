@@ -1494,11 +1494,23 @@ impl Uiua {
                     std::thread::yield_now();
                 }
                 let mut env = make_env();
-                pool.execute(move || _ = send.send(env.exec(f).map(|_| env.take_stack())));
+                pool.execute(move || {
+                    _ = send.send(
+                        env.exec(f)
+                            .map(|_| env.take_stack())
+                            .inspect_err(|e| eprintln!("{}", e.report())),
+                    )
+                });
             } else {
                 let mut env = make_env();
                 std::thread::Builder::new()
-                    .spawn(move || _ = send.send(env.exec(f).map(|_| env.take_stack())))
+                    .spawn(move || {
+                        _ = send.send(
+                            env.exec(f)
+                                .map(|_| env.take_stack())
+                                .inspect_err(|e| eprintln!("{}", e.report())),
+                        )
+                    })
                     .map_err(|e| self.error(format!("Error spawning thread: {e}")))?;
             }
             recv
@@ -1541,7 +1553,8 @@ impl Uiua {
                 .ok_or_else(|| self.error("Invalid thread id"))?
                 .recv
                 .recv()
-                .unwrap()?;
+                .unwrap()
+                .map_err(|_| self.error("A thread errored"))?;
             #[cfg(target_arch = "wasm32")]
             let mut thread_stack = self
                 .rt
@@ -1549,7 +1562,8 @@ impl Uiua {
                 .children
                 .remove(&handle)
                 .ok_or_else(|| self.error("Invalid thread id"))?
-                .result?;
+                .result
+                .map_err(|_| self.error("A thread errored"))?;
             match thread_stack.len() {
                 0 => self.push(Value::default()),
                 1 => self.push(thread_stack.into_iter().next().unwrap()),

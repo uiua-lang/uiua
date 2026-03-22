@@ -1,6 +1,9 @@
 # Uiua Todo
 
 # 0.19
+- Paths in signature comments
+- Macro signature comments
+- Data def method to construct with validators but not defaults/initializers
 - Optimize `rows match`
 - Case packs for pattern matching?
 - Improve GA API

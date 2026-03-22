@@ -112,6 +112,15 @@ impl Compiler {
                     .map(|f| f.map(Word::Func))
                     .collect(),
                 modifier.span.clone(),
+                false,
+            ),
+            Modifier::Primitive(Primitive::Pattern) => self.try_(
+                pack.lexical_order()
+                    .cloned()
+                    .map(|f| f.map(Word::Func))
+                    .collect(),
+                modifier.span.clone(),
+                true,
             ),
             Modifier::Primitive(Primitive::Fill) => {
                 let mut branches = pack.lexical_order().cloned().rev();
@@ -1304,6 +1313,12 @@ impl Compiler {
             Try => self.try_(
                 modified.code_operands().cloned().collect(),
                 modified.modifier.span.clone(),
+                false,
+            )?,
+            Pattern => self.try_(
+                modified.code_operands().cloned().collect(),
+                modified.modifier.span.clone(),
+                true,
             )?,
             Switch => self.switch(
                 modified.code_operands().cloned().collect(),

@@ -2571,6 +2571,25 @@ primitive!(
     ///   : F [1]
     ///   : F "hi"
     ([2], Try, Misc, ("try", '⍣')),
+    /// Choose different cases based on pattern matching
+    ///
+    /// Currently, when using [try], [case] causes errors emitted from its function to escape the [try] without being caught.
+    /// ex: # Experimental!
+    ///   : F ← ⍣(⍩(˜⊏⇡5) °1⊸<10|∘)
+    ///   : F 2
+    ///   : F 20
+    /// ex! # Experimental!
+    ///   : F ← ⍣(⍩(˜⊏⇡5) °1⊸<10|∘)
+    ///   : F 6
+    /// [pattern] does the opposite, where *only* errors emitted from a [case]'s function are caught. This makes pattern matches that you expect to possibly fail more explicit, and makes pattern matching code overall easier to debug and maintain.
+    /// ex: # Experimental!
+    ///   : F ← ⍡(˜⊏⇡5 ⍩°1⊸<10|∘)
+    ///   : F 2
+    ///   : F 20
+    /// ex! # Experimental!
+    ///   : F ← ⍡(˜⊏⇡5 ⍩°1⊸<10|∘)
+    ///   : F 6
+    ([2], Pattern, Misc, ("pattern", '⍡'), { experimental: true }),
     /// Call a pattern matching case
     ///
     /// [case] calls its function and allows errors to escape from a single [try].

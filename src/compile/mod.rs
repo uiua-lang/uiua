@@ -2197,7 +2197,7 @@ impl Compiler {
             under_cond: false,
         })
     }
-    fn try_(&mut self, branches: Vec<Sp<Word>>, span: CodeSpan) -> UiuaResult<Node> {
+    fn try_(&mut self, branches: Vec<Sp<Word>>, span: CodeSpan, pattern: bool) -> UiuaResult<Node> {
         let in_try = replace(&mut self.in_try, true);
         let mut branches = branches.into_iter();
         let tried = self.word_sig(branches.next().unwrap());
@@ -2279,7 +2279,12 @@ impl Compiler {
             }
             ops.push(handler);
         }
-        Ok(Node::Mod(Primitive::Try, ops, span))
+        let prim = if pattern {
+            Primitive::Pattern
+        } else {
+            Primitive::Try
+        };
+        Ok(Node::Mod(prim, ops, span))
     }
     fn handle_primitive_deprecation(&mut self, prim: Primitive, span: &CodeSpan) {
         if let Some(suggestion) = prim.deprecation_suggestion() {

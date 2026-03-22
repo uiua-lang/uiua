@@ -684,7 +684,7 @@ pub fn switch(
     Ok(())
 }
 
-pub fn try_(ops: Ops, env: &mut Uiua) -> UiuaResult {
+pub fn try_(ops: Ops, pattern: bool, env: &mut Uiua) -> UiuaResult {
     let mut ops = ops.into_iter();
     let mut f = ops.next().expect("try should have at least 2 args");
     for handler in ops {
@@ -692,8 +692,10 @@ pub fn try_(ops: Ops, env: &mut Uiua) -> UiuaResult {
         let (f_sig, handler_sig) = (f.sig, handler.sig);
         let backup = env.clone_stack_top(f.sig.args().min(handler_sig.args()))?;
         if let Err(mut err) = env.exec_clean_stack(f) {
-            if err.meta.is_case {
+            if !pattern && err.meta.is_case {
                 err.meta.is_case = false;
+                return Err(err);
+            } else if pattern && !err.meta.is_case {
                 return Err(err);
             }
             if handler_sig.args() > f_sig.args() {

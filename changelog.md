@@ -11,6 +11,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`oklch`](https://uiua.org/docs/oklch) function
 - Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape
 - Add `$_` syntax to remove labels
+- Add experimental [`pattern ⍡`](https://uiua.org/docs/pattern) modifier, which makes big pattern match lists easier to debug and maintain
 ### Interpreter
 - Remove proxy values, which where a hacky solution to maintaining correct types and shapes when iterating over arrays with 0 rows.
   - The type analyzer for these cases has been improved to make them mostly unnecessary

@@ -494,7 +494,8 @@ pub fn run_prim_mod(prim: &Primitive, mut ops: Ops, env: &mut Uiua) -> UiuaResul
 
         // Misc
         Primitive::Fill => fill!(ops, None, env, with_fill, without_fill_but),
-        Primitive::Try => algorithm::try_(ops, env)?,
+        Primitive::Try => algorithm::try_(ops, false, env)?,
+        Primitive::Pattern => algorithm::try_(ops, true, env)?,
         Primitive::Case => {
             let [f] = get_ops(ops, env)?;
             env.exec(f).map_err(|mut e| {

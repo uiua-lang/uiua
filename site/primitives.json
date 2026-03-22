@@ -1164,6 +1164,14 @@
     "class": "Environment",
     "description": "Get the primary path separator for the current platform"
   },
+  "pattern": {
+    "glyph": "⍡",
+    "outputs": 1,
+    "modifier_args": 2,
+    "class": "Misc",
+    "description": "Choose different cases based on pattern matching",
+    "experimental": true
+  },
   "pi": {
     "glyph": "π",
     "args": 0,

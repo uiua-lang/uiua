@@ -242,12 +242,33 @@ impl SysBackend for WebBackend {
         } else if path.starts_with('.') {
             path = &path[1..];
         }
-        let path = Path::new(path);
         let mut set = BTreeSet::new();
         FILES.with(|files| {
             for file in files.borrow().keys() {
-                if file.parent() == Some(path) {
+                logging::log!("check file {file:?}");
+                if file.parent().is_some_and(|par| par == path)
+                    || file.parent().is_none() && path.is_empty()
+                {
                     set.insert(file.file_name().unwrap().to_string_lossy().into());
+                } else if let Some(mut parent) = file
+                    .parent()
+                    .filter(|&par| par != path && par.starts_with(path))
+                {
+                    logging::log!("  parent: {parent:?}");
+                    while let Some(par) = parent
+                        .parent()
+                        .filter(|&par| par != path && par.starts_with(path))
+                    {
+                        parent = par;
+                        logging::log!("  parent: {parent:?}");
+                    }
+                    set.insert(
+                        parent
+                            .to_string_lossy()
+                            .trim_start_matches(path)
+                            .trim_start_matches("/")
+                            .into(),
+                    );
                 }
             }
         });
@@ -526,14 +547,7 @@ impl SysBackend for WebBackend {
                             let tree = tree.get("tree").unwrap().as_array().unwrap();
                             let paths = tree
                                 .iter()
-                                .filter_map(|entry| {
-                                    let path = entry.get("path")?.as_str()?;
-                                    if path.ends_with(".ua") {
-                                        Some(path.to_string())
-                                    } else {
-                                        None
-                                    }
-                                })
+                                .filter_map(|entry| entry.get("path")?.as_str())
                                 .collect::<HashSet<_>>();
 
                             if !paths.contains("lib.ua") {
@@ -553,20 +567,23 @@ impl SysBackend for WebBackend {
                                     let internal_path = Path::new("uiua-modules")
                                         .join(repo_owner)
                                         .join(repo_name)
-                                        .join(path.clone());
+                                        .join(path);
 
-                                    (path, internal_path, fetch(fetch_url.as_str()).await)
+                                    (path, internal_path, fetch_bytes(fetch_url.as_str()).await)
                                 }
                             }))
                             .await;
 
-                            for (original_path, internal_path, res) in results {
-                                if original_path.eq("lib.ua") {
-                                    cache_url(&url, res.clone());
+                            for (&original_path, internal_path, res) in results {
+                                if original_path == "lib.ua" {
+                                    let text = res.clone().map(|b| {
+                                        String::from_utf8(b).unwrap_or_else(|e| {
+                                            String::from_utf8_lossy(e.as_bytes()).into_owned()
+                                        })
+                                    });
+                                    cache_url(&url, text);
                                 }
-
-                                if let Ok(text) = res {
-                                    let contents = text.as_bytes().to_vec();
+                                if let Ok(contents) = res {
                                     drop_file(internal_path.clone(), contents);
                                 }
                             }

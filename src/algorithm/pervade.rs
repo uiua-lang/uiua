@@ -1384,19 +1384,20 @@ pub mod add {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b + a.into()
     }
+    fn on_i64(a: i64, b: i64) -> char {
+        char::from_u32(b.saturating_add(a).clamp(0, char::MAX as i64) as u32).unwrap_or('\0')
+    }
     pub fn num_char(a: f64, b: char) -> char {
-        char::from_u32(((b as i64).saturating_add(a as i64)).clamp(0, char::MAX as i64) as u32)
-            .unwrap_or('\0')
+        on_i64(a as i64, b as i64)
     }
     pub fn char_num(a: char, b: f64) -> char {
-        char::from_u32(((b as i64).saturating_add(a as i64)).clamp(0, char::MAX as i64) as u32)
-            .unwrap_or('\0')
+        on_i64(a as i64, b as i64)
     }
     pub fn byte_char(a: u8, b: char) -> char {
-        char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
+        on_i64(a as i64, b as i64)
     }
     pub fn char_byte(a: char, b: u8) -> char {
-        char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
+        on_i64(a as i64, b as i64)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot add {a} and {b}"))

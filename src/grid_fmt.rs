@@ -1082,7 +1082,9 @@ impl<T: ArrayValue> Array<T> {
         let base: String = shape_row::<T>(&self.shape).into_iter().collect();
         if let Some(keys) = &self.meta.map_keys {
             let mut keys_shape = keys.keys.shape.clone();
-            keys_shape[0] = self.row_count();
+            if let Some(len) = keys_shape.first_mut() {
+                *len = self.row_count();
+            }
             let mut s: String = match keys.keys {
                 Value::Num(_) => shape_row::<f64>(&keys_shape),
                 Value::Byte(_) => shape_row::<u8>(&keys_shape),

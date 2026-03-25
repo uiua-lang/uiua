@@ -613,7 +613,12 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Load a git repo as a module and return the path to its `lib.ua` file
     ///
     /// The returned path should be loadable via [`SysBackend::file_read_all`]
-    fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {
+    fn load_git_module(
+        &self,
+        url: &str,
+        target: GitTarget,
+        subfolder: Option<&str>,
+    ) -> Result<PathBuf, String> {
         Err("Loading git modules is not supported in this environment".into())
     }
     /// Get the local timezone offset in hours

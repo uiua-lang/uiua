@@ -49,7 +49,7 @@ struct GlobalNativeSys {
     #[cfg(feature = "webcam")]
     cam_channels: std::sync::Mutex<std::collections::HashMap<usize, WebcamChannel>>,
     hostnames: DashMap<Handle, String>,
-    git_paths: DashMap<String, Result<PathBuf, String>>,
+    git_paths: DashMap<(String, Option<String>), Result<PathBuf, String>>,
     #[cfg(feature = "audio")]
     audio_stream_time: parking_lot::Mutex<Option<f64>>,
     #[cfg(feature = "audio")]
@@ -1226,8 +1226,14 @@ impl SysBackend for NativeSys {
         let ptr = NATIVE_SYS.ffi.ffi_allocate(size)?;
         Ok(Value::ffi_pointer(&ptr))
     }
-    fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {
-        if let Some(path) = NATIVE_SYS.git_paths.get(url)
+    fn load_git_module(
+        &self,
+        url: &str,
+        target: GitTarget,
+        subfolder: Option<&str>,
+    ) -> Result<PathBuf, String> {
+        let key = (url.into(), subfolder.map(Into::into));
+        if let Some(path) = NATIVE_SYS.git_paths.get(&key)
             && (path.is_err() || path.as_ref().unwrap().exists())
         {
             return path.clone();
@@ -1243,9 +1249,13 @@ impl SysBackend for NativeSys {
         // Add submodule
         let res = (|| {
             let parent_path = Path::new("uiua-modules").join(repo_owner);
-            let submodule_path = parent_path.join(repo_name);
-            let lib_path = submodule_path.join("lib.ua");
-            if !submodule_path.exists() {
+            let module_path = parent_path.join(repo_name);
+            let lib_path = if let Some(subfolder) = subfolder {
+                module_path.join(subfolder).join("lib.ua")
+            } else {
+                module_path.join("lib.ua")
+            };
+            if !module_path.exists() {
                 // Ensure the repo exists
                 let repo_exists = Command::new("git")
                     .args(["ls-remote", "--exit-code", url])
@@ -1263,7 +1273,7 @@ impl SysBackend for NativeSys {
                 }
                 // Clone the repo
                 let mut child = Command::new("git")
-                    .args(["clone", url, &submodule_path.to_string_lossy()])
+                    .args(["clone", url, &module_path.to_string_lossy()])
                     .stderr(Stdio::piped())
                     .stdout(Stdio::null())
                     .spawn()
@@ -1276,7 +1286,7 @@ impl SysBackend for NativeSys {
                     return Err(format!("Failed to clone git repository `{url}`: {err}"));
                 }
 
-                set_current_dir(&*submodule_path).map_err(|e| e.to_string())?;
+                set_current_dir(&*module_path).map_err(|e| e.to_string())?;
                 changed_dir = true;
                 match &target {
                     GitTarget::Default => {}
@@ -1317,7 +1327,7 @@ impl SysBackend for NativeSys {
         if changed_dir {
             _ = set_current_dir("../../..");
         }
-        NATIVE_SYS.git_paths.insert(url.to_string(), res.clone());
+        NATIVE_SYS.git_paths.insert(key, res.clone());
         res
     }
     #[allow(clippy::print_stdout)]

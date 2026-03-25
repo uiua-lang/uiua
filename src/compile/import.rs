@@ -59,28 +59,44 @@ impl Compiler {
         span: &CodeSpan,
     ) -> UiuaResult<Module> {
         // Resolve path
-        let (path, file_kind) = if let Some(url) =
+        let (path, file_kind) = if let Some(mut url) =
             (path_str.trim().strip_prefix("git:").map(Into::into)).or_else(|| {
                 (path_str.trim().strip_prefix("gh:")).map(|s| format!("github.com/{}", s.trim()))
             }) {
-            let mut url = url.as_str();
+            // Git import
             if url.contains("branch:") && url.contains("commit:") {
                 return Err(self.error(
                     span.clone(),
                     "Cannot specify both branch and commit in git import",
                 ));
             }
-            let target = if let Some((a, b)) = url.split_once("branch:") {
-                url = a;
-                GitTarget::Branch(b.trim().into())
-            } else if let Some((a, b)) = url.split_once("commit:") {
-                url = a;
-                GitTarget::Commit(b.trim().into())
-            } else {
-                GitTarget::Default
-            };
-            // Git import
-            let mut url = url.trim().trim_end_matches(".git").to_string();
+            while url.contains("  ") {
+                url = url.replace("  ", " ");
+            }
+            if url.contains(": ") {
+                url = url.replace(": ", ":");
+            }
+            let mut parts = url.split_whitespace();
+            let mut url = parts
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .trim_end_matches(".git")
+                .trim_end_matches("/")
+                .to_string();
+            let mut target = GitTarget::Default;
+            let mut subfolder = None;
+            for part in parts {
+                if let Some(br) = part.strip_prefix("branch:") {
+                    target = GitTarget::Branch(br.trim().into());
+                } else if let Some(com) = part.strip_prefix("commit:") {
+                    target = GitTarget::Branch(com.trim().into());
+                } else if subfolder.is_some() {
+                    self.add_error(span.clone(), "Cannot specify multiple Git repo subfolders");
+                } else {
+                    subfolder = Some(part)
+                }
+            }
             if url.ends_with("/uiua") {
                 return Err(self.error(span.clone(), "Cannot import what looks like a Uiua fork"));
             }
@@ -88,7 +104,7 @@ impl Compiler {
                 url = format!("https://{url}");
             }
             (self.code_meta.import_srcs).insert(span.clone(), ImportSrc::Git(url.clone()));
-            let path = (self.backend().load_git_module(&url, target))
+            let path = (self.backend().load_git_module(&url, target, subfolder))
                 .map_err(|e| self.error(span.clone(), e))?;
             (path, FileScopeKind::Git)
         } else {
@@ -128,7 +144,6 @@ impl Compiler {
                 bytes.hash(&mut hasher);
                 hasher.finish()
             }
-
             let (asm, ua_hash) = if let Some(asm) = asm {
                 asm
             } else {

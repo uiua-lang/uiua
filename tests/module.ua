@@ -79,7 +79,7 @@ Foo ← ⇡
 └─╴
 # Rebound
 B ← A
-⍤⤙≍ 6 B~F 5
+⍤⤙≍ 6 B.F 5
 
 # Experimental!
 
@@ -89,3 +89,6 @@ B ← A
   D‼ ← ^0^1
 └─╴
 ⍤⤙≍ 6 M!D‼++ 1 2 3
+
+~ "gh: uiua-lang/example-module subfolder" ~ Lang
+⍤⤙≍ "Uiua" Lang

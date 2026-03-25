@@ -12,6 +12,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape
 - Add `$_` syntax to remove labels
 - Add experimental [`pattern ⍡`](https://uiua.org/docs/pattern) modifier, which makes big pattern match lists easier to debug and maintain
+- Allow for subfolder imports from Git repos specified like `~ "git: example.com/user/repo subfolder"`
 ### Interpreter
 - Remove proxy values, which where a hacky solution to maintaining correct types and shapes when iterating over arrays with 0 rows.
   - The type analyzer for these cases has been improved to make them mostly unnecessary

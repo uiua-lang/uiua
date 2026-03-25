@@ -460,15 +460,21 @@ impl SysBackend for WebBackend {
     fn allow_thread_spawning(&self) -> bool {
         true
     }
-    fn load_git_module(&self, original_url: &str, target: GitTarget) -> Result<PathBuf, String> {
+    fn load_git_module(
+        &self,
+        original_url: &str,
+        target: GitTarget,
+        subfolder: Option<&str>,
+    ) -> Result<PathBuf, String> {
+        type CacheKey = (String, Option<String>);
         thread_local! {
-            static CACHE: RefCell<HashMap<String, Result<String, String>>> = Default::default();
+            static CACHE: RefCell<HashMap<CacheKey, Result<String, String>>> = Default::default();
             static WORKING: RefCell<HashSet<String>> = Default::default();
         }
 
-        fn cache_url(url: &str, res: Result<String, String>) {
+        fn cache_url(url: &str, subfolder: Option<String>, res: Result<String, String>) {
             CACHE.with(|cache| {
-                cache.borrow_mut().insert(url.into(), res);
+                cache.borrow_mut().insert((url.into(), subfolder), res);
             });
         }
 
@@ -497,10 +503,11 @@ impl SysBackend for WebBackend {
             let mut parts = original_url.rsplitn(3, '/');
             let repo_name = parts.next().ok_or("Invalid git url")?;
             let repo_owner = parts.next().ok_or("Invalid git url")?;
-            let path = Path::new("uiua-modules")
-                .join(repo_owner)
-                .join(repo_name)
-                .join("lib.ua");
+            let mut path = Path::new("uiua-modules").join(repo_owner).join(repo_name);
+            if let Some(subfolder) = subfolder {
+                path = path.join(subfolder);
+            }
+            path = path.join("lib.ua");
 
             (repo_owner.to_string(), repo_name.to_string(), path)
         };
@@ -515,15 +522,12 @@ impl SysBackend for WebBackend {
             .replace("github.com", "raw.githubusercontent.com")
             .replace("src/branch/master", "raw/branch/master");
 
-        if !url.ends_with(".ua") {
-            url = format!("{url}/main/lib.ua");
-        }
-
         let res = CACHE.with(|cache| {
-            if let Some(res) = cache.borrow().get(&url) {
+            let subfolder = subfolder.map(str::to_string);
+            if let Some(res) = cache.borrow().get(&(url.clone(), subfolder.clone())) {
                 logging::log!("Using cached module for {url:?}");
                 Some(res.clone())
-            } else if original_url.contains("github.com") && url.ends_with("/lib.ua") {
+            } else if original_url.contains("github.com") {
                 logging::log!("Fetching github repo: {url}");
                 mark_working(original_url);
                 let original_url = original_url.to_string();
@@ -537,7 +541,7 @@ impl SysBackend for WebBackend {
 
                     match tree_res {
                         Err(_) => {
-                            cache_url(&url, tree_res);
+                            cache_url(&url, subfolder, tree_res);
                             unmark_working(&original_url);
                             return;
                         }
@@ -550,13 +554,19 @@ impl SysBackend for WebBackend {
                                 .filter_map(|entry| entry.get("path")?.as_str())
                                 .collect::<HashSet<_>>();
 
-                            if !paths.contains("lib.ua") {
-                                cache_url(&url, Err("lib.ua not found".into()));
+                            let mut lib_path = PathBuf::from("lib.ua");
+                            if let Some(subfolder) = &subfolder {
+                                lib_path = PathBuf::from(subfolder).join(lib_path);
+                            }
+                            let lib_path = lib_path.to_string_lossy();
+                            if !paths.contains(&*lib_path) {
+                                cache_url(&url, subfolder, Err(format!("{lib_path} not found")));
                                 unmark_working(&original_url);
                                 return;
                             }
 
                             let results = join_all(paths.iter().map(|path| {
+                                logging::log!("path: {path}");
                                 let repo_owner = repo_owner.clone();
                                 let repo_name = repo_name.clone();
                                 async move {
@@ -575,13 +585,16 @@ impl SysBackend for WebBackend {
                             .await;
 
                             for (&original_path, internal_path, res) in results {
-                                if original_path == "lib.ua" {
+                                if subfolder.is_none() && original_path == "lib.ua"
+                                    || subfolder.is_some() && original_path.ends_with("/lib.ua")
+                                {
                                     let text = res.clone().map(|b| {
                                         String::from_utf8(b).unwrap_or_else(|e| {
                                             String::from_utf8_lossy(e.as_bytes()).into_owned()
                                         })
                                     });
-                                    cache_url(&url, text);
+                                    logging::log!("{} text: {:?}", original_path, text);
+                                    cache_url(&url, subfolder.clone(), text);
                                 }
                                 if let Ok(contents) = res {
                                     drop_file(internal_path.clone(), contents);
@@ -594,12 +607,15 @@ impl SysBackend for WebBackend {
                 });
                 None
             } else {
+                if !url.ends_with(".ua") {
+                    url = format!("{url}/main/lib.ua");
+                }
                 logging::log!("Fetching url: {url}");
                 mark_working(original_url);
                 let original_url = original_url.to_string();
                 spawn_local(async move {
                     let res = fetch(&url).await;
-                    cache_url(&url, res);
+                    cache_url(&url, subfolder, res);
                     unmark_working(&original_url);
                 });
                 None

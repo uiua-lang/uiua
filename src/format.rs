@@ -1897,8 +1897,13 @@ impl SysBackend for FormatterBackend {
     fn clipboard(&self) -> Result<String, String> {
         self.sys().clipboard()
     }
-    fn load_git_module(&self, url: &str, target: crate::GitTarget) -> Result<PathBuf, String> {
-        self.sys().load_git_module(url, target)
+    fn load_git_module(
+        &self,
+        url: &str,
+        target: crate::GitTarget,
+        subfolder: Option<&str>,
+    ) -> Result<PathBuf, String> {
+        self.sys().load_git_module(url, target, subfolder)
     }
 }
 

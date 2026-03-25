@@ -264,6 +264,13 @@ To use Git modules in the [native interpreter](/docs/install), you must have Git
 
 The native interpreter also supports adding an additional `branch: <branch-name>` or `commit: <commit-hash>` specifier after the URL.
 
+You can also specify modules from subfolders in the repository by naming the folder after the url.
+
+```uiua
+~ "git: github.com/uiua-lang/example-module subfolder" ~ Lang
+$"This is _!" Lang
+```
+
 The `uiua module` command can be used to list or update Git modules.
 
 You can find a curated list of Uiua modules [here](https://github.com/uiua-lang/uiua-modules).

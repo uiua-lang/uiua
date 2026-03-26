@@ -6,15 +6,6 @@ use smallvec::SmallVec;
 
 pub use signature::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct UnderflowError<A>(pub A);
-
-impl<A: StackArg> fmt::Display for UnderflowError<A> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Not enough arguments to provide {}", self.0.arg_name())
-    }
-}
-
 pub trait Exec<S>: HasStack {
     type Output;
     fn exec(&mut self, f: S) -> Result<Self::Output, Self::Error>;
@@ -121,6 +112,29 @@ pub trait HasStack {
         self.require_height(n)?;
         Ok(self.stack()[n].clone())
     }
+    fn dup(&mut self) -> Result<(), Self::Error>
+    where
+        Self::Item: Clone,
+    {
+        let x = self.copy_top()?;
+        self.push(x);
+        Ok(())
+    }
+    fn flip(&mut self) -> Result<(), Self::Error> {
+        let i = self.require_height(2)?;
+        self.stack_mut().swap(i, i + 1);
+        Ok(())
+    }
+    fn over(&mut self) -> Result<(), Self::Error>
+    where
+        Self::Item: Clone,
+    {
+        let a = self.pop(1)?;
+        let b = self.copy_nth(1)?;
+        self.push(a);
+        self.push(b);
+        Ok(())
+    }
     fn dip<F>(&mut self, f: F) -> Result<Self::Output, Self::Error>
     where
         Self: Exec<F>,
@@ -147,18 +161,20 @@ pub trait HasStack {
     }
     fn fork<S>(
         &mut self,
-        ops: impl Indexable<Item = S, IntoIter: DoubleEndedIterator>,
+        ops: impl IntoIterator<Item = S, IntoIter: DoubleEndedIterator + ExactSizeIterator> + Clone,
     ) -> Result<(), Self::Error>
     where
         S: HasSig,
         Self: Exec<S>,
         Self::Item: Clone,
     {
-        if ops.is_empty() {
+        let ops_clone = ops.clone();
+        let mut ops = ops.into_iter();
+        if ops.len() == 0 {
             return Ok(());
         }
         if ops.len() == 2 {
-            let mut ops = ops.into_iter();
+            drop(ops_clone);
             let f = ops.next().unwrap();
             let g = ops.next().unwrap();
             let f_args = if f.args() > g.args() {
@@ -172,14 +188,14 @@ pub trait HasStack {
             self.push_all(f_args);
             self.exec(f)?;
         } else {
-            let args = self.pop_n(ops.iter().map(|s| s.args()).max().unwrap_or(0))?;
-            let mut ops = ops.into_iter();
+            let arg_count =
+                self.pop_n(ops_clone.into_iter().map(|s| s.args()).max().unwrap_or(0))?;
             let last = ops.next().unwrap();
             for op in ops.rev() {
-                self.push_all(args[..op.args()].iter().cloned());
+                self.push_all(arg_count[..op.args()].iter().cloned());
                 self.exec(op)?;
             }
-            self.push_all(args.into_iter().take(last.args()));
+            self.push_all(arg_count.into_iter().take(last.args()));
             self.exec(last)?;
         }
         Ok(())
@@ -216,17 +232,19 @@ pub trait HasStack {
     }
     fn bracket<S>(
         &mut self,
-        ops: impl Indexable<Item = S, IntoIter: DoubleEndedIterator>,
+        ops: impl IntoIterator<Item = S, IntoIter: DoubleEndedIterator + ExactSizeIterator> + Clone,
     ) -> Result<(), Self::Error>
     where
         S: HasSig,
         Self: Exec<S>,
     {
-        if ops.is_empty() {
+        let ops_clone = ops.clone();
+        let mut ops = ops.into_iter();
+        if ops.len() == 0 {
             return Ok(());
         }
         if ops.len() == 2 {
-            let mut ops = ops.into_iter();
+            drop(ops_clone);
             let f = ops.next().unwrap();
             let g = ops.next().unwrap();
             let f_args = self.pop_n(f.args())?;
@@ -234,8 +252,12 @@ pub trait HasStack {
             self.push_all(f_args);
             self.exec(f)?;
         } else {
-            let mut args = self.pop_n(ops.iter().rev().skip(1).map(|s| s.args()).sum::<usize>())?;
-            let mut ops = ops.into_iter().rev();
+            let mut args = self.pop_n(
+                (ops_clone.into_iter().rev().skip(1))
+                    .map(|s| s.args())
+                    .sum::<usize>(),
+            )?;
+            let mut ops = ops.rev();
             self.exec(ops.next().unwrap())?;
             for op in ops {
                 self.push_all(args.drain(args.len() - op.args()..));
@@ -324,7 +346,7 @@ impl<T> HasStack for Vec<T> {
         self
     }
     fn underflow_error<A: StackArg>(&self, arg: A) -> Self::Error {
-        UnderflowError(arg).to_string()
+        arg.underflow_message()
     }
 }
 
@@ -363,6 +385,9 @@ pub trait StackArg {
         Self: 'a;
     /// Get the name of the argument
     fn arg_name<'a>(&'a self) -> Self::Name<'a>;
+    fn underflow_message(&self) -> String {
+        format!("Not enough arguments to provide {}", self.arg_name())
+    }
 }
 
 impl StackArg for () {

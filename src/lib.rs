@@ -172,6 +172,7 @@ mod shape;
 pub mod stand;
 mod sys;
 mod tree;
+mod types;
 mod value;
 #[cfg(feature = "window")]
 #[doc(hidden)]

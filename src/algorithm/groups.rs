@@ -849,7 +849,7 @@ where
             }
             env.exec(f.clone())?;
             for i in 0..sig.outputs() {
-                let value = env.pop(|| format!("{}'s function result", prim.format()))?;
+                let value = env.pop((prim.format(), "'s function result"))?;
                 rows[i].push(value);
             }
             if sig.args() == 0 {

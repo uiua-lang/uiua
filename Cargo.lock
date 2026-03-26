@@ -6766,6 +6766,7 @@ dependencies = [
  "tower-lsp",
  "trash",
  "uiua_parser",
+ "uiua_stack",
  "unicode-segmentation",
  "viuer",
  "vorbis_rs",
@@ -6807,7 +6808,16 @@ dependencies = [
  "enum-iterator",
  "serde",
  "serde_tuple",
+ "uiua_stack",
  "unicode-segmentation",
+]
+
+[[package]]
+name = "uiua_stack"
+version = "0.19.0-dev.2"
+dependencies = [
+ "serde",
+ "smallvec",
 ]
 
 [[package]]

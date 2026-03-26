@@ -1,5 +1,5 @@
 [workspace]
-members = ["site", "tests_ffi", "pad/editor", "parser"]
+members = ["site", "tests_ffi", "pad/editor", "parser", "stack"]
 
 [workspace.package]
 categories = ["compilers", "algorithms", "multimedia", "parser-implementations"]
@@ -13,6 +13,10 @@ version = "0.19.0-dev.2"
 
 [dependencies.uiua_parser]
 path = "parser"
+version = "0.19.0-dev.2"
+
+[dependencies.uiua_stack]
+path = "stack"
 version = "0.19.0-dev.2"
 
 [workspace.lints.clippy]
@@ -39,6 +43,7 @@ leptos_router = {version = "0.6.11", features = ["csr"]}
 rand = "0.10.0"
 serde = {version = "1", features = ["derive"]}
 serde_json = "1.0.115"
+smallvec = {version = "1.9", features = ["serde", "union", "const_new"]}
 unicode-segmentation = "1.10"
 urlencoding = "2"
 vorbis_rs = "0.5.5"
@@ -121,7 +126,7 @@ rustls = {version = "0.23.35", optional = true, default-features = false, featur
 ]}
 serde = {workspace = true, features = ["rc"]}
 serde_json.workspace = true
-smallvec = {version = "1.9", features = ["serde", "union", "const_new"]}
+smallvec = {workspace = true, features = ["serde", "union", "const_new"]}
 terminal_size = {version = "0.4.2", optional = true}
 thread_local = "1"
 threadpool = "1.8.1"

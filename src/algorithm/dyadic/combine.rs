@@ -6,10 +6,9 @@ use ecow::EcoVec;
 use uiua_parser::SubSide;
 
 use crate::{
-    Array, ArrayValue, Boxed, Complex, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
-    algorithm::{
-        ArrayCmpSlice, FillContext, Indexable, max_shape, validate_size_impl, validate_size_of,
-    },
+    Array, ArrayValue, Boxed, Complex, FormatShape, Indexable, Primitive, Shape, Uiua, UiuaResult,
+    Value,
+    algorithm::{ArrayCmpSlice, FillContext, max_shape, validate_size_impl, validate_size_of},
     cowslice::cowslice,
     fill::FillValue,
     val_as_arr,

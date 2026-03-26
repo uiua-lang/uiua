@@ -26,4 +26,5 @@ ecow.workspace = true
 enum-iterator.workspace = true
 serde = {workspace = true, features = ["rc"]}
 serde_tuple = "1.0.0"
+uiua_stack.path = "../stack"
 unicode-segmentation.workspace = true

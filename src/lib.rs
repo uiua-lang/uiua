@@ -199,6 +199,8 @@ pub use self::{
 };
 #[doc(inline)]
 pub use uiua_parser::*;
+#[doc(inline)]
+pub use uiua_stack::*;
 
 use self::algorithm::get_ops;
 

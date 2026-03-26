@@ -1156,7 +1156,7 @@ fn prepare_fold(
     };
     let mut arrays = Vec::with_capacity(iterable_count);
     for i in 0..iterable_count {
-        let mut val = env.pop(("iterated array", i + 1))?;
+        let mut val = env.pop(("iterated array ", i + 1))?;
         arrays.push(if val.row_count() == 1 {
             val.undo_fix();
             Err(val)
@@ -1166,7 +1166,7 @@ fn prepare_fold(
     }
     if env.stack_height() < acc_count {
         for i in 0..acc_count {
-            env.pop(("accumulator", i + 1))?;
+            env.pop(("accumulator ", i + 1))?;
         }
     }
     for i in 0..iterable_count {

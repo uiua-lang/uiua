@@ -17,8 +17,8 @@ use rapidhash::quality::RapidHasher;
 use serde::*;
 
 use crate::{
-    AestheticHash, Assembly, BindingKind, DynamicFunction, Function, ImplPrimitive, Primitive,
-    Purity, Signature, Value,
+    AestheticHash, Assembly, BindingKind, DynamicFunction, Function, HasSig, ImplPrimitive,
+    Primitive, Purity, Signature, Value,
     check::SigCheckError,
     compile::invert::{InversionError, InversionResult},
 };
@@ -104,6 +104,13 @@ pub struct SigNode {
     pub node: Node,
     /// The signature
     pub sig: Signature,
+}
+
+impl HasSig for SigNode {
+    #[inline]
+    fn signature(&self) -> Signature {
+        self.sig
+    }
 }
 
 impl SigNode {

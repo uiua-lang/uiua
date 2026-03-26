@@ -16,7 +16,7 @@ use crate::{
     Array, ArrayValue, Boxed, CodeSpan, Complex, ExactDoubleIterator, Inputs, Ops, PersistentMeta,
     Shape, SigNode, Signature, Span, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
     cowslice::ecovec_extend_cowslice, fill::FillValue, grid_fmt::GridFmt,
-    types::push_empty_rows_value,
+    empty_types::push_empty_rows_value,
 };
 
 mod dyadic;

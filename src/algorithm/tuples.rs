@@ -4,7 +4,7 @@ use ecow::EcoVec;
 
 use crate::{
     Array, ArrayValue, Node, Ops, Primitive, SigNode, Uiua, UiuaResult, Value, get_ops,
-    grid_fmt::GridFmt, types::push_empty_rows_value, val_as_arr,
+    grid_fmt::GridFmt, empty_types::push_empty_rows_value, val_as_arr,
 };
 
 use super::{monadic::range, table::table_impl, validate_size};

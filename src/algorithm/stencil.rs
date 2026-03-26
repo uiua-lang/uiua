@@ -12,7 +12,7 @@ use crate::{
         zip::{ValueMonFn, f_mon_fast_fn},
     },
     cowslice::extend_repeat,
-    types::push_empty_rows_value,
+    empty_types::push_empty_rows_value,
     val_as_arr,
 };
 

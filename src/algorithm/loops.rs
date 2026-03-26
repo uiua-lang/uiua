@@ -6,7 +6,7 @@ use crate::{
     Ops, Primitive, Shape, SigNode, Signature, Uiua, UiuaResult,
     algorithm::{FixedRowsData, fixed_rows, get_ops, pervade::pervade_dim},
     array::Array,
-    types::push_empty_rows_value,
+    empty_types::push_empty_rows_value,
     value::Value,
 };
 

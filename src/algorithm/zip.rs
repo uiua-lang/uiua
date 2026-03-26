@@ -15,9 +15,8 @@ use crate::{
     Uiua, UiuaResult,
     algorithm::{pervade::bin_pervade_values, reduce},
     cowslice::CowSlice,
-    get_ops, random,
-    types::push_empty_rows_value,
-    val_as_arr,
+    empty_types::push_empty_rows_value,
+    get_ops, random, val_as_arr,
     value::Value,
 };
 

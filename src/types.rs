@@ -1,21 +1,19 @@
 #![allow(dead_code)]
 
-use std::{collections::BTreeSet, ops::BitOr};
-
-use smallvec::SmallVec;
+use std::ops::BitOr;
 
 use crate::{
-    Assembly, Exec, HasStack, ImplPrimitive, Node, Primitive, SigNode, UiuaError, Value,
+    Assembly, Boxed, Exec, HasStack, ImplPrimitive, Node, Primitive, Shape, SigNode, Value,
     invert::InversionError,
 };
 
 pub struct TypeEnv<'a> {
     asm: &'a Assembly,
-    stack: Vec<TypeSet>,
+    stack: Vec<TypeVal>,
 }
 
 impl<'a> HasStack for TypeEnv<'a> {
-    type Item = TypeSet;
+    type Item = TypeVal;
     type Error = TypeError;
     fn stack(&self) -> &Vec<Self::Item> {
         &self.stack
@@ -33,38 +31,62 @@ pub enum TypeError {
     Unsupported,
     Underflow(String),
     Inversion(InversionError),
+    Generic(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub enum TypeSet {
-    #[default]
-    Any,
-    Set(BTreeSet<TypeVal>),
+impl From<&str> for TypeError {
+    fn from(s: &str) -> Self {
+        TypeError::Generic(s.into())
+    }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+impl From<String> for TypeError {
+    fn from(s: String) -> Self {
+        TypeError::Generic(s.into())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum TypeVal {
+    Num(f64),
+    NumList(Vec<f64>),
     Val(Value),
     Type(Type),
 }
 
-impl From<TypeVal> for TypeSet {
-    fn from(tv: TypeVal) -> Self {
-        TypeSet::Set([tv].into())
+impl TypeVal {
+    pub fn ty(self) -> Type {
+        match self {
+            TypeVal::Num(_) => Type {
+                scalar: Scalar::Num,
+                shape: DynShape::default(),
+            },
+            TypeVal::NumList(list) => Type {
+                scalar: Scalar::Num,
+                shape: DynShape::from(list.len()),
+            },
+            TypeVal::Val(val) => Type::from(&val),
+            TypeVal::Type(ty) => ty.clone(),
+        }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+impl From<Value> for TypeVal {
+    fn from(value: Value) -> Self {
+        TypeVal::Val(value)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
 pub struct Type {
-    pub scalar: ScalarSet,
+    pub scalar: Scalar,
     pub shape: DynShape,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct DynShape(pub SmallVec<[DimSet; 1]>);
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
 pub enum Scalar {
+    #[default]
+    Any,
     Num,
     Char,
     Box(Option<Box<Type>>),
@@ -72,122 +94,130 @@ pub enum Scalar {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub enum ScalarSet {
-    #[default]
-    Any,
-    Set(BTreeSet<Scalar>),
+pub struct DynShape {
+    dims: Vec<Dim>,
+    suffix: Option<Vec<Dim>>,
+}
+
+impl From<&Shape> for DynShape {
+    fn from(shape: &Shape) -> Self {
+        DynShape {
+            dims: shape.iter().map(|&d| Dim::Static(d)).collect(),
+            suffix: None,
+        }
+    }
+}
+
+impl From<usize> for DynShape {
+    fn from(n: usize) -> Self {
+        DynShape {
+            dims: vec![Dim::Static(n)],
+            suffix: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum DimSet {
+pub enum Dim {
     Static(usize),
-    Set(BTreeSet<usize>),
     Dyn,
 }
 
-impl BitOr for ScalarSet {
+impl BitOr for Scalar {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self::Output {
-        use ScalarSet::*;
+        use Scalar::*;
         match (self, rhs) {
-            (Any, _) | (_, Any) => Any,
-            (Set(mut a), Set(b)) => {
-                a.extend(b);
-                Set(a)
-            }
+            (Box(a), Box(b)) => Box(a.zip(b).map(|(a, b)| (*a | *b).into())),
+            (a, b) if a == b => a,
+            _ => Any,
         }
     }
 }
 
-impl BitOr for DimSet {
+impl BitOr for DynShape {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self::Output {
-        use DimSet::*;
+        use Dim::*;
+        let dim_count = self.dims.len().max(rhs.dims.len());
+        let mut dims = Vec::with_capacity(dim_count);
+        for i in 0..dim_count {
+            let a = self.dims.get(i).unwrap_or(&Dyn);
+            let b = rhs.dims.get(i).unwrap_or(&Dyn);
+            dims.push(match (a, b) {
+                (Static(a), Static(b)) if a == b => Static(*a),
+                _ => Dyn,
+            });
+        }
+        let suffix = self.suffix.zip(rhs.suffix).map(|(a, b)| {
+            let dim_count = a.len().max(b.len());
+            let mut dims = Vec::with_capacity(dim_count);
+            for i in 0..dim_count {
+                let a = (a.len().checked_sub(i))
+                    .and_then(|i| a.get(i))
+                    .unwrap_or(&Dyn);
+                let b = (b.len().checked_sub(i))
+                    .and_then(|i| b.get(i))
+                    .unwrap_or(&Dyn);
+                dims.push(match (a, b) {
+                    (Static(a), Static(b)) if a == b => Static(*a),
+                    _ => Dyn,
+                });
+            }
+            dims
+        });
+        DynShape { dims, suffix }
+    }
+}
+
+impl BitOr for Dim {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self::Output {
+        use Dim::*;
         match (self, rhs) {
             (Dyn, _) | (_, Dyn) => Dyn,
-            (Set(mut a), Set(b)) => {
-                a.extend(b);
-                Set(a)
-            }
-            (Set(mut set), Static(d)) | (Static(d), Set(mut set)) => {
-                set.insert(d);
-                Set(set)
-            }
-            (Static(a), Static(b)) => Set([a, b].into()),
+            (Static(a), Static(b)) if a == b => Static(a),
+            (Static(_), Static(_)) => Dyn,
         }
-    }
-}
-
-impl DimSet {
-    pub fn superset_of(&self, other: &Self) -> bool {
-        use DimSet::*;
-        match (self, other) {
-            (Dyn, _) => true,
-            (_, Dyn) => false,
-            (Set(a), Set(b)) => a.is_superset(b),
-            (Set(a), Static(b)) => a.contains(b),
-            (Static(a), Set(b)) => b.len() == 1 && b.contains(a),
-            (Static(a), Static(b)) => a == b,
-        }
-    }
-    pub fn subset_of(&self, other: &Self) -> bool {
-        other.superset_of(self)
     }
 }
 
 impl BitOr for TypeVal {
-    type Output = Result<Self, [Self; 2]>;
+    type Output = Self;
     fn bitor(self, rhs: Self) -> Self::Output {
-        let a = match self {
-            TypeVal::Val(value) => todo!(),
-            TypeVal::Type(_) => todo!(),
-        };
-        todo!()
+        if self == rhs {
+            return self;
+        }
+        TypeVal::Type(self.ty() | rhs.ty())
     }
 }
 
 impl From<&Value> for Type {
-    fn from(value: &Value) -> Self {
-        let scalar = match value {
+    fn from(val: &Value) -> Self {
+        let scalar = match val {
             Value::Num(_) | Value::Byte(_) => Scalar::Num,
             Value::Char(_) => Scalar::Char,
             Value::Complex(_) => Scalar::Complex,
-            Value::Box(arr) => {
-                // Scalar::Box(
-                //     arr.data
-                //         .iter()
-                //         .map(Type::from)
-                //         .reduce(BitOr::bitor)
-                //         .map(Box::new),
-                // );
-                todo!()
-            }
-        };
-        todo!()
+            Value::Box(arr) => Scalar::Box(
+                arr.data
+                    .iter()
+                    .map(|Boxed(v)| Type::from(v))
+                    .reduce(BitOr::bitor)
+                    .map(Box::new),
+            ),
+        }
+        .into();
+        let shape = DynShape::from(&val.shape);
+        Type { scalar, shape }
     }
 }
 
-impl BitOr for TypeSet {
+impl BitOr for Type {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self::Output {
-        use TypeSet::*;
-        match (self, rhs) {
-            (Any, _) | (_, Any) => Any,
-            (Set(a), Set(b)) => {
-                let mut new = BTreeSet::new();
-                for a in a {
-                    for b in &b {
-                        match a.clone() | b.clone() {
-                            Ok(ty) => {
-                                new.insert(ty);
-                            }
-                            Err(tys) => new.extend(tys),
-                        }
-                    }
-                }
-                Set(new)
-            }
-        }
+        let scalar = self.scalar | rhs.scalar;
+        let shape = self.shape | rhs.shape;
+        Type { scalar, shape }
     }
 }
 
@@ -207,7 +237,7 @@ impl<'a> Exec<&SigNode> for TypeEnv<'a> {
 
 impl<'a> TypeEnv<'a> {
     fn node(&mut self, node: &Node) -> Result<(), TypeError> {
-        use {ImplPrimitive::*, Node::*, Primitive::*};
+        use {ImplPrimitive::*, Node::*, Primitive::*, Scalar::*};
         match node {
             Run(nodes) => {
                 for node in nodes {
@@ -223,6 +253,11 @@ impl<'a> TypeEnv<'a> {
                 }
                 Dup => self.dup()?,
                 Flip => self.flip()?,
+                Add => {
+                    let a = self.pop(1)?.ty();
+                    let b = self.pop(2)?.ty();
+                    todo!()
+                }
                 _ => return Err(TypeError::Unsupported),
             },
             ImplPrim(prim, _) => match prim {
@@ -233,6 +268,10 @@ impl<'a> TypeEnv<'a> {
                 Fork => self.fork(ops.clone())?,
                 Bracket => self.bracket(ops.clone())?,
                 Dip => self.dip(monad(ops))?,
+                _ => return Err(TypeError::Unsupported),
+            },
+            ImplMod(prim, ops, _) => match prim {
+                &DipN(n) => self.dip_n(n, monad(ops))?,
                 _ => return Err(TypeError::Unsupported),
             },
             CustomInverse(cust, _) => match &cust.normal {

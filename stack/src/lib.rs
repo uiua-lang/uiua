@@ -144,7 +144,7 @@ pub trait HasStack {
         self.push(dipped);
         res
     }
-    fn dip_n<F, R>(&mut self, n: usize, f: F) -> Result<Self::Output, Self::Error>
+    fn dip_n<F>(&mut self, n: usize, f: F) -> Result<Self::Output, Self::Error>
     where
         Self: Exec<F>,
     {

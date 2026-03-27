@@ -17,6 +17,7 @@ use crate::{
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
+    types::Scalar,
 };
 
 /// A generic array value
@@ -1600,6 +1601,54 @@ impl<const N: usize> From<[i32; N]> for Value {
     }
 }
 
+macro_rules! scalar_mon_impl {
+    ($name:ident, $(($in:ident,$out:expr),)*) => {
+        impl Scalar {
+            #[doc(hidden)]
+            pub fn $name(self) -> Result<Self, String> {
+                Ok(match self {
+                    $(
+                        #[allow(unreachable_patterns)]
+                        Self::$in => $out,
+                    )*
+                    Scalar::Any | Scalar::Box(None) => self,
+                    Scalar::Box(Some(mut ty)) => {
+                        ty.scalar = ty.scalar.$name()?;
+                        Scalar::Box(Some(ty))
+                    }
+                    #[allow(unreachable_patterns)]
+                    val => return Err($name::error(val))
+                })
+            }
+        }
+    }
+}
+
+trait OutputScalarType {
+    fn scalar(&self) -> Scalar;
+}
+
+impl<T> OutputScalarType for fn(T) -> f64 {
+    fn scalar(&self) -> Scalar {
+        Scalar::Num
+    }
+}
+impl<T> OutputScalarType for fn(T) -> u8 {
+    fn scalar(&self) -> Scalar {
+        Scalar::Num
+    }
+}
+impl<T> OutputScalarType for fn(T) -> char {
+    fn scalar(&self) -> Scalar {
+        Scalar::Char
+    }
+}
+impl<T> OutputScalarType for fn(T) -> Complex {
+    fn scalar(&self) -> Scalar {
+        Scalar::Complex
+    }
+}
+
 macro_rules! value_mon_impl {
     (
         $name:ident,
@@ -1637,13 +1686,19 @@ macro_rules! value_mon_impl {
                         array.into()
                     }
                     #[allow(unreachable_patterns)]
-                    val => return Err($name::error(val.type_name(), env))
+                    val => return Err(env.error($name::error(val.type_name())))
                 }))?;
                 $((|$sorted_val: &mut Value, $sorted_flags| $sorted_body)(&mut val, _sorted_flags);)?
                 val.validate();
                 Ok(val)
             }
         }
+
+        scalar_mon_impl!(
+            $name,
+            $($(($in_place, Self::$in_place),)*)*
+            $($(($make_new, ($name::$f2 as fn(_) -> _).scalar()),)*)*
+        );
     }
 }
 
@@ -1932,7 +1987,7 @@ macro_rules! value_dy_impl {
                         }
                         val
                     },
-                    (a, b) => return Err($name::error(a.type_name(), b.type_name(), env)),
+                    (a, b) => return Err(env.error($name::error(a.type_name(), b.type_name()))),
                 })})?;
                 val.validate();
                 Ok(val)

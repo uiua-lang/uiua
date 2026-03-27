@@ -558,7 +558,8 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
     b.arr.untranspose();
 
     let (csel, _) = dim_selector(dims, size, env)?;
-    let mut csemi = derive_new_shape(&a.semi, &b.semi, Err(""), Err(""), env)?;
+    let mut csemi =
+        derive_new_shape(&a.semi, &b.semi, Err(""), Err("")).map_err(|e| env.error(e))?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
 
     if csemi.contains(&0) {
@@ -746,7 +747,7 @@ fn product_impl_transposed(
     } = b;
 
     let (csel, _) = dim_selector(dims, size, env)?;
-    let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
+    let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err("")).map_err(|e| env.error(e))?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
 
     // println!("dims: {dims}, metrics: {metrics:?}, size: {size}");

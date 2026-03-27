@@ -57,14 +57,8 @@ pub enum TypeVal {
 impl TypeVal {
     pub fn ty(self) -> Type {
         match self {
-            TypeVal::Num(_) => Type {
-                scalar: Scalar::Num,
-                shape: DynShape::default(),
-            },
-            TypeVal::NumList(list) => Type {
-                scalar: Scalar::Num,
-                shape: DynShape::from(list.len()),
-            },
+            TypeVal::Num(_) => Scalar::Num.scalar(),
+            TypeVal::NumList(list) => Scalar::Num.shaped(list.len()),
             TypeVal::Val(val) => Type::from(&val),
             TypeVal::Type(ty) => ty.clone(),
         }
@@ -133,7 +127,7 @@ impl From<Scalar> for Type {
     fn from(scalar: Scalar) -> Self {
         Type {
             scalar,
-            shape: DynShape::default(),
+            shape: DynShape::scalar(),
         }
     }
 }
@@ -167,7 +161,7 @@ impl Scalar {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DynShape {
     dims: Vec<Dim>,
     suffix: Option<Vec<Dim>>,
@@ -213,8 +207,29 @@ impl From<usize> for DynShape {
 }
 
 impl DynShape {
+    pub fn scalar() -> Self {
+        DynShape {
+            dims: Vec::new(),
+            suffix: None,
+        }
+    }
+    pub fn any() -> Self {
+        DynShape {
+            dims: Vec::new(),
+            suffix: Some(Vec::new()),
+        }
+    }
     pub fn row_count(&self) -> Dim {
         self.dims.first().copied().unwrap_or(Dim::Static(1))
+    }
+    pub fn is_any(&self) -> bool {
+        self.dims.is_empty() && self.suffix.as_ref().is_some_and(|s| s.is_empty())
+    }
+}
+
+impl Default for DynShape {
+    fn default() -> Self {
+        Self::any()
     }
 }
 
@@ -254,7 +269,11 @@ impl fmt::Display for DynShape {
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.shape, self.scalar)
+        if self.shape.is_any() {
+            write!(f, "{}", self.scalar)
+        } else {
+            write!(f, "{}[{}]", self.scalar, self.shape)
+        }
     }
 }
 

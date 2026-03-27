@@ -77,8 +77,7 @@ pub fn derive_new_shape(
     bsh: &Shape,
     a_fill_sh: Result<&Shape, &'static str>,
     b_fill_sh: Result<&Shape, &'static str>,
-    env: &Uiua,
-) -> UiuaResult<Shape> {
+) -> Result<Shape, String> {
     let new_rank = ash.len().max(bsh.len());
     let mut new_shape = Shape::with_capacity(new_rank);
     for i in 0..new_rank {
@@ -92,29 +91,25 @@ pub fn derive_new_shape(
                 } else if ad < bd {
                     match a_fill_sh {
                         Ok(sh) if !ash.row_slice().ends_with(sh) => {
-                            return Err(env.error(format!(
+                            return Err(format!(
                                 "Fill shape {sh} cannot be used to fill array with shape {ash}"
-                            )));
+                            ));
                         }
                         Ok(_) => ad.max(bd),
                         Err(e) => {
-                            return Err(
-                                env.error(format!("Shapes {ash} and {bsh} are not compatible{e}"))
-                            );
+                            return Err(format!("Shapes {ash} and {bsh} are not compatible{e}"));
                         }
                     }
                 } else {
                     match b_fill_sh {
                         Ok(sh) if !bsh.row_slice().ends_with(sh) => {
-                            return Err(env.error(format!(
+                            return Err(format!(
                                 "Fill shape {sh} cannot be used to fill array with shape {bsh}"
-                            )));
+                            ));
                         }
                         Ok(_) => ad.max(bd),
                         Err(e) => {
-                            return Err(
-                                env.error(format!("Shapes {ash} and {bsh} are not compatible{e}"))
-                            );
+                            return Err(format!("Shapes {ash} and {bsh} are not compatible{e}"));
                         }
                     }
                 }
@@ -141,8 +136,8 @@ where
         &b.shape,
         a_fill.as_ref().map(|_| &empty).map_err(|&e| e),
         b_fill.as_ref().map(|_| &empty).map_err(|&e| e),
-        env,
-    )?;
+    )
+    .map_err(|e| env.error(e))?;
 
     // dbg!(&a.shape, &b.shape, &new_shape);
 
@@ -728,8 +723,8 @@ pub(crate) fn bin_pervade_values(
         &b.shape,
         a_fill.as_ref().map(|a| &a.shape).map_err(|&e| e),
         b_fill.as_ref().map(|b| &b.shape).map_err(|&e| e),
-        env,
-    )?;
+    )
+    .map_err(|e| env.error(e))?;
 
     #[allow(clippy::too_many_arguments)]
     fn recur(

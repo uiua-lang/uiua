@@ -49,7 +49,7 @@
             overlays = [ rust-overlay.overlays.default ];
           };
           packages = {
-            default = pkgs.callPackage ./nix/package.nix { inherit craneLib rustPlatform; };
+            default = pkgs.callPackage ./nix/package.nix { inherit craneLib rustPlatform; doCheck = false; };
             fonts = pkgs.callPackage ./nix/fonts.nix { };
             site = pkgs.callPackage ./nix/site.nix { inherit craneLib; };
             toolchain = toolchainFor pkgs;

@@ -933,15 +933,15 @@ impl<'a> Lexer<'a> {
         for c in c.chars() {
             match c {
                 '\n' => {
-                    self.loc.line += 1;
+                    self.loc.line = self.loc.line.saturating_add(1);
                     self.loc.col = 1;
                 }
                 '\r' => {}
-                _ => self.loc.col += 1,
+                _ => self.loc.col = self.loc.col.saturating_add(1),
             }
         }
-        self.loc.char_pos += 1;
-        self.loc.byte_pos += c.len() as u32;
+        self.loc.char_pos = self.loc.char_pos.saturating_add(1);
+        self.loc.byte_pos = self.loc.byte_pos.saturating_add(c.len() as u32);
     }
     fn next_char_if(&mut self, f: impl Fn(&str) -> bool) -> Option<&'a str> {
         let c = *self.input_segments.get(self.loc.char_pos as usize)?;

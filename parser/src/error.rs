@@ -199,7 +199,7 @@ impl Report {
                 let input = inputs.get(&span.src);
                 let line = input
                     .lines()
-                    .nth(span.start.line as usize - 1)
+                    .nth((span.start.line as usize).saturating_sub(1))
                     .unwrap_or("");
                 let start_char_pos = span.start.col - 1;
                 let end_char_pos = if span.start.line == span.end.line {

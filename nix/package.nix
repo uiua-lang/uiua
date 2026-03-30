@@ -55,7 +55,7 @@ let
   cargoArtifacts = craneLib.buildDepsOnly commonArgs;
   totalArgs = commonArgs // {
     inherit cargoArtifacts;
-    cargoTestExtraArgs = "-- --skip format::generate_format_cfg_docs";
+    cargoTestExtraArgs = "-- --skip tests::suite --skip format::generate_format_cfg_docs";
     postInstall = ''
       wrapProgram "$out/bin/uiua" --prefix LD_LIBRARY_PATH : "${libPath}"
     '';

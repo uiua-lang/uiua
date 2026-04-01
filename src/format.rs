@@ -640,8 +640,11 @@ impl Formatter<'_> {
         self.output.push('\n');
         self.indent(depth);
     }
+    fn indentation(&self, depth: usize) -> usize {
+        self.config.multiline_indent * depth
+    }
     fn indent(&mut self, depth: usize) {
-        for _ in 0..self.config.multiline_indent * depth {
+        for _ in 0..self.indentation(depth) {
             self.output.push(' ');
         }
     }
@@ -708,7 +711,7 @@ impl Formatter<'_> {
                                     if !self.output.ends_with('\n') {
                                         self.output.push('\n');
                                     }
-                                    for _ in 0..self.config.multiline_indent * depth {
+                                    for _ in 0..self.indentation(depth) {
                                         self.output.push(' ');
                                     }
                                     self.output.push(end);
@@ -1005,7 +1008,7 @@ impl Formatter<'_> {
                         if !self.output.ends_with('\n') {
                             self.output.push('\n');
                         }
-                        for _ in 0..self.config.multiline_indent * depth {
+                        for _ in 0..self.indentation(depth) {
                             self.output.push(' ');
                         }
                         self.output.push(end);
@@ -1013,6 +1016,16 @@ impl Formatter<'_> {
                     }
                 }
             }
+        }
+    }
+    fn curr_line_pos(&self) -> usize {
+        if self.output.ends_with('\n') {
+            0
+        } else {
+            (self.output.split('\n').next_back())
+                .unwrap_or_default()
+                .graphemes(true)
+                .count()
         }
     }
     fn format_word(&mut self, word: &Sp<Word>, depth: usize) {
@@ -1043,14 +1056,7 @@ impl Formatter<'_> {
                 .output
                 .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
             Word::MultilineString(lines) => {
-                let curr_line_pos = if self.output.ends_with('\n') {
-                    0
-                } else {
-                    (self.output.split('\n').next_back())
-                        .unwrap_or_default()
-                        .graphemes(true)
-                        .count()
-                };
+                let curr_line_pos = self.curr_line_pos();
                 for (i, line) in lines.iter().enumerate() {
                     let mut line = line.value.as_str();
                     if line.ends_with('\r') {
@@ -1073,14 +1079,7 @@ impl Formatter<'_> {
                         .push_str(&self.inputs.get(&span.src)[span.byte_range()]);
                     return;
                 }
-                let curr_line_pos = if self.output.ends_with('\n') {
-                    0
-                } else {
-                    (self.output.split('\n').next_back())
-                        .unwrap_or_default()
-                        .graphemes(true)
-                        .count()
-                };
+                let curr_line_pos = self.curr_line_pos();
                 for (i, line) in lines.iter().enumerate() {
                     if i > 0 {
                         self.output.push('\n');
@@ -1112,7 +1111,6 @@ impl Formatter<'_> {
                 }
             }
             Word::Array(arr) => {
-                let unclosed = self.output.rsplit('\n').next().map_or(0, count_unclosed);
                 if let Some(down_span) = &arr.down_span {
                     self.push(down_span, "↓");
                 }
@@ -1121,11 +1119,8 @@ impl Formatter<'_> {
                 } else {
                     self.output.push('[');
                 }
-
-                let depth = depth + 1
-                    - unclosed
-                        * arr.word_lines().next().is_some_and(|line| line.is_empty()) as usize;
-                self.format_inner_items(&arr.lines, true, depth);
+                let subdepth = depth + 1;
+                self.format_inner_items(&arr.lines, true, subdepth);
                 if arr.boxes {
                     self.output.push('}');
                 } else {
@@ -1208,14 +1203,7 @@ impl Formatter<'_> {
                         s.push('#');
                     }
                 }
-                let start_line_pos = if self.output.ends_with('\n') {
-                    0
-                } else {
-                    (self.output.split('\n').next_back())
-                        .unwrap_or_default()
-                        .graphemes(true)
-                        .count()
-                };
+                let start_line_pos = self.curr_line_pos();
                 // Build grid
                 const MAX_HEIGHT: usize = 100;
                 let mut grid: Vec<Vec<Vec<String>>> = vec![Vec::new(); stacks.len()];
@@ -1401,20 +1389,19 @@ impl Formatter<'_> {
             items = &items[1..];
             has_leading_newline = true;
         }
-        let curr_line = self.output.split('\n').next_back().unwrap_or_default();
-        let start_line_pos = if self.output.ends_with('\n') {
-            0
-        } else {
-            curr_line.graphemes(true).count()
-        };
-        let depth_indent = self.config.multiline_indent * depth;
+        let mut start_line_pos = self.curr_line_pos();
+        let mut depth_indent = self.indentation(depth);
         let starts_indented = start_line_pos > depth_indent;
-        let allow_leading_newline = starts_indented || has_trailing_newline && allow_compact;
-        let indent = if allow_leading_newline && has_leading_newline {
-            depth_indent
-        } else {
-            start_line_pos
-        };
+        if allow_compact && !has_leading_newline {
+            depth_indent = depth_indent.max(start_line_pos);
+        }
+        if !has_leading_newline {
+            while start_line_pos < depth_indent {
+                self.output.push(' ');
+                start_line_pos += 1;
+            }
+        }
+        let allow_leading_newline = !allow_compact || starts_indented || has_trailing_newline;
         let last_index = items.len() - 1;
         for (i, item) in items.iter().enumerate() {
             let is_empty_line = item.is_empty_line();
@@ -1424,7 +1411,7 @@ impl Formatter<'_> {
                 }
             } else if i > 0 || has_leading_newline && allow_leading_newline {
                 self.output.push('\n');
-                for _ in 0..indent {
+                for _ in 0..depth_indent {
                     self.output.push(' ');
                 }
             }
@@ -1503,7 +1490,6 @@ impl Formatter<'_> {
         let start_indent =
             (self.output.rsplit('\n').next()).map_or(0, |line| line.graphemes(true).count());
 
-        let unclosed = self.output.rsplit('\n').next().map_or(0, count_unclosed);
         self.output.push('(');
 
         // Signature
@@ -1516,21 +1502,14 @@ impl Formatter<'_> {
             }
         }
 
-        let extra_newline = func.lines.len() > 1
-            && start_indent > self.config.multiline_indent * (depth + 1)
-            && !func.lines.first().is_some_and(|item| item.is_empty_line());
+        let extra_newline = func.is_multiline()
+            && start_indent > self.indentation(depth + 1)
+            && !(func.word_lines().next()).is_some_and(|line| line.is_empty());
         if extra_newline {
             self.newline(depth + 1);
         }
 
-        let depth = depth + 1
-            - unclosed * func.word_lines().next().is_some_and(|line| line.is_empty()) as usize;
-        self.format_inner_items(&func.lines, true, depth);
-        if unclosed > 0 {
-            while self.output.chars().rev().take_while(|&c| c == ' ').count() >= start_indent {
-                self.output.pop();
-            }
-        }
+        self.format_inner_items(&func.lines, false, depth + 1);
         if extra_newline && !func.lines.last().is_some_and(|item| item.is_empty_line()) {
             self.newline(depth.saturating_sub(1));
         }
@@ -1546,7 +1525,7 @@ impl Formatter<'_> {
 
         let start_indent =
             (self.output.lines().last()).map_or(0, |line| line.graphemes(true).count());
-        let indent = self.config.multiline_indent * depth;
+        let indent = self.indentation(depth);
 
         self.output.push(match pack.is_array {
             None => '(',
@@ -1777,26 +1756,6 @@ fn end_loc(s: &str) -> Loc {
     }
 }
 
-/// Count the number of unclosed open delimiters in a string
-fn count_unclosed(s: &str) -> usize {
-    let [mut parens, mut brackets, mut curlies] = [0i32; 3];
-    for c in s.chars() {
-        match c {
-            '(' => parens += 1,
-            ')' => parens -= 1,
-            '[' => brackets += 1,
-            ']' => brackets -= 1,
-            '{' => curlies += 1,
-            '}' => curlies -= 1,
-            _ => {}
-        }
-    }
-    [parens, brackets, curlies]
-        .map(|i| i.max(0) as usize)
-        .into_iter()
-        .sum()
-}
-
 #[derive(Default)]
 struct FormatterBackend(pub Option<Arc<dyn SysBackend>>);
 
@@ -1953,25 +1912,31 @@ G ← (
   ∘
   ∘ # hi
 )
-F(F(
-  F
-))
-F(F{
-  F
-})
-F{F{
-  F
-}}
-F{F(
-  F
-)}
-F((F((
-  F
-))))
-F{{F{{
-  F
-}}}}
-
+≡({
+    +
+  }
+  +)
+≡((
+    +
+  )
+  +
+)
+( (
+    +
+    1 2 3
+    (
+      +
+    )
+  )
+)
+( (+)
+  +
+)
+((+) +)
+(
+  ∘
+  ∘ # hi
+)
 ⊃(+
 | - # x
 )
@@ -1987,25 +1952,25 @@ F{{F{{
 (1 2) (
   5
 )
-(1
- 2
+( 1
+  2
 ) (
   5
 )
-(1
- 2
- 3
+( 1
+  2
+  3
 )
-[1
- 2
- 3
+[ 1
+  2
+  3
 ]
-(1
- 2
- 3)
-[1
- 2
- 3]
+( 1
+  2
+  3)
+[ 1
+  2
+  3]
 ⊃(1
 | 2
 )
@@ -2041,7 +2006,7 @@ x ← 2
 | 3
 )
 ∘∘(
-  (∘
+  ( ∘
   )
 )
 (
@@ -2097,13 +2062,13 @@ F ← (|2
 
 F ← 5
 
-[(
-  1 2
-  3 4
-)]
-[(1 2
-  3 4
-)]
+[ (
+    1 2
+    3 4
+  )]
+[ ( 1 2
+    3 4
+  )]
 
 ⊃(∘ | ¯ | ±
 | ⌵ | ∿ | √

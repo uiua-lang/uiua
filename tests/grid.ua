@@ -124,9 +124,9 @@ RoundtripRepr!@\u{100002}
 ⍤⟜≍ pretty@\u{2fffe} ¤$ @\⊥
 
 pretty ¤ $label [1]
-["╭─ label"
- "╷ 1     "
- "    ╯   "]
+[ "╭─ label"
+  "╷ 1     "
+  "    ╯   "]
 ⍤⤙≍
 
 # Experimental!

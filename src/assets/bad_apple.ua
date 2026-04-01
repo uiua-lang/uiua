@@ -51,9 +51,9 @@ Intro ← /+⬚0[
     0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
     0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0
   ]
-  (IntroDrums
-   ×↯⊙Noise¤⊸⧻ ↥0-⊸¬÷⟜⇡⊸⧻ # Build
-   ×0.5 ⁿ10 ⍜↙×₀ ¯⧻Quarter Tempo)
+  ( IntroDrums
+    ×↯⊙Noise¤⊸⧻ ↥0-⊸¬÷⟜⇡⊸⧻ # Build
+    ×0.5 ⁿ10 ⍜↙×₀ ¯⧻Quarter Tempo)
   ×2 /⊂⍉⊞× Snare Eighth Tempo Hit
 ]
 MainDrums ← /+[
@@ -80,8 +80,8 @@ Bassy ← /+⬚0[
     0 ∞ 0 7 ∞ 7 6 7 0 ∞ 0 7 ∞ 7 6 7
     0 ∞ 0 7 ∞ 7 6 7 3 3 9 10 2 2 7 9
   ]
-  (Key 1 ♭↯2 Bass
-   BassSaw SmoothTime Sixteenth Tempo)
+  ( Key 1 ♭↯2 Bass
+    BassSaw SmoothTime Sixteenth Tempo)
   MainDrums
 ]
 
@@ -102,11 +102,11 @@ Verse ← /+⬚0[
     0 7 0 7 0 7 0 7 0 7 0 7 0 7 0 7
     ¯2 5 ¯2 5 ¯2 5 ¯2 5 ¯1 6 ¯1 6 ¯1 6 ¯1 6
   ]
-  (Key 4 /≡⊂ [[⟜≡₀⋅∞ VerseM] [VerseM VerseM′]]
-   SmoothTime Eighth Tempo
-   /+ ×0.5 ×[1 0.6] Square 4)
-  (Key 1 VerseH
-   ♭↯2 BassSaw SmoothTime Eighth Tempo)
+  ( Key 4 /≡⊂ [[⟜≡₀⋅∞ VerseM] [VerseM VerseM′]]
+    SmoothTime Eighth Tempo
+    /+ ×0.5 ×[1 0.6] Square 4)
+  ( Key 1 VerseH
+    ♭↯2 BassSaw SmoothTime Eighth Tempo)
   ♭↯2 MainDrums
 ]
 
@@ -145,21 +145,21 @@ Chorus ← /+⬚0[
   ChorusHEnd ← [3 3 2 2]
   BreakdownDrums ← ♭↯8 ×0.4 /⊂⍉⊞× Noisy⊸⧻ Quarter Tempo [0 0 1 0]
 
-  (Key 4 /≡⊂ [
+  ( Key 4 /≡⊂ [
       [ChorusM ChorusM′] [⟜+₇ ChorusM₂]
       [ChorusM ChorusM′] [⟜+₇ ⊂⤚(↘¯⧻) ChorusMEnd ChorusM₂]
     ]
-   SmoothTime Eighth Tempo
-   /+ ×0.5 ×[1 0.6] Square 4)
+    SmoothTime Eighth Tempo
+    /+ ×0.5 ×[1 0.6] Square 4)
   /⊂[
-    (Key 1 ♭↯4 ChorusH
-     BassSaw SmoothTime Eighth Tempo)
+    ( Key 1 ♭↯4 ChorusH
+      BassSaw SmoothTime Eighth Tempo)
     /◇⊂{
-      (Key 2 /◇⊂ {ChorusH₂ ChorusH₂ ChorusH₃ ↘¯⧻ChorusHEnd ChorusH₃}
-       SmoothTime Eighth Tempo
-       /+ Distort 4 Triangle 10)
-      (Key 1 ChorusHEnd
-       BassSaw SmoothTime Eighth Tempo)
+      ( Key 2 /◇⊂ {ChorusH₂ ChorusH₂ ChorusH₃ ↘¯⧻ChorusHEnd ChorusH₃}
+        SmoothTime Eighth Tempo
+        /+ Distort 4 Triangle 10)
+      ( Key 1 ChorusHEnd
+        BassSaw SmoothTime Eighth Tempo)
     }
   ]
   /⊂▽2⬚0[MainDrums BreakdownDrums]

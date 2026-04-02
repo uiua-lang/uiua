@@ -339,7 +339,8 @@ pub fn Editor<'a>(
                 }
                 .into_view()
             }
-            OutputItem::Gif(bytes, label) => {
+            OutputItem::Gif(mut bytes, label) => {
+                bytes.extend(uiua::random().to_ne_bytes());
                 let encoded = STANDARD.encode(bytes);
                 view! {
                     <div class="output-media-wrapper">
@@ -349,7 +350,8 @@ pub fn Editor<'a>(
                 }
                 .into_view()
             }
-            OutputItem::Apng(bytes, label) => {
+            OutputItem::Apng(mut bytes, label) => {
+                bytes.extend(uiua::random().to_ne_bytes());
                 let encoded = STANDARD.encode(bytes);
                 view! {
                     <div class="output-media-wrapper">

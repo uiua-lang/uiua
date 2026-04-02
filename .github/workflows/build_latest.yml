@@ -28,7 +28,7 @@ concurrency:
 jobs:
   # Test the interpreter
   test_bin:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-riscv
     steps:
       - uses: actions/checkout@v4
       - name: Rust version
@@ -52,7 +52,7 @@ jobs:
         run: cargo test --lib
   # Test the site
   test_site:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-riscv
     steps:
       - uses: actions/checkout@v4
       - name: Rust version
@@ -76,7 +76,7 @@ jobs:
         run: cargo test -p site
   # Test ffi
   test_ffi:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-riscv
     steps:
       - uses: actions/checkout@v4
       - name: Rust version
@@ -101,7 +101,7 @@ jobs:
   # Build the site
   build_site:
     needs: test_site
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-riscv
     env:
       CACHE_TARGET: wasm32-unknown-unknown
     steps:
@@ -154,7 +154,7 @@ jobs:
   create_release:
     name: Create release
     needs: [test_bin, build_site]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-riscv
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -192,12 +192,12 @@ jobs:
               features: 'audio,window',
             }
           - {
-              os: ubuntu-latest,
+              os: ubuntu-24.04-riscv,
               target: x86_64-unknown-linux-gnu,
               features: 'full',
             }
           - {
-              os: ubuntu-latest,
+              os: ubuntu-24.04-riscv,
               target: x86_64-unknown-linux-gnu,
               features: 'window',
               name: '-no-audio',
@@ -241,7 +241,7 @@ jobs:
             ${{ runner.os }}-cargo-target-${{ matrix.target }}-${{ steps.rustv.outputs.version }}-
       - if: matrix.target == 'x86_64-unknown-linux-musl'
         run: sudo apt-get install -y musl-tools
-      - if: matrix.os == 'ubuntu-latest'
+      - if: matrix.os == 'ubuntu-24.04-riscv'
         run: |
           sudo apt-get update -y
           sudo apt-get --fix-missing install -y

@@ -232,10 +232,52 @@ mod enabled {
     use libloading::Library;
     use std::{ffi::*, iter::zip};
 
+    #[derive(Clone, Default)]
+    pub struct AlignedBuffer {
+        pub data: Vec<u64>,
+        pub len: usize,
+    }
+
+    impl AlignedBuffer {
+        pub fn new(bytes: &[u8]) -> Self {
+            let len = bytes.len();
+            if len == 0 {
+                return Self { data: Vec::new(), len: 0 };
+            }
+
+            // Calculate how many u64s we need to fit `len` bytes
+            let capacity = (len + 7) / 8;
+            let mut data = vec![0u64; capacity];
+
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    bytes.as_ptr(),
+                    data.as_mut_ptr() as *mut u8,
+                    len,
+                );
+            }
+
+            Self { data, len }
+        }
+
+        pub fn as_ptr(&self) -> *const u8 {
+            self.data.as_ptr() as *const u8
+        }
+
+        pub fn as_slice(&self) -> &[u8] {
+            if self.len == 0 {
+                &[]
+            } else {
+                unsafe { slice::from_raw_parts(self.as_ptr(), self.len) }
+            }
+        }
+    }
+
     #[derive(Default)]
     pub struct FfiState {
         libraries: DashMap<String, Library>,
-        buffers: DashMap<usize, Vec<u8>>,
+        // Store AlignedBuffer here instead of Vec<u8>
+        buffers: DashMap<usize, AlignedBuffer>,
     }
 
     impl FfiState {
@@ -264,8 +306,8 @@ mod enabled {
             let c_arg_tys = arg_tys.iter().map(Type::from);
             let cif = Cif::new(c_arg_tys, Type::from(&return_ty));
 
-            let mut reprs = Vec::new();
-            let mut buffers = Vec::new();
+            let mut reprs: Vec<AlignedBuffer> = Vec::new();
+            let mut buffers: Vec<AlignedBuffer> = Vec::new();
             // Pointers to out parameters
             let mut out_params = Vec::new();
 
@@ -277,7 +319,7 @@ mod enabled {
                 if arg.out {
                     if arg.ty.is_ptr() {
                         let ptr =
-                            usize::from_ne_bytes(repr.clone().try_into().unwrap()) as *const u8;
+                            usize::from_ne_bytes(repr.as_slice().try_into().unwrap()) as *const u8;
                         reprs.push(repr);
                         out_params.push((
                             ptr,
@@ -288,15 +330,16 @@ mod enabled {
                             self.buffers.insert(buffer.as_ptr() as usize, buffer);
                         }
                     } else {
-                        let (out_repr, out_buffer) = FfiType::data_to_buffer(repr);
+                        let (out_repr, out_buffer) = FfiType::data_to_buffer(repr.as_slice());
                         out_params.push((
-                            usize::from_ne_bytes(out_repr) as *const u8,
+                            usize::from_ne_bytes(out_repr.as_slice().try_into().unwrap())
+                                as *const u8,
                             arg.ty.clone(),
                             None,
                         ));
                         buffers.push(out_buffer);
                         buffers.extend(buffer);
-                        reprs.push(out_repr.into());
+                        reprs.push(out_repr);
                     }
                 } else {
                     reprs.push(repr);
@@ -304,9 +347,17 @@ mod enabled {
                 }
             }
 
+            static DUMMY_ZST: u64 = 0; // Just in case an FFI arg has 0 length
             let c_args = reprs
                 .iter()
-                .map(|repr| Arg::new(&repr[0]))
+                .map(|repr| {
+                    if repr.len == 0 {
+                        Arg::new(&DUMMY_ZST)
+                    } else {
+                        // Because data is Vec<u64>, data[0] guarantees 8-byte alignment!
+                        Arg::new(&repr.data[0])
+                    }
+                })
                 .collect::<Vec<_>>();
 
             let return_repr = unsafe { call(&cif, code_ptr, &c_args, return_ty.size()) };
@@ -348,13 +399,27 @@ mod enabled {
             Ok(rets)
         }
 
+        pub(crate) fn ffi_allocate(&self, size: usize) -> Result<MetaPtr, String> {
+            if size == 0 {
+                return Err("Cannot allocate zero bytes".to_string());
+            }
+
+            // Using AlignedBuffer guarantees the allocated block also supports
+            // 4-byte/8-byte types safely without crashing when accessed from C!
+            let buffer = AlignedBuffer::new(&vec![0; size]);
+            let ptr = buffer.as_ptr() as usize;
+
+            // Store it so ffi_free can successfully drop the full Vec<u64> later
+            self.buffers.insert(ptr, buffer);
+
+            Ok(MetaPtr::new(ptr, FfiType::UChar))
+        }
+
         pub(crate) fn ffi_free(&self, ptr: &MetaPtr) {
             if !ptr.get().is_null() {
-                if let Some((_, buffer)) = self.buffers.remove(&ptr.ptr) {
-                    drop(buffer);
-                } else {
-                    unsafe { drop(Box::from_raw(ptr.get_mut())) };
-                }
+                // This safely drops the memory whether it was an out-param buffer
+                // or created by `ffi_allocate`. (Box::from_raw removed completely)
+                self.buffers.remove(&ptr.ptr);
             }
         }
     }
@@ -498,19 +563,8 @@ mod enabled {
         let offset = size * index;
         let dest = unsafe { slice::from_raw_parts_mut((ptr.ptr + offset) as *mut u8, size) };
         let (repr, _) = ty.repr(value)?;
-        dest.copy_from_slice(&repr);
+        dest.copy_from_slice(repr.as_slice());
         Ok(())
-    }
-
-    impl FfiState {
-        pub(crate) fn ffi_allocate(&self, size: usize) -> Result<MetaPtr, String> {
-            if size == 0 {
-                return Err("Cannot allocate zero bytes".to_string());
-            }
-            let buffer = Box::<[u8]>::new_uninit_slice(size);
-            let ptr = Box::leak(buffer).as_ptr() as usize;
-            Ok(MetaPtr::new(ptr, FfiType::UChar))
-        }
     }
 
     impl FfiArg {
@@ -559,7 +613,7 @@ mod enabled {
         }
     }
 
-    type Buffers = (Vec<u8>, Vec<Vec<u8>>);
+    type Buffers = (AlignedBuffer, Vec<AlignedBuffer>);
 
     impl FfiType {
         fn is_ptr(&self) -> bool {
@@ -645,7 +699,7 @@ mod enabled {
 
             if let Some(ptr) = value.meta.pointer.as_ref() {
                 return if matches!(self, FfiType::Ptr(_)) {
-                    Ok((ptr.ptr.to_ne_bytes().to_vec(), Vec::new()))
+                    Ok((AlignedBuffer::new(&ptr.ptr.to_ne_bytes()), Vec::new()))
                 } else {
                     Err("Argument is a pointer, but the type is not a pointer type".to_string())
                 };
@@ -658,7 +712,10 @@ mod enabled {
                     if !is_scalar {
                         return Err(format!("Array must be a scalar for C type {}", self));
                     }
-                    (($arr.data[0] as $c_ty).to_ne_bytes().to_vec(), Vec::new())
+                    (
+                        AlignedBuffer::new(&($arr.data[0] as $c_ty).to_ne_bytes()),
+                        Vec::new(),
+                    )
                 }};
             }
 
@@ -740,9 +797,10 @@ mod enabled {
             })
         }
 
-        fn data_to_buffer(data: Vec<u8>) -> ([u8; size_of::<usize>()], Vec<u8>) {
-            let ptr = (data.as_ptr() as usize).to_ne_bytes();
-            (ptr, data)
+        fn data_to_buffer(bytes: &[u8]) -> (AlignedBuffer, AlignedBuffer) {
+            let buffer = AlignedBuffer::new(bytes);
+            let ptr_bytes = (buffer.as_ptr() as usize).to_ne_bytes();
+            (AlignedBuffer::new(&ptr_bytes), buffer)
         }
 
         fn repr_struct(fields: &[FfiType], value: Value) -> Result<Buffers, String> {
@@ -764,10 +822,11 @@ mod enabled {
                 let (field_repr, buffer) = field_ty.repr(row)?;
                 buffers.extend(buffer.into_iter());
 
-                struct_repr[offset..offset + field_repr.len()].copy_from_slice(&field_repr);
+                struct_repr[offset..offset + field_repr.len]
+                    .copy_from_slice(field_repr.as_slice());
             }
 
-            Ok((struct_repr, buffers))
+            Ok((AlignedBuffer::new(&struct_repr), buffers))
         }
 
         fn unrepr_struct(fields: &[FfiType], repr: &[u8]) -> Result<Value, String> {
@@ -798,15 +857,15 @@ mod enabled {
                         return Err(format!("Array must be rank 1 to become a list of {self}, but it was rank {rank}"));
                     }
                     if is_empty {
-                        return Ok(((0_usize).to_ne_bytes().into(), Vec::new()));
+                        return Ok((AlignedBuffer::new(&(0_usize).to_ne_bytes()), Vec::new()));
                     }
-                    let (ptr, buffer) = FfiType::data_to_buffer(
-                        $arr.data
-                            .iter()
-                            .flat_map(|&n| (n as $c_type).to_ne_bytes())
-                            .collect::<Vec<u8>>(),
-                    );
-                    (ptr.into(), vec![buffer])
+                    let bytes = $arr
+                        .data
+                        .iter()
+                        .flat_map(|&n| (n as $c_type).to_ne_bytes())
+                        .collect::<Vec<u8>>();
+                    let (ptr, buffer) = FfiType::data_to_buffer(&bytes);
+                    (ptr, vec![buffer])
                 }};
             }
 
@@ -817,16 +876,17 @@ mod enabled {
                             "Array must be rank 1 to become a string, but it was rank {rank}"
                         ));
                     }
-                    let (ptr, buffer) = FfiType::data_to_buffer(
-                        $arr.data
-                            .iter()
-                            .map($tochar)
-                            .collect::<String>()
-                            .bytes()
-                            .chain([b'\0'])
-                            .collect(),
-                    );
-                    (ptr.into(), vec![buffer])
+                    let bytes = $arr
+                        .data
+                        .iter()
+                        .map($tochar)
+                        .collect::<String>()
+                        .into_bytes()
+                        .into_iter()
+                        .chain([b'\0'])
+                        .collect::<Vec<u8>>();
+                    let (ptr, buffer) = FfiType::data_to_buffer(&bytes);
+                    (ptr, vec![buffer])
                 }};
             }
 
@@ -864,22 +924,25 @@ mod enabled {
                 (FfiType::ULongLong, Value::Byte(arr)) => arr!(arr, c_ulonglong),
                 (FfiType::ULongLong, Value::Num(arr)) => arr!(arr, c_ulonglong),
                 (ty, arr) => {
-                    let (row_reprs, buffers): (Vec<Vec<u8>>, Vec<Vec<Vec<u8>>>) = arr
+                    let (row_reprs, buffers): (Vec<AlignedBuffer>, Vec<Vec<AlignedBuffer>>) = arr
                         .rows()
                         .map(|row| ty.repr(row.unpacked()))
                         .collect::<Result<Vec<_>, _>>()?
                         .into_iter()
                         .unzip();
 
-                    let arr_repr = row_reprs.into_iter().flatten().collect::<Vec<_>>();
-                    let (ptr, buffer) = FfiType::data_to_buffer(arr_repr);
+                    let arr_repr = row_reprs
+                        .into_iter()
+                        .flat_map(|r| r.as_slice().to_vec())
+                        .collect::<Vec<_>>();
+                    let (ptr, buffer) = FfiType::data_to_buffer(&arr_repr);
                     let buffers = buffers
                         .into_iter()
                         .flatten()
                         .chain([buffer])
                         .collect::<Vec<_>>();
 
-                    (ptr.into(), buffers)
+                    (ptr, buffers)
                 }
             })
         }

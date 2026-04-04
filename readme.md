@@ -3,7 +3,7 @@
 
 # Uiua
 
-Uiua (pronounced *"wee-wuh"*) is a stack-based array programming language.
+Uiua (pronounced *"wee-wuh"*) is a [tacit](https://en.wikipedia.org/wiki/Tacit_programming) [array](https://en.wikipedia.org/wiki/Array_programming) programming language.
 
 Documentation, examples, and an online interpreter can be found at [uiua.org](https://uiua.org).
 

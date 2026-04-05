@@ -1310,7 +1310,7 @@ impl<T: ArrayValue> Array<T> {
             self.shape[depth..].reverse();
             return;
         }
-        // If depth is 0, we can use orient/tranpose as an optimization
+        // If depth is 0, we can use orient/transpose as an optimization
         if depth == 0 {
             let undices = (0..self.rank()).rev().collect::<Vec<_>>();
             for (depth, amnt) in derive_orient_rotations(self.rank(), &undices) {

@@ -1546,7 +1546,7 @@ impl Value {
     }
 }
 
-fn derive_orient_rotations(rank: usize, undices: &[usize]) -> Vec<(usize, i32)> {
+pub(crate) fn derive_orient_rotations(rank: usize, undices: &[usize]) -> Vec<(usize, i32)> {
     let mut orientation: Vec<usize> = (0..rank).collect();
     let mut depth_rotations: Vec<(usize, i32)> = Vec::new();
     for (i, &u) in undices.iter().enumerate() {

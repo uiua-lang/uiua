@@ -23,6 +23,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     Boxed, Complex, Primitive, Shape, Uiua, UiuaResult, WILDCARD_NAN,
+    algorithm::dyadic::derive_orient_rotations,
     array::*,
     cowslice::{CowSlice, cowslice},
     grid_fmt::{GridFmt, format_char_inner_repr},
@@ -1307,6 +1308,14 @@ impl<T: ArrayValue> Array<T> {
         // Early return if any dimension is 0, because there are no elements
         if self.shape[depth..].contains(&0) || depth > 0 && self.shape[depth - 1] == 0 {
             self.shape[depth..].reverse();
+            return;
+        }
+        // If depth is 0, we can use orient/transpose as an optimization
+        if depth == 0 {
+            let undices = (0..self.rank()).rev().collect::<Vec<_>>();
+            for (depth, amnt) in derive_orient_rotations(self.rank(), &undices) {
+                self.transpose_depth(depth, amnt);
+            }
             return;
         }
         let subshape = Shape::from(&self.shape[depth..]);

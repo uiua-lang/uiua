@@ -1731,7 +1731,14 @@ fn layout_text_impl(
     {
         match all::<LayoutParam>().nth(i) {
             Some(LayoutParam::LineHeight) => {
-                line_height = arg.as_num(env, "Line height must be a scalar number")? as f32
+                line_height = arg.as_num(env, "Line height must be a scalar number")? as f32;
+                if line_height <= 0.0 {
+                    return Err(env.error(if line_height == 0.0 {
+                        "Line height cannot be 0"
+                    } else {
+                        "Line height must be positive"
+                    }));
+                }
             }
             Some(LayoutParam::Size) => {
                 if arg.shape == 0 {

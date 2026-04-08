@@ -2147,6 +2147,7 @@ pub fn has_subn(words: &[Sp<Word>]) -> bool {
             {
                 return true;
             }
+            Word::Subscripted(sub) if has_subn(slice::from_ref(&sub.word)) => return true,
             _ => {}
         }
     }

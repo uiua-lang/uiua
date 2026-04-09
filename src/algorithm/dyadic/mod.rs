@@ -1168,14 +1168,15 @@ impl<T: ArrayValue> Array<T> {
             }
             self.transpose();
         }
-
         // Handles depth and fixed axes
+        #[allow(clippy::too_many_arguments)]
         fn recur<T: Clone>(
             bysh: &[usize],
             by: &[isize],
             shape: &[usize],
             rotated: &mut [T],
             depth: usize,
+            forward: bool,
             fill: Option<&[T]>,
             env: &Uiua,
         ) -> UiuaResult {
@@ -1199,19 +1200,21 @@ impl<T: ArrayValue> Array<T> {
                     let shape = &shape[shape.len().min(1)..];
                     let row_len = shape.iter().product::<usize>();
                     for chunk in rotated.chunks_exact_mut(row_len) {
-                        recur(&[], by, shape, chunk, depth.saturating_sub(1), fill, env)?;
+                        let depth = depth.saturating_sub(1);
+                        recur(&[], by, shape, chunk, depth, forward, fill, env)?;
                     }
                 }
                 [1, rest @ ..] => {
                     let shape = &shape[1..];
                     let row_len = shape.iter().product::<usize>();
                     for chunk in rotated.chunks_exact_mut(row_len) {
-                        recur(rest, by, shape, chunk, depth.saturating_sub(1), fill, env)?;
+                        let depth = depth.saturating_sub(1);
+                        recur(rest, by, shape, chunk, depth, forward, fill, env)?;
                     }
                 }
                 [b, rest @ ..] => {
                     if *b != shape[0] {
-                        return Err(env.error(if depth == 0 {
+                        return Err(env.error(if depth == 0 || !forward {
                             format!(
                                 "Shapes {} and {} are not compatible for rotation",
                                 FormatShape(bysh),
@@ -1233,7 +1236,8 @@ impl<T: ArrayValue> Array<T> {
                         .chunks_exact(by_row_len)
                         .zip(rotated.chunks_exact_mut(row_len))
                     {
-                        recur(rest, by, shape, rot, depth.saturating_sub(1), fill, env)?;
+                        let depth = depth.saturating_sub(1);
+                        recur(rest, by, shape, rot, depth, forward, fill, env)?;
                     }
                 }
             }
@@ -1246,6 +1250,7 @@ impl<T: ArrayValue> Array<T> {
             &self.shape,
             self.data.as_mut_slice(),
             depth,
+            forward,
             fill.as_ref().map(|fv| fv.data.as_slice()),
             env,
         )?;

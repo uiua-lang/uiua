@@ -1048,7 +1048,7 @@ impl Formatter<'_> {
                     self.output.pop();
                     self.glyph_map.pop();
                 }
-                self.push(&word.span, s)
+                self.push(&word.span, s.trim_end_matches(","));
             }
             Word::Label(Some(label)) => self.push(&word.span, &format!("${label}")),
             Word::Label(None) => self.push(&word.span, "$_"),

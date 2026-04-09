@@ -1468,7 +1468,7 @@ impl Parser<'_> {
                         })
                     {
                         self.diagnostics.push(Diagnostic::new(
-                            format!("Separated section `{sec}` is too short"),
+                            format!("Number section `{sec}` is too short"),
                             span.clone(),
                             DiagnosticKind::Style,
                             self.inputs.clone(),

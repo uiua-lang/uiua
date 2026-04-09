@@ -36,10 +36,10 @@ impl Value {
             scalar: self.scalar_ty(),
             shape: self.shape.clone(),
             int: match self {
-                Value::Num(n) if self.rank() == 0 && n.data[0].fract() == 0.0 => {
+                Value::Num(n) if self.shape.elements() == 1 && n.data[0].fract() == 0.0 => {
                     Some(n.data[0] as isize)
                 }
-                Value::Byte(n) if self.rank() == 0 => Some(n.data[0] as isize),
+                Value::Byte(n) if self.shape.elements() == 1 => Some(n.data[0] as isize),
                 _ => None,
             },
         }
@@ -49,10 +49,10 @@ impl Value {
             scalar: self.scalar_ty(),
             shape: self.shape.row(),
             int: match self {
-                Value::Num(n) if self.rank() == 0 && n.data[0].fract() == 0.0 => {
+                Value::Num(n) if self.shape.elements() == 1 && n.data[0].fract() == 0.0 => {
                     Some(n.data[0] as isize)
                 }
-                Value::Byte(n) if self.rank() == 0 => Some(n.data[0] as isize),
+                Value::Byte(n) if self.shape.elements() == 1 => Some(n.data[0] as isize),
                 _ => None,
             },
         }

@@ -14,6 +14,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [`pattern ⍡`](https://uiua.org/docs/pattern) modifier, which makes big pattern match lists easier to debug and maintain
 - Allow for subfolder imports from Git repos specified like `~ "git: example.com/user/repo subfolder"`
 ### Interpreter
+- Tweak the formatter to make indentation always a multiple of 2
 - Remove proxy values, which where a hacky solution to maintaining correct types and shapes when iterating over arrays with 0 rows.
   - The type analyzer for these cases has been improved to make them mostly unnecessary
 - Add `raze` alias for `/◇⊂`

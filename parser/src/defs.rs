@@ -1817,8 +1817,8 @@ primitive!(
     /// ex: ⬚5/↥ [1 2 3]
     ///
     /// If the function takes more than 2 arguments, additional arguments in front of the array will be passed to the function on every iteration. This is useful for things like interspersing one array between the rows of another.
-    /// ex: /(⊂⊂) 0_1 [2 3 4 5]
-    /// ex: /◇(⊂⊂) @, {"cat" "bird" "dog"}
+    /// ex: /⊂₃ 0_1 [2 3 4 5]
+    /// ex: /◇⊂₃ @, {"cat" "bird" "dog"}
     ([1], Reduce, IteratingModifier, ("reduce", '/')),
     /// Apply a function to aggregate arrays
     ///

@@ -1,6 +1,6 @@
 # Uiua website
 
-This is a [Trunk](https://trunkrs.dev/)-powered single-page application.
+This is a [Trunk](https://trunk-rs.github.io/trunk/)-powered single-page application.
 To build it, try
 
 ```sh

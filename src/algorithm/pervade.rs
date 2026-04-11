@@ -988,17 +988,15 @@ pub mod sqrt {
     }
 }
 pub mod exp {
-    use std::f64::consts::E;
-
     use super::*;
     pub fn num(a: f64) -> f64 {
-        E.powf(a)
+        a.exp()
     }
     pub fn byte(a: u8) -> f64 {
         num(a.into())
     }
     pub fn com(a: Complex) -> Complex {
-        Complex::new(E, 0.0).powc(a)
+        a.exp()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot take the exponential of {a}"))

@@ -1,6 +1,6 @@
 //! The [`Complex`] type
 
-use std::{f64::consts::E, fmt, ops::*};
+use std::{fmt, ops::*};
 
 use bytemuck::{Pod, Zeroable};
 use serde::*;
@@ -134,7 +134,7 @@ impl Complex {
     }
     /// Calculate the exponential of a complex number
     pub fn exp(self) -> Self {
-        Self::from_polar(E.powf(self.re), self.im)
+        Self::from_polar(1.0, self.im).safe_mul(Self::new(self.re.exp(), 0.0))
     }
     /// Calculate the natural logarithm of a complex number
     pub fn ln(self) -> Self {

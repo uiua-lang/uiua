@@ -1086,8 +1086,8 @@ pub fn gif_bytes_to_value_impl(
     decoder.set_color_output(mode);
     let mut decoder = decoder.read_info(bytes)?;
     let first_frame = decoder.read_next_frame()?.unwrap();
-    let gif_width = first_frame.width as usize;
-    let gif_height = first_frame.height as usize;
+    let gif_width = (first_frame.left + first_frame.width) as usize;
+    let gif_height = (first_frame.top + first_frame.height) as usize;
     let mut data: crate::cowslice::CowSlice<f64> = Default::default();
     let mut frame_count = 1;
     let mut delay_sum = first_frame.delay as f64 / 100.0;
@@ -1103,7 +1103,18 @@ pub fn gif_bytes_to_value_impl(
         let frame_height = frame.height as usize;
         // Some frames may have different dimensions than the GIF
         if frame_width == gif_width && frame_height == gif_height {
-            frame_data.copy_from_slice(&frame.buffer);
+            if frame.dispose == gif::DisposalMethod::Keep && mode == gif::ColorOutput::RGBA {
+                for (data_pixel, frame_pixel) in frame_data
+                    .chunks_exact_mut(4)
+                    .zip(frame.buffer.chunks_exact(4))
+                {
+                    if frame_pixel[3] > 0 {
+                        data_pixel.copy_from_slice(frame_pixel);
+                    }
+                }
+            } else {
+                frame_data.copy_from_slice(&frame.buffer);
+            }
         } else {
             // Copy the frame into the correct position in the GIF
             let frame_left = frame.left as usize;
@@ -1114,7 +1125,11 @@ pub fn gif_bytes_to_value_impl(
                     let x = frame_left + dx;
                     let outer_i = (y * gif_width + x) * 4;
                     let inner_i = (dy * frame_width + dx) * 4;
-                    frame_data[outer_i..][..4].copy_from_slice(&frame.buffer[inner_i..][..4]);
+                    let data = &mut frame_data[outer_i..][..4];
+                    let buffer = &frame.buffer[inner_i..][..4];
+                    if frame.dispose != gif::DisposalMethod::Keep || buffer[3] > 0 {
+                        data.copy_from_slice(buffer);
+                    }
                 }
             }
         }

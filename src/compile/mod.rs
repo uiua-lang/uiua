@@ -790,6 +790,12 @@ impl Compiler {
                 "Cannot use placeholder outside of an index macro",
             );
         }
+        if has_subn(&line) {
+            self.add_error(
+                span.clone(),
+                "Cannot use ₙ or ^n outside of a custom subscript function",
+            );
+        }
         // Compile the words
         let binding_count_before = self.asm.bindings.len();
         let root_len_before = self.asm.root.len();

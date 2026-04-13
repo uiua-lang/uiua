@@ -18,6 +18,7 @@ use crate::{
     cowslice::CowSlice,
     grid_fmt::GridFmt,
     types::Scalar,
+    types::{TypeError, pervade_dyn_shapes},
 };
 
 /// A generic array value
@@ -1601,29 +1602,6 @@ impl<const N: usize> From<[i32; N]> for Value {
     }
 }
 
-macro_rules! scalar_mon_impl {
-    ($name:ident, $(($in:ident,$out:expr),)*) => {
-        impl Scalar {
-            #[doc(hidden)]
-            pub fn $name(self) -> Result<Self, String> {
-                Ok(match self {
-                    $(
-                        #[allow(unreachable_patterns)]
-                        Self::$in => $out,
-                    )*
-                    Scalar::Any | Scalar::Box(None) => self,
-                    Scalar::Box(Some(mut ty)) => {
-                        ty.scalar = ty.scalar.$name()?;
-                        Scalar::Box(Some(ty))
-                    }
-                    #[allow(unreachable_patterns)]
-                    val => return Err($name::error(val))
-                })
-            }
-        }
-    }
-}
-
 trait OutputScalarType {
     fn scalar(&self) -> Scalar;
 }
@@ -1646,6 +1624,56 @@ impl<T> OutputScalarType for fn(T) -> char {
 impl<T> OutputScalarType for fn(T) -> Complex {
     fn scalar(&self) -> Scalar {
         Scalar::Complex
+    }
+}
+
+impl<A, B> OutputScalarType for fn(A, B) -> f64 {
+    fn scalar(&self) -> Scalar {
+        Scalar::Num
+    }
+}
+impl<A, B> OutputScalarType for fn(A, B) -> u8 {
+    fn scalar(&self) -> Scalar {
+        Scalar::Num
+    }
+}
+impl<A, B> OutputScalarType for fn(A, B) -> char {
+    fn scalar(&self) -> Scalar {
+        Scalar::Char
+    }
+}
+impl<A, B> OutputScalarType for fn(A, B) -> Complex {
+    fn scalar(&self) -> Scalar {
+        Scalar::Complex
+    }
+}
+impl<A, B> OutputScalarType for fn(A, B) -> Boxed {
+    fn scalar(&self) -> Scalar {
+        Scalar::Box(None)
+    }
+}
+
+macro_rules! scalar_mon_impl {
+    ($name:ident, $(($in:pat,$out:expr),)*) => {
+        impl Scalar {
+            #[doc(hidden)]
+            pub fn $name(self) -> Result<Self, String> {
+                use Scalar::{*, Num as Byte};
+                Ok(match self {
+                    $(
+                        #[allow(unreachable_patterns)]
+                        $in => $out,
+                    )*
+                    Scalar::Any | Scalar::Box(None) => self,
+                    Scalar::Box(Some(mut ty)) => {
+                        ty.scalar = ty.scalar.$name()?;
+                        Scalar::Box(Some(ty))
+                    }
+                    #[allow(unreachable_patterns)]
+                    val => return Err($name::error(val))
+                })
+            }
+        }
     }
 }
 
@@ -1696,7 +1724,7 @@ macro_rules! value_mon_impl {
 
         scalar_mon_impl!(
             $name,
-            $($(($in_place, Self::$in_place),)*)*
+            $($(($in_place, $in_place),)*)*
             $($(($make_new, ($name::$f2 as fn(_) -> _).scalar()),)*)*
         );
     }
@@ -1898,12 +1926,48 @@ fn optimize_types(a: Value, b: Value) -> (Value, Value) {
     }
 }
 
+macro_rules! scalar_dy_impl {
+    ($name:ident, $(($a:ident, $b:ident, $out:expr),)*) => {
+        impl Scalar {
+            #[doc(hidden)]
+            #[allow(clippy::wrong_self_convention)]
+            pub fn $name(self, other: Self) -> Result<Self, TypeError> {
+                use Scalar::{*, Box, Num as Byte};
+                Ok(match (self, other) {
+                    $(
+                        #[allow(unreachable_patterns)]
+                        ($a {..}, $b {..}) => $out,
+                    )*
+                    (Any, _) | (_, Any) => Any,
+                    (Box(None), _) | (_, Box(None)) => Box(None),
+                        #[allow(unreachable_patterns)]
+                    (Box(Some(mut a)), Box(Some(b))) => {
+                        a.scalar = a.scalar.$name(b.scalar)?;
+                        a.shape = pervade_dyn_shapes(a.shape, b.shape)?;
+                        Box(Some(a))
+                    }
+                    (Box(Some(mut a)), b) => {
+                        a.scalar = a.scalar.$name(b)?;
+                        Box(Some(a))
+                    }
+                    (a, Box(Some(mut b))) => {
+                        b.scalar = a.$name(b.scalar)?;
+                        Box(Some(b))
+                    }
+                    #[allow(unreachable_patterns)]
+                    (a, b) => return Err($name::error(a, b).into())
+                })
+            }
+        }
+    };
+}
+
 /// Macro to generate a dyadic pervasive function on [`Value`]s.
 macro_rules! value_dy_impl {
     (
         $name:ident,
         $(
-            $(($na:ident, $nb:ident, $f1:ident))*
+            $(($na:ident, $nb:ident, $f1:ident $(,$ta:ty,$tb:ty)?))*
             $([$(|$meta:ident| $pred:expr,)* $ip:ident, $f2:ident $(, $reset_value_flags:literal)?])*
         ),*
         $({
@@ -1993,6 +2057,12 @@ macro_rules! value_dy_impl {
                 Ok(val)
             }
         }
+
+        scalar_dy_impl!(
+            $name,
+            $($(($ip, $ip, $ip),)*)*
+            $($(($na, $nb, ($name::$f1 $(as fn ($ta, $tb) -> _)* as fn(_, _) -> _).scalar()),)*)*
+        );
     };
 }
 
@@ -2103,10 +2173,10 @@ macro_rules! value_dy_math_impl {
             (Byte, Num, byte_num),
             (Num, Byte, num_byte),
             [Complex, com_x],
-            (Complex, Num, com_x),
-            (Num, Complex, x_com),
-            (Complex, Byte, com_x),
-            (Byte, Complex, x_com),
+            (Complex, Num, com_x, crate::Complex, f64),
+            (Num, Complex, x_com, f64, crate::Complex),
+            (Complex, Byte, com_x, crate::Complex, u8),
+            (Byte, Complex, x_com, u8, crate::Complex),
             $({$($after)*})?
         );
     };
@@ -2167,7 +2237,7 @@ value_dy_math_impl!(
     min,
     (
         [Char, generic],
-        (Box, Box, generic),
+        (Box, Box, generic, Boxed, Boxed),
         [|meta| meta.flags.is_boolean(), Byte, bool_bool],
     ),
     maintain_both_sortedness
@@ -2176,7 +2246,7 @@ value_dy_math_impl!(
     max,
     (
         [Char, generic],
-        (Box, Box, generic),
+        (Box, Box, generic, Boxed, Boxed),
         [|meta| meta.flags.is_boolean(), Byte, bool_bool],
     ),
     maintain_both_sortedness
@@ -2189,23 +2259,23 @@ value_dy_impl!(
     (Byte, Num, byte_num),
     (Num, Byte, num_byte),
     [Complex, com_x],
-    (Complex, Num, com_x),
-    (Num, Complex, x_com),
-    (Complex, Byte, com_x),
-    (Byte, Complex, x_com),
+    (Complex, Num, com_x, crate::Complex, f64),
+    (Num, Complex, x_com, f64, crate::Complex),
+    (Complex, Byte, com_x, crate::Complex, u8),
+    (Byte, Complex, x_com, u8, crate::Complex),
 );
 
 value_dy_impl!(
     abs_complex,
     [Num, num],
-    (Byte, Byte, num),
-    (Byte, Num, num),
-    (Num, Byte, num),
-    (Complex, Complex, com),
-    (Complex, Num, com),
-    (Num, Complex, com),
-    (Complex, Byte, com),
-    (Byte, Complex, com),
+    (Byte, Byte, num, u8, u8),
+    (Byte, Num, num, u8, f64),
+    (Num, Byte, num, f64, f64),
+    (Complex, Complex, com, crate::Complex, crate::Complex),
+    (Complex, Num, com, crate::Complex, f64),
+    (Num, Complex, com, f64, crate::Complex),
+    (Complex, Byte, com, crate::Complex, u8),
+    (Byte, Complex, com, u8, crate::Complex),
 );
 
 macro_rules! eq_impls {
@@ -2215,23 +2285,23 @@ macro_rules! eq_impls {
                 $name,
                 // Value comparable
                 [Num, same_type],
-                (Complex, Complex, com_x),
-                (Box, Box, generic),
+                (Complex, Complex, com_x, crate::Complex, crate::Complex),
+                (Box, Box, generic, Boxed, Boxed),
                 [Byte, same_type],
-                (Char, Char, generic),
+                (Char, Char, generic, char, char),
                 (Num, Byte, num_byte),
                 (Byte, Num, byte_num),
-                (Complex, Num, com_x),
-                (Num, Complex, x_com),
-                (Complex, Byte, com_x),
-                (Byte, Complex, x_com),
+                (Complex, Num, com_x, crate::Complex, f64),
+                (Num, Complex, x_com, f64, crate::Complex),
+                (Complex, Byte, com_x, crate::Complex, u8),
+                (Byte, Complex, x_com, u8, crate::Complex),
                 // Type comparable
-                (Num, Char, always_less),
-                (Byte, Char, always_less),
-                (Complex, Char, always_less),
-                (Char, Num, always_greater),
-                (Char, Byte, always_greater),
-                (Char, Complex, always_greater),
+                (Num, Char, always_less, f64, char),
+                (Byte, Char, always_less, u8, char),
+                (Complex, Char, always_less, crate::Complex, char),
+                (Char, Num, always_greater, char, f64),
+                (Char, Byte, always_greater, char, u8),
+                (Char, Complex, always_greater, char, crate::Complex),
             );
         )*
     };
@@ -2245,22 +2315,22 @@ macro_rules! cmp_impls {
                 // Value comparable
                 [Num, same_type],
                 [Complex, com_x],
-                (Box, Box, generic),
+                (Box, Box, generic, Boxed, Boxed),
                 [Byte, same_type],
-                (Char, Char, generic),
+                (Char, Char, generic, char, char),
                 (Num, Byte, num_byte),
                 (Byte, Num, byte_num),
-                (Complex, Num, com_x),
-                (Num, Complex, x_com),
-                (Complex, Byte, com_x),
-                (Byte, Complex, x_com),
+                (Complex, Num, com_x, crate::Complex, f64),
+                (Num, Complex, x_com, f64, crate::Complex),
+                (Complex, Byte, com_x, crate::Complex, u8),
+                (Byte, Complex, x_com, u8, crate::Complex),
                 // Type comparable
-                (Num, Char, always_less),
-                (Byte, Char, always_less),
-                (Complex, Char, always_less),
-                (Char, Num, always_greater),
-                (Char, Byte, always_greater),
-                (Char, Complex, always_greater),
+                (Num, Char, always_less, f64, char),
+                (Byte, Char, always_less, u8, char),
+                (Complex, Char, always_less, crate::Complex, char),
+                (Char, Num, always_greater, char, f64),
+                (Char, Byte, always_greater, char, u8),
+                (Char, Complex, always_greater, char, crate::Complex),
             );
         )*
     };

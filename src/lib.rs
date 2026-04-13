@@ -145,6 +145,7 @@ The `uiua` crate has the following noteable feature flags:
     mismatched_lifetime_syntaxes
 )]
 #![warn(missing_docs)]
+#![recursion_limit = "512"]
 
 mod algorithm;
 mod array;

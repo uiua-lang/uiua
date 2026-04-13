@@ -1294,7 +1294,7 @@ macro_rules! eq_impl {
             pub fn same_type<T: ArrayCmp + From<u8>>(a: T, b: T) -> T {
                ((b.array_cmp(&a) $eq $ordering) as u8).into()
             }
-            pub fn error<T: Display>(a: T, b: T) -> UiuaError {
+            pub fn error<T: Display>(a: T, b: T) -> String {
                 unreachable!("Comparisons cannot fail, failed to compare {a} and {b}")
             }
         }
@@ -1340,7 +1340,7 @@ macro_rules! cmp_impl {
             pub fn same_type<T: ArrayCmp + From<u8>>(a: T, b: T) -> T {
                ((b.array_cmp(&a) $eq $ordering) as u8).into()
             }
-            pub fn error<T: Display>(a: T, b: T) -> UiuaError {
+            pub fn error<T: Display>(a: T, b: T) -> String {
                 unreachable!("Comparisons cannot fail, failed to compare {a} and {b}")
             }
         }

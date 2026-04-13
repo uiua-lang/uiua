@@ -3,8 +3,8 @@
 use std::{fmt, mem::take, ops::BitOr};
 
 use crate::{
-    Assembly, Boxed, Exec, HasStack, ImplPrimitive, Node, Primitive, Shape, SigNode, Value,
-    invert::InversionError,
+    Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node, Primitive, Shape, SigNode,
+    Value, invert::InversionError,
 };
 
 pub struct TypeEnv<'a> {
@@ -31,6 +31,7 @@ pub enum TypeError {
     Unsupported,
     Underflow(String),
     Inversion(InversionError),
+    DyadicPervasiveShapes(DynShape, DynShape),
     Generic(String),
 }
 
@@ -93,7 +94,25 @@ impl From<Scalar> for TypeVal {
 
 impl From<usize> for TypeVal {
     fn from(n: usize) -> Self {
-        TypeVal::Num(n as f64)
+        (n as f64).into()
+    }
+}
+
+impl From<u8> for TypeVal {
+    fn from(n: u8) -> Self {
+        (n as f64).into()
+    }
+}
+
+impl From<f64> for TypeVal {
+    fn from(n: f64) -> Self {
+        TypeVal::Num(n)
+    }
+}
+
+impl From<Complex> for TypeVal {
+    fn from(_: Complex) -> Self {
+        Scalar::Complex.into()
     }
 }
 
@@ -148,8 +167,6 @@ pub enum Scalar {
     Complex,
 }
 impl Scalar {
-    #[allow(non_upper_case_globals)]
-    pub const Byte: Self = Self::Num;
     pub fn scalar(self) -> Type {
         self.shaped([0usize; 0])
     }
@@ -237,6 +254,12 @@ impl Default for DynShape {
 pub enum Dim {
     Static(usize),
     Dyn,
+}
+
+impl PartialEq<usize> for Dim {
+    fn eq(&self, other: &usize) -> bool {
+        *self == Dim::Static(*other)
+    }
 }
 
 impl fmt::Display for Dim {
@@ -428,9 +451,26 @@ impl<'a> TypeEnv<'a> {
                 Floor => self.monadic_pervasive(Scalar::floor, floor::num)?,
                 Ceil => self.monadic_pervasive(Scalar::ceil, ceil::num)?,
                 Round => self.monadic_pervasive(Scalar::round, round::num)?,
+                Add => self.dyadic_pervasive(Scalar::add, add::num_num)?,
+                Sub => self.dyadic_pervasive(Scalar::sub, sub::num_num)?,
+                Mul => self.dyadic_pervasive(Scalar::mul, mul::num_num)?,
+                Div => self.dyadic_pervasive(Scalar::div, div::num_num)?,
+                Modulo => self.dyadic_pervasive(Scalar::modulo, modulo::num_num)?,
+                Or => self.dyadic_pervasive(Scalar::or, or::num_num)?,
+                Pow => self.dyadic_pervasive(Scalar::scalar_pow, scalar_pow::num_num)?,
+                Atan => self.dyadic_pervasive(Scalar::atan2, atan2::num_num)?,
+                Min => self.dyadic_pervasive(Scalar::min, min::num_num)?,
+                Max => self.dyadic_pervasive(Scalar::max, max::num_num)?,
+                Complex => self.dyadic_pervasive(Scalar::complex, complex::num_num)?,
+                Eq => self.dyadic_pervasive(Scalar::is_eq, is_eq::num_num)?,
+                Ne => self.dyadic_pervasive(Scalar::is_ne, is_ne::num_num)?,
+                Lt => self.dyadic_pervasive(Scalar::other_is_lt, other_is_lt::num_num)?,
+                Le => self.dyadic_pervasive(Scalar::other_is_le, other_is_le::num_num)?,
+                Gt => self.dyadic_pervasive(Scalar::other_is_gt, other_is_gt::num_num)?,
+                Ge => self.dyadic_pervasive(Scalar::other_is_ge, other_is_ge::num_num)?,
                 Len => self.monadic(
                     |ty| Ok(ty.shape.row_count()),
-                    |_| Ok(1),
+                    |_| Ok(1u8),
                     |list| Ok(list.len()),
                 )?,
                 Shape => self.monadic(
@@ -452,6 +492,10 @@ impl<'a> TypeEnv<'a> {
                 Log10 => self.monadic_pervasive(Scalar::log10, log10::num)?,
                 SquareAbs => self.monadic_pervasive(Scalar::square_abs, square_abs::num)?,
                 NegAbs => self.monadic_pervasive(Scalar::neg_abs, neg_abs::num)?,
+                SetSign => self.dyadic_pervasive(Scalar::set_sign, set_sign::num_num)?,
+                Root => self.dyadic_pervasive(Scalar::root, root::num_num)?,
+                Log => self.dyadic_pervasive(Scalar::log, log::num_num)?,
+                AbsComplex => self.dyadic_pervasive(Scalar::abs_complex, abs_complex::num)?,
                 UnComplex => {
                     let x = self.copy_top()?;
                     self.monadic_pervasive(Scalar::complex_re, complex_re::generic)?;
@@ -499,11 +543,26 @@ impl<'a> TypeEnv<'a> {
             },
         )
     }
+    fn dyadic_pervasive<N: Into<TypeVal>>(
+        &mut self,
+        f: impl Fn(Scalar, Scalar) -> Result<Scalar, TypeError>,
+        f64: impl Fn(f64, f64) -> N,
+    ) -> Result<(), TypeError> {
+        self.dyadic(
+            |a, b| {
+                Ok(Type {
+                    scalar: f(a.scalar, b.scalar)?,
+                    shape: pervade_dyn_shapes(a.shape, b.shape)?,
+                })
+            },
+            |a, b| Ok(f64(a, b)),
+        )
+    }
     fn monadic<T: Into<TypeVal>, N: Into<TypeVal>, L: Into<TypeVal>>(
         &mut self,
-        f: impl Fn(Type) -> Result<T, String>,
-        num: impl Fn(f64) -> Result<N, String>,
-        list: impl Fn(Vec<f64>) -> Result<L, String>,
+        f: impl Fn(Type) -> Result<T, TypeError>,
+        num: impl Fn(f64) -> Result<N, TypeError>,
+        list: impl Fn(Vec<f64>) -> Result<L, TypeError>,
     ) -> Result<(), TypeError> {
         let x = self.pop(1)?;
         self.push(match x {
@@ -513,6 +572,38 @@ impl<'a> TypeEnv<'a> {
         });
         Ok(())
     }
+    fn dyadic<T: Into<TypeVal>, N: Into<TypeVal>>(
+        &mut self,
+        f: impl Fn(Type, Type) -> Result<T, TypeError>,
+        num: impl Fn(f64, f64) -> Result<N, TypeError>,
+    ) -> Result<(), TypeError> {
+        let a = self.pop(1)?;
+        let b = self.pop(2)?;
+        self.push(match (a, b) {
+            (TypeVal::Num(a), TypeVal::Num(b)) => num(a, b)?.into(),
+            (a, b) => f(a.ty(), b.ty())?.into(),
+        });
+        Ok(())
+    }
+}
+
+pub(crate) fn pervade_dyn_shapes(a: DynShape, b: DynShape) -> Result<DynShape, TypeError> {
+    let mut shape = DynShape::scalar();
+    for i in 0..a.dims.len().max(b.dims.len()) {
+        // TODO: Handle fills
+        let new_dim = match (a.dims.get(i).copied(), b.dims.get(i).copied()) {
+            (None, None) => unreachable!(),
+            (Some(d), None | Some(Dim::Dyn)) | (None | Some(Dim::Dyn), Some(d)) => d,
+            (Some(d), Some(Dim::Static(1))) | (Some(Dim::Static(1)), Some(d)) => d,
+            (Some(a), Some(b)) if a == b => a,
+            (Some(_), Some(_)) => {
+                return Err(TypeError::DyadicPervasiveShapes(a, b));
+            }
+        };
+        shape.dims.push(new_dim);
+    }
+    shape.suffix = a.suffix.xor(b.suffix);
+    Ok(shape)
 }
 
 fn monad(ops: &[SigNode]) -> &SigNode {

@@ -1,3 +1,5 @@
+//! Best effort type checking for ≡ on empty arrays
+
 use std::{array, cmp::Ordering, mem::take};
 
 use uiua_parser::PrimClass;

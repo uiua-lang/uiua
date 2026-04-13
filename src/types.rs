@@ -10,6 +10,7 @@ use crate::{
 pub struct TypeEnv<'a> {
     asm: &'a Assembly,
     stack: Vec<TypeVal>,
+    under_stack: Vec<TypeVal>,
 }
 
 impl<'a> HasStack for TypeEnv<'a> {
@@ -508,16 +509,32 @@ impl<'a> TypeEnv<'a> {
                 Fork => self.fork(ops.clone())?,
                 Bracket => self.bracket(ops.clone())?,
                 Dip => self.dip(monad(ops))?,
+                Both => self.both(monad(ops))?,
                 _ => return Err(TypeError::Unsupported),
             },
-            ImplMod(prim, ops, _) => match prim {
-                &DipN(n) => self.dip_n(n, monad(ops))?,
+            ImplMod(prim, ops, _) => match *prim {
+                DipN(n) => self.dip_n(n, monad(ops))?,
+                BothImpl(sub) if sub.num.is_some() && sub.side.is_none() => {
+                    self.both_n(sub.num.unwrap() as usize, monad(ops))?
+                }
                 _ => return Err(TypeError::Unsupported),
             },
             CustomInverse(cust, _) => match &cust.normal {
                 Ok(node) => self.exec(node)?,
                 Err(e) => return Err(TypeError::Inversion(e.clone())),
             },
+            &PushUnder(n, _) => {
+                let vals = self.pop_n(n)?;
+                self.under_stack.extend(vals)
+            }
+            &CopyToUnder(n, _) => {
+                let vals = self.copy_n(n)?;
+                self.under_stack.extend(vals)
+            }
+            &PopUnder(n, _) => self.stack.extend(self.under_stack.pop_n(n)?),
+            NoInline(node) => self.node(node)?,
+            TrackCaller(sn) => self.exec(&**sn)?,
+            SetOutputComment { .. } => {}
             _ => return Err(TypeError::Unsupported),
         }
         Ok(())

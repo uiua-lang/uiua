@@ -2569,7 +2569,20 @@ fn prim_sig_class(prim: Primitive, subscript: Option<&SubscriptToken>) -> &'stat
     match prim {
         Primitive::Identity => code_font!("stack-function"),
         Primitive::Transpose if at_least_a_little_gay() => {
-            code_font!("monadic-function trans text-gradient")
+            if let Some(i) = subscript
+                .and_then(|s| s.num.as_ref())
+                .and_then(|n| n.i())
+                .flatten()
+                .filter(|&i| i != 0)
+            {
+                if i > 0 {
+                    code_font!("monadic-function transfem text-gradient")
+                } else {
+                    code_font!("monadic-function transmasc text-gradient")
+                }
+            } else {
+                code_font!("monadic-function trans text-gradient")
+            }
         }
         Primitive::Both if at_least_a_little_gay() => {
             match subscript.and_then(Subscript::n).flatten().unwrap_or(2) {

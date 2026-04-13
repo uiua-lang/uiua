@@ -404,6 +404,7 @@ li {
     display: grid;
     grid-template-rows: 1fr;
     transition: grid-template-rows 0.3s ease-in-out;
+
     @media (prefers-reduced-motion: reduce) {
         transition: none;
     }
@@ -576,6 +577,7 @@ li {
     grid-template-rows: 0fr;
     visibility: hidden;
     transition: grid-template-rows 0.3s ease-in-out, visibility 0.3s ease-in-out;
+
     @media (prefers-reduced-motion: reduce) {
         transition: none;
     }
@@ -1533,6 +1535,38 @@ a.clean {
             #5BCEFA 67%);
 }
 
+.transfem {
+    background-image: linear-gradient(180deg,
+            #73deff 34%,
+            #ffe1ed 34%,
+            #ffe1ed 41%,
+            #ffb5b6 41%,
+            #ffb5b6 47%,
+            #fe8cbf 47%,
+            #fe8cbf 54%,
+            #ffb5b6 54%,
+            #ffb5b6 60%,
+            #ffe1ed 60%,
+            #ffe1ed 67%,
+            #73deff 67%);
+}
+
+.transmasc {
+    background-image: linear-gradient(180deg,
+            #ff8abd 34%,
+            #cdf5fe 34%,
+            #cdf5fe 41%,
+            #9aebff 41%,
+            #9aebff 47%,
+            #74dfff 47%,
+            #74dfff 54%,
+            #9aebff 54%,
+            #9aebff 60%,
+            #cdf5fe 60%,
+            #cdf5fe 67%,
+            #ff8abd 67%);
+}
+
 .bi {
     background-image: linear-gradient(180deg,
             #D60270 45%,
@@ -1868,6 +1902,8 @@ a.clean {
 @media (prefers-color-scheme: light) {
 
     .trans,
+    .transfem,
+    .transmasc,
     .pan,
     .ace,
     .aro,

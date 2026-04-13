@@ -116,6 +116,15 @@ impl<I> NumericSubscript<I> {
     }
 }
 
+impl<I: Clone> NumericSubscript<I> {
+    pub fn i(&self) -> Option<I> {
+        match self {
+            NumericSubscript::N(i) => Some(i.clone()),
+            _ => None,
+        }
+    }
+}
+
 /// The sided part of a subscript
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct SidedSubscript {

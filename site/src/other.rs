@@ -702,7 +702,7 @@ pub fn Subscripts() -> impl IntoView {
         </table>
 
         <Hd id="mixed">"Mixed Subscripts"</Hd>
-        <p>"Some modifiers that can take both numeric and sided subscripts can take them "<em>"both"</em>" at the same time. The numeric subscript is written first, followed by the sided subscript. Additionally, the sided subscript can be followed by "<em>"another"</em>" number to specify how many times to apply the sided behavior. This second number is called the \"side quntifier\"."</p>
+        <p>"Some modifiers that can take both numeric and sided subscripts can take them "<em>"both"</em>" at the same time. The numeric subscript is written first, followed by the sided subscript. Additionally, the sided subscript can be followed by "<em>"another"</em>" number to specify how many times to apply the sided behavior. This second number is called the \"side quantifier\"."</p>
         <table class="header-centered-table cell-centered-table" style="width: 100%">
             <tr>
                 <th>"Primitive"</th>

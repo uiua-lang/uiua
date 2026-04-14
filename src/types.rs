@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 
-use std::{fmt, mem::take, ops::BitOr};
+use std::{cmp::Ordering, fmt, mem::take, ops::BitOr};
+
+use ecow::{EcoVec, eco_vec};
 
 use crate::{
     Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node, Primitive, Shape, SigNode,
@@ -33,6 +35,7 @@ pub enum TypeError {
     Underflow(String),
     Inversion(InversionError),
     DyadicPervasiveShapes(DynShape, DynShape),
+    ShapeMistmatch(DynShape, DynShape),
     Generic(String),
 }
 
@@ -51,7 +54,7 @@ impl From<String> for TypeError {
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum TypeVal {
     Num(f64),
-    NumList(Vec<f64>),
+    NumList(EcoVec<f64>),
     Val(Value),
     Type(Type),
 }
@@ -64,6 +67,48 @@ impl TypeVal {
             TypeVal::Val(val) => Type::from(&val),
             TypeVal::Type(ty) => ty.clone(),
         }
+    }
+    pub fn shape(&self) -> DynShape {
+        match self {
+            TypeVal::Num(_) => DynShape::scalar(),
+            TypeVal::NumList(items) => [items.len()].into(),
+            TypeVal::Val(value) => (&value.shape).into(),
+            TypeVal::Type(ty) => ty.shape.clone(),
+        }
+    }
+    pub fn into_row(self) -> Self {
+        match self {
+            TypeVal::Num(_) => self,
+            TypeVal::NumList(list) if list.len() == 1 => TypeVal::Num(list[0]),
+            TypeVal::Val(mut val) if val.row_count() == 1 => {
+                val.shape.undo_fix();
+                TypeVal::Val(val)
+            }
+            TypeVal::NumList(_) | TypeVal::Val(_) => TypeVal::Type(self.ty().into_row()),
+            TypeVal::Type(ty) => TypeVal::Type(ty.into_row()),
+        }
+    }
+    pub fn prepend_dim(&mut self, dim: Dim) {
+        match (&mut *self, dim) {
+            (TypeVal::Num(n), Dim::Static(1)) => *self = TypeVal::NumList(eco_vec![*n]),
+            (TypeVal::NumList(list), Dim::Static(1)) => {
+                let mut val: Value = take(list).into();
+                val.fix();
+                *self = TypeVal::Val(val)
+            }
+            (TypeVal::Val(val), Dim::Static(1)) => val.fix(),
+            (TypeVal::Type(ty), _) => ty.shape.dims.insert(0, dim),
+            (_, Dim::Dyn | Dim::Static(_)) => {
+                *self = take(self).ty().into();
+                self.prepend_dim(dim);
+            }
+        }
+    }
+}
+
+impl Default for TypeVal {
+    fn default() -> Self {
+        TypeVal::Type(Type::default())
     }
 }
 
@@ -131,7 +176,7 @@ impl From<DynShape> for TypeVal {
         if shape.suffix.is_some() {
             TypeVal::Type(Scalar::Num.shaped(Dim::Dyn))
         } else {
-            let mut list = Vec::new();
+            let mut list = EcoVec::new();
             for dim in shape.dims {
                 match dim {
                     Dim::Static(n) => list.push(n as f64),
@@ -156,6 +201,15 @@ impl From<Scalar> for Type {
 pub struct Type {
     pub scalar: Scalar,
     pub shape: DynShape,
+}
+
+impl Type {
+    pub fn into_row(self) -> Self {
+        Type {
+            scalar: self.scalar,
+            shape: self.shape.into_row(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
@@ -243,6 +297,22 @@ impl DynShape {
     pub fn is_any(&self) -> bool {
         self.dims.is_empty() && self.suffix.as_ref().is_some_and(|s| s.is_empty())
     }
+    pub fn is_scalar(&self) -> bool {
+        self.dims.is_empty() && self.suffix.is_none()
+    }
+    pub fn into_row(self) -> DynShape {
+        let mut row = self;
+        if row.dims.is_empty() {
+            if let Some(suff) = &mut row.suffix
+                && !suff.is_empty()
+            {
+                suff.remove(0);
+            }
+        } else {
+            row.dims.remove(0);
+        }
+        row
+    }
 }
 
 impl Default for DynShape {
@@ -251,10 +321,45 @@ impl Default for DynShape {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Dim {
     Static(usize),
     Dyn,
+}
+
+impl From<usize> for Dim {
+    fn from(n: usize) -> Self {
+        Dim::Static(n)
+    }
+}
+
+impl Dim {
+    pub const MIN: Self = Dim::Static(1);
+    pub fn row_compatible(self, other: Self) -> bool {
+        match (self, other) {
+            (Dim::Dyn | Dim::Static(1), _) | (_, Dim::Dyn | Dim::Static(1)) => true,
+            (Dim::Static(a), Dim::Static(b)) => a == b,
+        }
+    }
+}
+
+impl Ord for Dim {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Dim::Static(1), Dim::Dyn) => Ordering::Less,
+            (Dim::Static(_), Dim::Dyn) => Ordering::Greater,
+            (Dim::Dyn, Dim::Static(1)) => Ordering::Greater,
+            (Dim::Dyn, Dim::Static(_)) => Ordering::Less,
+            (Dim::Dyn, Dim::Dyn) => Ordering::Equal,
+            (Dim::Static(a), Dim::Static(b)) => a.cmp(b),
+        }
+    }
+}
+
+impl PartialOrd for Dim {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl PartialEq<usize> for Dim {
@@ -479,6 +584,7 @@ impl<'a> TypeEnv<'a> {
                     |_| Ok(Scalar::Num.scalar()),
                     |list| Ok(Scalar::Num.shaped([list.len()])),
                 )?,
+                Fix => self.top_mut(1)?.prepend_dim(1.into()),
                 _ => return Err(TypeError::Unsupported),
             },
             ImplPrim(prim, _) => match prim {
@@ -510,6 +616,31 @@ impl<'a> TypeEnv<'a> {
                 Bracket => self.bracket(ops.clone())?,
                 Dip => self.dip(monad(ops))?,
                 Both => self.both(monad(ops))?,
+                Rows => {
+                    let f = monad(ops);
+                    let args = self.pop_n(f.sig.args())?;
+                    let mut row_count = Dim::MIN;
+                    let mut all_scalar = true;
+                    for (i, a) in args.iter().enumerate() {
+                        let ash = a.shape();
+                        for b in &args[i + 1..] {
+                            let bsh = b.shape();
+                            if !ash.row_count().row_compatible(bsh.row_count()) {
+                                return Err(TypeError::ShapeMistmatch(ash, bsh));
+                            }
+                        }
+                        row_count = row_count.max(ash.row_count());
+                        all_scalar &= ash.is_scalar();
+                    }
+                    self.push_all(args.into_iter().map(TypeVal::into_row));
+                    let outputs = f.sig.outputs();
+                    self.exec(f)?;
+                    if !all_scalar {
+                        for output in self.top_n_mut(outputs)? {
+                            output.prepend_dim(row_count);
+                        }
+                    }
+                }
                 _ => return Err(TypeError::Unsupported),
             },
             ImplMod(prim, ops, _) => match *prim {
@@ -553,7 +684,7 @@ impl<'a> TypeEnv<'a> {
             },
             |n| Ok(TypeVal::Num(f64(n))),
             |mut ns| {
-                for n in &mut ns {
+                for n in ns.make_mut() {
                     *n = f64(*n);
                 }
                 Ok(TypeVal::NumList(ns))
@@ -579,7 +710,7 @@ impl<'a> TypeEnv<'a> {
         &mut self,
         f: impl Fn(Type) -> Result<T, TypeError>,
         num: impl Fn(f64) -> Result<N, TypeError>,
-        list: impl Fn(Vec<f64>) -> Result<L, TypeError>,
+        list: impl Fn(EcoVec<f64>) -> Result<L, TypeError>,
     ) -> Result<(), TypeError> {
         let x = self.pop(1)?;
         self.push(match x {

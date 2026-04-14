@@ -70,6 +70,23 @@ pub trait HasStack {
     fn pop_n(&mut self, n: usize) -> Result<SmallVec<[Self::Item; 1]>, Self::Error> {
         self.pop_n_down(n, 0)
     }
+    fn top<A: StackArg>(&self, arg: A) -> Result<&Self::Item, Self::Error> {
+        self.stack().last().ok_or_else(|| self.underflow_error(arg))
+    }
+    fn top_mut<A: StackArg>(&mut self, arg: A) -> Result<&mut Self::Item, Self::Error> {
+        let error = self.underflow_error(arg);
+        self.stack_mut().last_mut().ok_or(error)
+    }
+    fn top_n(&self, n: usize) -> Result<impl DoubleEndedIterator<Item = &Self::Item>, Self::Error> {
+        Ok(self.stack()[self.require_height(n)?..].iter().rev())
+    }
+    fn top_n_mut(
+        &mut self,
+        n: usize,
+    ) -> Result<impl DoubleEndedIterator<Item = &mut Self::Item>, Self::Error> {
+        let height = self.require_height(n)?;
+        Ok(self.stack_mut()[height..].iter_mut().rev())
+    }
     /// Pop values possibly skipping some at the top
     fn pop_n_down(
         &mut self,

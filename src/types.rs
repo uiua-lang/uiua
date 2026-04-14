@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{cmp::Ordering, fmt, mem::take, ops::BitOr};
+use std::{borrow::Cow, cmp::Ordering, fmt, iter::repeat_n, mem::take, ops::BitOr};
 
 use ecow::{EcoVec, eco_vec};
 
@@ -68,12 +68,20 @@ impl TypeVal {
             TypeVal::Type(ty) => ty.clone(),
         }
     }
-    pub fn shape(&self) -> DynShape {
+    pub fn row_count(&self) -> Dim {
         match self {
-            TypeVal::Num(_) => DynShape::scalar(),
-            TypeVal::NumList(items) => [items.len()].into(),
-            TypeVal::Val(value) => (&value.shape).into(),
-            TypeVal::Type(ty) => ty.shape.clone(),
+            TypeVal::Num(_) => Dim::Static(1),
+            TypeVal::NumList(list) => Dim::Static(list.len()),
+            TypeVal::Val(value) => Dim::Static(value.row_count()),
+            TypeVal::Type(ty) => ty.shape.row_count(),
+        }
+    }
+    pub fn shape(&self) -> Cow<DynShape> {
+        match self {
+            TypeVal::Num(_) => Cow::Owned(DynShape::scalar()),
+            TypeVal::NumList(items) => Cow::Owned([items.len()].into()),
+            TypeVal::Val(value) => Cow::Owned((&value.shape).into()),
+            TypeVal::Type(ty) => Cow::Borrowed(&ty.shape),
         }
     }
     pub fn into_row(self) -> Self {
@@ -102,6 +110,22 @@ impl TypeVal {
                 *self = take(self).ty().into();
                 self.prepend_dim(dim);
             }
+        }
+    }
+    pub fn boxed(self) -> Self {
+        match self {
+            TypeVal::Val(val) => TypeVal::Val(val.boxed_if(true)),
+            tv => Scalar::Box(Some(tv.ty().into())).into(),
+        }
+    }
+    pub fn unboxed(self) -> Self {
+        match self {
+            TypeVal::Val(val) => TypeVal::Val(val.unboxed()),
+            TypeVal::Type(Type {
+                scalar: Scalar::Box(inner),
+                shape,
+            }) if shape.is_scalar() => inner.map_or_else(TypeVal::default, |ty| (*ty).into()),
+            tv => tv,
         }
     }
 }
@@ -585,6 +609,10 @@ impl<'a> TypeEnv<'a> {
                     |list| Ok(Scalar::Num.shaped([list.len()])),
                 )?,
                 Fix => self.top_mut(1)?.prepend_dim(1.into()),
+                Box => {
+                    let x = self.pop(1)?;
+                    self.push(x.boxed());
+                }
                 _ => return Err(TypeError::Unsupported),
             },
             ImplPrim(prim, _) => match prim {
@@ -609,6 +637,11 @@ impl<'a> TypeEnv<'a> {
                     self.push(x);
                     self.monadic_pervasive(Scalar::complex_im, complex_im::num)?;
                 }
+                UnBox => {
+                    let x = self.pop(1)?;
+                    self.push(x.unboxed());
+                }
+                UnCouple => self.unpack(2, false, Some(Couple))?,
                 _ => return Err(TypeError::Unsupported),
             },
             Mod(prim, ops, _) => match prim {
@@ -626,7 +659,10 @@ impl<'a> TypeEnv<'a> {
                         for b in &args[i + 1..] {
                             let bsh = b.shape();
                             if !ash.row_count().row_compatible(bsh.row_count()) {
-                                return Err(TypeError::ShapeMistmatch(ash, bsh));
+                                return Err(TypeError::ShapeMistmatch(
+                                    ash.into_owned(),
+                                    bsh.into_owned(),
+                                ));
                             }
                         }
                         row_count = row_count.max(ash.row_count());
@@ -666,6 +702,9 @@ impl<'a> TypeEnv<'a> {
             NoInline(node) => self.node(node)?,
             TrackCaller(sn) => self.exec(&**sn)?,
             SetOutputComment { .. } => {}
+            &Unpack {
+                count, unbox, prim, ..
+            } => self.unpack(count, unbox, prim)?,
             _ => return Err(TypeError::Unsupported),
         }
         Ok(())
@@ -731,6 +770,39 @@ impl<'a> TypeEnv<'a> {
             (TypeVal::Num(a), TypeVal::Num(b)) => num(a, b)?.into(),
             (a, b) => f(a.ty(), b.ty())?.into(),
         });
+        Ok(())
+    }
+    fn unpack(&mut self, n: usize, unbox: bool, prim: Option<Primitive>) -> Result<(), TypeError> {
+        let x = self.pop(1)?;
+        if x.row_count() != n {
+            return Err(if let Some(prim) = prim {
+                format!(
+                    "Cannot {} {} array of shape {} into {n} rows",
+                    Primitive::Un.format(),
+                    prim.format(),
+                    x.shape()
+                )
+            } else {
+                format!("Cannot unpack array of shape {} into {n} rows", x.shape())
+            }
+            .into());
+        }
+        match x {
+            TypeVal::Num(n) => self.push(n),
+            TypeVal::NumList(list) => self.push_all(list.into_iter().map(Into::into)),
+            TypeVal::Type(ty) => {
+                let mut tv = TypeVal::from(ty.into_row());
+                if unbox {
+                    tv = tv.unboxed();
+                }
+                self.push_all(repeat_n(tv, n))
+            }
+            TypeVal::Val(mut val) if n == 1 => {
+                val.undo_fix();
+                self.push(val.unboxed_if(unbox))
+            }
+            TypeVal::Val(val) => self.push_all(val.into_rows().map(|v| v.unboxed_if(unbox).into())),
+        };
         Ok(())
     }
 }

@@ -74,7 +74,7 @@ pub fn Install() -> impl IntoView {
         <Hd id="editor-support">"Editor Support"</Hd>
         <p>"An official "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">{lang}" language extension for VSCode"</a>" is available."</p>
         <p>"For Vim/Neovim, Apeiros-46B maintains a "<a href="https://github.com/Apeiros-46B/uiua.vim">{lang}" syntax highlighting plugin"</a>"."</p>
-        <p>"For Vim, sputnick1124 maintains a "<a href="https://github.com/sputnick1124/uiua.vim">{lang}" plugin"</a>"."</p>
+        <p>"For Vim, 0racle maintains a "<a href="https://github.com/0racle/uiua.vim">{lang}" plugin"</a>"."</p>
         <p>"Language support in Neovim is easy with "<a href="https://github.com/neovim/nvim-lspconfig">"nvim-lspconfig"</a>"."</p>
         <p>"For Emacs, crmsnbleyd maintains a "<a href="https://github.com/crmsnbleyd/uiua-ts-mode">{lang}" mode"</a>"."</p>
         <p>"For Kakoune, ThaCuber maintains a "<a href="https://github.com/thacuber2a03/highlighters.kak/blob/main/uiua.kak">"syntax highlighting module"</a>"."</p>

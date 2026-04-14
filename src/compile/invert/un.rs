@@ -519,7 +519,7 @@ inverse!(UnByPat, input, asm, By, span, [f], {
             .sig_node()?;
             let after =
                 Node::from_iter([PopUnder(2, *span), ImplPrim(UndoRerank, *span)]).sig_node()?;
-            let adjust_rank = CustomInverse {
+            let adjust_rank = crate::CustomInverse {
                 normal: Ok(Node::from_iter([
                     Node::new_push(1),
                     Prim(Sub, *span),

@@ -1051,7 +1051,7 @@ impl ImplPrimitive {
             ImplPrimitive::CountUnique => env.monadic_ref(Value::count_unique)?,
             ImplPrimitive::MatchPattern => {
                 let expected = env.pop(1)?;
-                let got = env.pop(2)?;
+                let got = env.pop("value to match")?;
                 match (&expected, &got) {
                     (Value::Num(a), Value::Num(b))
                         if a.shape == b.shape

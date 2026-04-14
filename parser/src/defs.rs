@@ -981,9 +981,13 @@ primitive!(
     /// ex: °⋯ [[0 1 1]
     ///   :     [1 0 0]
     ///   :     [1 1 0]]
+    /// [un][bits] works on non-boolean arras, multiplying each number by its corresponding 2's place
+    /// ex: °⋯ [1 5]
+    /// ex: °⋯ [1 0 5]
     ///
     /// [under][bits] can be used to perform bit-wise operations.
     /// ex: ⍜⋯(¬⬚0↙8) 5
+    /// ex: ⍜⋯₈¬ 5
     ///
     /// Subscripted [bits] forces the number of bits to be used. This extends or truncates the bits.
     /// ex: ⋯₄ [1 2 3]

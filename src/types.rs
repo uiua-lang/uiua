@@ -542,19 +542,39 @@ impl BitOr for Type {
 
 impl<'a> Exec<SigNode> for TypeEnv<'a> {
     type Output = ();
-    fn exec(&mut self, f: SigNode) -> Result<Self::Output, Self::Error> {
-        self.node(&f.node)
+    fn exec(&mut self, sn: SigNode) -> Result<Self::Output, Self::Error> {
+        self.sig_node(&sn)
     }
 }
 
 impl<'a> Exec<&SigNode> for TypeEnv<'a> {
     type Output = ();
-    fn exec(&mut self, f: &SigNode) -> Result<Self::Output, Self::Error> {
-        self.node(&f.node)
+    fn exec(&mut self, sn: &SigNode) -> Result<Self::Output, Self::Error> {
+        self.sig_node(sn)
     }
 }
 
 impl<'a> TypeEnv<'a> {
+    fn sig_node(&mut self, sn: &SigNode) -> Result<(), TypeError> {
+        let stack_height = self.stack_len();
+        match self.node(&sn.node) {
+            Ok(()) => Ok(()),
+            Err(TypeError::Unsupported) => {
+                // Replace types with any
+                let Some(min_height) = stack_height.checked_sub(sn.sig.args()) else {
+                    return Err(TypeError::Unsupported);
+                };
+                while self.stack_len() > min_height {
+                    self.stack.pop();
+                }
+                while self.stack_len() < min_height + sn.sig.outputs() {
+                    self.push(TypeVal::default())
+                }
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
+    }
     fn node(&mut self, node: &Node) -> Result<(), TypeError> {
         use {crate::algorithm::pervade::*, ImplPrimitive::*, Node::*, Primitive::*};
         match node {

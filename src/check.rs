@@ -560,6 +560,7 @@ impl VirtualEnv {
                 UndoRowsSub(sub, _) => {
                     let [mut f] = get_args(args)?;
                     self.pop();
+                    self.pop();
                     f.update_args_outputs(|a, o| {
                         let new_a = a.max(sub.side.and_then(|side| side.n).unwrap_or(0));
                         let new_o = o + new_a - a;

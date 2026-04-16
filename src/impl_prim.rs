@@ -43,6 +43,8 @@ macro_rules! impl_primitive {
             DecodeBytes(Option<SubSide>),
             /// Push the maximum row count of N values
             MaxRowCount(usize),
+            /// Push the maximum rank of N values
+            MaxRank(usize),
             BothImpl(Subscript<u32>),
             UnBothImpl(Subscript<u32>),
             Ga(ga::GaOp, ga::Spec),
@@ -58,7 +60,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoRotate(n) => *n + 1,
                     ImplPrimitive::ReduceDepth(_) => 1,
                     ImplPrimitive::StackN { n, .. } => *n,
-                    ImplPrimitive::MaxRowCount(n) => *n,
+                    ImplPrimitive::MaxRowCount(n) | ImplPrimitive::MaxRank(n) => *n,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 2,
                     ImplPrimitive::Ga(op, _) => op.args(),
                     ImplPrimitive::MultiJoin(n) => *n,
@@ -72,7 +74,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n,
                     ImplPrimitive::StackN { n, .. } => *n,
-                    ImplPrimitive::MaxRowCount(n) => *n + 1,
+                    ImplPrimitive::MaxRowCount(n) | ImplPrimitive::MaxRank(n) => *n + 1,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 1,
                     ImplPrimitive::Ga(op, _) => op.outputs(),
                     _ if self.modifier_args().is_some() => return None,

@@ -1016,6 +1016,14 @@ impl ImplPrimitive {
                 }
                 env.push(max_len.unwrap_or(1));
             }
+            &ImplPrimitive::MaxRank(n) => {
+                let mut max_rank = 0;
+                let start = env.require_height(n)?;
+                for val in &env.stack()[start..] {
+                    max_rank = max_rank.max(val.rank());
+                }
+                env.push(max_rank);
+            }
             ImplPrimitive::SetSign => env.dyadic_oo_env(Value::set_sign)?,
             // Optimizations
             ImplPrimitive::AbsComplex => env.dyadic_oo_env(Value::abs_complex)?,
@@ -1556,19 +1564,23 @@ impl ImplPrimitive {
             }
             &ImplPrimitive::RowsSub(sub, inv) | &ImplPrimitive::UndoRowsSub(sub, inv) => {
                 let undo = matches!(self, ImplPrimitive::UndoRowsSub(..));
-                let len = if undo {
-                    env.pop(1)?
-                        .as_nat(env, "Rows length must be a natural number")?
+                let (mut max_rank, len) = if undo {
+                    (
+                        env.pop("max rank")?
+                            .as_nat(env, "Max rank must be a natural number")?,
+                        env.pop("rows length")?
+                            .as_nat(env, "Rows Length must be a natural number")?,
+                    )
                 } else {
-                    0
+                    (0, 0)
                 };
                 let [f] = get_ops(ops, env)?;
                 let sig = f.sig;
-                let arg_count = sig
-                    .args()
-                    .max(sub.side.and_then(|side| side.n).unwrap_or(0));
+                let arg_count = (sig.args()).max(sub.side.and_then(|side| side.n).unwrap_or(0));
                 let vals = env.top_n_mut(arg_count)?;
-                let max_rank = vals.iter().map(Value::rank).max().unwrap_or(0);
+                if !undo {
+                    max_rank = vals.iter().map(Value::rank).max().unwrap_or(0);
+                }
                 let depth = match sub.num {
                     None => 1,
                     Some(n) if n < 0 => n.unsigned_abs() as usize,
@@ -1592,7 +1604,8 @@ impl ImplPrimitive {
                             }
                         }
                     }
-                } else if let Some(n) = sub.num
+                } else if !undo
+                    && let Some(n) = sub.num
                     && n > 0
                 {
                     let n = n.unsigned_abs() as usize;
@@ -1615,7 +1628,7 @@ impl ImplPrimitive {
                         if val.row_count() != len {
                             let message = format!(
                                 "Cannot undo {} of length {len} when \
-                            transformed array has shape {}",
+                                transformed array has shape {}",
                                 if inv {
                                     Primitive::Inventory
                                 } else {

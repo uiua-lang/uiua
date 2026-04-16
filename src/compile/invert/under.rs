@@ -709,19 +709,20 @@ under!(
                 ImplMod(RowsSub(undo_sub, *inventory), eco_vec![f_after], *span),
             )
         } else {
-            let befores = Node::from_iter([
-                ImplPrim(MaxRowCount(f.sig.args()), *span),
-                Mod(
-                    Dip,
-                    eco_vec![
-                        ImplMod(RowsSub(*sub, *inventory), eco_vec![f_before], *span).sig_node()?
-                    ],
-                    *span,
-                ),
-                PushUnder(1, *span),
+            let befores = Node::from([
+                ImplPrim(MaxRank(f.sig.args()), *span),
+                ImplPrim(MaxRowCount(f.sig.args()), *span)
+                    .sig_node()?
+                    .dipped(1, *span)
+                    .node,
+                ImplMod(RowsSub(*sub, *inventory), eco_vec![f_before], *span)
+                    .sig_node()?
+                    .dipped(2, *span)
+                    .node,
+                PushUnder(2, *span),
             ]);
-            let afters = Node::from_iter([
-                PopUnder(1, *span),
+            let afters = Node::from([
+                PopUnder(2, *span),
                 ImplMod(UndoRowsSub(undo_sub, *inventory), eco_vec![f_after], *span),
             ]);
             (befores, afters)

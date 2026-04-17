@@ -1489,13 +1489,11 @@ impl<'a> Lexer<'a> {
         let init_is_digit = init.chars().all(|c| c.is_ascii_digit());
         let mut last_is_comma = init_is_digit && self.next_char_exact(",");
         let mut got_comma = last_is_comma;
-        let mut loc_before_comma = self.loc;
         while self
             .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
             .is_some()
         {
             got_digit = true;
-            loc_before_comma = self.loc;
             last_is_comma = self.next_char_exact(",");
             if last_is_comma {
                 got_comma = true;
@@ -1505,7 +1503,6 @@ impl<'a> Lexer<'a> {
             return false;
         }
         if last_is_comma {
-            self.loc = loc_before_comma;
             return true;
         }
         // Fractional part
@@ -1513,7 +1510,6 @@ impl<'a> Lexer<'a> {
         if self.next_char_exact(".") {
             let mut has_decimal = false;
             last_is_comma = false;
-            loc_before_comma = self.loc;
             while self
                 .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
                 .is_some()
@@ -1528,7 +1524,6 @@ impl<'a> Lexer<'a> {
                 self.loc = before_dot;
             }
             if last_is_comma {
-                self.loc = loc_before_comma;
                 return true;
             }
         }

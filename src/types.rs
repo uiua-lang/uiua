@@ -16,19 +16,22 @@ use crate::{
     SigNode, SubSide, Value, invert::InversionError,
 };
 
-pub fn typecheck(sn: &SigNode, asm: &Assembly) -> Result<(), TypeError> {
-    TypeEnv {
+pub fn typecheck(sn: &SigNode, asm: &Assembly) -> Result<(), (TypeError, usize)> {
+    let mut env = TypeEnv {
         asm,
         stack: vec![TypeVal::default(); sn.sig.args()],
         under_stack: Vec::new(),
-    }
-    .sig_node(sn)
+        call_stack: Vec::new(),
+    };
+    env.sig_node(sn)
+        .map_err(|e| (e, env.call_stack.pop().unwrap_or(0)))
 }
 
 pub struct TypeEnv<'a> {
     asm: &'a Assembly,
     stack: Vec<TypeVal>,
     under_stack: Vec<TypeVal>,
+    call_stack: Vec<usize>,
 }
 
 impl<'a> HasStack for TypeEnv<'a> {
@@ -496,6 +499,7 @@ impl fmt::Display for Dim {
 
 impl fmt::Display for DynShape {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[")?;
         for (i, dim) in self.dims.iter().enumerate() {
             if i > 0 {
                 write!(f, "×")?;
@@ -509,7 +513,7 @@ impl fmt::Display for DynShape {
                 write!(f, "{dim}")?;
             }
         }
-        Ok(())
+        write!(f, "]")
     }
 }
 
@@ -527,11 +531,11 @@ impl fmt::Display for Scalar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Scalar::Any => write!(f, "*"),
-            Scalar::Num => write!(f, "ℝ"),
-            Scalar::Char => write!(f, "@"),
-            Scalar::Box(None) => write!(f, "□"),
-            Scalar::Box(Some(inner)) => write!(f, "□{inner}"),
-            Scalar::Complex => write!(f, "ℂ"),
+            Scalar::Num => write!(f, "ℝ number"),
+            Scalar::Char => write!(f, "@ character"),
+            Scalar::Box(None) => write!(f, "□ box"),
+            Scalar::Box(Some(inner)) => write!(f, "□ boxed {inner}"),
+            Scalar::Complex => write!(f, "ℂ complex"),
         }
     }
 }
@@ -675,6 +679,17 @@ impl<'a> TypeEnv<'a> {
         }
     }
     fn node(&mut self, node: &Node) -> Result<(), TypeError> {
+        let span = node.span();
+        self.call_stack.extend(span);
+        let res = self.node_impl(node);
+        if let Ok(()) | Err(TypeError::Unsupported(_)) = res
+            && span.is_some()
+        {
+            self.call_stack.pop();
+        }
+        res
+    }
+    fn node_impl(&mut self, node: &Node) -> Result<(), TypeError> {
         use {crate::algorithm::pervade::*, ImplPrimitive::*, Node::*, Primitive::*};
         match node {
             Run(nodes) => {
@@ -828,7 +843,6 @@ impl<'a> TypeEnv<'a> {
                         } else if let Some(shape) = mat.as_nat_list() {
                             // Shape checking
                             let shape = crate::Shape::from(shape.as_slice());
-                            dbg!(&shape, &ty);
                             let dims = &ty.shape.dims;
                             let mismatch = !ty.shape.is_any()
                                 && if let Some(sub) = sub {

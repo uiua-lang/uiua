@@ -327,11 +327,11 @@ impl Compiler {
                     node = Node::NoInline(node.into());
                 }
                 let sn = SigNode::new(sig, node);
-                if let Err(e) = typecheck(&sn, &comp.asm) {
+                if let Err((e, span)) = typecheck(&sn, &comp.asm) {
                     comp.emit_diagnostic(
                         format!("Type error: {e}"),
                         DiagnosticKind::Warning,
-                        span.clone(),
+                        comp.get_span(span),
                     );
                 }
                 comp.asm

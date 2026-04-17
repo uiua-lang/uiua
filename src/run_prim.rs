@@ -1808,7 +1808,6 @@ impl ImplPrimitive {
             ImplPrimitive::ValidateImpl(sub) => {
                 let [f] = get_ops(ops, env)?;
                 let sig = f.sig;
-                env.dup_values(sig.args(), sig.args())?;
                 env.exec(f)?;
                 let outputs = env.pop_n(sig.outputs())?;
                 for mat in outputs {

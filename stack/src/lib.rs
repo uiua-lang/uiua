@@ -228,7 +228,7 @@ pub trait HasStack {
                 self.exec(f)?;
             }
             n => {
-                let mut args = self.pop_n(n * f.args())?;
+                let mut args = self.pop_n((n - 1) * f.args())?;
                 self.exec(f.clone())?;
                 for _ in 0..n - 2 {
                     self.push_all(args.drain(args.len() - f.args()..));

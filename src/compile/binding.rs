@@ -1,5 +1,7 @@
 //! Compiler code for bindings
 
+use crate::types::typecheck;
+
 use super::*;
 
 impl Compiler {
@@ -313,7 +315,7 @@ impl Compiler {
                 {
                     comp.emit_diagnostic(
                         "Functions should consume their arguments. \
-                                        Try removing this.",
+                        Try removing this.",
                         DiagnosticKind::Style,
                         dup_span,
                     );
@@ -324,8 +326,16 @@ impl Compiler {
                 if prelude.no_inline {
                     node = Node::NoInline(node.into());
                 }
+                let sn = SigNode::new(sig, node);
+                if let Err(e) = typecheck(&sn, &comp.asm) {
+                    comp.emit_diagnostic(
+                        format!("Type error: {e}"),
+                        DiagnosticKind::Warning,
+                        span.clone(),
+                    );
+                }
                 comp.asm
-                    .add_function(FunctionId::Named(name), sig, node, local.index)
+                    .add_function(FunctionId::Named(name), sn.sig, sn.node, local.index)
             }
         };
         let words_span = (binding.words.first())

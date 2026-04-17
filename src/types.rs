@@ -1,13 +1,29 @@
 #![allow(dead_code)]
 
-use std::{borrow::Cow, cmp::Ordering, fmt, iter::repeat_n, mem::take, ops::BitOr};
+use std::{
+    borrow::Cow,
+    cmp::Ordering,
+    fmt,
+    iter::repeat_n,
+    mem::{discriminant, take},
+    ops::BitOr,
+};
 
 use ecow::{EcoVec, eco_vec};
 
 use crate::{
-    Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node, Primitive, Shape, SigNode,
-    Value, invert::InversionError,
+    ArrayValue, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node, Primitive, Shape,
+    SigNode, SubSide, Value, invert::InversionError,
 };
+
+pub fn typecheck(sn: &SigNode, asm: &Assembly) -> Result<(), TypeError> {
+    TypeEnv {
+        asm,
+        stack: vec![TypeVal::default(); sn.sig.args()],
+        under_stack: Vec::new(),
+    }
+    .sig_node(sn)
+}
 
 pub struct TypeEnv<'a> {
     asm: &'a Assembly,
@@ -31,12 +47,47 @@ impl<'a> HasStack for TypeEnv<'a> {
 
 #[derive(Debug)]
 pub enum TypeError {
-    Unsupported,
+    Unsupported(Option<String>),
     Underflow(String),
     Inversion(InversionError),
     DyadicPervasiveShapes(DynShape, DynShape),
-    ShapeMistmatch(DynShape, DynShape),
+    RowsShapes(DynShape, DynShape),
+    TypeMismatch(Scalar, Scalar),
+    ShapeMismatch(Option<SubSide>, Shape, DynShape),
     Generic(String),
+}
+
+impl fmt::Display for TypeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TypeError::Unsupported(None) => {
+                write!(f, "type checking is unsupported on this operation")
+            }
+            TypeError::Unsupported(Some(thing)) => {
+                write!(f, "type checking is unsupported for {thing}")
+            }
+            TypeError::Underflow(message) => write!(f, "{message}"),
+            TypeError::Inversion(e) => write!(f, "{e}"),
+            TypeError::DyadicPervasiveShapes(a, b) => {
+                write!(f, "shapes {a} and {b} are not compatible")
+            }
+            TypeError::RowsShapes(a, b) => write!(f, "shapes {a} and {b} are not compatible"),
+            TypeError::TypeMismatch(expected, found) => {
+                write!(f, "expected {expected} but found {found}")
+            }
+            TypeError::ShapeMismatch(None, expected, found) => {
+                write!(f, "expected shape {expected} but found {found}")
+            }
+            TypeError::ShapeMismatch(Some(SubSide::Left), expected, found) => write!(
+                f,
+                "expected shape to start with {expected} but found {found}"
+            ),
+            TypeError::ShapeMismatch(Some(SubSide::Right), expected, found) => {
+                write!(f, "expected shape to end with {expected} but found {found}")
+            }
+            TypeError::Generic(e) => write!(f, "{e}"),
+        }
+    }
 }
 
 impl From<&str> for TypeError {
@@ -127,6 +178,48 @@ impl TypeVal {
             }) if shape.is_scalar() => inner.map_or_else(TypeVal::default, |ty| (*ty).into()),
             tv => tv,
         }
+    }
+    pub fn type_id(&self) -> Option<u8> {
+        Some(match self {
+            TypeVal::Num(_) | TypeVal::NumList(_) => f64::TYPE_ID,
+            TypeVal::Val(val) => val.type_id(),
+            TypeVal::Type(ty) => match ty.scalar {
+                Scalar::Any => return None,
+                Scalar::Num => f64::TYPE_ID,
+                Scalar::Char => char::TYPE_ID,
+                Scalar::Box(_) => Boxed::TYPE_ID,
+                Scalar::Complex => Complex::TYPE_ID,
+            },
+        })
+    }
+    pub fn as_nat(&self) -> Option<usize> {
+        let n = match self {
+            TypeVal::Num(n) => *n,
+            TypeVal::Val(Value::Num(arr)) if arr.rank() == 0 => arr.data[0],
+            TypeVal::Val(Value::Byte(arr)) if arr.rank() == 0 => arr.data[0] as f64,
+            _ => return None,
+        };
+        if n.fract() == 0.0 && n >= 0.0 {
+            Some(n as usize)
+        } else {
+            None
+        }
+    }
+    pub fn as_nat_list(&self) -> Option<EcoVec<usize>> {
+        Some(match self {
+            TypeVal::NumList(nums) if nums.iter().all(|&n| n >= 0.0 && n.fract() == 0.0) => {
+                nums.iter().map(|&n| n as usize).collect()
+            }
+            TypeVal::Val(Value::Num(arr))
+                if arr.rank() == 1 && arr.data.iter().all(|&n| n >= 0.0 && n.fract() == 0.0) =>
+            {
+                arr.data.iter().map(|&n| n as usize).collect()
+            }
+            TypeVal::Val(Value::Byte(arr)) if arr.rank() == 1 => {
+                arr.data.iter().map(|&f| f as usize).collect()
+            }
+            _ => return None,
+        })
     }
 }
 
@@ -514,7 +607,15 @@ impl BitOr for TypeVal {
 
 impl From<&Value> for Type {
     fn from(val: &Value) -> Self {
-        let scalar = match val {
+        let scalar = Scalar::from(val);
+        let shape = DynShape::from(&val.shape);
+        Type { scalar, shape }
+    }
+}
+
+impl From<&Value> for Scalar {
+    fn from(val: &Value) -> Self {
+        match val {
             Value::Num(_) | Value::Byte(_) => Scalar::Num,
             Value::Char(_) => Scalar::Char,
             Value::Complex(_) => Scalar::Complex,
@@ -525,9 +626,7 @@ impl From<&Value> for Type {
                     .reduce(BitOr::bitor)
                     .map(Box::new),
             ),
-        };
-        let shape = DynShape::from(&val.shape);
-        Type { scalar, shape }
+        }
     }
 }
 
@@ -559,10 +658,10 @@ impl<'a> TypeEnv<'a> {
         let stack_height = self.stack_len();
         match self.node(&sn.node) {
             Ok(()) => Ok(()),
-            Err(TypeError::Unsupported) => {
+            Err(TypeError::Unsupported(e)) => {
                 // Replace types with any
                 let Some(min_height) = stack_height.checked_sub(sn.sig.args()) else {
-                    return Err(TypeError::Unsupported);
+                    return Err(TypeError::Unsupported(e));
                 };
                 while self.stack_len() > min_height {
                     self.stack.pop();
@@ -633,7 +732,7 @@ impl<'a> TypeEnv<'a> {
                     let x = self.pop(1)?;
                     self.push(x.boxed());
                 }
-                _ => return Err(TypeError::Unsupported),
+                _ => return Err(TypeError::Unsupported(Some(prim.format().to_string()))),
             },
             ImplPrim(prim, _) => match prim {
                 Over => self.over()?,
@@ -662,7 +761,7 @@ impl<'a> TypeEnv<'a> {
                     self.push(x.unboxed());
                 }
                 UnCouple => self.unpack(2, false, Some(Couple))?,
-                _ => return Err(TypeError::Unsupported),
+                _ => return Err(TypeError::Unsupported(Some(format!("{prim:?}")))),
             },
             Mod(prim, ops, _) => match prim {
                 Fork => self.fork(ops.clone())?,
@@ -679,7 +778,7 @@ impl<'a> TypeEnv<'a> {
                         for b in &args[i + 1..] {
                             let bsh = b.shape();
                             if !ash.row_count().row_compatible(bsh.row_count()) {
-                                return Err(TypeError::ShapeMistmatch(
+                                return Err(TypeError::RowsShapes(
                                     ash.into_owned(),
                                     bsh.into_owned(),
                                 ));
@@ -697,14 +796,82 @@ impl<'a> TypeEnv<'a> {
                         }
                     }
                 }
-                _ => return Err(TypeError::Unsupported),
+                _ => return Err(TypeError::Unsupported(Some(prim.format().to_string()))),
             },
             ImplMod(prim, ops, _) => match *prim {
                 DipN(n) => self.dip_n(n, monad(ops))?,
                 BothImpl(sub) if sub.num.is_some() && sub.side.is_none() => {
                     self.both_n(sub.num.unwrap() as usize, monad(ops))?
                 }
-                _ => return Err(TypeError::Unsupported),
+                ValidateImpl(sub) => {
+                    let f = monad(ops);
+                    self.exec(f)?;
+                    let outputs = self.pop_n(f.sig.outputs())?;
+                    let val = self.top_mut("validated value")?;
+                    let mut ty = val.clone().ty();
+                    for mat in outputs {
+                        if let Some(type_id) = mat.as_nat() {
+                            // Type checking
+                            let expected = match type_id as u8 {
+                                f64::TYPE_ID => Scalar::Num,
+                                char::TYPE_ID => Scalar::Char,
+                                Boxed::TYPE_ID => Scalar::Box(None),
+                                crate::Complex::TYPE_ID => Scalar::Complex,
+                                type_id => return Err(format!("Invalid type id {type_id}").into()),
+                            };
+                            if let Scalar::Any = ty.scalar {
+                                ty.scalar = expected;
+                                *val = ty.clone().into();
+                            } else if discriminant(&expected) != discriminant(&ty.scalar) {
+                                return Err(TypeError::TypeMismatch(expected, ty.scalar));
+                            }
+                        } else if let Some(shape) = mat.as_nat_list() {
+                            // Shape checking
+                            let shape = crate::Shape::from(shape.as_slice());
+                            dbg!(&shape, &ty);
+                            let dims = &ty.shape.dims;
+                            let mismatch = !ty.shape.is_any()
+                                && if let Some(sub) = sub {
+                                    match sub.side {
+                                        SubSide::Left => {
+                                            dims.iter().zip(&shape).all(|(a, b)| a == b)
+                                        }
+                                        SubSide::Right => if let Some(suf) = &ty.shape.suffix {
+                                            suf
+                                        } else {
+                                            dims
+                                        }
+                                        .iter()
+                                        .rev()
+                                        .zip(shape.iter().rev())
+                                        .all(|(a, b)| a == b),
+                                    }
+                                } else {
+                                    if let Some(suf) = &ty.shape.suffix {
+                                        dims.len() + suf.len() > shape.len()
+                                            || !dims.iter().eq(shape.iter().take(dims.len()))
+                                            || !suf
+                                                .iter()
+                                                .rev()
+                                                .eq(shape[dims.len()..].iter().rev())
+                                    } else {
+                                        !dims.iter().eq(&shape)
+                                    }
+                                };
+                            if mismatch {
+                                return Err(TypeError::ShapeMismatch(
+                                    sub.map(|sub| sub.side),
+                                    shape,
+                                    ty.shape,
+                                ));
+                            } else if ty.shape.is_any() {
+                                ty.shape = (&shape).into();
+                                *val = ty.clone().into();
+                            }
+                        }
+                    }
+                }
+                _ => return Err(TypeError::Unsupported(Some(format!("{prim:?}")))),
             },
             CustomInverse(cust, _) => match &cust.normal {
                 Ok(node) => self.exec(node)?,
@@ -725,7 +892,7 @@ impl<'a> TypeEnv<'a> {
             &Unpack {
                 count, unbox, prim, ..
             } => self.unpack(count, unbox, prim)?,
-            _ => return Err(TypeError::Unsupported),
+            _ => return Err(TypeError::Unsupported(None)),
         }
         Ok(())
     }

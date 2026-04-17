@@ -1630,6 +1630,39 @@ impl Compiler {
                 let op = modified.code_operands().next().unwrap().clone();
                 self.geometric(op, subscript, None)?
             }
+            Validate => {
+                let (mut sn, span) = self.monadic_modifier_op(modified)?;
+                let sub = subscript.map(|sub| self.validate_subscript(sub));
+                let subnum = sub.as_ref().and_then(|sub| sub.value.num);
+                let subside = sub.and_then(|sub| sub.value.side);
+                if let Some(n) = subnum {
+                    sn.node.push(Node::new_push(n));
+                    sn.sig.update_outputs(|o| o + 1);
+                }
+                if sn.sig.args() > 0 {
+                    self.add_error(
+                        span.clone(),
+                        format!(
+                            "{}'s function must take 0 arguments, \
+                            but its signature is {}",
+                            Validate.format(),
+                            sn.sig
+                        ),
+                    )
+                } else if sn.sig.outputs() > 2 {
+                    self.add_error(
+                        span.clone(),
+                        format!(
+                            "{}'s function must return at most 2 values, \
+                            but its signature is {}",
+                            Validate.format(),
+                            sn.sig
+                        ),
+                    )
+                }
+                let span = self.add_span(span);
+                Node::ImplMod(ImplPrimitive::ValidateImpl(subside), eco_vec![sn], span)
+            }
             _ => return Ok(None),
         }))
     }

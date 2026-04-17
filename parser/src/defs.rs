@@ -2657,6 +2657,8 @@ primitive!(
     /// ex! ˙⍤ =8 9
     /// Errors thrown by [assert] can be caught with [try].
     (2(0), Assert, Misc, ("assert", '⍤'), Impure),
+    /// Validate a value's type and/or shape
+    (1(1)[1], Validate, Misc, ("validate", '⊲'), { experimental: true }),
     /// Memoize a function
     ///
     /// If a function is [memo]ized, then its results are cached.

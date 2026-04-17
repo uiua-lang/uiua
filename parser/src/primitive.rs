@@ -263,7 +263,8 @@ impl Primitive {
             (Slf | Backward | On | By | With | Off | Both)
             | (Rows | Each | Inventory | Table)
             | (Repeat | Tuples | Stencil)
-            | Geometric => 1,
+            | Geometric
+            | Validate => 1,
             Bracket | Under | Fill => 2,
             Reach if sub.side.is_some() => 2,
             Reach | OldReach => 1,

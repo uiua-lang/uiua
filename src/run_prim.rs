@@ -20,8 +20,8 @@ use std::{
 use rand::prelude::*;
 
 use crate::{
-    FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive, Shape, SubSide, SysOp, Uiua,
-    UiuaErrorKind, UiuaResult,
+    ArrayValue, Complex, FormatShape, FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive,
+    Shape, SubSide, SysOp, Uiua, UiuaErrorKind, UiuaResult,
     algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
@@ -335,7 +335,8 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         | Primitive::Anti
         | Primitive::Under
         | Primitive::Obverse
-        | Primitive::Switch => {
+        | Primitive::Switch
+        | Primitive::Validate => {
             return Err(env.error(format!(
                 "{} was not inlined. This is a bug in the interpreter",
                 prim.format()
@@ -353,13 +354,13 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             return Err(env.error(if prim.modifier_args().is_some() {
                 format!(
                     "{} was not handled as a modifier. \
-                        This is a bug in the interpreter",
+                    This is a bug in the interpreter",
                     prim.format()
                 )
             } else {
                 format!(
                     "{} was not handled as a function. \
-                        This is a bug in the interpreter",
+                    This is a bug in the interpreter",
                     prim.format()
                 )
             }));
@@ -550,13 +551,13 @@ pub fn run_prim_mod(prim: &Primitive, mut ops: Ops, env: &mut Uiua) -> UiuaResul
             return Err(env.error(if prim.modifier_args().is_some() {
                 format!(
                     "{} was not handled as a modifier. \
-                        This is a bug in the interpreter",
+                    This is a bug in the interpreter",
                     prim.format()
                 )
             } else {
                 format!(
                     "{} was called as a modifier. \
-                        This is a bug in the interpreter",
+                    This is a bug in the interpreter",
                     prim.format()
                 )
             }));
@@ -1803,6 +1804,65 @@ impl ImplPrimitive {
                 let [f] = get_ops(ops, env)?;
                 let bytes = media::fold_to_gif(f, env)?;
                 env.push(bytes);
+            }
+            ImplPrimitive::ValidateImpl(sub) => {
+                let [f] = get_ops(ops, env)?;
+                let sig = f.sig;
+                env.dup_values(sig.args(), sig.args())?;
+                env.exec(f)?;
+                let outputs = env.pop_n(sig.outputs())?;
+                for mat in outputs {
+                    let val = env.top()?;
+                    if let Ok(n) = mat.as_nat(env, "") {
+                        if val.type_id() != n as u8 {
+                            let expected = match n as u8 {
+                                f64::TYPE_ID => "number",
+                                char::TYPE_ID => "character",
+                                Boxed::TYPE_ID => "box",
+                                Complex::TYPE_ID => "complex",
+                                _ => return Err(env.error(format!("Invalid type id: {n}"))),
+                            };
+                            return Err(env.error(format!(
+                                "Expected {expected} but found {}",
+                                val.type_name()
+                            )));
+                        }
+                    } else {
+                        let shape = mat.as_nats(
+                            env,
+                            "Type constraint must be an integer indicating \
+                            a type or a list of integers indicating a shape.",
+                        )?;
+                        if let Some(sub) = sub {
+                            match sub.side {
+                                SubSide::Left => {
+                                    if !val.shape.starts_with(&shape) {
+                                        return Err(env.error(format!(
+                                            "Expected shape to start with {} but found {}",
+                                            FormatShape(shape.as_slice()),
+                                            val.shape,
+                                        )));
+                                    }
+                                }
+                                SubSide::Right => {
+                                    if !val.shape.ends_with(&shape) {
+                                        return Err(env.error(format!(
+                                            "Expected shape to end with {} but found {}",
+                                            FormatShape(shape.as_slice()),
+                                            val.shape,
+                                        )));
+                                    }
+                                }
+                            }
+                        } else if val.shape != shape.as_slice() {
+                            return Err(env.error(format!(
+                                "Expected shape {} but found {}",
+                                FormatShape(shape.as_slice()),
+                                val.shape,
+                            )));
+                        }
+                    }
+                }
             }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

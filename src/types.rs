@@ -529,7 +529,9 @@ impl fmt::Display for DynShape {
             write!(f, "{dim}")?;
         }
         if let Some(suffix) = &self.suffix {
-            write!(f, "×…")?;
+            if !self.dims.is_empty() {
+                write!(f, "×…")?;
+            }
             for dim in suffix {
                 write!(f, "×")?;
                 write!(f, "{dim}")?;
@@ -541,7 +543,7 @@ impl fmt::Display for DynShape {
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.shape.is_any() {
+        if self.shape.is_scalar() {
             write!(f, "{}", self.scalar)
         } else {
             write!(f, "[{} {}]", self.shape, self.scalar)

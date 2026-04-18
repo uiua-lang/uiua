@@ -364,7 +364,7 @@ fn spanned_dy_fn(
     span: usize,
     f: impl Fn(Value, Value, &Uiua) -> UiuaResult<Value> + 'static,
 ) -> ValueDyFn {
-    Box::new(move |a, b, _, env| env.with_span(span, |env| f(a, b, env)))
+    Box::new(move |a, b, _, env| env.without_fill(|env| env.with_span(span, |env| f(a, b, env))))
 }
 
 fn prim_dy_fast_fn(

@@ -30,10 +30,11 @@ impl Compiler {
 
         // Create meta
         let comment = prelude.comment.map(|text| DocComment::from(text.as_str()));
-        let meta = BindingMeta {
+        let mut meta = BindingMeta {
             comment,
             deprecation: prelude.deprecation,
             counts: Some(binding.counts),
+            output_types: None,
             external: prelude.external,
         };
 
@@ -90,6 +91,7 @@ impl Compiler {
                         comment: Some(comment),
                         counts: old_meta.counts.or(meta.counts),
                         deprecation: meta.deprecation.or(old_meta.deprecation),
+                        output_types: old_meta.output_types,
                         external: old_meta.external || meta.external,
                     };
                     let local = LocalIndex {
@@ -326,16 +328,8 @@ impl Compiler {
                 if prelude.no_inline {
                     node = Node::NoInline(node.into());
                 }
-                let sn = SigNode::new(sig, node);
-                if let Err((e, span)) = typecheck(&sn, &comp.asm) {
-                    comp.emit_diagnostic(
-                        format!("Type error: {e}"),
-                        DiagnosticKind::Warning,
-                        comp.get_span(span),
-                    );
-                }
                 comp.asm
-                    .add_function(FunctionId::Named(name), sn.sig, sn.node, local.index)
+                    .add_function(FunctionId::Named(name), sig, node, local.index)
             }
         };
         let words_span = (binding.words.first())
@@ -358,7 +352,6 @@ impl Compiler {
             recurses: 0,
             global_index: local.index,
         });
-
         // Compile the words
         let (_, mut node) = self.in_scope(ScopeKind::Binding, |comp| {
             comp.line(binding.words).inspect_err(|_| {
@@ -519,7 +512,20 @@ impl Compiler {
                     }
                 } else {
                     // Binding is a normal function
-                    let func = make_fn(node, sig, self);
+                    let sn = SigNode::new(sig, node);
+                    match typecheck(&sn, &self.asm) {
+                        Ok(output_types) => {
+                            meta.output_types = Some(output_types.into_iter().collect())
+                        }
+                        Err((e, span)) => {
+                            self.emit_diagnostic(
+                                format!("Type error: {e}"),
+                                DiagnosticKind::Warning,
+                                self.get_span(span),
+                            );
+                        }
+                    }
+                    let func = make_fn(sn.node, sn.sig, self);
                     self.compile_bind_function(name, local, func, spandex, meta)?;
                 }
 

@@ -5,18 +5,19 @@ use std::{
     cmp::Ordering,
     fmt,
     iter::repeat_n,
-    mem::{discriminant, take},
+    mem::{discriminant, swap, take},
     ops::BitOr,
 };
 
 use ecow::{EcoVec, eco_vec};
+use serde::*;
 
 use crate::{
-    ArrayValue, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node, Primitive, Shape,
-    SigNode, SubSide, Value, invert::InversionError,
+    ArrayCmp, ArrayValue, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node, Primitive,
+    Shape, SigNode, SubSide, Value, invert::InversionError,
 };
 
-pub fn typecheck(sn: &SigNode, asm: &Assembly) -> Result<(), (TypeError, usize)> {
+pub fn typecheck(sn: &SigNode, asm: &Assembly) -> Result<Vec<TypeVal>, (TypeError, usize)> {
     let mut env = TypeEnv {
         asm,
         stack: vec![TypeVal::default(); sn.sig.args()],
@@ -24,6 +25,10 @@ pub fn typecheck(sn: &SigNode, asm: &Assembly) -> Result<(), (TypeError, usize)>
         call_stack: Vec::new(),
     };
     env.sig_node(sn)
+        .map(|()| {
+            env.stack.reverse();
+            take(&mut env.stack)
+        })
         .map_err(|e| (e, env.call_stack.pop().unwrap_or(0)))
 }
 
@@ -105,7 +110,7 @@ impl From<String> for TypeError {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialOrd, Serialize, Deserialize)]
 pub enum TypeVal {
     Num(f64),
     NumList(EcoVec<f64>),
@@ -232,6 +237,22 @@ impl Default for TypeVal {
     }
 }
 
+impl PartialEq for TypeVal {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Num(a), Self::Num(b)) => a.array_eq(b),
+            (Self::NumList(a), Self::NumList(b)) => {
+                a.len() == b.len() && a.iter().zip(b).all(|(a, b)| a.array_eq(b))
+            }
+            (Self::Val(a), Self::Val(b)) => a == b,
+            (Self::Type(a), Self::Type(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for TypeVal {}
+
 impl From<Value> for TypeVal {
     fn from(value: Value) -> Self {
         match value {
@@ -317,7 +338,7 @@ impl From<Scalar> for Type {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
 pub struct Type {
     pub scalar: Scalar,
     pub shape: DynShape,
@@ -332,7 +353,7 @@ impl Type {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
 pub enum Scalar {
     #[default]
     Any,
@@ -353,9 +374,10 @@ impl Scalar {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct DynShape {
     dims: Vec<Dim>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     suffix: Option<Vec<Dim>>,
 }
 
@@ -441,7 +463,8 @@ impl Default for DynShape {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Dim {
     Static(usize),
     Dyn,
@@ -499,7 +522,6 @@ impl fmt::Display for Dim {
 
 impl fmt::Display for DynShape {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[")?;
         for (i, dim) in self.dims.iter().enumerate() {
             if i > 0 {
                 write!(f, "×")?;
@@ -513,7 +535,7 @@ impl fmt::Display for DynShape {
                 write!(f, "{dim}")?;
             }
         }
-        write!(f, "]")
+        Ok(())
     }
 }
 
@@ -522,7 +544,7 @@ impl fmt::Display for Type {
         if self.shape.is_any() {
             write!(f, "{}", self.scalar)
         } else {
-            write!(f, "{}[{}]", self.scalar, self.shape)
+            write!(f, "[{} {}]", self.shape, self.scalar)
         }
     }
 }
@@ -531,11 +553,11 @@ impl fmt::Display for Scalar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Scalar::Any => write!(f, "*"),
-            Scalar::Num => write!(f, "ℝ number"),
-            Scalar::Char => write!(f, "@ character"),
-            Scalar::Box(None) => write!(f, "□ box"),
-            Scalar::Box(Some(inner)) => write!(f, "□ boxed {inner}"),
-            Scalar::Complex => write!(f, "ℂ complex"),
+            Scalar::Num => write!(f, "ℝ"),
+            Scalar::Char => write!(f, "@"),
+            Scalar::Box(None) => write!(f, "□"),
+            Scalar::Box(Some(inner)) => write!(f, "□{inner}"),
+            Scalar::Complex => write!(f, "ℂ"),
         }
     }
 }
@@ -747,6 +769,10 @@ impl<'a> TypeEnv<'a> {
                     let x = self.pop(1)?;
                     self.push(x.boxed());
                 }
+                First | Last => {
+                    let x = self.pop(1)?;
+                    self.push(x.into_row());
+                }
                 _ => return Err(TypeError::Unsupported(Some(prim.format().to_string()))),
             },
             ImplPrim(prim, _) => match prim {
@@ -783,6 +809,12 @@ impl<'a> TypeEnv<'a> {
                 Bracket => self.bracket(ops.clone())?,
                 Dip => self.dip(monad(ops))?,
                 Both => self.both(monad(ops))?,
+                By => self.by(monad(ops))?,
+                On => self.on(monad(ops))?,
+                With => self.with(monad(ops))?,
+                Off => self.off(monad(ops))?,
+                Below => self.below(monad(ops))?,
+                Above => self.above(monad(ops))?,
                 Rows => {
                     let f = monad(ops);
                     let args = self.pop_n(f.sig.args())?;
@@ -819,6 +851,7 @@ impl<'a> TypeEnv<'a> {
                     self.both_n(sub.num.unwrap() as usize, monad(ops))?
                 }
                 ValidateImpl(sub) => {
+                    let side = sub.map(|sub| sub.side);
                     let f = monad(ops);
                     self.exec(f)?;
                     let outputs = self.pop_n(f.sig.outputs())?;
@@ -845,41 +878,45 @@ impl<'a> TypeEnv<'a> {
                             let shape = crate::Shape::from(shape.as_slice());
                             let dims = &ty.shape.dims;
                             let mismatch = !ty.shape.is_any()
-                                && if let Some(sub) = sub {
-                                    match sub.side {
-                                        SubSide::Left => {
-                                            dims.iter().zip(&shape).all(|(a, b)| a == b)
-                                        }
-                                        SubSide::Right => if let Some(suf) = &ty.shape.suffix {
-                                            suf
-                                        } else {
-                                            dims
-                                        }
-                                        .iter()
-                                        .rev()
-                                        .zip(shape.iter().rev())
-                                        .all(|(a, b)| a == b),
+                                && match side {
+                                    Some(SubSide::Left) => {
+                                        dims.iter().zip(&shape).all(|(a, b)| a == b)
                                     }
-                                } else {
-                                    if let Some(suf) = &ty.shape.suffix {
-                                        dims.len() + suf.len() > shape.len()
-                                            || !dims.iter().eq(shape.iter().take(dims.len()))
-                                            || !suf
-                                                .iter()
-                                                .rev()
-                                                .eq(shape[dims.len()..].iter().rev())
+                                    Some(SubSide::Right) => if let Some(suf) = &ty.shape.suffix {
+                                        suf
                                     } else {
-                                        !dims.iter().eq(&shape)
+                                        dims
+                                    }
+                                    .iter()
+                                    .rev()
+                                    .zip(shape.iter().rev())
+                                    .all(|(a, b)| a == b),
+                                    None => {
+                                        if let Some(suf) = &ty.shape.suffix {
+                                            dims.len() + suf.len() > shape.len()
+                                                || !dims.iter().eq(shape.iter().take(dims.len()))
+                                                || !suf
+                                                    .iter()
+                                                    .rev()
+                                                    .eq(shape[dims.len()..].iter().rev())
+                                        } else {
+                                            !dims.iter().eq(&shape)
+                                        }
                                     }
                                 };
                             if mismatch {
-                                return Err(TypeError::ShapeMismatch(
-                                    sub.map(|sub| sub.side),
-                                    shape,
-                                    ty.shape,
-                                ));
+                                return Err(TypeError::ShapeMismatch(side, shape, ty.shape));
                             } else if ty.shape.is_any() {
                                 ty.shape = (&shape).into();
+                                if let Some(side) = side {
+                                    match side {
+                                        SubSide::Left => ty.shape.suffix = Some(Vec::new()),
+                                        SubSide::Right => swap(
+                                            &mut ty.shape.dims,
+                                            ty.shape.suffix.get_or_insert_default(),
+                                        ),
+                                    }
+                                }
                                 *val = ty.clone().into();
                             }
                         }
@@ -1009,6 +1046,12 @@ impl<'a> TypeEnv<'a> {
 }
 
 pub(crate) fn pervade_dyn_shapes(a: DynShape, b: DynShape) -> Result<DynShape, TypeError> {
+    if a.is_any() {
+        return Ok(b);
+    }
+    if b.is_any() {
+        return Ok(a);
+    }
     let mut shape = DynShape::scalar();
     for i in 0..a.dims.len().max(b.dims.len()) {
         // TODO: Handle fills

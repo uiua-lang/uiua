@@ -1011,6 +1011,17 @@ pub fn gen_code_view(id: &str, code: &str, hidden: &str) -> View {
                                     _ => {}
                                 }
                             }
+                            if docs.meta.comment.as_ref().is_none_or(|com| com.sig.is_none()) 
+                                && let Some(tvs) = &docs.meta.output_types
+                                && !tvs.is_empty() {
+                                if !title.ends_with('\n') {
+                                    title.push('\n');
+                                }
+                                for tv in tvs {
+                                    title.push_str(&format!("{} ", tv.clone().ty()));
+                                }
+                                title.push('?');
+                            }
                             if let Some(counts) = &docs.meta.counts {
                                 title.push('\n');
                                 title.push_str(&counts.to_string());

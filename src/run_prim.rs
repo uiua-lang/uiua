@@ -1827,15 +1827,18 @@ impl ImplPrimitive {
                             )));
                         }
                     } else {
-                        let shape = mat.as_nats(
+                        let shape = mat.as_nats_or_infs(
                             env,
-                            "Type constraint must be an integer indicating \
-                            a type or a list of integers indicating a shape.",
+                            "Type constraint must be an integer or infinity indicating \
+                            a type or a list of integers indicating a shape",
                         )?;
                         if let Some(sub) = sub {
                             match sub.side {
                                 SubSide::Left => {
-                                    if !val.shape.starts_with(&shape) {
+                                    if val.shape.len() < shape.len()
+                                        || !(val.shape.iter().zip(&shape))
+                                            .all(|(a, b)| b.is_none_or(|b| *a == b))
+                                    {
                                         return Err(env.error(format!(
                                             "Expected shape to start with {} but found {}",
                                             FormatShape(shape.as_slice()),
@@ -1844,7 +1847,10 @@ impl ImplPrimitive {
                                     }
                                 }
                                 SubSide::Right => {
-                                    if !val.shape.ends_with(&shape) {
+                                    if val.shape.len() < shape.len()
+                                        || !(val.shape.iter().rev().zip(shape.iter().rev()))
+                                            .all(|(a, b)| b.is_none_or(|b| *a == b))
+                                    {
                                         return Err(env.error(format!(
                                             "Expected shape to end with {} but found {}",
                                             FormatShape(shape.as_slice()),
@@ -1853,7 +1859,10 @@ impl ImplPrimitive {
                                     }
                                 }
                             }
-                        } else if val.shape != shape.as_slice() {
+                        } else if val.rank() != shape.len()
+                            || !(val.shape.iter().zip(&shape))
+                                .all(|(a, b)| b.is_none_or(|b| *a == b))
+                        {
                             return Err(env.error(format!(
                                 "Expected shape {} but found {}",
                                 FormatShape(shape.as_slice()),

@@ -5,7 +5,7 @@ use std::{
     cmp::Ordering,
     fmt,
     iter::repeat_n,
-    mem::{discriminant, swap, take},
+    mem::{discriminant, take},
     ops::BitOr,
 };
 
@@ -67,7 +67,7 @@ pub enum TypeError {
     DyadicPervasiveShapes(DynShape, DynShape),
     RowsShapes(DynShape, DynShape),
     TypeMismatch(Scalar, Scalar),
-    ShapeMismatch(Option<SubSide>, Shape, DynShape),
+    ShapeMismatch(DynShape, DynShape),
     Generic(String),
 }
 
@@ -89,15 +89,8 @@ impl fmt::Display for TypeError {
             TypeError::TypeMismatch(expected, found) => {
                 write!(f, "expected {expected} but found {found}")
             }
-            TypeError::ShapeMismatch(None, expected, found) => {
+            TypeError::ShapeMismatch(expected, found) => {
                 write!(f, "expected shape {expected} but found {found}")
-            }
-            TypeError::ShapeMismatch(Some(SubSide::Left), expected, found) => write!(
-                f,
-                "expected shape to start with {expected} but found {found}"
-            ),
-            TypeError::ShapeMismatch(Some(SubSide::Right), expected, found) => {
-                write!(f, "expected shape to end with {expected} but found {found}")
             }
             TypeError::Generic(e) => write!(f, "{e}"),
         }
@@ -219,18 +212,22 @@ impl TypeVal {
             None
         }
     }
-    pub fn as_nat_list(&self) -> Option<EcoVec<usize>> {
+    pub fn as_dims(&self) -> Option<Vec<Dim>> {
         Some(match self {
-            TypeVal::NumList(nums) if nums.iter().all(|&n| n >= 0.0 && n.fract() == 0.0) => {
-                nums.iter().map(|&n| n as usize).collect()
+            TypeVal::NumList(nums)
+                if (nums.iter()).all(|&n| n == f64::INFINITY || n >= 0.0 && n.fract() == 0.0) =>
+            {
+                nums.iter().copied().map(Into::into).collect()
             }
             TypeVal::Val(Value::Num(arr))
-                if arr.rank() == 1 && arr.data.iter().all(|&n| n >= 0.0 && n.fract() == 0.0) =>
+                if arr.rank() == 1
+                    && (arr.data.iter())
+                        .all(|&n| n == f64::INFINITY || n >= 0.0 && n.fract() == 0.0) =>
             {
-                arr.data.iter().map(|&n| n as usize).collect()
+                arr.data.iter().copied().map(Into::into).collect()
             }
             TypeVal::Val(Value::Byte(arr)) if arr.rank() == 1 => {
-                arr.data.iter().map(|&f| f as usize).collect()
+                arr.data.iter().map(|&f| Dim::Static(f as usize)).collect()
             }
             _ => return None,
         })
@@ -497,6 +494,16 @@ impl From<usize> for Dim {
     }
 }
 
+impl From<f64> for Dim {
+    fn from(n: f64) -> Self {
+        if n == f64::INFINITY {
+            Dim::Dyn
+        } else {
+            Dim::Static(n as usize)
+        }
+    }
+}
+
 impl Dim {
     pub const MIN: Self = Dim::Static(1);
     pub fn row_compatible(self, other: Self) -> bool {
@@ -536,7 +543,7 @@ impl fmt::Display for Dim {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Dim::Static(n) => write!(f, "{n}"),
-            Dim::Dyn => write!(f, "*"),
+            Dim::Dyn => write!(f, "_"),
         }
     }
 }
@@ -986,50 +993,50 @@ impl<'a> TypeEnv<'a> {
                             } else if discriminant(&expected) != discriminant(&ty.scalar) {
                                 return Err(TypeError::TypeMismatch(expected, ty.scalar));
                             }
-                        } else if let Some(shape) = mat.as_nat_list() {
+                        } else if let Some(dims) = mat.as_dims() {
                             // Shape checking
-                            let shape = crate::Shape::from(shape.as_slice());
-                            let dims = &ty.shape.dims;
+                            let val_dims = &ty.shape.dims;
                             let mismatch = !ty.shape.is_any()
                                 && match side {
                                     Some(SubSide::Left) => {
-                                        dims.iter().zip(&shape).all(|(a, b)| a == b)
+                                        val_dims.iter().zip(&dims).all(|(a, b)| a == b)
                                     }
                                     Some(SubSide::Right) => if let Some(suf) = &ty.shape.suffix {
                                         suf
                                     } else {
-                                        dims
+                                        val_dims
                                     }
                                     .iter()
                                     .rev()
-                                    .zip(shape.iter().rev())
+                                    .zip(dims.iter().rev())
                                     .all(|(a, b)| a == b),
                                     None => {
                                         if let Some(suf) = &ty.shape.suffix {
-                                            dims.len() + suf.len() > shape.len()
-                                                || !dims.iter().eq(shape.iter().take(dims.len()))
-                                                || !suf
-                                                    .iter()
-                                                    .rev()
-                                                    .eq(shape[dims.len()..].iter().rev())
+                                            val_dims.len() + suf.len() > dims.len()
+                                                || !(val_dims.iter())
+                                                    .eq(dims.iter().take(val_dims.len()))
+                                                || !(suf.iter().rev())
+                                                    .eq(dims[val_dims.len()..].iter().rev())
                                         } else {
-                                            !dims.iter().eq(&shape)
+                                            !val_dims.iter().eq(&dims)
                                         }
                                     }
                                 };
+                            let shape = match side {
+                                None => DynShape { dims, suffix: None },
+                                Some(SubSide::Left) => DynShape {
+                                    dims,
+                                    suffix: Some(Vec::new()),
+                                },
+                                Some(SubSide::Right) => DynShape {
+                                    dims: Vec::new(),
+                                    suffix: Some(dims),
+                                },
+                            };
                             if mismatch {
-                                return Err(TypeError::ShapeMismatch(side, shape, ty.shape));
+                                return Err(TypeError::ShapeMismatch(shape, ty.shape));
                             } else if ty.shape.is_any() {
-                                ty.shape = (&shape).into();
-                                if let Some(side) = side {
-                                    match side {
-                                        SubSide::Left => ty.shape.suffix = Some(Vec::new()),
-                                        SubSide::Right => swap(
-                                            &mut ty.shape.dims,
-                                            ty.shape.suffix.get_or_insert_default(),
-                                        ),
-                                    }
-                                }
+                                ty.shape = shape;
                                 *val = ty.clone().into();
                             }
                         }
@@ -1190,7 +1197,13 @@ pub(crate) fn pervade_dyn_shapes(a: DynShape, b: DynShape) -> Result<DynShape, T
         };
         shape.dims.push(new_dim);
     }
-    shape.suffix = a.suffix.xor(b.suffix);
+    shape.suffix = match (a.suffix, b.suffix) {
+        (None, None) => None,
+        (Some(suf), None) | (None, Some(suf)) => Some(suf),
+        (Some(a), Some(b)) if a.is_empty() => Some(b),
+        (Some(a), Some(b)) if b.is_empty() => Some(a),
+        (Some(_), Some(_)) => Some(Vec::new()),
+    };
     Ok(shape)
 }
 

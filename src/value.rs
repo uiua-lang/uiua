@@ -673,25 +673,33 @@ impl ScalarNum for Result<isize, bool> {
     }
 }
 
+impl ScalarNum for Option<usize> {
+    fn from_u8(u: u8) -> Result<Self, FromU8Error> {
+        Ok(Some(u as usize))
+    }
+    fn from_f64(f: f64) -> Result<Self, FromF64Error> {
+        if f.is_nan() {
+            Err(FromF64Error::NaN)
+        } else if f.is_infinite() {
+            Ok(None)
+        } else if f > usize::MAX as f64 {
+            Err(FromF64Error::TooHigh)
+        } else if f < usize::MIN as f64 {
+            Err(FromF64Error::TooLow)
+        } else if f.fract() != 0.0 {
+            Err(FromF64Error::NonInteger)
+        } else {
+            Ok(Some(f as usize))
+        }
+    }
+}
+
 impl ScalarNum for Option<isize> {
     fn from_u8(u: u8) -> Result<Self, FromU8Error> {
         Ok(Some(u as isize))
     }
     fn from_f64(f: f64) -> Result<Self, FromF64Error> {
         Result::<isize, bool>::from_f64(f).map(Result::ok)
-    }
-}
-
-impl ScalarNum for Option<usize> {
-    fn from_u8(u: u8) -> Result<Self, FromU8Error> {
-        Ok(Some(u as usize))
-    }
-    fn from_f64(f: f64) -> Result<Self, FromF64Error> {
-        if f == f64::INFINITY {
-            Ok(None)
-        } else {
-            usize::from_f64(f).map(Some)
-        }
     }
 }
 
@@ -782,6 +790,13 @@ impl Value {
         env: &Uiua,
         requirement: &'static str,
     ) -> UiuaResult<Vec<Result<isize, bool>>> {
+        self.as_number_list(env, requirement)
+    }
+    pub(crate) fn as_nats_or_infs(
+        &self,
+        env: &Uiua,
+        requirement: &'static str,
+    ) -> UiuaResult<Vec<Option<usize>>> {
         self.as_number_list(env, requirement)
     }
     /// Attempt to convert the array to a single boolean

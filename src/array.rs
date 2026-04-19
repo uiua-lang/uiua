@@ -1305,20 +1305,40 @@ impl ArrayCmp<u8> for f64 {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct FormatShape<'a, T = usize>(pub &'a [T]);
 
-impl<T: fmt::Display> fmt::Debug for FormatShape<'_, T> {
+impl<'a, T> fmt::Debug for FormatShape<'a, T>
+where
+    FormatShape<'a, T>: fmt::Display,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{self}")
     }
 }
 
-impl<T: fmt::Display> fmt::Display for FormatShape<'_, T> {
+impl fmt::Display for FormatShape<'_, usize> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[")?;
         for (i, dim) in self.0.iter().enumerate() {
             if i > 0 {
-                write!(f, " × ")?;
+                write!(f, "×")?;
             }
             write!(f, "{dim}")?;
+        }
+        write!(f, "]")
+    }
+}
+
+impl fmt::Display for FormatShape<'_, Option<usize>> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[")?;
+        for (i, dim) in self.0.iter().enumerate() {
+            if i > 0 {
+                write!(f, "×")?;
+            }
+            if let Some(dim) = dim {
+                write!(f, "{dim}")?;
+            } else {
+                write!(f, "_")?;
+            }
         }
         write!(f, "]")
     }

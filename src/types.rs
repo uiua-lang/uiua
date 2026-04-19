@@ -2,7 +2,7 @@
 
 use std::{
     borrow::Cow,
-    cmp::Ordering,
+    cmp::{Ordering, max_by},
     fmt,
     iter::repeat_n,
     mem::{discriminant, take},
@@ -13,8 +13,8 @@ use ecow::{EcoVec, eco_vec};
 use serde::*;
 
 use crate::{
-    ArrayCmp, ArrayValue, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node, Primitive,
-    Shape, SigNode, SubSide, Value, invert::InversionError,
+    Array, ArrayCmp, ArrayValue, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node,
+    Primitive, Shape, SigNode, SubSide, Value, invert::InversionError,
 };
 
 pub fn typecheck(
@@ -120,7 +120,7 @@ pub enum TypeVal {
 impl TypeVal {
     pub fn ty(self) -> Type {
         match self {
-            TypeVal::Num(_) => Scalar::Num.scalar(),
+            TypeVal::Num(_) => Scalar::Num.scalar_type(),
             TypeVal::NumList(list) => Scalar::Num.shaped(list.len()),
             TypeVal::Val(val) => Type::from(&val),
             TypeVal::Type(ty) => ty.clone(),
@@ -140,6 +140,58 @@ impl TypeVal {
             TypeVal::NumList(items) => Cow::Owned([items.len()].into()),
             TypeVal::Val(value) => Cow::Owned((&value.shape).into()),
             TypeVal::Type(ty) => Cow::Borrowed(&ty.shape),
+        }
+    }
+    pub fn scalar(&self) -> Scalar {
+        match self {
+            TypeVal::Num(_) | TypeVal::NumList(_) => Scalar::Num,
+            TypeVal::Val(val) => Scalar::from(val),
+            TypeVal::Type(ty) => ty.scalar.clone(),
+        }
+    }
+    pub fn set_scalar(&mut self, scalar: Scalar) {
+        if scalar.is_any() {
+            return;
+        }
+        match (self, scalar) {
+            (TypeVal::Num(_) | TypeVal::NumList(_), Scalar::Num) => {}
+            (TypeVal::Val(val), scalar) if Type::from(&*val).scalar == scalar => {}
+            (tv, scalar) => {
+                let mut ty = take(tv).ty();
+                ty.scalar = scalar;
+                *tv = ty.into();
+            }
+        }
+    }
+    pub fn set_shape(&mut self, shape: DynShape) {
+        let curr = self.shape();
+        if *curr == shape {
+            return;
+        }
+        let mut ty = take(self).ty();
+        ty.shape = shape;
+        *self = ty.into();
+    }
+    pub fn rank(&self) -> usize {
+        match self {
+            TypeVal::Num(_) => 0,
+            TypeVal::NumList(_) => 1,
+            TypeVal::Val(val) => val.rank(),
+            TypeVal::Type(ty) => ty.shape.rank(),
+        }
+    }
+    pub fn leading_rank(&self) -> usize {
+        match self {
+            TypeVal::Num(_) => 0,
+            TypeVal::NumList(_) => 1,
+            TypeVal::Val(val) => val.rank(),
+            TypeVal::Type(ty) => ty.shape.dims.len(),
+        }
+    }
+    pub fn suffix_rank(&self) -> Option<usize> {
+        match self {
+            TypeVal::Type(ty) => ty.shape.suffix.as_ref().map(|suf| suf.len()),
+            _ => None,
         }
     }
     pub fn into_row(self) -> Self {
@@ -234,6 +286,30 @@ impl TypeVal {
     }
     pub fn is_any(&self) -> bool {
         matches!(self, TypeVal::Type(ty) if ty.is_any())
+    }
+    pub fn reshape_scalar(&mut self, dim: Dim, suffix: bool) {
+        match (dim, suffix) {
+            (Dim::Static(n), false) => match self {
+                TypeVal::Num(x) => *self = eco_vec![*x; n].into(),
+                TypeVal::NumList(list) => {
+                    let mut val: Value = Value::from(take(list));
+                    val.reshape_scalar(Ok(n as isize), false, &()).unwrap();
+                    *self = val.into()
+                }
+                TypeVal::Val(val) => val.reshape_scalar(Ok(n as isize), false, &()).unwrap(),
+                TypeVal::Type(ty) => ty.shape.dims.insert(0, dim),
+            },
+            _ => {
+                let mut ty = take(self).ty();
+                if suffix {
+                    ty.shape.suffix.get_or_insert_default()
+                } else {
+                    &mut ty.shape.dims
+                }
+                .insert(0, dim);
+                *self = ty.into();
+            }
+        }
     }
 }
 
@@ -350,7 +426,7 @@ impl From<Scalar> for Type {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub struct Type {
     pub scalar: Scalar,
     pub shape: DynShape,
@@ -368,7 +444,7 @@ impl Type {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub enum Scalar {
     #[default]
     Any,
@@ -381,13 +457,34 @@ impl Scalar {
     pub fn is_any(&self) -> bool {
         matches!(self, Scalar::Any)
     }
-    pub fn scalar(self) -> Type {
+    pub fn is_box(&self) -> bool {
+        matches!(self, Scalar::Box(_))
+    }
+    pub fn scalar_type(self) -> Type {
         self.shaped([0usize; 0])
+    }
+    pub fn maybe_scalar_type(self) -> Option<Type> {
+        if self.is_any() {
+            None
+        } else {
+            Some(self.scalar_type())
+        }
     }
     pub fn shaped(self, shape: impl Into<DynShape>) -> Type {
         Type {
             scalar: self,
             shape: shape.into(),
+        }
+    }
+    pub fn compatible_with(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Scalar::Any, _)
+            | (_, Scalar::Any)
+            | (Scalar::Num, Scalar::Num)
+            | (Scalar::Char, Scalar::Char)
+            | (Scalar::Complex, Scalar::Complex)
+            | (Scalar::Box(_), Scalar::Box(_)) => true,
+            _ => false,
         }
     }
 }
@@ -454,6 +551,9 @@ impl DynShape {
     pub fn row_count(&self) -> Dim {
         self.dims.first().copied().unwrap_or(Dim::Static(1))
     }
+    pub fn rank(&self) -> usize {
+        self.dims.len() + self.suffix.as_ref().map_or(0, |s| s.len())
+    }
     pub fn is_any(&self) -> bool {
         self.dims.is_empty() && self.suffix.as_ref().is_some_and(|s| s.is_empty())
     }
@@ -472,6 +572,14 @@ impl DynShape {
             row.dims.remove(0);
         }
         row
+    }
+    pub fn compatible_with(&self, other: &Self) -> bool {
+        self.dims.len() == other.dims.len()
+            && self
+                .dims
+                .iter()
+                .zip(&other.dims)
+                .all(|(a, b)| Dim::row_compatible(*a, *b))
     }
 }
 
@@ -510,6 +618,14 @@ impl Dim {
         match (self, other) {
             (Dim::Dyn | Dim::Static(1), _) | (_, Dim::Dyn | Dim::Static(1)) => true,
             (Dim::Static(a), Dim::Static(b)) => a == b,
+        }
+    }
+    pub fn cmp_defined(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Dim::Static(_), Dim::Dyn) => Ordering::Greater,
+            (Dim::Dyn, Dim::Static(_)) => Ordering::Less,
+            (Dim::Dyn, Dim::Dyn) => Ordering::Equal,
+            (Dim::Static(a), Dim::Static(b)) => a.cmp(b),
         }
     }
 }
@@ -823,7 +939,7 @@ impl<'a> TypeEnv<'a> {
                 )?,
                 Shape => self.monadic(
                     |ty| Ok(ty.shape),
-                    |_| Ok(Scalar::Num.scalar()),
+                    |_| Ok(Scalar::Num.scalar_type()),
                     |list| Ok(Scalar::Num.shaped([list.len()])),
                     |_| None,
                 )?,
@@ -858,6 +974,7 @@ impl<'a> TypeEnv<'a> {
                         Some(val)
                     },
                 )?,
+                Couple => self.pack(2, false, true, Some(Couple))?,
                 _ => return Err(TypeError::Unsupported(Some(prim.format().to_string()))),
             },
             ImplPrim(prim, _) => match prim {
@@ -1064,6 +1181,17 @@ impl<'a> TypeEnv<'a> {
             &Unpack {
                 count, unbox, prim, ..
             } => self.unpack(count, unbox, prim)?,
+            Array {
+                len,
+                inner,
+                boxed,
+                allow_ext,
+                prim,
+                ..
+            } => {
+                self.node(inner)?;
+                self.pack(*len, *boxed, *allow_ext, *prim)?;
+            }
             _ => return Err(TypeError::Unsupported(None)),
         }
         Ok(())
@@ -1139,6 +1267,133 @@ impl<'a> TypeEnv<'a> {
             (TypeVal::Num(a), TypeVal::Num(b)) => num(a, b)?.into(),
             (a, b) => f(a.ty(), b.ty())?.into(),
         });
+        Ok(())
+    }
+    fn pack(
+        &mut self,
+        n: usize,
+        bx: bool,
+        allow_ext: bool,
+        prim: Option<Primitive>,
+    ) -> Result<(), TypeError> {
+        if n == 0 {
+            self.push(if bx {
+                Array::<Boxed>::default().into()
+            } else {
+                Value::default()
+            });
+            return Ok(());
+        }
+        let mut tvs = self.pop_n(n)?;
+        if bx {
+            // Box
+            for tv in &mut tvs {
+                *tv = take(tv).boxed();
+            }
+        } else {
+            // Coerce anys and boxes
+            for i in 0..tvs.len().saturating_sub(1) {
+                let [a, b] = tvs.get_disjoint_mut([i, i + 1]).unwrap();
+                if a.scalar().is_any() {
+                    a.set_scalar(b.scalar())
+                }
+                if b.scalar().is_any() {
+                    b.set_scalar(a.scalar())
+                }
+                if a.scalar().is_box() && !b.scalar().is_box() {
+                    b.set_scalar(Scalar::Box(b.scalar().maybe_scalar_type().map(Box::new)));
+                } else if !a.scalar().is_box() && b.scalar().is_box() {
+                    a.set_scalar(Scalar::Box(a.scalar().maybe_scalar_type().map(Box::new)));
+                }
+            }
+        }
+        // Extend
+        if allow_ext {
+            let max_rank = tvs.iter().map(TypeVal::rank).max().unwrap();
+            let max_shape = tvs.iter().find(|tv| tv.rank() == max_rank).unwrap().shape();
+            let dims: Vec<(Dim, bool)> = (max_shape.dims.iter().map(|&d| (d, false)))
+                .chain((max_shape.suffix.as_ref().into_iter().flatten()).map(|&d| (d, true)))
+                .collect();
+            for tv in &mut tvs {
+                while tv.rank() < max_rank {
+                    let (dim, suffix) = dims[max_rank - tv.rank() - 1];
+                    tv.reshape_scalar(dim, suffix);
+                }
+            }
+        }
+        for win in tvs.windows(2) {
+            let [a, b] = win else { unreachable!() };
+            if !a.shape().compatible_with(&b.shape()) {
+                return Err(if let Some(prim) = prim {
+                    format!(
+                        "Cannot {} arrays with shapes {} and {}",
+                        prim.format(),
+                        a.shape(),
+                        b.shape()
+                    )
+                } else {
+                    format!(
+                        "Cannot combine arrays with shapes {} and {}",
+                        a.shape(),
+                        b.shape()
+                    )
+                }
+                .into());
+            }
+            if !a.scalar().compatible_with(&b.scalar()) {
+                return Err(if let Some(prim) = prim {
+                    format!(
+                        "Cannot {} {} array with {} array",
+                        prim.format(),
+                        a.scalar(),
+                        b.scalar()
+                    )
+                } else {
+                    format!(
+                        "Cannot combine {} array with {} array",
+                        a.scalar(),
+                        b.scalar()
+                    )
+                }
+                .into());
+            }
+        }
+        let scalar = tvs.iter().map(|tv| tv.scalar()).max().unwrap();
+        // Remove remove overdefined dims
+        let min_leading_rank = tvs.iter().map(TypeVal::leading_rank).min().unwrap();
+        let mut dims = vec![Dim::Dyn; min_leading_rank];
+        let mut suffix = None;
+        for tv in &mut tvs {
+            let mut shape = tv.shape().into_owned();
+            if shape.dims.len() > min_leading_rank {
+                shape.dims.truncate(min_leading_rank);
+                shape.suffix.get_or_insert_default();
+                for (a, b) in dims.iter_mut().zip(&shape.dims) {
+                    *a = max_by(*a, *b, Dim::cmp_defined);
+                }
+            }
+        }
+        let max_suffix_rank = tvs.iter().map(TypeVal::suffix_rank).max().unwrap();
+        if max_suffix_rank.is_some() {
+            let min_suffix_rank = (tvs.iter())
+                .map(|tv| tv.suffix_rank().unwrap_or(0))
+                .min()
+                .unwrap();
+            let suffix = suffix.get_or_insert_with(|| vec![Dim::Dyn; min_suffix_rank]);
+            for tv in tvs {
+                let mut shape = tv.shape().into_owned();
+                let this_suf = shape.suffix.get_or_insert_default();
+                let mid = this_suf.len().min(min_suffix_rank);
+                this_suf.rotate_right(mid);
+                this_suf.truncate(min_suffix_rank);
+                for (a, b) in suffix.iter_mut().rev().zip(this_suf.iter().rev()) {
+                    *a = max_by(*a, *b, Dim::cmp_defined);
+                }
+            }
+        }
+        dims.insert(0, Dim::Static(n));
+        let shape = DynShape { dims, suffix };
+        self.push(Type { scalar, shape });
         Ok(())
     }
     fn unpack(&mut self, n: usize, unbox: bool, prim: Option<Primitive>) -> Result<(), TypeError> {

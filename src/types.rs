@@ -17,17 +17,22 @@ use crate::{
     Shape, SigNode, SubSide, Value, invert::InversionError,
 };
 
-pub fn typecheck(sn: &SigNode, asm: &Assembly) -> Result<Vec<TypeVal>, (TypeError, usize)> {
+pub fn typecheck(
+    sn: &SigNode,
+    asm: &Assembly,
+) -> Result<(Vec<TypeVal>, Vec<TypeVal>), (TypeError, usize)> {
     let mut env = TypeEnv {
         asm,
         stack: vec![TypeVal::default(); sn.sig.args()],
         under_stack: Vec::new(),
         call_stack: Vec::new(),
+        arg_types: vec![TypeVal::default(); sn.sig.args()],
     };
     env.sig_node(sn)
         .map(|()| {
             env.stack.reverse();
-            take(&mut env.stack)
+            env.arg_types.reverse();
+            (take(&mut env.arg_types), take(&mut env.stack))
         })
         .map_err(|e| (e, env.call_stack.pop().unwrap_or(0)))
 }
@@ -37,6 +42,7 @@ pub struct TypeEnv<'a> {
     stack: Vec<TypeVal>,
     under_stack: Vec<TypeVal>,
     call_stack: Vec<usize>,
+    arg_types: Vec<TypeVal>,
 }
 
 impl<'a> HasStack for TypeEnv<'a> {
@@ -229,6 +235,9 @@ impl TypeVal {
             _ => return None,
         })
     }
+    pub fn is_any(&self) -> bool {
+        matches!(self, TypeVal::Type(ty) if ty.is_any())
+    }
 }
 
 impl Default for TypeVal {
@@ -345,6 +354,9 @@ pub struct Type {
 }
 
 impl Type {
+    pub fn is_any(&self) -> bool {
+        self.scalar.is_any() && self.shape.is_any()
+    }
     pub fn into_row(self) -> Self {
         Type {
             scalar: self.scalar,
@@ -363,6 +375,9 @@ pub enum Scalar {
     Complex,
 }
 impl Scalar {
+    pub fn is_any(&self) -> bool {
+        matches!(self, Scalar::Any)
+    }
     pub fn scalar(self) -> Type {
         self.shaped([0usize; 0])
     }
@@ -522,6 +537,9 @@ impl fmt::Display for Dim {
 
 impl fmt::Display for DynShape {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_any() {
+            return write!(f, "…");
+        }
         for (i, dim) in self.dims.iter().enumerate() {
             if i > 0 {
                 write!(f, "×")?;
@@ -543,7 +561,9 @@ impl fmt::Display for DynShape {
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.shape.is_scalar() {
+        if self.is_any() {
+            write!(f, "…*")
+        } else if self.shape.is_scalar() {
             write!(f, "{}", self.scalar)
         } else {
             write!(f, "[{} {}]", self.shape, self.scalar)
@@ -682,6 +702,25 @@ impl<'a> Exec<&SigNode> for TypeEnv<'a> {
 }
 
 impl<'a> TypeEnv<'a> {
+    fn update_arg_types(&mut self) {
+        if self.stack.len() != self.arg_types.len() {
+            return;
+        }
+        for (tv, arg) in self.stack.iter().zip(&mut self.arg_types) {
+            if let TypeVal::Type(arg_ty) = arg {
+                if let TypeVal::Type(ty) = tv {
+                    if arg_ty.scalar.is_any() {
+                        arg_ty.scalar = ty.scalar.clone();
+                    }
+                    if arg_ty.shape.is_any() {
+                        arg_ty.shape = ty.shape.clone();
+                    }
+                } else if arg_ty.is_any() {
+                    *arg = tv.clone();
+                }
+            }
+        }
+    }
     fn sig_node(&mut self, sn: &SigNode) -> Result<(), TypeError> {
         let stack_height = self.stack_len();
         match self.node(&sn.node) {
@@ -923,6 +962,7 @@ impl<'a> TypeEnv<'a> {
                             }
                         }
                     }
+                    self.update_arg_types();
                 }
                 _ => return Err(TypeError::Unsupported(Some(format!("{prim:?}")))),
             },

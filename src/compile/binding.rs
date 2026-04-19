@@ -34,7 +34,7 @@ impl Compiler {
             comment,
             deprecation: prelude.deprecation,
             counts: Some(binding.counts),
-            output_types: None,
+            types: None,
             external: prelude.external,
         };
 
@@ -91,7 +91,7 @@ impl Compiler {
                         comment: Some(comment),
                         counts: old_meta.counts.or(meta.counts),
                         deprecation: meta.deprecation.or(old_meta.deprecation),
-                        output_types: old_meta.output_types,
+                        types: old_meta.types,
                         external: old_meta.external || meta.external,
                     };
                     let local = LocalIndex {
@@ -514,8 +514,11 @@ impl Compiler {
                     // Binding is a normal function
                     let sn = SigNode::new(sig, node);
                     match typecheck(&sn, &self.asm) {
-                        Ok(output_types) => {
-                            meta.output_types = Some(output_types.into_iter().collect())
+                        Ok((arg_types, output_types)) => {
+                            meta.types = Some((
+                                arg_types.into_iter().collect(),
+                                output_types.into_iter().collect(),
+                            ))
                         }
                         Err((e, span)) => {
                             self.emit_diagnostic(

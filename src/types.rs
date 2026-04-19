@@ -306,6 +306,12 @@ impl From<f64> for TypeVal {
     }
 }
 
+impl From<EcoVec<f64>> for TypeVal {
+    fn from(list: EcoVec<f64>) -> Self {
+        TypeVal::NumList(list)
+    }
+}
+
 impl From<Complex> for TypeVal {
     fn from(_: Complex) -> Self {
         Scalar::Complex.into()
@@ -547,7 +553,9 @@ impl fmt::Display for DynShape {
             write!(f, "{dim}")?;
         }
         if let Some(suffix) = &self.suffix {
-            if !self.dims.is_empty() {
+            if self.dims.is_empty() {
+                write!(f, "…")?;
+            } else {
                 write!(f, "×…")?;
             }
             for dim in suffix {
@@ -563,6 +571,8 @@ impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_any() {
             write!(f, "…*")
+        } else if self.scalar.is_any() {
+            write!(f, "[{}]", self.shape)
         } else if self.shape.is_scalar() {
             write!(f, "{}", self.scalar)
         } else {
@@ -760,7 +770,10 @@ impl<'a> TypeEnv<'a> {
                     self.node(node)?;
                 }
             }
-            Call(f, _) => self.node(&self.asm[f])?,
+            Call(f, _) => {
+                let sn = SigNode::new(f.sig, self.asm[f].clone());
+                self.sig_node(&sn)?
+            }
             Push(val) => self.push(TypeVal::Val(val.clone())),
             Prim(prim, _) => match prim {
                 Identity => _ = self.require_height(1)?,
@@ -799,11 +812,13 @@ impl<'a> TypeEnv<'a> {
                     |ty| Ok(ty.shape.row_count()),
                     |_| Ok(1u8),
                     |list| Ok(list.len()),
+                    |_| None,
                 )?,
                 Shape => self.monadic(
                     |ty| Ok(ty.shape),
                     |_| Ok(Scalar::Num.scalar()),
                     |list| Ok(Scalar::Num.shaped([list.len()])),
+                    |_| None,
                 )?,
                 Fix => self.top_mut(1)?.prepend_dim(1.into()),
                 Box => {
@@ -814,6 +829,28 @@ impl<'a> TypeEnv<'a> {
                     let x = self.pop(1)?;
                     self.push(x.into_row());
                 }
+                Transpose => self.monadic(
+                    |mut ty| {
+                        if let Some(suf) = &mut ty.shape.suffix {
+                            if ty.shape.dims.is_empty() {
+                                let mid = suf.len().min(1);
+                                suf.rotate_left(mid);
+                            } else {
+                                suf.push(ty.shape.dims.remove(0));
+                            }
+                        } else {
+                            let mid = ty.shape.dims.len().min(1);
+                            ty.shape.dims.rotate_left(mid);
+                        }
+                        Ok(ty)
+                    },
+                    Ok,
+                    Ok,
+                    |mut val| {
+                        val.transpose();
+                        Some(val)
+                    },
+                )?,
                 _ => return Err(TypeError::Unsupported(Some(prim.format().to_string()))),
             },
             ImplPrim(prim, _) => match prim {
@@ -843,6 +880,41 @@ impl<'a> TypeEnv<'a> {
                     self.push(x.unboxed());
                 }
                 UnCouple => self.unpack(2, false, Some(Couple))?,
+                &TransposeN(amnt) => self.monadic(
+                    |mut ty| {
+                        let abs_amnt = amnt.unsigned_abs() as usize;
+                        if let Some(suf) = &mut ty.shape.suffix {
+                            if amnt >= 0 {
+                                if ty.shape.dims.is_empty() {
+                                    let mid = suf.len().min(abs_amnt);
+                                    suf.rotate_left(mid);
+                                } else {
+                                    suf.push(ty.shape.dims.remove(0));
+                                }
+                            } else {
+                                if let Some(dim) = suf.pop() {
+                                    ty.shape.dims.insert(0, dim);
+                                } else {
+                                    ty.shape = DynShape::any();
+                                }
+                            }
+                        } else {
+                            let mid = ty.shape.dims.len().min(abs_amnt);
+                            if amnt >= 0 {
+                                ty.shape.dims.rotate_left(mid);
+                            } else {
+                                ty.shape.dims.rotate_right(mid);
+                            }
+                        }
+                        Ok(ty)
+                    },
+                    Ok,
+                    Ok,
+                    |mut val| {
+                        val.transpose_depth(0, amnt);
+                        Some(val)
+                    },
+                )?,
                 _ => return Err(TypeError::Unsupported(Some(format!("{prim:?}")))),
             },
             Mod(prim, ops, _) => match prim {
@@ -1008,6 +1080,7 @@ impl<'a> TypeEnv<'a> {
                 }
                 Ok(TypeVal::NumList(ns))
             },
+            |_| None,
         )
     }
     fn dyadic_pervasive<N: Into<TypeVal>>(
@@ -1030,12 +1103,21 @@ impl<'a> TypeEnv<'a> {
         f: impl Fn(Type) -> Result<T, TypeError>,
         num: impl Fn(f64) -> Result<N, TypeError>,
         list: impl Fn(EcoVec<f64>) -> Result<L, TypeError>,
+        val: impl Fn(Value) -> Option<Value>,
     ) -> Result<(), TypeError> {
         let x = self.pop(1)?;
         self.push(match x {
             TypeVal::Num(n) => num(n)?.into(),
             TypeVal::NumList(ns) => list(ns)?.into(),
-            tv => f(tv.ty())?.into(),
+            TypeVal::Val(v) => {
+                let ty = Type::from(&v);
+                if let Some(v) = val(v) {
+                    TypeVal::Val(v)
+                } else {
+                    f(ty)?.into()
+                }
+            }
+            TypeVal::Type(ty) => f(ty)?.into(),
         });
         Ok(())
     }

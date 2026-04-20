@@ -2,7 +2,7 @@
 
 use std::{
     borrow::Cow,
-    cmp::{Ordering, max_by},
+    cmp::Ordering,
     fmt,
     iter::repeat_n,
     mem::{discriminant, take},
@@ -1359,36 +1359,32 @@ impl<'a> TypeEnv<'a> {
             }
         }
         let scalar = tvs.iter().map(|tv| tv.scalar()).max().unwrap();
-        // Remove remove overdefined dims
-        let min_leading_rank = tvs.iter().map(TypeVal::leading_rank).min().unwrap();
-        let mut dims = vec![Dim::Dyn; min_leading_rank];
-        let mut suffix = None;
-        for tv in &mut tvs {
-            let mut shape = tv.shape().into_owned();
-            if shape.dims.len() > min_leading_rank {
-                shape.dims.truncate(min_leading_rank);
-                shape.suffix.get_or_insert_default();
-                for (a, b) in dims.iter_mut().zip(&shape.dims) {
-                    *a = max_by(*a, *b, Dim::cmp_defined);
-                }
-            }
+        // Figure out shape
+        let mut dims = Vec::new();
+        for i in 0.. {
+            let Some(d) = tvs
+                .iter()
+                .filter_map(|tv| tv.shape().dims.get(i).copied())
+                .max_by(|a, b| a.cmp_defined(b))
+            else {
+                break;
+            };
+            dims.push(d)
         }
-        let max_suffix_rank = tvs.iter().map(TypeVal::suffix_rank).max().unwrap();
-        if max_suffix_rank.is_some() {
-            let min_suffix_rank = (tvs.iter())
-                .map(|tv| tv.suffix_rank().unwrap_or(0))
-                .min()
-                .unwrap();
-            let suffix = suffix.get_or_insert_with(|| vec![Dim::Dyn; min_suffix_rank]);
-            for tv in tvs {
-                let mut shape = tv.shape().into_owned();
-                let this_suf = shape.suffix.get_or_insert_default();
-                let mid = this_suf.len().min(min_suffix_rank);
-                this_suf.rotate_right(mid);
-                this_suf.truncate(min_suffix_rank);
-                for (a, b) in suffix.iter_mut().rev().zip(this_suf.iter().rev()) {
-                    *a = max_by(*a, *b, Dim::cmp_defined);
-                }
+        let mut suffix = None;
+        if tvs.iter().any(|tv| tv.suffix_rank().is_some()) {
+            let suffix = suffix.get_or_insert_with(Vec::new);
+            for i in 0.. {
+                let Some(d) = tvs
+                    .iter()
+                    .filter_map(|tv| tv.shape().into_owned().suffix)
+                    .filter(|suf| suf.len() > i)
+                    .filter_map(|suf| suf.get(suf.len() - 1 - i).copied())
+                    .max_by(|a, b| a.cmp_defined(b))
+                else {
+                    break;
+                };
+                suffix.insert(0, d);
             }
         }
         dims.insert(0, Dim::Static(n));

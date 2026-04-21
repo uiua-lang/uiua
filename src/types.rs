@@ -981,6 +981,13 @@ impl<'a> TypeEnv<'a> {
                     },
                 )?,
                 Couple => self.pack(2, false, true, Some(Couple))?,
+                // TODO (descending priority):
+                // - range, deshape, reshape, sort, rise, fall, reverse
+                // - pick, select, take, drop
+                // - keep, rotate, where, match
+                // - parse, bits, base, memberof, indexin, random
+                // - classify, occurences, deduplicate find, mask, orient
+                // - system functions
                 _ => return Err(TypeError::Unsupported(Some(prim.format().to_string()))),
             },
             ImplPrim(prim, _) => match prim {
@@ -1328,6 +1335,12 @@ impl<'a> TypeEnv<'a> {
         self.push(match x {
             TypeVal::Num(n) => num(n)?.into(),
             TypeVal::NumList(ns) => list(ns)?.into(),
+            TypeVal::Val(Value::Num(arr)) if arr.rank() == 0 => num(arr.data[0])?.into(),
+            TypeVal::Val(Value::Byte(arr)) if arr.rank() == 0 => num(arr.data[0] as f64)?.into(),
+            TypeVal::Val(Value::Num(arr)) if arr.rank() == 1 => list(arr.data.into())?.into(),
+            TypeVal::Val(Value::Byte(arr)) if arr.rank() == 1 => {
+                list(arr.data.into_iter().map(Into::into).collect())?.into()
+            }
             TypeVal::Val(v) => {
                 let ty = Type::from(&v);
                 if let Some(v) = val(v) {

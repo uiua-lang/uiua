@@ -5,7 +5,7 @@ use std::{
     cmp::Ordering,
     fmt,
     iter::repeat_n,
-    mem::{discriminant, take},
+    mem::{discriminant, swap, take},
     ops::BitOr,
 };
 
@@ -14,7 +14,7 @@ use serde::*;
 
 use crate::{
     Array, ArrayCmp, ArrayValue, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node,
-    Primitive, Shape, SigNode, SubSide, Value, invert::InversionError,
+    PrimClass, Primitive, Shape, SigNode, SubSide, Value, invert::InversionError,
 };
 
 pub fn typecheck(
@@ -1039,6 +1039,22 @@ impl<'a> TypeEnv<'a> {
                         Some(val)
                     },
                 )?,
+                Retropose => self.monadic(
+                    |mut ty| {
+                        ty.shape.dims.reverse();
+                        if let Some(suf) = &mut ty.shape.suffix {
+                            suf.reverse();
+                            swap(&mut ty.shape.dims, suf);
+                        }
+                        Ok(ty)
+                    },
+                    Ok,
+                    Ok,
+                    |mut val| {
+                        val.retropose_depth(0);
+                        Some(val)
+                    },
+                )?,
                 _ => return Err(TypeError::Unsupported(Some(format!("{prim:?}")))),
             },
             Mod(prim, ops, _) => match prim {
@@ -1078,6 +1094,50 @@ impl<'a> TypeEnv<'a> {
                         for output in self.top_n_mut(outputs)? {
                             output.prepend_dim(row_count);
                         }
+                    }
+                }
+                Reduce => {
+                    let f = monad(ops);
+                    if f.sig.args() != 2 {
+                        return Err(TypeError::Unsupported(None));
+                    }
+                    let mut xs = self.pop(1)?;
+                    if xs.row_count() == 2 {
+                        self.push(xs);
+                        self.unpack(2, false, None)?;
+                        return self.sig_node(f);
+                    }
+                    if let Some((prim, _)) = f.node.as_flipped_primitive()
+                        && prim.class() == PrimClass::DyadicPervasive
+                    {
+                        let mut shape = xs.shape().into_owned();
+                        if shape.dims.is_empty() {
+                            if shape.suffix.is_some() {
+                                shape = DynShape::any();
+                            }
+                        } else {
+                            shape.dims.remove(0);
+                        }
+                        xs.set_shape(shape);
+                        self.push(xs);
+                    } else if let Some(Node::Prim(Primitive::Join, _)) = f.node.last() {
+                        let mut shape = xs.shape().into_owned();
+                        if shape.dims.len() <= 1 {
+                            if shape.suffix.is_some() {
+                                shape = DynShape::any();
+                            }
+                        } else {
+                            let first = shape.dims.remove(0);
+                            match (&mut shape.dims[0], first) {
+                                (Dim::Static(a), Dim::Static(b)) => *a *= b,
+                                (a @ Dim::Static(_), Dim::Dyn) => *a = Dim::Dyn,
+                                _ => {}
+                            }
+                        }
+                        xs.set_shape(shape);
+                        self.push(xs);
+                    } else {
+                        return Err(TypeError::Unsupported(None));
                     }
                 }
                 _ => return Err(TypeError::Unsupported(Some(prim.format().to_string()))),
@@ -1159,6 +1219,19 @@ impl<'a> TypeEnv<'a> {
                         }
                     }
                     self.update_arg_types();
+                }
+                FixMatchRanks => {
+                    let f = monad(ops);
+                    let n = f.sig.args();
+                    let max_rank = self.top_n(n)?.map(|tv| tv.rank()).max().unwrap_or(0);
+                    for tv in self.top_n_mut(n)? {
+                        if tv.rank() == 0 {
+                            continue;
+                        }
+                        while tv.rank() < max_rank {
+                            tv.prepend_dim(1.into());
+                        }
+                    }
                 }
                 _ => return Err(TypeError::Unsupported(Some(format!("{prim:?}")))),
             },

@@ -1,14 +1,11 @@
 # Uiua Todo
 
 # 0.19
-- Paths in signature comments
+- `match` subscripts
 - Macro signature comments
 - Data def method to construct with validators but not defaults/initializers
 - Optimize `rows match`
-- Case packs for pattern matching?
 - Improve GA API
-- Best-effort compile-time type/shape checking
-  - Generic stack container to deduplicate implementations
 - `first group/partition` optimization
 - `under group/partition inventory` optimization
 

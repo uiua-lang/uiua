@@ -433,6 +433,12 @@ pub struct Type {
 }
 
 impl Type {
+    pub fn new(scalar: impl Into<Scalar>, shape: impl Into<DynShape>) -> Self {
+        Type {
+            scalar: scalar.into(),
+            shape: shape.into(),
+        }
+    }
     pub fn is_any(&self) -> bool {
         self.scalar.is_any() && self.shape.is_any()
     }
@@ -1232,6 +1238,7 @@ impl<'a> TypeEnv<'a> {
                             tv.prepend_dim(1.into());
                         }
                     }
+                    self.sig_node(f)?;
                 }
                 _ => return Err(TypeError::Unsupported(Some(format!("{prim:?}")))),
             },
@@ -1250,7 +1257,7 @@ impl<'a> TypeEnv<'a> {
             &PopUnder(n, _) => self.stack.extend(self.under_stack.pop_n(n)?),
             NoInline(node) => self.node(node)?,
             TrackCaller(sn) => self.exec(&**sn)?,
-            SetOutputComment { .. } => {}
+            Label(..) | RemoveLabel(..) | SetOutputComment { .. } => {}
             &Unpack {
                 count, unbox, prim, ..
             } => self.unpack(count, unbox, prim)?,
@@ -1264,6 +1271,10 @@ impl<'a> TypeEnv<'a> {
             } => {
                 self.node(inner)?;
                 self.pack(*len, *boxed, *allow_ext, *prim)?;
+            }
+            Format(parts, _) => {
+                self.pop_n(parts.len().saturating_sub(1))?;
+                self.push(self::Type::new(Scalar::Char, [Dim::Dyn]));
             }
             _ => return Err(TypeError::Unsupported(None)),
         }

@@ -14,7 +14,7 @@ use serde::*;
 
 use crate::{
     Array, ArrayCmp, ArrayValue, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node,
-    PrimClass, Primitive, Shape, SigNode, SubSide, Value, invert::InversionError,
+    PrimClass, Primitive, Shape, SigNode, SubSide, SysOp, Value, invert::InversionError,
 };
 
 pub fn typecheck(
@@ -447,6 +447,10 @@ impl Type {
             scalar: self.scalar,
             shape: self.shape.into_row(),
         }
+    }
+    pub fn is_string(&self) -> bool {
+        self.shape.rank() <= 1 && self.scalar.compatible_with(&Scalar::Char)
+            || self.shape.rank() == 0 && self.scalar.compatible_with(&Scalar::Box(None))
     }
 }
 
@@ -1299,12 +1303,38 @@ impl<'a> TypeEnv<'a> {
                     )?;
                     self.update_arg_types();
                 }
+                Rand => self.push(Scalar::Num.scalar_type()),
                 // TODO (descending priority):
                 // - pick, drop
                 // - keep, rotate, where
-                // - parse, bits, base, memberof, indexin, random
-                // - classify, occurences, deduplicate find, mask, orient
+                // - parse, bits, base, memberof, indexin
+                // - classify, occurences, deduplicate, find, mask, orient
                 // - system functions
+                Sys(SysOp::FReadAllStr | SysOp::FReadAllBytes) => {
+                    let path = self.pop(1)?.ty();
+                    if !path.is_string() {
+                        return Err(format!(
+                            "{}'s path must be a string, but it is {path}",
+                            prim.format()
+                        )
+                        .into());
+                    }
+                    let scalar = if *prim == Sys(SysOp::FReadAllBytes) {
+                        Scalar::Num
+                    } else {
+                        Scalar::Char
+                    };
+                    self.push(Type::new(scalar, [Dim::Dyn]));
+                }
+                Sys(SysOp::ReadBytes | SysOp::ReadStr) => {
+                    let _path = self.pop(1)?;
+                    let scalar = if *prim == Sys(SysOp::ReadBytes) {
+                        Scalar::Num
+                    } else {
+                        Scalar::Char
+                    };
+                    self.push(Type::new(scalar, [Dim::Dyn]));
+                }
                 _ => return Err(TypeError::Unsupported(Some(prim.format().to_string()))),
             },
             ImplPrim(prim, _) => match prim {
@@ -1398,6 +1428,10 @@ impl<'a> TypeEnv<'a> {
                         Some(val)
                     },
                 )?,
+                RandomRow => {
+                    let x = self.pop(1)?;
+                    self.push(x.into_row());
+                }
                 _ => return Err(TypeError::Unsupported(Some(format!("{prim:?}")))),
             },
             Mod(prim, ops, _) => match prim {

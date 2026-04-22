@@ -2838,6 +2838,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "hdf5-pure"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "772af903b1f10f041af4ab6daa4959c1451f72146931653236571ee699e3aaee"
+dependencies = [
+ "byteorder",
+ "flate2",
+]
+
+[[package]]
 name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6720,6 +6730,7 @@ dependencies = [
  "enum-iterator",
  "flate2",
  "gif 0.13.3",
+ "hdf5-pure",
  "highway",
  "hodaun",
  "hound",

@@ -301,6 +301,12 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         }
         Primitive::Hsv => env.monadic_env(Value::rgb_to_hsv)?,
         Primitive::Oklch => env.monadic_env(Value::rgb_to_oklch)?,
+        Primitive::Hdf5 => {
+            let bytes = env.pop(1)?;
+            let bytes = bytes.as_bytes(env, "hdf,5 expects bytes")?;
+            let val = Value::from_hdf5_bytes(&bytes, env)?;
+            env.push(val);
+        }
         Primitive::Json => env.monadic_ref_env(Value::to_json_string)?,
         Primitive::Binary => env.monadic_ref_env(Value::to_binary)?,
         Primitive::Compress => {

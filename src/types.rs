@@ -1230,8 +1230,77 @@ impl<'a> TypeEnv<'a> {
                         }
                     },
                 )?,
+                Take => {
+                    self.dyadic(
+                        |amnt, mut ty| {
+                            if !amnt.scalar.compatible_with(&Scalar::Num) {
+                                return Err(format!(
+                                    "Cannot {} with {} amount",
+                                    Take.format(),
+                                    amnt.scalar
+                                )
+                                .into());
+                            }
+                            if amnt.shape.dims.len() > 1 {
+                                return Err(format!(
+                                    "Cannot {} amount of shape {}",
+                                    Take.format(),
+                                    amnt.shape
+                                )
+                                .into());
+                            }
+                            if amnt.shape.suffix.is_some() {
+                                return Err(TypeError::Unsupported(None));
+                            }
+                            if amnt.shape.dims.is_empty() {
+                                return Ok(ty);
+                            }
+                            let n = amnt.shape.dims[0];
+                            match (n, ty.shape.row_count()) {
+                                (Dim::Static(n), Dim::Static(r)) if n > r => {
+                                    return Err(format!(
+                                        "Cannot take {n} rows from array with shape {}",
+                                        ty.shape
+                                    )
+                                    .into());
+                                }
+                                (Dim::Static(n), _) => ty.shape.dims[0] = Dim::Static(n),
+                                _ => ty.shape.dims[0] = Dim::Dyn,
+                            }
+                            Ok(ty)
+                        },
+                        |n, mut ty| {
+                            if !n.is_infinite() {
+                                ty = ty.into_row();
+                                ty.shape.dims.insert(0, Dim::Static(n.abs() as usize));
+                            }
+                            Ok(ty)
+                        },
+                        |list, mut ty| {
+                            if list.iter().any(|n| n.is_infinite()) {
+                                ty.shape = DynShape::any();
+                            } else {
+                                for _ in 0..list.len() {
+                                    ty = ty.into_row();
+                                }
+                                for n in list.into_iter().rev() {
+                                    ty.shape.dims.insert(0, Dim::Static(n.abs() as usize));
+                                }
+                            }
+                            Ok(ty)
+                        },
+                        |n, x| {
+                            Ok::<TypeVal, _>(match n {
+                                0.0 => Value::default().into(),
+                                1.0 => Value::from([x]).into(),
+                                n => Type::new(Scalar::Num, [n.abs() as usize]).into(),
+                            })
+                        },
+                    )?;
+                    self.update_arg_types();
+                }
                 // TODO (descending priority):
-                // - pick, take, drop
+                // - pick, drop
                 // - keep, rotate, where
                 // - parse, bits, base, memberof, indexin, random
                 // - classify, occurences, deduplicate find, mask, orient

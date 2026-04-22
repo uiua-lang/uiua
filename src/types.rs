@@ -1174,8 +1174,64 @@ impl<'a> TypeEnv<'a> {
                     self.pop_n(2)?;
                     self.push(Scalar::Num);
                 }
+                Select => self.dyadic(
+                    |indices, mut ty| {
+                        if !indices.scalar.compatible_with(&Scalar::Num) {
+                            return Err(format!(
+                                "Cannot {} with {} indices",
+                                Select.format(),
+                                indices.scalar
+                            )
+                            .into());
+                        }
+                        ty = ty.into_row();
+                        let mut idx_shape = indices.shape;
+                        if let Some(suf) = &mut idx_shape.suffix {
+                            if ty.shape.suffix.is_some() {
+                                ty.shape.dims = idx_shape.dims;
+                            } else {
+                                suf.extend(ty.shape.dims);
+                                ty.shape = idx_shape;
+                            }
+                        } else {
+                            idx_shape.dims.extend(ty.shape.dims);
+                            ty.shape.dims = idx_shape.dims;
+                        }
+                        Ok(ty)
+                    },
+                    |index, ty| {
+                        if let Dim::Static(n) = ty.shape.row_count()
+                            && (index >= 0.0 && index as usize >= n
+                                || index < 0.0 && index.abs() as usize > n)
+                        {
+                            return Err(
+                                format!("Index {index} is out of bounds of length {n}").into()
+                            );
+                        }
+                        Ok(ty.into_row())
+                    },
+                    |indices, mut ty| {
+                        if let Dim::Static(n) = ty.shape.row_count()
+                            && let Some(i) = indices.iter().find(|&&i| {
+                                i >= 0.0 && i as usize >= n || i < 0.0 && i.abs() as usize > n
+                            })
+                        {
+                            return Err(format!("Index {i} is out of bounds of length {n}").into());
+                        }
+                        ty = ty.into_row();
+                        ty.shape.dims.insert(0, Dim::Static(indices.len()));
+                        Ok(ty)
+                    },
+                    |index, n| {
+                        if index != 0.0 && index != 1.0 {
+                            Err(format!("Index {index} is out of bounds of length 1").into())
+                        } else {
+                            Ok(n)
+                        }
+                    },
+                )?,
                 // TODO (descending priority):
-                // - pick, select, take, drop
+                // - pick, take, drop
                 // - keep, rotate, where
                 // - parse, bits, base, memberof, indexin, random
                 // - classify, occurences, deduplicate find, mask, orient

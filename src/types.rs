@@ -6,7 +6,7 @@ use std::{
     fmt,
     iter::repeat_n,
     mem::{discriminant, swap, take},
-    ops::BitOr,
+    ops::{BitOr, Div, Mul},
 };
 
 use ecow::{EcoVec, eco_vec};
@@ -529,6 +529,12 @@ impl<const N: usize> From<[Dim; N]> for DynShape {
     }
 }
 
+impl From<Vec<Dim>> for DynShape {
+    fn from(dims: Vec<Dim>) -> Self {
+        DynShape { dims, suffix: None }
+    }
+}
+
 impl<const N: usize> From<[usize; N]> for DynShape {
     fn from(dims: [usize; N]) -> Self {
         dims.map(Dim::Static).into()
@@ -614,6 +620,27 @@ impl From<f64> for Dim {
             Dim::Dyn
         } else {
             Dim::Static(n as usize)
+        }
+    }
+}
+
+impl Mul for Dim {
+    type Output = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Dim::Static(a), Dim::Static(b)) => Dim::Static(a * b),
+            _ => Dim::Dyn,
+        }
+    }
+}
+
+impl Div for Dim {
+    type Output = Self;
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Dim::Static(_), Dim::Static(0)) => Dim::Dyn,
+            (Dim::Static(a), Dim::Static(b)) => Dim::Static(a / b),
+            _ => Dim::Dyn,
         }
     }
 }
@@ -892,7 +919,13 @@ impl<'a> TypeEnv<'a> {
         res
     }
     fn node_impl(&mut self, node: &Node) -> Result<(), TypeError> {
+        use self::Type;
         use {crate::algorithm::pervade::*, ImplPrimitive::*, Node::*, Primitive::*};
+
+        fn unsupported() -> Result<TypeVal, TypeError> {
+            Err(TypeError::Unsupported(None))
+        }
+
         match node {
             Run(nodes) => {
                 for node in nodes {
@@ -903,7 +936,7 @@ impl<'a> TypeEnv<'a> {
                 let sn = SigNode::new(f.sig, self.asm[f].clone());
                 self.sig_node(&sn)?
             }
-            Push(val) => self.push(TypeVal::Val(val.clone())),
+            Push(val) => self.push(val.clone()),
             Prim(prim, _) => match prim {
                 Identity => _ = self.require_height(1)?,
                 Pop => _ = self.pop(1)?,
@@ -981,10 +1014,169 @@ impl<'a> TypeEnv<'a> {
                     },
                 )?,
                 Couple => self.pack(2, false, true, Some(Couple))?,
+                Range => self.monadic(
+                    |_| unsupported(),
+                    |n| Ok(Type::new(Scalar::Num, n.abs() as usize)),
+                    |list| {
+                        let len = list.len();
+                        Ok(Type::new(
+                            Scalar::Num,
+                            list.into_iter()
+                                .map(|n| n.abs() as usize)
+                                .chain([len])
+                                .map(Dim::Static)
+                                .collect::<Vec<_>>(),
+                        ))
+                    },
+                    |_| None,
+                )?,
+                Reverse => self.monadic(
+                    Ok,
+                    Ok,
+                    |mut list| {
+                        list.make_mut().reverse();
+                        Ok(list)
+                    },
+                    |mut val| {
+                        val.reverse();
+                        Some(val)
+                    },
+                )?,
+                Deshape => self.monadic(
+                    |mut ty| {
+                        ty.shape.dims = vec![if ty.shape.suffix.take().is_some() {
+                            Dim::Dyn
+                        } else {
+                            (ty.shape.dims.into_iter()).fold(Dim::Static(1), Dim::mul)
+                        }];
+                        Ok(ty)
+                    },
+                    |n| Ok(Value::from([n])),
+                    |list| Ok(Value::from(list)),
+                    |mut val| {
+                        val.deshape();
+                        Some(val)
+                    },
+                )?,
+                Reshape => self.dyadic(
+                    |sh, mut ty| {
+                        if sh.shape.suffix.is_some() {
+                            return Err(TypeError::Unsupported(None));
+                        }
+                        if sh.shape.dims.len() > 1 {
+                            return Err(format!(
+                                "{} must be rank 0 or 1, but it is rank {}",
+                                Reshape.format(),
+                                sh.shape.dims.len()
+                            )
+                            .into());
+                        }
+                        match *sh.shape.dims.as_slice() {
+                            [] => ty.shape.dims.insert(0, Dim::Dyn),
+                            [Dim::Dyn] => ty.shape = DynShape::any(),
+                            [Dim::Static(n)] => ty.shape = vec![Dim::Dyn; n].into(),
+                            _ => unreachable!(),
+                        }
+                        Ok(ty)
+                    },
+                    |n, mut ty| {
+                        ty.shape.dims.insert(0, Dim::Static(n.abs() as usize));
+                        Ok(ty)
+                    },
+                    |list, mut ty| {
+                        let has_suffix = ty.shape.suffix.take().is_some();
+                        let inf_count = list.iter().filter(|&&n| n == f64::INFINITY).count();
+                        if inf_count > 1 {
+                            return Err(format!(
+                                "{} list can have at most one ∞, but it has {inf_count}",
+                                Reshape.format()
+                            )
+                            .into());
+                        }
+                        if inf_count == 1 {
+                            if has_suffix {
+                                ty.shape = DynShape::any();
+                            } else {
+                                let elem_count =
+                                    ty.shape.dims.into_iter().fold(Dim::Static(1), Dim::mul);
+                                let target_count = Dim::Static(
+                                    list.iter()
+                                        .filter(|&&n| n != f64::INFINITY)
+                                        .product::<f64>()
+                                        .abs() as usize,
+                                );
+                                ty.shape.dims = list
+                                    .into_iter()
+                                    .map(|n| {
+                                        if n == f64::INFINITY {
+                                            elem_count / target_count
+                                        } else {
+                                            Dim::Static(n.abs() as usize)
+                                        }
+                                    })
+                                    .collect();
+                            }
+                        } else {
+                            ty.shape.dims =
+                                list.into_iter().map(|n| Dim::Static(n as usize)).collect();
+                        }
+                        Ok(ty)
+                    },
+                    |n, x| {
+                        Ok(if n.abs() <= 1000.0 {
+                            Value::from(eco_vec![x; n.abs() as usize]).into()
+                        } else {
+                            TypeVal::Type(Type::new(Scalar::Num, n.abs() as usize))
+                        })
+                    },
+                )?,
+                Sort => self.monadic(
+                    Ok,
+                    Ok,
+                    |mut list| {
+                        list.make_mut().sort_unstable_by(f64::array_cmp);
+                        Ok(list)
+                    },
+                    |mut val| {
+                        val.sort_up();
+                        Some(val)
+                    },
+                )?,
+                Rise => self.monadic(
+                    |mut ty| {
+                        ty.scalar = Scalar::Num;
+                        if ty.shape.suffix.take().is_some() && ty.shape.dims.is_empty() {
+                            ty.shape = DynShape::any();
+                        } else {
+                            ty.shape.dims.truncate(1);
+                        }
+                        Ok(ty)
+                    },
+                    |_| Ok(Value::from(0)),
+                    |list| Ok(Type::new(Scalar::Num, list.len())),
+                    |val| Some(Value::from(val.rise())),
+                )?,
+                Fall => self.monadic(
+                    |mut ty| {
+                        ty.scalar = Scalar::Num;
+                        if ty.shape.suffix.take().is_some() && ty.shape.dims.is_empty() {
+                            ty.shape = DynShape::any();
+                        } else {
+                            ty.shape.dims.truncate(1);
+                        }
+                        Ok(ty)
+                    },
+                    |_| Ok(Value::from(0)),
+                    |list| Ok(Type::new(Scalar::Num, list.len())),
+                    |val| Some(Value::from(val.fall())),
+                )?,
+                Match => {
+                    self.pop_n(2)?;
+                    self.push(Scalar::Num);
+                }
                 // TODO (descending priority):
-                // - range, deshape, reshape, sort, rise, fall, reverse
                 // - pick, select, take, drop
-                // - keep, rotate, where, match
+                // - keep, rotate, where
                 // - parse, bits, base, memberof, indexin, random
                 // - classify, occurences, deduplicate find, mask, orient
                 // - system functions
@@ -1065,6 +1257,19 @@ impl<'a> TypeEnv<'a> {
                     Ok,
                     |mut val| {
                         val.retropose_depth(0);
+                        Some(val)
+                    },
+                )?,
+                SortDown => self.monadic(
+                    Ok,
+                    Ok,
+                    |mut list| {
+                        list.make_mut().sort_unstable_by(f64::array_cmp);
+                        list.make_mut().reverse();
+                        Ok(list)
+                    },
+                    |mut val| {
+                        val.sort_down();
                         Some(val)
                     },
                 )?,
@@ -1314,15 +1519,20 @@ impl<'a> TypeEnv<'a> {
         f: impl Fn(Scalar, Scalar) -> Result<Scalar, TypeError>,
         f64: impl Fn(f64, f64) -> N,
     ) -> Result<(), TypeError> {
-        self.dyadic(
-            |a, b| {
-                Ok(Type {
+        let a = self.pop(1)?;
+        let b = self.pop(2)?;
+        self.push(match (a, b) {
+            (TypeVal::Num(a), TypeVal::Num(b)) => f64(a, b).into(),
+            (a, b) => {
+                let (a, b) = (a.ty(), b.ty());
+                Type {
                     scalar: f(a.scalar, b.scalar)?,
                     shape: pervade_dyn_shapes(a.shape, b.shape)?,
-                })
-            },
-            |a, b| Ok(f64(a, b)),
-        )
+                }
+                .into()
+            }
+        });
+        Ok(())
     }
     fn monadic<T: Into<TypeVal>, N: Into<TypeVal>, L: Into<TypeVal>>(
         &mut self,
@@ -1353,15 +1563,25 @@ impl<'a> TypeEnv<'a> {
         });
         Ok(())
     }
-    fn dyadic<T: Into<TypeVal>, N: Into<TypeVal>>(
+    fn dyadic<T, N, L, NN>(
         &mut self,
         f: impl Fn(Type, Type) -> Result<T, TypeError>,
-        num: impl Fn(f64, f64) -> Result<N, TypeError>,
-    ) -> Result<(), TypeError> {
+        num: impl Fn(f64, Type) -> Result<N, TypeError>,
+        list: impl Fn(EcoVec<f64>, Type) -> Result<L, TypeError>,
+        num_num: impl Fn(f64, f64) -> Result<NN, TypeError>,
+    ) -> Result<(), TypeError>
+    where
+        T: Into<TypeVal>,
+        N: Into<TypeVal>,
+        L: Into<TypeVal>,
+        NN: Into<TypeVal>,
+    {
         let a = self.pop(1)?;
         let b = self.pop(2)?;
         self.push(match (a, b) {
-            (TypeVal::Num(a), TypeVal::Num(b)) => num(a, b)?.into(),
+            (TypeVal::Num(a), TypeVal::Num(b)) => num_num(a, b)?.into(),
+            (TypeVal::Num(a), b) => num(a, b.ty())?.into(),
+            (TypeVal::NumList(a), b) => list(a, b.ty())?.into(),
             (a, b) => f(a.ty(), b.ty())?.into(),
         });
         Ok(())
@@ -1403,6 +1623,18 @@ impl<'a> TypeEnv<'a> {
                     a.set_scalar(Scalar::Box(a.scalar().maybe_scalar_type().map(Box::new)));
                 }
             }
+        }
+        // Combining scalars
+        if let Some(v) = tvs.iter().try_fold(EcoVec::new(), |mut v, tv| {
+            if let &TypeVal::Num(n) = tv {
+                v.push(n);
+                Some(v)
+            } else {
+                None
+            }
+        }) {
+            self.push(v);
+            return Ok(());
         }
         // Extend
         if allow_ext {

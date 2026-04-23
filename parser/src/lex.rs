@@ -1233,8 +1233,8 @@ impl<'a> Lexer<'a> {
                 "#" => {
                     if self.next_char_exact("?") {
                         // Type sig comment
-                        self.end(TypeSigComment, start);
                         while self.next_char_if(|c| !c.ends_with('\n')).is_some() {}
+                        self.end(TypeSigComment, start);
                         continue;
                     }
                     let mut n = 0;

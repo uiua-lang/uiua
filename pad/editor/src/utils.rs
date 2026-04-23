@@ -703,7 +703,7 @@ pub fn gen_code_view(id: &str, code: &str, hidden: &str) -> View {
                         SpanKind::Obverse(_) => prim_sig_class(Primitive::Obverse, None),
                         SpanKind::Number | SpanKind::Subscript(None, _) => number_class(),
                         SpanKind::String | SpanKind::ImportSrc(_) => string_class(),
-                        SpanKind::Comment | SpanKind::OutputComment => comment_class(),
+                        SpanKind::Comment | SpanKind::OutputComment | SpanKind::TypeSigComment => comment_class(),
                         SpanKind::Strand => "strand-span",
                         SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, n.as_ref()),
                         SpanKind::MacroDelim(margs) => modifier_class(*margs),

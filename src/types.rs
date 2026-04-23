@@ -5,7 +5,7 @@ use std::{
     cmp::Ordering,
     fmt,
     iter::repeat_n,
-    mem::{discriminant, swap, take},
+    mem::{discriminant, replace, swap, take},
     ops::{BitOr, Div, Mul},
 };
 
@@ -108,6 +108,8 @@ impl From<String> for TypeError {
         TypeError::Generic(s)
     }
 }
+
+pub type TypeResult<T = ()> = Result<T, TypeError>;
 
 #[derive(Debug, Clone, PartialOrd, Serialize, Deserialize)]
 pub enum TypeVal {
@@ -605,6 +607,12 @@ impl Default for DynShape {
     }
 }
 
+impl FromIterator<Dim> for DynShape {
+    fn from_iter<T: IntoIterator<Item = Dim>>(iter: T) -> Self {
+        iter.into_iter().collect::<Vec<_>>().into()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Dim {
@@ -896,7 +904,7 @@ impl<'a> TypeEnv<'a> {
             }
         }
     }
-    fn sig_node(&mut self, sn: &SigNode) -> Result<(), TypeError> {
+    fn sig_node(&mut self, sn: &SigNode) -> TypeResult {
         let stack_height = self.stack_len();
         match self.node(&sn.node) {
             Ok(()) => Ok(()),
@@ -916,7 +924,7 @@ impl<'a> TypeEnv<'a> {
             Err(e) => Err(e),
         }
     }
-    fn node(&mut self, node: &Node) -> Result<(), TypeError> {
+    fn node(&mut self, node: &Node) -> TypeResult {
         let span = node.span();
         self.call_stack.extend(span);
         let res = self.node_impl(node);
@@ -927,7 +935,7 @@ impl<'a> TypeEnv<'a> {
         }
         res
     }
-    fn node_impl(&mut self, node: &Node) -> Result<(), TypeError> {
+    fn node_impl(&mut self, node: &Node) -> TypeResult {
         use self::Type;
         use {crate::algorithm::pervade::*, ImplPrimitive::*, Node::*, Primitive::*};
 
@@ -1479,50 +1487,8 @@ impl<'a> TypeEnv<'a> {
                         }
                     }
                 }
-                Reduce => {
-                    let f = monad(ops);
-                    if f.sig.args() != 2 {
-                        return Err(TypeError::Unsupported(None));
-                    }
-                    let mut xs = self.pop(1)?;
-                    if xs.row_count() == 2 {
-                        self.push(xs);
-                        self.unpack(2, false, None)?;
-                        return self.sig_node(f);
-                    }
-                    if let Some((prim, _)) = f.node.as_flipped_primitive()
-                        && prim.class() == PrimClass::DyadicPervasive
-                    {
-                        let mut shape = xs.shape().into_owned();
-                        if shape.dims.is_empty() {
-                            if shape.suffix.is_some() {
-                                shape = DynShape::any();
-                            }
-                        } else {
-                            shape.dims.remove(0);
-                        }
-                        xs.set_shape(shape);
-                        self.push(xs);
-                    } else if let Some(Node::Prim(Primitive::Join, _)) = f.node.last() {
-                        let mut shape = xs.shape().into_owned();
-                        if shape.dims.len() <= 1 {
-                            if shape.suffix.is_some() {
-                                shape = DynShape::any();
-                            }
-                        } else {
-                            let first = shape.dims.remove(0);
-                            match (&mut shape.dims[0], first) {
-                                (Dim::Static(a), Dim::Static(b)) => *a *= b,
-                                (a @ Dim::Static(_), Dim::Dyn) => *a = Dim::Dyn,
-                                _ => {}
-                            }
-                        }
-                        xs.set_shape(shape);
-                        self.push(xs);
-                    } else {
-                        return Err(TypeError::Unsupported(None));
-                    }
-                }
+                Reduce => self.reduce(monad(ops))?,
+                Table => self.table(monad(ops))?,
                 Group | Partition => {
                     let f = monad(ops);
                     let markers = self.pop(1)?;
@@ -1644,6 +1610,11 @@ impl<'a> TypeEnv<'a> {
                     }
                     self.sig_node(f)?;
                 }
+                ReduceTable => {
+                    let [f, g] = dyad(ops);
+                    self.table(g)?;
+                    self.reduce(f)?;
+                }
                 _ => return Err(TypeError::Unsupported(Some(format!("{prim:?}")))),
             },
             CustomInverse(cust, _) => match &cust.normal {
@@ -1684,11 +1655,68 @@ impl<'a> TypeEnv<'a> {
         }
         Ok(())
     }
+    fn table(&mut self, f: &SigNode) -> TypeResult {
+        let args = self.pop_n(f.sig.args())?;
+        let shape_prefix: Vec<_> = args.iter().map(TypeVal::row_count).collect();
+        self.push_all(args.into_iter().map(TypeVal::into_row));
+        self.sig_node(f)?;
+        for tv in self.top_n_mut(f.sig.outputs())? {
+            let mut shape = tv.shape().into_owned();
+            let suffix = replace(&mut shape.dims, shape_prefix.clone());
+            shape.dims.extend(suffix);
+            tv.set_shape(shape);
+        }
+        Ok(())
+    }
+    fn reduce(&mut self, f: &SigNode) -> TypeResult {
+        if f.sig.args() != 2 {
+            return Err(TypeError::Unsupported(None));
+        }
+        let mut xs = self.pop(1)?;
+        if xs.row_count() == 2 {
+            self.push(xs);
+            self.unpack(2, false, None)?;
+            return self.sig_node(f);
+        }
+        if let Some((prim, _)) = f.node.as_flipped_primitive()
+            && prim.class() == PrimClass::DyadicPervasive
+        {
+            let mut shape = xs.shape().into_owned();
+            if shape.dims.is_empty() {
+                if shape.suffix.is_some() {
+                    shape = DynShape::any();
+                }
+            } else {
+                shape.dims.remove(0);
+            }
+            xs.set_shape(shape);
+            self.push(xs);
+        } else if let Some(Node::Prim(Primitive::Join, _)) = f.node.last() {
+            let mut shape = xs.shape().into_owned();
+            if shape.dims.len() <= 1 {
+                if shape.suffix.is_some() {
+                    shape = DynShape::any();
+                }
+            } else {
+                let first = shape.dims.remove(0);
+                match (&mut shape.dims[0], first) {
+                    (Dim::Static(a), Dim::Static(b)) => *a *= b,
+                    (a @ Dim::Static(_), Dim::Dyn) => *a = Dim::Dyn,
+                    _ => {}
+                }
+            }
+            xs.set_shape(shape);
+            self.push(xs);
+        } else {
+            return Err(TypeError::Unsupported(None));
+        }
+        Ok(())
+    }
     fn monadic_pervasive(
         &mut self,
         f: impl Fn(Scalar) -> Result<Scalar, String>,
         f64: impl Fn(f64) -> f64,
-    ) -> Result<(), TypeError> {
+    ) -> TypeResult {
         self.monadic(
             |mut ty| {
                 Ok(Type {
@@ -1710,7 +1738,7 @@ impl<'a> TypeEnv<'a> {
         &mut self,
         f: impl Fn(Scalar, Scalar) -> Result<Scalar, TypeError>,
         f64: impl Fn(f64, f64) -> N,
-    ) -> Result<(), TypeError> {
+    ) -> TypeResult {
         let a = self.pop(1)?;
         let b = self.pop(2)?;
         self.push(match (a, b) {
@@ -1732,7 +1760,7 @@ impl<'a> TypeEnv<'a> {
         num: impl Fn(f64) -> Result<N, TypeError>,
         list: impl Fn(EcoVec<f64>) -> Result<L, TypeError>,
         val: impl Fn(Value) -> Option<Value>,
-    ) -> Result<(), TypeError> {
+    ) -> TypeResult {
         let x = self.pop(1)?;
         self.push(match x {
             TypeVal::Num(n) => num(n)?.into(),
@@ -1761,7 +1789,7 @@ impl<'a> TypeEnv<'a> {
         num: impl Fn(f64, Type) -> Result<N, TypeError>,
         list: impl Fn(EcoVec<f64>, Type) -> Result<L, TypeError>,
         num_num: impl Fn(f64, f64) -> Result<NN, TypeError>,
-    ) -> Result<(), TypeError>
+    ) -> TypeResult
     where
         T: Into<TypeVal>,
         N: Into<TypeVal>,
@@ -1778,13 +1806,7 @@ impl<'a> TypeEnv<'a> {
         });
         Ok(())
     }
-    fn pack(
-        &mut self,
-        n: usize,
-        bx: bool,
-        allow_ext: bool,
-        prim: Option<Primitive>,
-    ) -> Result<(), TypeError> {
+    fn pack(&mut self, n: usize, bx: bool, allow_ext: bool, prim: Option<Primitive>) -> TypeResult {
         if n == 0 {
             self.push(if bx {
                 Array::<Boxed>::default().into()
@@ -1913,7 +1935,7 @@ impl<'a> TypeEnv<'a> {
         self.push(Type { scalar, shape });
         Ok(())
     }
-    fn unpack(&mut self, n: usize, unbox: bool, prim: Option<Primitive>) -> Result<(), TypeError> {
+    fn unpack(&mut self, n: usize, unbox: bool, prim: Option<Primitive>) -> TypeResult {
         let x = self.pop(1)?;
         if x.row_count() != n {
             return Err(if let Some(prim) = prim {
@@ -1949,12 +1971,6 @@ impl<'a> TypeEnv<'a> {
 }
 
 pub(crate) fn pervade_dyn_shapes(a: DynShape, b: DynShape) -> Result<DynShape, TypeError> {
-    if a.is_any() {
-        return Ok(b);
-    }
-    if b.is_any() {
-        return Ok(a);
-    }
     let mut shape = DynShape::scalar();
     for i in 0..a.dims.len().max(b.dims.len()) {
         // TODO: Handle fills
@@ -1982,6 +1998,10 @@ pub(crate) fn pervade_dyn_shapes(a: DynShape, b: DynShape) -> Result<DynShape, T
 fn monad(ops: &[SigNode]) -> &SigNode {
     let [f] = get_ops(ops);
     f
+}
+
+fn dyad(ops: &[SigNode]) -> &[SigNode; 2] {
+    get_ops(ops)
 }
 
 fn get_ops<const N: usize>(ops: &[SigNode]) -> &[SigNode; N] {

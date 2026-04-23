@@ -126,8 +126,8 @@ pub trait HasStack {
     where
         Self::Item: Clone,
     {
-        self.require_height(n)?;
-        Ok(self.stack()[n].clone())
+        let i = self.require_height(n + 1)?;
+        Ok(self.stack()[i].clone())
     }
     fn dup(&mut self) -> Result<(), Self::Error>
     where

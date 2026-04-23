@@ -735,6 +735,11 @@ impl fmt::Display for Type {
             write!(f, "[{}]", self.shape)
         } else if self.shape.is_scalar() {
             write!(f, "{}", self.scalar)
+        } else if self.scalar == Scalar::Char
+            && self.shape.dims.len() == 1
+            && self.shape.suffix.is_none()
+        {
+            write!(f, "str")
         } else {
             write!(f, "[{} {}]", self.shape, self.scalar)
         }
@@ -1305,6 +1310,7 @@ impl<'a> TypeEnv<'a> {
                 }
                 Rand => self.push(Scalar::Num.scalar_type()),
                 // TODO (descending priority):
+                // - Input type suggestion
                 // - pick, drop
                 // - keep, rotate, where
                 // - parse, bits, base, memberof, indexin
@@ -1515,6 +1521,33 @@ impl<'a> TypeEnv<'a> {
                         self.push(xs);
                     } else {
                         return Err(TypeError::Unsupported(None));
+                    }
+                }
+                Group | Partition => {
+                    let f = monad(ops);
+                    let markers = self.pop(1)?;
+                    if markers.rank() > 1 {
+                        return Err(TypeError::Unsupported(None));
+                    }
+                    if !markers.scalar().compatible_with(&Scalar::Num) {
+                        return Err(format!(
+                            "{}'s first argument must be numbers, not {}",
+                            prim.format(),
+                            markers.scalar()
+                        )
+                        .into());
+                    }
+                    let partitioned = self.pop_n(f.sig.args())?;
+                    self.push_all(partitioned.into_iter().map(|tv| {
+                        let mut ty = tv.ty().into_row();
+                        ty.shape.dims.insert(0, Dim::Dyn);
+                        ty.into()
+                    }));
+                    self.sig_node(f)?;
+                    for tv in self.top_n_mut(f.sig.outputs())? {
+                        let mut shape = tv.shape().into_owned();
+                        shape.dims.insert(0, Dim::Dyn);
+                        tv.set_shape(shape);
                     }
                 }
                 _ => return Err(TypeError::Unsupported(Some(prim.format().to_string()))),

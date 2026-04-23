@@ -27,6 +27,8 @@ pub fn typecheck(
         under_stack: Vec::new(),
         call_stack: Vec::new(),
         arg_types: vec![TypeVal::default(); sn.sig.args()],
+        fill_stack: Vec::new(),
+        stashed_fills: Vec::new(),
     };
     env.sig_node(sn)
         .map(|()| {
@@ -43,6 +45,8 @@ pub struct TypeEnv<'a> {
     under_stack: Vec<TypeVal>,
     call_stack: Vec<usize>,
     arg_types: Vec<TypeVal>,
+    fill_stack: Vec<TypeVal>,
+    stashed_fills: Vec<TypeVal>,
 }
 
 impl<'a> HasStack for TypeEnv<'a> {
@@ -924,6 +928,14 @@ impl<'a> TypeEnv<'a> {
             Err(e) => Err(e),
         }
     }
+    fn sig_node_no_fill(&mut self, sn: &SigNode) -> TypeResult {
+        let fill_stack = take(&mut self.fill_stack);
+        let len = fill_stack.len();
+        self.stashed_fills.extend(fill_stack);
+        self.sig_node(sn)?;
+        self.fill_stack = self.stashed_fills.split_off(self.stashed_fills.len() - len);
+        Ok(())
+    }
     fn node(&mut self, node: &Node) -> TypeResult {
         let span = node.span();
         self.call_stack.extend(span);
@@ -951,7 +963,7 @@ impl<'a> TypeEnv<'a> {
             }
             Call(f, _) => {
                 let sn = SigNode::new(f.sig, self.asm[f].clone());
-                self.sig_node(&sn)?
+                self.sig_node_no_fill(&sn)?
             }
             Push(val) => self.push(val.clone()),
             Prim(prim, _) => match prim {
@@ -1509,7 +1521,7 @@ impl<'a> TypeEnv<'a> {
                     }
                     self.push_all(args.into_iter().map(TypeVal::into_row));
                     let outputs = f.sig.outputs();
-                    self.exec(f)?;
+                    self.sig_node_no_fill(f)?;
                     if !all_scalar {
                         for output in self.top_n_mut(outputs)? {
                             output.prepend_dim(row_count);
@@ -1538,11 +1550,23 @@ impl<'a> TypeEnv<'a> {
                         ty.shape.dims.insert(0, Dim::Dyn);
                         ty.into()
                     }));
-                    self.sig_node(f)?;
+                    self.sig_node_no_fill(f)?;
                     for tv in self.top_n_mut(f.sig.outputs())? {
                         let mut shape = tv.shape().into_owned();
                         shape.dims.insert(0, Dim::Dyn);
                         tv.set_shape(shape);
+                    }
+                }
+                Fill => {
+                    let [f, g] = dyad(ops);
+                    self.sig_node(f)?;
+                    if f.sig.outputs() == 0 {
+                        self.sig_node_no_fill(g)?;
+                    } else {
+                        let mut fills = self.pop_n(f.sig.outputs())?;
+                        self.fill_stack.push(fills.remove(0));
+                        self.sig_node(g)?;
+                        self.fill_stack.pop();
                     }
                 }
                 _ => return Err(TypeError::Unsupported(Some(prim.format().to_string()))),
@@ -1688,7 +1712,7 @@ impl<'a> TypeEnv<'a> {
         let args = self.pop_n(f.sig.args())?;
         let shape_prefix: Vec<_> = args.iter().map(TypeVal::row_count).collect();
         self.push_all(args.into_iter().map(TypeVal::into_row));
-        self.sig_node(f)?;
+        self.sig_node_no_fill(f)?;
         for tv in self.top_n_mut(f.sig.outputs())? {
             let mut shape = tv.shape().into_owned();
             let suffix = replace(&mut shape.dims, shape_prefix.clone());
@@ -1705,7 +1729,7 @@ impl<'a> TypeEnv<'a> {
         if xs.row_count() == 2 {
             self.push(xs);
             self.unpack(2, false, None)?;
-            return self.sig_node(f);
+            return self.sig_node_no_fill(f);
         }
         if let Some((prim, _)) = f.node.as_flipped_primitive()
             && prim.class() == PrimClass::DyadicPervasive
@@ -1765,7 +1789,7 @@ impl<'a> TypeEnv<'a> {
     }
     fn dyadic_pervasive<N: Into<TypeVal>>(
         &mut self,
-        f: impl Fn(Scalar, Scalar) -> Result<Scalar, TypeError>,
+        f: impl Fn(Scalar, Scalar, bool, bool) -> Result<Scalar, TypeError>,
         f64: impl Fn(f64, f64) -> N,
     ) -> TypeResult {
         let a = self.pop(1)?;
@@ -1774,14 +1798,21 @@ impl<'a> TypeEnv<'a> {
             (TypeVal::Num(a), TypeVal::Num(b)) => f64(a, b).into(),
             (a, b) => {
                 let (a, b) = (a.ty(), b.ty());
+                let a_fill = self.fill_for(&a);
+                let b_fill = self.fill_for(&b);
                 Type {
-                    scalar: f(a.scalar, b.scalar)?,
-                    shape: pervade_dyn_shapes(a.shape, b.shape)?,
+                    scalar: f(a.scalar, b.scalar, a_fill, b_fill)?,
+                    shape: pervade_dyn_shapes(a.shape, b.shape, a_fill, b_fill)?,
                 }
                 .into()
             }
         });
         Ok(())
+    }
+    fn fill_for(&self, ty: &Type) -> bool {
+        self.fill_stack
+            .iter()
+            .any(|f| f.scalar().compatible_with(&ty.scalar))
     }
     fn monadic<T: Into<TypeVal>, N: Into<TypeVal>, L: Into<TypeVal>>(
         &mut self,
@@ -1999,22 +2030,29 @@ impl<'a> TypeEnv<'a> {
     }
 }
 
-pub(crate) fn pervade_dyn_shapes(a: DynShape, b: DynShape) -> Result<DynShape, TypeError> {
+pub(crate) fn pervade_dyn_shapes(
+    ash: DynShape,
+    bsh: DynShape,
+    a_fill: bool,
+    b_fill: bool,
+) -> Result<DynShape, TypeError> {
     let mut shape = DynShape::scalar();
-    for i in 0..a.dims.len().max(b.dims.len()) {
+    for i in 0..ash.dims.len().max(bsh.dims.len()) {
         // TODO: Handle fills
-        let new_dim = match (a.dims.get(i).copied(), b.dims.get(i).copied()) {
+        let new_dim = match (ash.dims.get(i).copied(), bsh.dims.get(i).copied()) {
             (None, None) => unreachable!(),
             (Some(d), None | Some(Dim::Dyn)) | (None | Some(Dim::Dyn), Some(d)) => d,
             (Some(d), Some(Dim::Static(1))) | (Some(Dim::Static(1)), Some(d)) => d,
-            (Some(a), Some(b)) if a == b => a,
-            (Some(_), Some(_)) => {
-                return Err(TypeError::DyadicPervasiveShapes(a, b));
-            }
+            (Some(a), Some(b)) => match (a.cmp(&b), a_fill, b_fill) {
+                (Ordering::Equal, ..) => a,
+                (Ordering::Less, true, _) => b,
+                (Ordering::Greater, _, true) => a,
+                _ => return Err(TypeError::DyadicPervasiveShapes(ash, bsh)),
+            },
         };
         shape.dims.push(new_dim);
     }
-    shape.suffix = match (a.suffix, b.suffix) {
+    shape.suffix = match (ash.suffix, bsh.suffix) {
         (None, None) => None,
         (Some(suf), None) | (None, Some(suf)) => Some(suf),
         (Some(a), Some(b)) if a.is_empty() => Some(b),

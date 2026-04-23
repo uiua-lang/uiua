@@ -1946,7 +1946,7 @@ macro_rules! scalar_dy_impl {
         impl Scalar {
             #[doc(hidden)]
             #[allow(clippy::wrong_self_convention)]
-            pub fn $name(self, other: Self) -> Result<Self, TypeError> {
+            pub fn $name(self, other: Self, a_fill: bool, b_fill: bool) -> Result<Self, TypeError> {
                 use Scalar::{*, Box, Num as Byte};
                 Ok(match (self, other) {
                     $(
@@ -1957,16 +1957,16 @@ macro_rules! scalar_dy_impl {
                     (Box(None), _) | (_, Box(None)) => Box(None),
                         #[allow(unreachable_patterns)]
                     (Box(Some(mut a)), Box(Some(b))) => {
-                        a.scalar = a.scalar.$name(b.scalar)?;
-                        a.shape = pervade_dyn_shapes(a.shape, b.shape)?;
+                        a.scalar = a.scalar.$name(b.scalar, a_fill, b_fill)?;
+                        a.shape = pervade_dyn_shapes(a.shape, b.shape, a_fill, b_fill)?;
                         Box(Some(a))
                     }
                     (Box(Some(mut a)), b) => {
-                        a.scalar = a.scalar.$name(b)?;
+                        a.scalar = a.scalar.$name(b, a_fill, b_fill)?;
                         Box(Some(a))
                     }
                     (a, Box(Some(mut b))) => {
-                        b.scalar = a.$name(b.scalar)?;
+                        b.scalar = a.$name(b.scalar, a_fill, b_fill)?;
                         Box(Some(b))
                     }
                     #[allow(unreachable_patterns)]

@@ -28,6 +28,7 @@ pub enum SpanKind {
     String,
     Number,
     Comment,
+    TypeSigComment,
     OutputComment,
     Strand,
     Ident {
@@ -741,6 +742,9 @@ impl Spanner {
                 }
                 Word::Comment(_) | Word::SemanticComment(_) => {
                     spans.push(word.span.clone().sp(SpanKind::Comment))
+                }
+                Word::TypeSigComment { .. } => {
+                    spans.push(word.span.clone().sp(SpanKind::TypeSigComment))
                 }
                 Word::OutputComment { .. } => {
                     spans.push(word.span.clone().sp(SpanKind::OutputComment))

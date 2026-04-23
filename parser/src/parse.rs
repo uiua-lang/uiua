@@ -217,6 +217,7 @@ pub fn parse(
             errors,
             diagnostics,
             next_output_comment: 0,
+            next_type_sig_comment: 0,
             start_addr: &base as *const u8 as usize,
         };
         let items = parser.items(ItemsKind::TopLevel);
@@ -247,6 +248,7 @@ struct Parser<'i> {
     tokens: Vec<Sp<crate::lex::Token>>,
     index: usize,
     next_output_comment: usize,
+    next_type_sig_comment: usize,
     errors: Vec<Sp<ParseError>>,
     diagnostics: Vec<Diagnostic>,
     start_addr: usize,
@@ -442,6 +444,12 @@ impl Parser<'_> {
         let i = self.next_output_comment;
         self.next_output_comment += 1;
         Some(n.span.sp(Word::OutputComment { i, n: n.value }))
+    }
+    fn type_sig_comment(&mut self) -> Option<Sp<Word>> {
+        let span = self.exact(Token::TypeSigComment)?;
+        let i = self.next_type_sig_comment;
+        self.next_type_sig_comment += 1;
+        Some(span.sp(Word::TypeSigComment { i }))
     }
 }
 
@@ -1070,8 +1078,8 @@ impl Parser<'_> {
         if words.is_empty() { None } else { Some(words) }
     }
     fn word(&mut self) -> Option<Sp<Word>> {
-        self.comment()
-            .map(|c| c.map(Word::Comment))
+        (self.comment().map(|c| c.map(Word::Comment)))
+            .or_else(|| self.type_sig_comment())
             .or_else(|| self.output_comment())
             .or_else(|| self.strand())
     }

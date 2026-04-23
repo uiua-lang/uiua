@@ -626,6 +626,7 @@ impl<T> From<Sp<T>> for Sp<T, Span> {
 pub enum Token {
     Comment,
     SemanticComment(SemanticComment),
+    TypeSigComment,
     OutputComment(usize),
     Ident(Ident),
     Number,
@@ -729,6 +730,7 @@ impl fmt::Display for Token {
         match self {
             Token::Comment => write!(f, "comment"),
             Token::SemanticComment(sc) => sc.fmt(f),
+            Token::TypeSigComment => write!(f, "#?"),
             Token::OutputComment(_) => write!(f, "output comment"),
             Token::Ident(_) => write!(f, "identifier"),
             Token::Number => write!(f, "number"),
@@ -1229,11 +1231,18 @@ impl<'a> Lexer<'a> {
                 }
                 // Comments
                 "#" => {
+                    if self.next_char_exact("?") {
+                        // Type sig comment
+                        self.end(TypeSigComment, start);
+                        while self.next_char_if(|c| !c.ends_with('\n')).is_some() {}
+                        continue;
+                    }
                     let mut n = 0;
                     while self.next_char_exact("#") {
                         n += 1;
                     }
                     if n == 0 {
+                        // Normal and semantic comments
                         let mut comment = String::new();
                         while let Some(c) = self.next_char_if(|c| !c.ends_with('\n')) {
                             comment.push_str(c);
@@ -1256,6 +1265,7 @@ impl<'a> Lexer<'a> {
                             }
                         }
                     } else {
+                        // Output comments
                         loop {
                             while self.next_char_if(|c| !c.ends_with('\n')).is_some() {}
                             let restore = self.loc;

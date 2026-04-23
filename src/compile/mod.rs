@@ -44,6 +44,7 @@ use crate::{
         flip_unsplit_items, flip_unsplit_lines, has_subn, ident_modifier_args, max_placeholder,
         parse, split_items, split_words,
     },
+    types::TypeSig,
 };
 pub(crate) use modifier::*;
 pub use pre_eval::PreEvalMode;
@@ -93,6 +94,8 @@ pub struct Compiler {
     start_addrs: Vec<usize>,
     /// Primitive optional arg getter bindings
     prim_arg_bindings: HashMap<(Primitive, Ident), usize>,
+    /// Type signatures for type sig comments
+    pub(crate) type_sigs: HashMap<usize, TypeSig>,
 }
 
 impl Default for Compiler {
@@ -120,6 +123,7 @@ impl Default for Compiler {
             macro_env: Uiua::default(),
             start_addrs: Vec::new(),
             prim_arg_bindings: HashMap::new(),
+            type_sigs: HashMap::new(),
         }
     }
 }
@@ -130,6 +134,7 @@ struct BindingPrelude {
     track_caller: bool,
     no_inline: bool,
     external: bool,
+    type_sig: Option<Sp<usize>>,
     deprecation: Option<EcoString>,
 }
 
@@ -727,8 +732,8 @@ impl Compiler {
     }
     /// Handle comment words to modify a binding prelude.
     /// Returns whether the word was used.
-    fn prelude_word(&self, word: &Word, prelude: &mut BindingPrelude) -> bool {
-        match word {
+    fn prelude_word(&self, word: &Sp<Word>, prelude: &mut BindingPrelude) -> bool {
+        match &word.value {
             Word::Comment(c) => {
                 if let Some(curr_com) = &mut prelude.comment {
                     curr_com.push('\n');
@@ -737,6 +742,7 @@ impl Compiler {
                     prelude.comment = Some(c.as_str().into());
                 }
             }
+            Word::TypeSigComment { i } => prelude.type_sig = Some(word.span.clone().sp(*i)),
             Word::SemanticComment(SemanticComment::NoInline) => prelude.no_inline = true,
             Word::SemanticComment(SemanticComment::TrackCaller) => prelude.track_caller = true,
             Word::SemanticComment(SemanticComment::External) => prelude.external = true,
@@ -756,7 +762,7 @@ impl Compiler {
     ) -> UiuaResult {
         // Populate prelude
         let mut words = line.iter().filter(|w| !matches!(w.value, Word::Spaces));
-        if words.clone().count() == 1 && self.prelude_word(&words.next().unwrap().value, prelude) {
+        if words.clone().count() == 1 && self.prelude_word(words.next().unwrap(), prelude) {
             line.clear();
         } else {
             *prelude = BindingPrelude::default();
@@ -1512,6 +1518,7 @@ impl Compiler {
                 // Semantic comments are handled higher up
                 Node::empty()
             }
+            Word::TypeSigComment { .. } => Node::empty(),
             Word::OutputComment { i, n } => Node::SetOutputComment { i, n },
             Word::Subscripted(sub) => self.subscripted(*sub, word.span)?,
             Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::FlipLine => Node::empty(),

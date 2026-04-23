@@ -14,13 +14,12 @@ use serde::*;
 
 use crate::{
     Array, ArrayCmp, ArrayValue, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node,
-    PrimClass, Primitive, Shape, SigNode, SubSide, SysOp, Value, invert::InversionError,
+    PrimClass, Primitive, Shape, SigNode, SubSide, SysOp, Value,
 };
 
-pub fn typecheck(
-    sn: &SigNode,
-    asm: &Assembly,
-) -> Result<(Vec<TypeVal>, Vec<TypeVal>), (TypeError, usize)> {
+pub type TypeSig = (Vec<TypeVal>, Vec<TypeVal>);
+
+pub fn typecheck(sn: &SigNode, asm: &Assembly) -> Result<TypeSig, (TypeError, usize)> {
     let mut env = TypeEnv {
         asm,
         stack: vec![TypeVal::default(); sn.sig.args()],
@@ -67,7 +66,6 @@ impl<'a> HasStack for TypeEnv<'a> {
 pub enum TypeError {
     Unsupported(Option<String>),
     Underflow(String),
-    Inversion(InversionError),
     DyadicPervasiveShapes(DynShape, DynShape),
     RowsShapes(DynShape, DynShape),
     TypeMismatch(Scalar, Scalar),
@@ -85,7 +83,6 @@ impl fmt::Display for TypeError {
                 write!(f, "type checking is unsupported for {thing}")
             }
             TypeError::Underflow(message) => write!(f, "{message}"),
-            TypeError::Inversion(e) => write!(f, "{e}"),
             TypeError::DyadicPervasiveShapes(a, b) => {
                 write!(f, "shapes {a} and {b} are not compatible")
             }
@@ -713,8 +710,8 @@ impl fmt::Display for Dim {
     }
 }
 
-impl fmt::Display for DynShape {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl DynShape {
+    fn fmt_inner(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_any() {
             return write!(f, "…");
         }
@@ -739,21 +736,31 @@ impl fmt::Display for DynShape {
     }
 }
 
+impl fmt::Display for DynShape {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[")?;
+        self.fmt_inner(f)?;
+        write!(f, "]")
+    }
+}
+
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_any() {
             write!(f, "…*")
         } else if self.scalar.is_any() {
-            write!(f, "[{}]", self.shape)
+            write!(f, "{}", self.shape)
         } else if self.shape.is_scalar() {
             write!(f, "{}", self.scalar)
         } else if self.scalar == Scalar::Char
-            && self.shape.dims.len() == 1
+            && self.shape.dims == [Dim::Dyn]
             && self.shape.suffix.is_none()
         {
             write!(f, "str")
         } else {
-            write!(f, "[{} {}]", self.shape, self.scalar)
+            write!(f, "[")?;
+            self.shape.fmt_inner(f)?;
+            write!(f, " {}]", self.scalar)
         }
     }
 }
@@ -901,6 +908,14 @@ impl<'a> TypeEnv<'a> {
                     }
                     if arg_ty.shape.is_any() {
                         arg_ty.shape = ty.shape.clone();
+                    }
+                    if (arg_ty.shape.suffix.as_ref()).is_some_and(|suf| suf.is_empty())
+                        && ty.shape.suffix.is_some()
+                    {
+                        arg_ty.shape.suffix = ty.shape.suffix.clone();
+                    }
+                    if arg_ty.shape.dims.is_empty() && arg_ty.shape.suffix.is_some() {
+                        arg_ty.shape.dims = ty.shape.dims.clone();
                     }
                 } else if arg_ty.is_any() {
                     *arg = tv.clone();
@@ -1605,7 +1620,7 @@ impl<'a> TypeEnv<'a> {
                             let mismatch = !ty.shape.is_any()
                                 && match side {
                                     Some(SubSide::Left) => {
-                                        val_dims.iter().zip(&dims).all(|(a, b)| a == b)
+                                        val_dims.iter().zip(&dims).any(|(a, b)| a != b)
                                     }
                                     Some(SubSide::Right) => if let Some(suf) = &ty.shape.suffix {
                                         suf
@@ -1615,7 +1630,7 @@ impl<'a> TypeEnv<'a> {
                                     .iter()
                                     .rev()
                                     .zip(dims.iter().rev())
-                                    .all(|(a, b)| a == b),
+                                    .any(|(a, b)| a != b),
                                     None => {
                                         if let Some(suf) = &ty.shape.suffix {
                                             val_dims.len() + suf.len() > dims.len()
@@ -1643,8 +1658,15 @@ impl<'a> TypeEnv<'a> {
                                 return Err(TypeError::ShapeMismatch(shape, ty.shape));
                             } else if ty.shape.is_any() {
                                 ty.shape = shape;
-                                *val = ty.clone().into();
+                            } else {
+                                if ty.shape.suffix == Some(Vec::new()) && shape.suffix.is_some() {
+                                    ty.shape.suffix = shape.suffix;
+                                }
+                                if ty.shape.dims.is_empty() && ty.shape.suffix.is_some() {
+                                    ty.shape.dims = shape.dims
+                                }
                             }
+                            *val = ty.clone().into();
                         }
                     }
                     self.update_arg_types();
@@ -1672,7 +1694,7 @@ impl<'a> TypeEnv<'a> {
             },
             CustomInverse(cust, _) => match &cust.normal {
                 Ok(node) => self.exec(node)?,
-                Err(e) => return Err(TypeError::Inversion(e.clone())),
+                Err(_) => return Err(TypeError::Unsupported(None)),
             },
             &PushUnder(n, _) => {
                 let vals = self.pop_n(n)?;

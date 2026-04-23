@@ -1523,6 +1523,15 @@
     "class": "Encoding",
     "description": "Convert a string to UTF-8 bytes"
   },
+  "validate": {
+    "glyph": "⊲",
+    "args": 1,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Misc",
+    "description": "Validate a value's type and/or shape",
+    "experimental": true
+  },
   "voxels": {
     "args": 1,
     "outputs": 1,

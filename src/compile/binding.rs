@@ -12,8 +12,7 @@ impl Compiler {
     ) -> UiuaResult {
         let public = binding.public;
 
-        if (binding.words.iter().last()).is_some_and(|w| self.prelude_word(&w.value, &mut prelude))
-        {
+        if (binding.words.iter().last()).is_some_and(|w| self.prelude_word(w, &mut prelude)) {
             binding.words.pop();
         }
 
@@ -513,19 +512,24 @@ impl Compiler {
                 } else {
                     // Binding is a normal function
                     let sn = SigNode::new(sig, node);
-                    match typecheck(&sn, &self.asm) {
-                        Ok((arg_types, output_types)) => {
-                            meta.types = Some((
-                                arg_types.into_iter().collect(),
-                                output_types.into_iter().collect(),
-                            ))
-                        }
-                        Err((e, span)) => {
-                            self.emit_diagnostic(
-                                format!("Type error: {e}"),
-                                DiagnosticKind::Warning,
-                                self.get_span(span),
-                            );
+                    if let Some(i) = prelude.type_sig {
+                        self.experimental_error_them(&i.span, || "Type signature comments");
+                        match typecheck(&sn, &self.asm) {
+                            Ok((arg_types, output_types)) => {
+                                self.type_sigs
+                                    .insert(i.value, (arg_types.clone(), output_types.clone()));
+                                meta.types = Some((
+                                    arg_types.into_iter().collect(),
+                                    output_types.into_iter().collect(),
+                                ));
+                            }
+                            Err((e, span)) => {
+                                self.emit_diagnostic(
+                                    format!("Type error: {e}"),
+                                    DiagnosticKind::Warning,
+                                    self.get_span(span),
+                                );
+                            }
                         }
                     }
                     let func = make_fn(sn.node, sn.sig, self);

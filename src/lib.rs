@@ -169,6 +169,7 @@ pub mod profile;
 mod run;
 mod run_prim;
 mod shape;
+mod stack;
 #[cfg(feature = "stand")]
 #[doc(hidden)]
 pub mod stand;
@@ -202,10 +203,9 @@ pub use self::{
 };
 #[doc(inline)]
 pub use uiua_parser::*;
-#[doc(inline)]
-pub use uiua_stack::*;
 
 use self::algorithm::get_ops;
+use crate::stack::*;
 
 /// The Uiua version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

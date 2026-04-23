@@ -1,10 +1,8 @@
-mod signature;
-
 use std::{fmt, ops::Deref};
 
 use smallvec::SmallVec;
 
-pub use signature::*;
+use crate::Signature;
 
 pub trait Exec<S>: HasStack {
     type Output;
@@ -22,6 +20,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 pub trait HasStack {
     type Item;
     type Error;
@@ -30,9 +29,6 @@ pub trait HasStack {
     fn underflow_error<A: StackArg>(&self, arg: A) -> Self::Error;
     fn stack_len(&self) -> usize {
         self.stack().len()
-    }
-    fn stack_is_empty(&self) -> bool {
-        self.stack().is_empty()
     }
     fn push<U: Into<Self::Item>>(&mut self, val: U) {
         self.stack_mut().push(val.into())

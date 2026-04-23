@@ -14,7 +14,7 @@ use serde::*;
 
 use crate::{
     Array, ArrayCmp, ArrayValue, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node,
-    PrimClass, Primitive, Shape, SigNode, SubSide, SysOp, Value,
+    PrimClass, Primitive, Shape, SigNode, StackArg, SubSide, SysOp, Value,
 };
 
 pub type TypeSig = (Vec<TypeVal>, Vec<TypeVal>);
@@ -57,7 +57,7 @@ impl<'a> HasStack for TypeEnv<'a> {
     fn stack_mut(&mut self) -> &mut Vec<Self::Item> {
         &mut self.stack
     }
-    fn underflow_error<A: uiua_stack::StackArg>(&self, arg: A) -> Self::Error {
+    fn underflow_error<A: StackArg>(&self, arg: A) -> Self::Error {
         TypeError::Underflow(arg.underflow_message())
     }
 }
@@ -1460,12 +1460,10 @@ impl<'a> TypeEnv<'a> {
                                 } else {
                                     suf.push(ty.shape.dims.remove(0));
                                 }
+                            } else if let Some(dim) = suf.pop() {
+                                ty.shape.dims.insert(0, dim);
                             } else {
-                                if let Some(dim) = suf.pop() {
-                                    ty.shape.dims.insert(0, dim);
-                                } else {
-                                    ty.shape = DynShape::any();
-                                }
+                                ty.shape = DynShape::any();
                             }
                         } else {
                             let mid = ty.shape.dims.len().min(abs_amnt);

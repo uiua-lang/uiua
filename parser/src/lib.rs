@@ -6,14 +6,14 @@ mod inputs;
 mod lex;
 pub mod parse;
 mod primitive;
+mod signature;
 mod split;
 mod subscript;
 
 use bytemuck::must_cast;
-use uiua_stack::Signature;
 pub use {
-    complex::*, defs::*, error::*, inputs::*, lex::*, parse::parse, primitive::*, split::*,
-    subscript::*,
+    complex::*, defs::*, error::*, inputs::*, lex::*, parse::parse, primitive::*, signature::*,
+    split::*, subscript::*,
 };
 
 /// A Uiua identifier

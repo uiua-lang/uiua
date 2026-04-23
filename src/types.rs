@@ -29,7 +29,7 @@ pub fn typecheck(sn: &SigNode, asm: &Assembly) -> Result<TypeSig, (TypeError, us
         fill_stack: Vec::new(),
         stashed_fills: Vec::new(),
     };
-    env.sig_node(sn)
+    env.exec(sn)
         .map(|()| {
             env.stack.reverse();
             env.arg_types.reverse();
@@ -896,17 +896,27 @@ impl BitOr for Type {
     }
 }
 
-impl<'a> Exec<SigNode> for TypeEnv<'a> {
-    type Output = ();
-    fn exec(&mut self, sn: SigNode) -> Result<Self::Output, Self::Error> {
-        self.sig_node(&sn)
-    }
-}
-
 impl<'a> Exec<&SigNode> for TypeEnv<'a> {
     type Output = ();
     fn exec(&mut self, sn: &SigNode) -> Result<Self::Output, Self::Error> {
-        self.sig_node(sn)
+        let stack_height = self.stack_len();
+        match self.node(&sn.node) {
+            Ok(()) => Ok(()),
+            Err(TypeError::Unsupported(e)) => {
+                // Replace types with any
+                let Some(min_height) = stack_height.checked_sub(sn.sig.args()) else {
+                    return Err(TypeError::Unsupported(e));
+                };
+                while self.stack_len() > min_height {
+                    self.stack.pop();
+                }
+                while self.stack_len() < min_height + sn.sig.outputs() {
+                    self.push(TypeVal::default())
+                }
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 
@@ -938,31 +948,11 @@ impl<'a> TypeEnv<'a> {
             }
         }
     }
-    fn sig_node(&mut self, sn: &SigNode) -> TypeResult {
-        let stack_height = self.stack_len();
-        match self.node(&sn.node) {
-            Ok(()) => Ok(()),
-            Err(TypeError::Unsupported(e)) => {
-                // Replace types with any
-                let Some(min_height) = stack_height.checked_sub(sn.sig.args()) else {
-                    return Err(TypeError::Unsupported(e));
-                };
-                while self.stack_len() > min_height {
-                    self.stack.pop();
-                }
-                while self.stack_len() < min_height + sn.sig.outputs() {
-                    self.push(TypeVal::default())
-                }
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
-    }
-    fn sig_node_no_fill(&mut self, sn: &SigNode) -> TypeResult {
+    fn exec_no_fill(&mut self, sn: &SigNode) -> TypeResult {
         let fill_stack = take(&mut self.fill_stack);
         let len = fill_stack.len();
         self.stashed_fills.extend(fill_stack);
-        self.sig_node(sn)?;
+        self.exec(sn)?;
         self.fill_stack = self.stashed_fills.split_off(self.stashed_fills.len() - len);
         Ok(())
     }
@@ -993,7 +983,7 @@ impl<'a> TypeEnv<'a> {
             }
             Call(f, _) => {
                 let sn = SigNode::new(f.sig, self.asm[f].clone());
-                self.sig_node_no_fill(&sn)?
+                self.exec_no_fill(&sn)?
             }
             Push(val) => self.push(val.clone()),
             Prim(prim, _) => match prim {
@@ -1518,8 +1508,8 @@ impl<'a> TypeEnv<'a> {
                 _ => return Err(TypeError::Unsupported(Some(format!("{prim:?}")))),
             },
             Mod(prim, ops, _) => match prim {
-                Fork => self.fork(ops.clone())?,
-                Bracket => self.bracket(ops.clone())?,
+                Fork => self.fork(ops)?,
+                Bracket => self.bracket(ops)?,
                 Dip => self.dip(monad(ops))?,
                 Both => self.both(monad(ops))?,
                 By => self.by(monad(ops))?,
@@ -1549,7 +1539,7 @@ impl<'a> TypeEnv<'a> {
                     }
                     self.push_all(args.into_iter().map(TypeVal::into_row));
                     let outputs = f.sig.outputs();
-                    self.sig_node_no_fill(f)?;
+                    self.exec_no_fill(f)?;
                     if !all_scalar {
                         for output in self.top_n_mut(outputs)? {
                             output.prepend_dim(row_count);
@@ -1578,7 +1568,7 @@ impl<'a> TypeEnv<'a> {
                         ty.shape.dims.insert(0, Dim::Dyn);
                         ty.into()
                     }));
-                    self.sig_node_no_fill(f)?;
+                    self.exec_no_fill(f)?;
                     for tv in self.top_n_mut(f.sig.outputs())? {
                         let mut shape = tv.shape().into_owned();
                         shape.dims.insert(0, Dim::Dyn);
@@ -1587,13 +1577,13 @@ impl<'a> TypeEnv<'a> {
                 }
                 Fill => {
                     let [f, g] = dyad(ops);
-                    self.sig_node(f)?;
+                    self.exec(f)?;
                     if f.sig.outputs() == 0 {
-                        self.sig_node_no_fill(g)?;
+                        self.exec_no_fill(g)?;
                     } else {
                         let mut fills = self.pop_n(f.sig.outputs())?;
                         self.fill_stack.push(fills.remove(0));
-                        self.sig_node(g)?;
+                        self.exec(g)?;
                         self.fill_stack.pop();
                     }
                 }
@@ -1700,7 +1690,7 @@ impl<'a> TypeEnv<'a> {
                             tv.prepend_dim(1.into());
                         }
                     }
-                    self.sig_node(f)?;
+                    self.exec(f)?;
                 }
                 ReduceTable => {
                     let [f, g] = dyad(ops);
@@ -1751,7 +1741,7 @@ impl<'a> TypeEnv<'a> {
         let args = self.pop_n(f.sig.args())?;
         let shape_prefix: Vec<_> = args.iter().map(TypeVal::row_count).collect();
         self.push_all(args.into_iter().map(TypeVal::into_row));
-        self.sig_node_no_fill(f)?;
+        self.exec_no_fill(f)?;
         for tv in self.top_n_mut(f.sig.outputs())? {
             let mut shape = tv.shape().into_owned();
             let suffix = replace(&mut shape.dims, shape_prefix.clone());
@@ -1768,7 +1758,7 @@ impl<'a> TypeEnv<'a> {
         if xs.row_count() == 2 {
             self.push(xs);
             self.unpack(2, false, None)?;
-            return self.sig_node_no_fill(f);
+            return self.exec_no_fill(f);
         }
         if let Some((prim, _)) = f.node.as_flipped_primitive()
             && prim.class() == PrimClass::DyadicPervasive

@@ -1317,11 +1317,40 @@ impl<'a> TypeEnv<'a> {
                     self.update_arg_types();
                 }
                 Rand => self.push(Scalar::Num.scalar_type()),
+                Parse => {
+                    fn parse(ty: Type) -> TypeResult<Type> {
+                        let mut shape = ty.shape;
+                        match ty.scalar {
+                            Scalar::Char | Scalar::Any => {
+                                if let Some(suf) = &mut shape.suffix {
+                                    suf.pop();
+                                } else {
+                                    shape.dims.pop();
+                                }
+                            }
+                            Scalar::Box(None) => {}
+                            Scalar::Box(Some(boxed)) => {
+                                let ty = parse(*boxed)?;
+                                if ty.shape.suffix.is_some() {
+                                    shape.suffix = Some(Vec::new());
+                                } else {
+                                    shape.dims.extend(ty.shape.dims);
+                                }
+                            }
+                            scalar => {
+                                return Err(format!("Cannot {} {scalar}", Parse.format()).into());
+                            }
+                        }
+                        Ok(Type::new(Scalar::Num, shape))
+                    }
+                    let ty = self.pop(1)?.ty();
+                    self.push(parse(ty)?);
+                }
                 // TODO (descending priority):
                 // - Input type suggestion
                 // - pick, drop
                 // - keep, rotate, where
-                // - parse, bits, base, memberof, indexin
+                // - bits, base, memberof, indexin
                 // - classify, occurences, deduplicate, find, mask, orient
                 // - system functions
                 Sys(SysOp::FReadAllStr | SysOp::FReadAllBytes) => {

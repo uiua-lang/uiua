@@ -1432,6 +1432,7 @@ impl<'a> Lexer<'a> {
                                 PrimComponent::Epsilon => {
                                     Ident(PrimComponent::Epsilon.name().into())
                                 }
+                                PrimComponent::Infinity => Glyph(Primitive::Infinity),
                             };
                             self.tokens.push(self.make_span(start, end).sp(tok));
                             start = end;

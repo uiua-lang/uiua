@@ -267,6 +267,21 @@ impl TypeVal {
             None
         }
     }
+    pub fn as_dim(&self) -> Option<Dim> {
+        let n = match self {
+            TypeVal::Num(n) => *n,
+            TypeVal::Val(Value::Num(arr)) if arr.rank() == 0 => arr.data[0],
+            TypeVal::Val(Value::Byte(arr)) if arr.rank() == 0 => arr.data[0] as f64,
+            _ => return None,
+        };
+        if n.is_infinite() {
+            Some(Dim::Dyn)
+        } else if n.fract() == 0.0 && n >= 0.0 {
+            Some(Dim::Static(n as usize))
+        } else {
+            None
+        }
+    }
     pub fn as_dims(&self) -> Option<Vec<Dim>> {
         Some(match self {
             TypeVal::NumList(nums)
@@ -1598,8 +1613,9 @@ impl<'a> TypeEnv<'a> {
                     let outputs = self.pop_n(f.sig.outputs())?;
                     let val = self.top_mut("validated value")?;
                     let mut ty = val.clone().ty();
+                    let mut did_type = false;
                     for mat in outputs {
-                        if let Some(type_id) = mat.as_nat() {
+                        if !did_type && let Some(type_id) = mat.as_nat() {
                             // Type checking
                             let expected = match type_id as u8 {
                                 f64::TYPE_ID => Scalar::Num,
@@ -1614,7 +1630,10 @@ impl<'a> TypeEnv<'a> {
                             } else if discriminant(&expected) != discriminant(&ty.scalar) {
                                 return Err(TypeError::TypeMismatch(expected, ty.scalar));
                             }
-                        } else if let Some(dims) = mat.as_dims() {
+                            did_type = true;
+                        } else if let Some(dims) =
+                            mat.as_dims().or_else(|| mat.as_dim().map(|d| vec![d]))
+                        {
                             // Shape checking
                             let val_dims = &ty.shape.dims;
                             let mismatch = !ty.shape.is_any()

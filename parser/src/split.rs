@@ -72,6 +72,8 @@ pub enum PrimComponent {
     CloseParen,
     /// ε
     Epsilon,
+    /// ∞
+    Infinity,
 }
 
 impl From<Primitive> for PrimComponent {
@@ -98,6 +100,7 @@ impl PrimComponent {
             PrimComponent::OpenParen => "(",
             PrimComponent::CloseParen => ")",
             PrimComponent::Epsilon => "ε",
+            PrimComponent::Infinity => "∞",
         }
     }
     /// Try to parse a component from a name prefix
@@ -273,6 +276,11 @@ impl Primitive {
             alias!((epsilon, PrimComponent::Epsilon)),
             alias!((r, Reduce), (a, Content), (ze, Join)),
             alias!((r, Reduce), (a, Content), (z, Join)),
+            alias!(
+                (s, Validate),
+                (t, PrimComponent::Sub1),
+                (r, PrimComponent::Infinity)
+            ),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

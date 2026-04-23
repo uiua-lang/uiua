@@ -1810,9 +1810,10 @@ impl ImplPrimitive {
                 let sig = f.sig;
                 env.exec(f)?;
                 let outputs = env.pop_n(sig.outputs())?;
+                let mut did_type = false;
                 for mat in outputs {
                     let val = env.top()?;
-                    if let Ok(n) = mat.as_nat(env, "") {
+                    if !did_type && let Ok(n) = mat.as_nat(env, "") {
                         if val.type_id() != n as u8 {
                             let expected = match n as u8 {
                                 f64::TYPE_ID => "number",
@@ -1826,12 +1827,17 @@ impl ImplPrimitive {
                                 val.type_name()
                             )));
                         }
+                        did_type = true;
                     } else {
-                        let shape = mat.as_nats_or_infs(
-                            env,
-                            "Type constraint must be an integer or infinity indicating \
+                        let shape = mat
+                            .as_nats_or_infs(
+                                env,
+                                "Type constraint must be an integer or infinity indicating \
                             a type or a list of integers indicating a shape",
-                        )?;
+                            )
+                            .or_else(|e| {
+                                mat.as_nat_or_inf(env, "").map(|n| vec![n]).map_err(|_| e)
+                            })?;
                         if let Some(sub) = sub {
                             match sub.side {
                                 SubSide::Left => {

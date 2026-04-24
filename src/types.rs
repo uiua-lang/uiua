@@ -1183,7 +1183,37 @@ impl<'a> TypeEnv<'a> {
                 )?,
                 Couple => self.pack(2, false, true, Some(Couple))?,
                 Range => self.monadic(
-                    |_| unsupported(),
+                    |ty| {
+                        if !ty.scalar.compatible_with(&Scalar::Num) {
+                            return Err(format!("Cannot create range from {}", ty.scalar).into());
+                        }
+                        let shape = ty.shape;
+                        Ok(Scalar::Num.shaped(if shape.rank() > 1 {
+                            return Err(format!(
+                                "Cannot create range from array with shape {shape}"
+                            )
+                            .into());
+                        } else if shape.suffix.is_some() {
+                            DynShape {
+                                dims: vec![Dim::Dyn],
+                                suffix: Some(Vec::new()),
+                            }
+                        } else {
+                            match *shape.dims {
+                                [] => Dim::Dyn.into(),
+                                [Dim::Static(n)] => {
+                                    let mut dims = vec![Dim::Dyn; n];
+                                    dims.push(Dim::Static(n));
+                                    dims.into()
+                                }
+                                [Dim::Dyn] => DynShape {
+                                    dims: vec![Dim::Dyn],
+                                    suffix: Some(Vec::new()),
+                                },
+                                _ => unreachable!(),
+                            }
+                        }))
+                    },
                     |n| Ok(Type::new(Scalar::Num, n.abs() as usize)),
                     |list| {
                         let len = list.len();

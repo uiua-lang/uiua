@@ -1841,9 +1841,9 @@ impl ImplPrimitive {
                         if let Some(sub) = sub {
                             match sub.side {
                                 SubSide::Left => {
-                                    if val.shape.len() < shape.len()
-                                        || !(val.shape.iter().zip(&shape))
-                                            .all(|(a, b)| b.is_none_or(|b| *a == b))
+                                    if val.rank() < shape.len()
+                                        || (val.shape.iter().zip(&shape))
+                                            .any(|(a, b)| b.is_none_or(|b| *a != b))
                                     {
                                         return Err(env.error(format!(
                                             "Expected shape to start with {} but found {}",
@@ -1854,8 +1854,8 @@ impl ImplPrimitive {
                                 }
                                 SubSide::Right => {
                                     if val.shape.len() < shape.len()
-                                        || !(val.shape.iter().rev().zip(shape.iter().rev()))
-                                            .all(|(a, b)| b.is_none_or(|b| *a == b))
+                                        || (val.shape.iter().rev().zip(shape.iter().rev()))
+                                            .any(|(a, b)| b.is_none_or(|b| *a != b))
                                     {
                                         return Err(env.error(format!(
                                             "Expected shape to end with {} but found {}",

@@ -28,6 +28,7 @@ pub fn typecheck(sn: &SigNode, asm: &Assembly) -> Result<TypeSig, (TypeError, us
         arg_types: vec![TypeVal::default(); sn.sig.args()],
         fill_stack: Vec::new(),
         stashed_fills: Vec::new(),
+        can_set_arg_types: true,
     };
     env.exec(sn)
         .map(|()| {
@@ -46,6 +47,7 @@ pub struct TypeEnv<'a> {
     arg_types: Vec<TypeVal>,
     fill_stack: Vec<TypeVal>,
     stashed_fills: Vec<TypeVal>,
+    can_set_arg_types: bool,
 }
 
 impl<'a> HasStack for TypeEnv<'a> {
@@ -491,6 +493,9 @@ impl Scalar {
     pub fn scalar_type(self) -> Type {
         self.shaped([0usize; 0])
     }
+    pub fn any_shape(self) -> Type {
+        self.shaped(DynShape::any())
+    }
     pub fn maybe_scalar_type(self) -> Option<Type> {
         if self.is_any() {
             None
@@ -583,7 +588,13 @@ impl DynShape {
         }
     }
     pub fn row_count(&self) -> Dim {
-        self.dims.first().copied().unwrap_or(Dim::Static(1))
+        self.dims.first().copied().unwrap_or_else(|| {
+            if self.suffix.is_some() {
+                Dim::Dyn
+            } else {
+                Dim::Static(1)
+            }
+        })
     }
     pub fn rank(&self) -> usize {
         self.dims.len() + self.suffix.as_ref().map_or(0, |s| s.len())
@@ -921,11 +932,22 @@ impl<'a> Exec<&SigNode> for TypeEnv<'a> {
 }
 
 impl<'a> TypeEnv<'a> {
+    fn type_hint(&mut self, tys: impl IntoIterator<Item = Type>) {
+        for (tv, ty) in self.stack.iter_mut().rev().zip(tys) {
+            if tv.scalar().is_any() {
+                tv.set_scalar(ty.scalar);
+            }
+            if tv.shape().is_any() {
+                tv.set_shape(ty.shape);
+            }
+        }
+        self.update_arg_types();
+    }
     fn update_arg_types(&mut self) {
-        if self.stack.len() != self.arg_types.len() {
+        if !self.can_set_arg_types || self.stack.len() > self.arg_types.len() {
             return;
         }
-        for (tv, arg) in self.stack.iter().zip(&mut self.arg_types) {
+        for (tv, arg) in self.stack.iter().rev().zip(self.arg_types.iter_mut().rev()) {
             if let TypeVal::Type(arg_ty) = arg {
                 if let TypeVal::Type(ty) = tv {
                     if arg_ty.scalar.is_any() {
@@ -965,6 +987,27 @@ impl<'a> TypeEnv<'a> {
         {
             self.call_stack.pop();
         }
+
+        fn node_allows_more_arg_types(node: &Node) -> bool {
+            use {ImplPrimitive::*, Node::*};
+            match node {
+                Run(nodes) => nodes.iter().all(node_allows_more_arg_types),
+                Push(_) => true,
+                Prim(prim, _) => prim.class() == PrimClass::Arguments,
+                Mod(prim, args, _) => {
+                    prim.class() == PrimClass::Arguments
+                        && args.iter().all(|sn| node_allows_more_arg_types(&sn.node))
+                }
+                ImplPrim(Over, _) => true,
+                ImplMod(DipN(_) | BothImpl(_), args, _) => {
+                    args.iter().all(|sn| node_allows_more_arg_types(&sn.node))
+                }
+                ImplMod(ValidateImpl(_), ..) => true,
+                _ => false,
+            }
+        }
+
+        self.can_set_arg_types = self.can_set_arg_types && node_allows_more_arg_types(node);
         res
     }
     fn node_impl(&mut self, node: &Node) -> TypeResult {
@@ -1012,7 +1055,10 @@ impl<'a> TypeEnv<'a> {
                 Atan => self.dyadic_pervasive(Scalar::atan2, atan2::num_num)?,
                 Min => self.dyadic_pervasive(Scalar::min, min::num_num)?,
                 Max => self.dyadic_pervasive(Scalar::max, max::num_num)?,
-                Complex => self.dyadic_pervasive(Scalar::complex, complex::num_num)?,
+                Complex => {
+                    self.type_hint(vec![Scalar::Num.any_shape(); 2]);
+                    self.dyadic_pervasive(Scalar::complex, complex::num_num)?;
+                }
                 Eq => self.dyadic_pervasive(Scalar::is_eq, is_eq::num_num)?,
                 Ne => self.dyadic_pervasive(Scalar::is_ne, is_ne::num_num)?,
                 Lt => self.dyadic_pervasive(Scalar::other_is_lt, other_is_lt::num_num)?,
@@ -1386,6 +1432,7 @@ impl<'a> TypeEnv<'a> {
                 // - classify, occurences, deduplicate, find, mask, orient
                 // - system functions
                 Sys(SysOp::FReadAllStr | SysOp::FReadAllBytes) => {
+                    self.type_hint([Type::new(Scalar::Char, Dim::Dyn)]);
                     let path = self.pop(1)?.ty();
                     if !path.is_string() {
                         return Err(format!(
@@ -1550,6 +1597,7 @@ impl<'a> TypeEnv<'a> {
                 Table => self.table(monad(ops))?,
                 Group | Partition => {
                     let f = monad(ops);
+                    self.type_hint([Type::new(Scalar::Num, DynShape::any())]);
                     let markers = self.pop(1)?;
                     if markers.rank() > 1 {
                         return Err(TypeError::Unsupported(None));
@@ -1627,17 +1675,20 @@ impl<'a> TypeEnv<'a> {
                             let mismatch = !ty.shape.is_any()
                                 && match side {
                                     Some(SubSide::Left) => {
-                                        val_dims.iter().zip(&dims).any(|(a, b)| a != b)
+                                        val_dims.len() < dims.len()
+                                            || val_dims.iter().zip(&dims).any(|(a, b)| a != b)
                                     }
-                                    Some(SubSide::Right) => if let Some(suf) = &ty.shape.suffix {
-                                        suf
-                                    } else {
-                                        val_dims
+                                    Some(SubSide::Right) => {
+                                        let val_dims = if let Some(suf) = &ty.shape.suffix {
+                                            suf
+                                        } else {
+                                            val_dims
+                                        };
+                                        ty.shape.rank() < dims.len()
+                                            || (val_dims.iter().rev())
+                                                .zip(dims.iter().rev())
+                                                .any(|(a, b)| a != b)
                                     }
-                                    .iter()
-                                    .rev()
-                                    .zip(dims.iter().rev())
-                                    .any(|(a, b)| a != b),
                                     None => {
                                         if let Some(suf) = &ty.shape.suffix {
                                             val_dims.len() + suf.len() > dims.len()

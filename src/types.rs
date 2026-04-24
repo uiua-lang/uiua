@@ -243,19 +243,6 @@ impl TypeVal {
             tv => tv,
         }
     }
-    pub fn type_id(&self) -> Option<u8> {
-        Some(match self {
-            TypeVal::Num(_) | TypeVal::NumList(_) => f64::TYPE_ID,
-            TypeVal::Val(val) => val.type_id(),
-            TypeVal::Type(ty) => match ty.scalar {
-                Scalar::Any => return None,
-                Scalar::Num => f64::TYPE_ID,
-                Scalar::Char => char::TYPE_ID,
-                Scalar::Box(_) => Boxed::TYPE_ID,
-                Scalar::Complex => Complex::TYPE_ID,
-            },
-        })
-    }
     pub fn as_nat(&self) -> Option<usize> {
         let n = match self {
             TypeVal::Num(n) => *n,
@@ -462,6 +449,12 @@ impl Type {
     pub fn listy() -> Type {
         DynShape::prefix([Dim::Dyn]).any_scalar()
     }
+    pub fn list() -> Type {
+        DynShape::from(Dim::Dyn).any_scalar()
+    }
+    pub fn string() -> Type {
+        Scalar::Char.shaped(Dim::Dyn)
+    }
     pub fn is_any(&self) -> bool {
         self.scalar.is_any() && self.shape.is_any()
     }
@@ -475,6 +468,12 @@ impl Type {
         self.shape.rank() <= 1 && self.scalar.compatible_with(&Scalar::Char)
             || self.shape.rank() == 0 && self.scalar.compatible_with(&Scalar::Box(None))
     }
+    pub fn boxed(self) -> Self {
+        Scalar::Box(Some(self.into())).scalar_type()
+    }
+    pub fn box_list(self) -> Self {
+        Scalar::Box(Some(self.into())).shaped(Dim::Dyn)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
@@ -485,6 +484,7 @@ pub enum Scalar {
     Char,
     Box(Option<Box<Type>>),
     Complex,
+    Stream,
 }
 impl Scalar {
     pub fn is_any(&self) -> bool {
@@ -519,7 +519,8 @@ impl Scalar {
             | (Scalar::Num, Scalar::Num)
             | (Scalar::Char, Scalar::Char)
             | (Scalar::Complex, Scalar::Complex)
-            | (Scalar::Box(_), Scalar::Box(_)) => true,
+            | (Scalar::Box(_), Scalar::Box(_))
+            | (Scalar::Stream | Scalar::Box(_), Scalar::Stream | Scalar::Box(_)) => true,
             _ => false,
         }
     }
@@ -863,6 +864,7 @@ impl fmt::Display for Scalar {
             Scalar::Box(None) => write!(f, "□"),
             Scalar::Box(Some(inner)) => write!(f, "□{inner}"),
             Scalar::Complex => write!(f, "ℂ"),
+            Scalar::Stream => write!(f, "stream"),
         }
     }
 }
@@ -1507,13 +1509,14 @@ impl<'a> TypeEnv<'a> {
                     let ty = self.pop(1)?.ty();
                     self.push(parse(ty)?);
                 }
+                Args => {}
                 // TODO (descending priority):
                 // - Input type suggestion
                 // - pick, drop
                 // - keep, rotate, where
                 // - bits, base, memberof, indexin
                 // - classify, occurences, deduplicate, find, mask, orient
-                // - system functions
+                // - map functions
                 Sys(SysOp::FReadAllStr | SysOp::FReadAllBytes) => {
                     self.type_hint([Type::new(Scalar::Char, Dim::Dyn)]);
                     let path = self.pop(1)?.ty();
@@ -1529,16 +1532,84 @@ impl<'a> TypeEnv<'a> {
                     } else {
                         Scalar::Char
                     };
-                    self.push(Type::new(scalar, [Dim::Dyn]));
+                    self.push(scalar.shaped(Dim::Dyn));
                 }
-                Sys(SysOp::ReadBytes | SysOp::ReadStr) => {
-                    let _path = self.pop(1)?;
+                Sys(SysOp::ReadBytes | SysOp::ReadStr | SysOp::Seek) => {
+                    self.type_hint([
+                        Scalar::Num.scalar_type(),
+                        Scalar::Stream.scalar_type().boxed(),
+                    ]);
+                    let _count = self.pop(1)?;
+                    let _handle = self.pop(2)?;
                     let scalar = if *prim == Sys(SysOp::ReadBytes) {
                         Scalar::Num
                     } else {
                         Scalar::Char
                     };
-                    self.push(Type::new(scalar, [Dim::Dyn]));
+                    self.push(scalar.shaped(Dim::Dyn));
+                }
+                Sys(SysOp::Write) => {
+                    self.type_hint([Scalar::Stream.scalar_type().boxed(), Type::list()]);
+                    let _handle = self.pop(1)?;
+                    let _data = self.pop(2)?;
+                }
+                Sys(SysOp::Close) => {
+                    self.type_hint([Scalar::Stream.scalar_type().boxed()]);
+                    let _handle = self.pop(1)?;
+                }
+                Sys(SysOp::FOpen | SysOp::FCreate | SysOp::TcpConnect) => {
+                    self.type_hint([Type::string()]);
+                    let _path = self.pop("path")?;
+                    self.push(Scalar::Stream.scalar_type().boxed());
+                }
+                Sys(SysOp::FDelete | SysOp::FTrash | SysOp::FMakeDir | SysOp::Invoke) => {
+                    self.type_hint([Type::string()]);
+                    let _path = self.pop("path")?;
+                }
+                Sys(SysOp::FListDir) => {
+                    self.type_hint([Type::string()]);
+                    let _path = self.pop("path")?;
+                    self.push(Type::string().box_list());
+                }
+                Sys(SysOp::FIsFile | SysOp::FExists) => {
+                    self.type_hint([Type::string()]);
+                    let _path = self.pop("path")?;
+                    self.push(Scalar::Num);
+                }
+                Sys(SysOp::FWriteAll) => {
+                    self.type_hint([Type::string(), Type::list()]);
+                    let _path = self.pop(1)?;
+                    let _data = self.pop(2)?;
+                }
+                Sys(SysOp::RawMode | SysOp::Exit) => {
+                    self.type_hint([Scalar::Num.scalar_type()]);
+                    let _on = self.pop(1)?;
+                }
+                Sys(SysOp::Var) => {
+                    self.type_hint([Type::string()]);
+                    let _name = self.pop(1)?;
+                    self.push(Type::string());
+                }
+                Sys(SysOp::EnvArgs) => self.push(Type::string().box_list()),
+                Sys(
+                    SysOp::Prin | SysOp::Print | SysOp::PrinErr | SysOp::PrintErr | SysOp::Show,
+                ) => _ = self.pop(1)?,
+                Sys(SysOp::TermSize) => self.push(Scalar::Num.shaped(2)),
+                Sys(SysOp::RunInherit) => {
+                    let _args = self.pop(1);
+                    self.push(Scalar::Num);
+                }
+                Sys(SysOp::RunCapture) => {
+                    let _args = self.pop(1);
+                    self.push(Type::string());
+                    self.push(Type::string());
+                    self.push(Scalar::Num);
+                }
+                Sys(SysOp::RunStream) => {
+                    let _args = self.pop(1);
+                    for _ in 0..3 {
+                        self.push(Scalar::Stream.scalar_type().boxed());
+                    }
                 }
                 _ => return Err(TypeError::Unsupported(Some(prim.format().to_string()))),
             },

@@ -459,6 +459,9 @@ impl Type {
             shape: shape.into(),
         }
     }
+    pub fn listy() -> Type {
+        DynShape::prefix([Dim::Dyn]).any_scalar()
+    }
     pub fn is_any(&self) -> bool {
         self.scalar.is_any() && self.shape.is_any()
     }
@@ -518,6 +521,27 @@ impl Scalar {
             | (Scalar::Complex, Scalar::Complex)
             | (Scalar::Box(_), Scalar::Box(_)) => true,
             _ => false,
+        }
+    }
+    pub fn compatible_with_boxes(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Scalar::Box(Some(a)), Scalar::Box(Some(b))) => {
+                a.scalar.compatible_with_boxes(&b.scalar) && a.shape.compatible_with(&b.shape)
+            }
+            _ => self.compatible_with(other),
+        }
+    }
+    pub fn union(self, other: Self) -> Self {
+        match (self, other) {
+            (Scalar::Box(Some(a)), Scalar::Box(Some(b))) => {
+                if a.scalar.compatible_with_boxes(&b.scalar) && a.shape.compatible_with(&b.shape) {
+                    Scalar::Box(Some(a.max(b)))
+                } else {
+                    Scalar::Box(None)
+                }
+            }
+            (a, b) if a == b => a,
+            _ => Scalar::Any,
         }
     }
 }
@@ -585,6 +609,18 @@ impl DynShape {
         DynShape {
             dims: Vec::new(),
             suffix: Some(Vec::new()),
+        }
+    }
+    pub fn prefix(prefix: impl Into<Vec<Dim>>) -> Self {
+        DynShape {
+            dims: prefix.into(),
+            suffix: Some(Vec::new()),
+        }
+    }
+    pub fn any_scalar(self) -> Type {
+        Type {
+            scalar: Scalar::Any,
+            shape: self,
         }
     }
     pub fn row_count(&self) -> Dim {
@@ -1035,29 +1071,36 @@ impl<'a> TypeEnv<'a> {
                 Dup => self.dup()?,
                 Flip => self.flip()?,
                 Neg => self.monadic_pervasive(Scalar::scalar_neg, scalar_neg::num)?,
-                Not => self.monadic_pervasive(Scalar::not, not::num)?,
+                Not => self.monadic_pervasive_hint(Scalar::Num, Scalar::not, not::num)?,
                 Abs => self.monadic_pervasive(Scalar::scalar_abs, scalar_abs::num)?,
                 Sign => self.monadic_pervasive(Scalar::sign, sign::num)?,
-                Reciprocal => self.monadic_pervasive(Scalar::recip, recip::num)?,
-                Sqrt => self.monadic_pervasive(Scalar::sqrt, sqrt::num)?,
-                Exp => self.monadic_pervasive(Scalar::exp, exp::num)?,
-                Sin => self.monadic_pervasive(Scalar::sin, sin::num)?,
-                Floor => self.monadic_pervasive(Scalar::floor, floor::num)?,
-                Ceil => self.monadic_pervasive(Scalar::ceil, ceil::num)?,
-                Round => self.monadic_pervasive(Scalar::round, round::num)?,
-                Add => self.dyadic_pervasive(Scalar::add, add::num_num)?,
-                Sub => self.dyadic_pervasive(Scalar::sub, sub::num_num)?,
-                Mul => self.dyadic_pervasive(Scalar::mul, mul::num_num)?,
-                Div => self.dyadic_pervasive(Scalar::div, div::num_num)?,
-                Modulo => self.dyadic_pervasive(Scalar::modulo, modulo::num_num)?,
-                Or => self.dyadic_pervasive(Scalar::or, or::num_num)?,
-                Pow => self.dyadic_pervasive(Scalar::scalar_pow, scalar_pow::num_num)?,
-                Atan => self.dyadic_pervasive(Scalar::atan2, atan2::num_num)?,
+                Reciprocal => {
+                    self.monadic_pervasive_hint(Scalar::Num, Scalar::recip, recip::num)?
+                }
+                Sqrt => self.monadic_pervasive_hint(Scalar::Num, Scalar::sqrt, sqrt::num)?,
+                Exp => self.monadic_pervasive_hint(Scalar::Num, Scalar::exp, exp::num)?,
+                Sin => self.monadic_pervasive_hint(Scalar::Num, Scalar::sin, sin::num)?,
+                Floor => self.monadic_pervasive_hint(Scalar::Num, Scalar::floor, floor::num)?,
+                Ceil => self.monadic_pervasive_hint(Scalar::Num, Scalar::ceil, ceil::num)?,
+                Round => self.monadic_pervasive_hint(Scalar::Num, Scalar::round, round::num)?,
+                Add => self.dyadic_pervasive_hint(Scalar::Num, Scalar::add, add::num_num)?,
+                Sub => self.dyadic_pervasive_hint(Scalar::Num, Scalar::sub, sub::num_num)?,
+                Mul => self.dyadic_pervasive_hint(Scalar::Num, Scalar::mul, mul::num_num)?,
+                Div => self.dyadic_pervasive_hint(Scalar::Num, Scalar::div, div::num_num)?,
+                Modulo => {
+                    self.dyadic_pervasive_hint(Scalar::Num, Scalar::modulo, modulo::num_num)?
+                }
+                Or => self.dyadic_pervasive_hint(Scalar::Num, Scalar::or, or::num_num)?,
+                Pow => self.dyadic_pervasive_hint(
+                    Scalar::Num,
+                    Scalar::scalar_pow,
+                    scalar_pow::num_num,
+                )?,
+                Atan => self.dyadic_pervasive_hint(Scalar::Num, Scalar::atan2, atan2::num_num)?,
                 Min => self.dyadic_pervasive(Scalar::min, min::num_num)?,
                 Max => self.dyadic_pervasive(Scalar::max, max::num_num)?,
                 Complex => {
-                    self.type_hint(vec![Scalar::Num.any_shape(); 2]);
-                    self.dyadic_pervasive(Scalar::complex, complex::num_num)?;
+                    self.dyadic_pervasive_hint(Scalar::Num, Scalar::complex, complex::num_num)?
                 }
                 Eq => self.dyadic_pervasive(Scalar::is_eq, is_eq::num_num)?,
                 Ne => self.dyadic_pervasive(Scalar::is_ne, is_ne::num_num)?,
@@ -1083,6 +1126,7 @@ impl<'a> TypeEnv<'a> {
                     self.push(x.boxed());
                 }
                 First | Last => {
+                    self.type_hint([Type::listy()]);
                     let x = self.pop(1)?;
                     self.push(x.into_row());
                 }
@@ -1125,18 +1169,21 @@ impl<'a> TypeEnv<'a> {
                     },
                     |_| None,
                 )?,
-                Reverse => self.monadic(
-                    Ok,
-                    Ok,
-                    |mut list| {
-                        list.make_mut().reverse();
-                        Ok(list)
-                    },
-                    |mut val| {
-                        val.reverse();
-                        Some(val)
-                    },
-                )?,
+                Reverse => {
+                    self.type_hint([Type::listy()]);
+                    self.monadic(
+                        Ok,
+                        Ok,
+                        |mut list| {
+                            list.make_mut().reverse();
+                            Ok(list)
+                        },
+                        |mut val| {
+                            val.reverse();
+                            Some(val)
+                        },
+                    )?
+                }
                 Deshape => self.monadic(
                     |mut ty| {
                         ty.shape.dims = vec![if ty.shape.suffix.take().is_some() {
@@ -1225,46 +1272,55 @@ impl<'a> TypeEnv<'a> {
                         })
                     },
                 )?,
-                Sort => self.monadic(
-                    Ok,
-                    Ok,
-                    |mut list| {
-                        list.make_mut().sort_unstable_by(f64::array_cmp);
-                        Ok(list)
-                    },
-                    |mut val| {
-                        val.sort_up();
-                        Some(val)
-                    },
-                )?,
-                Rise => self.monadic(
-                    |mut ty| {
-                        ty.scalar = Scalar::Num;
-                        if ty.shape.suffix.take().is_some() && ty.shape.dims.is_empty() {
-                            ty.shape = DynShape::any();
-                        } else {
-                            ty.shape.dims.truncate(1);
-                        }
-                        Ok(ty)
-                    },
-                    |_| Ok(Value::from(0)),
-                    |list| Ok(Type::new(Scalar::Num, list.len())),
-                    |val| Some(Value::from(val.rise())),
-                )?,
-                Fall => self.monadic(
-                    |mut ty| {
-                        ty.scalar = Scalar::Num;
-                        if ty.shape.suffix.take().is_some() && ty.shape.dims.is_empty() {
-                            ty.shape = DynShape::any();
-                        } else {
-                            ty.shape.dims.truncate(1);
-                        }
-                        Ok(ty)
-                    },
-                    |_| Ok(Value::from(0)),
-                    |list| Ok(Type::new(Scalar::Num, list.len())),
-                    |val| Some(Value::from(val.fall())),
-                )?,
+                Sort => {
+                    self.type_hint([Type::listy()]);
+                    self.monadic(
+                        Ok,
+                        Ok,
+                        |mut list| {
+                            list.make_mut().sort_unstable_by(f64::array_cmp);
+                            Ok(list)
+                        },
+                        |mut val| {
+                            val.sort_up();
+                            Some(val)
+                        },
+                    )?
+                }
+                Rise => {
+                    self.type_hint([Type::listy()]);
+                    self.monadic(
+                        |mut ty| {
+                            ty.scalar = Scalar::Num;
+                            if ty.shape.suffix.take().is_some() && ty.shape.dims.is_empty() {
+                                ty.shape = DynShape::any();
+                            } else {
+                                ty.shape.dims.truncate(1);
+                            }
+                            Ok(ty)
+                        },
+                        |_| Ok(Value::from(0)),
+                        |list| Ok(Type::new(Scalar::Num, list.len())),
+                        |val| Some(Value::from(val.rise())),
+                    )?
+                }
+                Fall => {
+                    self.type_hint([Type::listy()]);
+                    self.monadic(
+                        |mut ty| {
+                            ty.scalar = Scalar::Num;
+                            if ty.shape.suffix.take().is_some() && ty.shape.dims.is_empty() {
+                                ty.shape = DynShape::any();
+                            } else {
+                                ty.shape.dims.truncate(1);
+                            }
+                            Ok(ty)
+                        },
+                        |_| Ok(Value::from(0)),
+                        |list| Ok(Type::new(Scalar::Num, list.len())),
+                        |val| Some(Value::from(val.fall())),
+                    )?
+                }
                 Match => {
                     self.pop_n(2)?;
                     self.push(Scalar::Num);
@@ -1461,27 +1517,33 @@ impl<'a> TypeEnv<'a> {
             },
             ImplPrim(prim, _) => match prim {
                 Over => self.over()?,
-                Ln => self.monadic_pervasive(Scalar::ln, ln::num)?,
-                Cos => self.monadic_pervasive(Scalar::cos, cos::num)?,
-                Asin => self.monadic_pervasive(Scalar::asin, asin::num)?,
-                Acos => self.monadic_pervasive(Scalar::acos, acos::num)?,
-                Exp2 => self.monadic_pervasive(Scalar::exp2, exp2::num)?,
-                Exp10 => self.monadic_pervasive(Scalar::exp10, exp10::num)?,
-                Log2 => self.monadic_pervasive(Scalar::log2, log2::num)?,
-                Log10 => self.monadic_pervasive(Scalar::log10, log10::num)?,
-                SquareAbs => self.monadic_pervasive(Scalar::square_abs, square_abs::num)?,
+                Ln => self.monadic_pervasive_hint(Scalar::Num, Scalar::ln, ln::num)?,
+                Cos => self.monadic_pervasive_hint(Scalar::Num, Scalar::cos, cos::num)?,
+                Asin => self.monadic_pervasive_hint(Scalar::Num, Scalar::asin, asin::num)?,
+                Acos => self.monadic_pervasive_hint(Scalar::Num, Scalar::acos, acos::num)?,
+                Exp2 => self.monadic_pervasive_hint(Scalar::Num, Scalar::exp2, exp2::num)?,
+                Exp10 => self.monadic_pervasive_hint(Scalar::Num, Scalar::exp10, exp10::num)?,
+                Log2 => self.monadic_pervasive_hint(Scalar::Num, Scalar::log2, log2::num)?,
+                Log10 => self.monadic_pervasive_hint(Scalar::Num, Scalar::log10, log10::num)?,
+                SquareAbs => {
+                    self.monadic_pervasive_hint(Scalar::Num, Scalar::square_abs, square_abs::num)?
+                }
                 NegAbs => self.monadic_pervasive(Scalar::neg_abs, neg_abs::num)?,
                 SetSign => self.dyadic_pervasive(Scalar::set_sign, set_sign::num_num)?,
-                Root => self.dyadic_pervasive(Scalar::root, root::num_num)?,
-                Log => self.dyadic_pervasive(Scalar::log, log::num_num)?,
-                AbsComplex => self.dyadic_pervasive(Scalar::abs_complex, abs_complex::num)?,
+                Root => self.dyadic_pervasive_hint(Scalar::Num, Scalar::root, root::num_num)?,
+                Log => self.dyadic_pervasive_hint(Scalar::Num, Scalar::log, log::num_num)?,
+                AbsComplex => {
+                    self.dyadic_pervasive_hint(Scalar::Num, Scalar::abs_complex, abs_complex::num)?
+                }
                 UnComplex => {
+                    self.type_hint([Scalar::Complex.any_shape()]);
                     let x = self.copy_top()?;
                     self.monadic_pervasive(Scalar::complex_re, complex_re::generic)?;
                     self.push(x);
                     self.monadic_pervasive(Scalar::complex_im, complex_im::num)?;
                 }
                 UnBox => {
+                    self.type_hint([Scalar::Box(None).any_shape()]);
                     let x = self.pop(1)?;
                     self.push(x.unboxed());
                 }
@@ -1845,6 +1907,15 @@ impl<'a> TypeEnv<'a> {
         }
         Ok(())
     }
+    fn monadic_pervasive_hint(
+        &mut self,
+        hint: Scalar,
+        f: impl Fn(Scalar) -> Result<Scalar, String>,
+        f64: impl Fn(f64) -> f64,
+    ) -> TypeResult {
+        self.type_hint([hint.any_shape()]);
+        self.monadic_pervasive(f, f64)
+    }
     fn monadic_pervasive(
         &mut self,
         f: impl Fn(Scalar) -> Result<Scalar, String>,
@@ -1866,6 +1937,16 @@ impl<'a> TypeEnv<'a> {
             },
             |_| None,
         )
+    }
+    fn dyadic_pervasive_hint<N: Into<TypeVal>>(
+        &mut self,
+        hint: Scalar,
+        f: impl Fn(Scalar, Scalar, bool, bool) -> Result<Scalar, TypeError>,
+        f64: impl Fn(f64, f64) -> N,
+    ) -> TypeResult {
+        let hint = hint.any_shape();
+        self.type_hint([hint.clone(), hint]);
+        self.dyadic_pervasive(f, f64)
     }
     fn dyadic_pervasive<N: Into<TypeVal>>(
         &mut self,
@@ -2041,7 +2122,11 @@ impl<'a> TypeEnv<'a> {
                 .into());
             }
         }
-        let scalar = tvs.iter().map(|tv| tv.scalar()).max().unwrap();
+        let scalar = tvs
+            .iter()
+            .map(|tv| tv.scalar())
+            .reduce(Scalar::union)
+            .unwrap();
         // Figure out shape
         let mut dims = Vec::new();
         for i in 0.. {
@@ -2076,6 +2161,7 @@ impl<'a> TypeEnv<'a> {
         Ok(())
     }
     fn unpack(&mut self, n: usize, unbox: bool, prim: Option<Primitive>) -> TypeResult {
+        self.type_hint([DynShape::prefix([Dim::Static(n)]).any_scalar()]);
         let x = self.pop(1)?;
         if x.row_count() != n {
             return Err(if let Some(prim) = prim {

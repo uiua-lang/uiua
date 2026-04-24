@@ -1193,7 +1193,7 @@ impl<'a> TypeEnv<'a> {
                                 "Cannot create range from array with shape {shape}"
                             )
                             .into());
-                        } else if shape.suffix.is_some() {
+                        } else if shape.suffix.is_some_and(|suf| !suf.is_empty()) {
                             DynShape {
                                 dims: vec![Dim::Dyn],
                                 suffix: Some(Vec::new()),
@@ -1261,18 +1261,23 @@ impl<'a> TypeEnv<'a> {
                 )?,
                 Reshape => self.dyadic(
                     |sh, mut ty| {
-                        if sh.shape.suffix.is_some() {
-                            return Err(TypeError::Unsupported(None));
-                        }
-                        if sh.shape.dims.len() > 1 {
+                        let dims = if let Some(suf) = sh.shape.suffix {
+                            if !sh.shape.dims.is_empty() {
+                                return Err(TypeError::Unsupported(None));
+                            }
+                            suf
+                        } else {
+                            sh.shape.dims
+                        };
+                        if dims.len() > 1 {
                             return Err(format!(
                                 "{} must be rank 0 or 1, but it is rank {}",
                                 Reshape.format(),
-                                sh.shape.dims.len()
+                                dims.len()
                             )
                             .into());
                         }
-                        match *sh.shape.dims.as_slice() {
+                        match *dims.as_slice() {
                             [] => ty.shape.dims.insert(0, Dim::Dyn),
                             [Dim::Dyn] => ty.shape = DynShape::any(),
                             [Dim::Static(n)] => ty.shape = vec![Dim::Dyn; n].into(),
@@ -2332,11 +2337,11 @@ pub(crate) fn pervade_dyn_shapes(
 ) -> Result<DynShape, TypeError> {
     let mut shape = DynShape::scalar();
     for i in 0..ash.dims.len().max(bsh.dims.len()) {
-        // TODO: Handle fills
         let new_dim = match (ash.dims.get(i).copied(), bsh.dims.get(i).copied()) {
             (None, None) => unreachable!(),
-            (Some(d), None | Some(Dim::Dyn)) | (None | Some(Dim::Dyn), Some(d)) => d,
-            (Some(d), Some(Dim::Static(1))) | (Some(Dim::Static(1)), Some(d)) => d,
+            (None, Some(Dim::Static(1))) | (Some(Dim::Static(1)), None) => Dim::Dyn,
+            (Some(d), Some(Dim::Static(1)) | None) | (Some(Dim::Static(1)) | None, Some(d)) => d,
+            (Some(d), Some(Dim::Dyn)) | (Some(Dim::Dyn), Some(d)) => d,
             (Some(a), Some(b)) => match (a.cmp(&b), a_fill, b_fill) {
                 (Ordering::Equal, ..) => a,
                 (Ordering::Less, true, _) => b,

@@ -1,6 +1,14 @@
 # Uiua Todo
 
 # 0.19
+- Type system
+  - Fix dipped argument hinting
+  - Boxed type specification
+  - Make `validate` a function?
+  - Data def types
+  - Missing primitives
+  - Documentation
+  - Blog post
 - `match` subscripts
 - Macro signature comments
 - Data def method to construct with validators but not defaults/initializers

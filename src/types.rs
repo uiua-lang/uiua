@@ -14,7 +14,7 @@ use serde::*;
 
 use crate::{
     Array, ArrayCmp, ArrayValue, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node,
-    PrimClass, Primitive, Shape, SigNode, StackArg, SubSide, SysOp, Value,
+    PrimClass, Primitive, Shape, SigNode, StackArg, SubSide, SysOp, Value, grid_fmt::GridFmt,
 };
 
 pub type TypeSig = (Vec<TypeVal>, Vec<TypeVal>);
@@ -823,6 +823,33 @@ impl fmt::Display for Type {
             write!(f, "[")?;
             self.shape.fmt_inner(f)?;
             write!(f, " {}]", self.scalar)
+        }
+    }
+}
+
+impl fmt::Display for TypeVal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TypeVal::Num(n) => write!(f, "{}", n.grid_string(false)),
+            TypeVal::NumList(list) => {
+                write!(f, "[")?;
+                for (i, n) in list.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " ")?;
+                    }
+                    write!(f, "{}", n.grid_string(false))?;
+                }
+                write!(f, "]")
+            }
+            TypeVal::Val(val) => {
+                let s = val.grid_string(false);
+                if s.contains("\n") {
+                    write!(f, "{s}")
+                } else {
+                    Type::from(val).fmt(f)
+                }
+            }
+            TypeVal::Type(ty) => ty.fmt(f),
         }
     }
 }

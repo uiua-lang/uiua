@@ -1207,13 +1207,11 @@ impl Formatter<'_> {
                 };
                 self.output.push(' ');
                 for output in outputs {
-                    let ty = output.ty();
-                    self.output.push_str(&format!("{ty} "));
+                    self.output.push_str(&format!("{output} "));
                 }
                 self.output.push('?');
                 for arg in args {
-                    let ty = arg.ty();
-                    self.output.push_str(&format!(" {ty}"));
+                    self.output.push_str(&format!(" {arg}"));
                 }
             }
             &Word::OutputComment { i, n } => {

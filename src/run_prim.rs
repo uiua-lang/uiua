@@ -14,6 +14,7 @@ use std::{
     collections::HashMap,
     f64::consts::{PI, TAU},
     iter::repeat_n,
+    slice,
     sync::OnceLock,
 };
 
@@ -1809,74 +1810,99 @@ impl ImplPrimitive {
                 let [f] = get_ops(ops, env)?;
                 let sig = f.sig;
                 env.exec(f)?;
-                let outputs = env.pop_n(sig.outputs())?;
-                let mut did_type = false;
-                for mat in outputs {
-                    let val = env.top()?;
-                    if !did_type && let Ok(n) = mat.as_nat(env, "") {
-                        if val.type_id() != n as u8 {
-                            let expected = match n as u8 {
-                                f64::TYPE_ID => "number",
-                                char::TYPE_ID => "character",
-                                Boxed::TYPE_ID => "box",
-                                Complex::TYPE_ID => "complex",
-                                _ => return Err(env.error(format!("Invalid type id: {n}"))),
-                            };
-                            return Err(env.error(format!(
-                                "Expected {expected} but found {}",
-                                val.type_name()
-                            )));
-                        }
-                        did_type = true;
-                    } else {
-                        let shape = mat
-                            .as_nats_or_infs(
-                                env,
-                                "Type constraint must be an integer or infinity indicating \
-                            a type or a list of integers indicating a shape",
-                            )
-                            .or_else(|e| {
-                                mat.as_nat_or_inf(env, "").map(|n| vec![n]).map_err(|_| e)
-                            })?;
-                        if let Some(sub) = sub {
-                            match sub.side {
-                                SubSide::Left => {
-                                    if val.rank() < shape.len()
-                                        || (val.shape.iter().zip(&shape))
-                                            .any(|(a, b)| b.is_none_or(|b| *a != b))
-                                    {
-                                        return Err(env.error(format!(
-                                            "Expected shape to start with {} but found {}",
-                                            FormatShape(shape.as_slice()),
-                                            val.shape,
-                                        )));
-                                    }
-                                }
-                                SubSide::Right => {
-                                    if val.shape.len() < shape.len()
-                                        || (val.shape.iter().rev().zip(shape.iter().rev()))
-                                            .any(|(a, b)| b.is_none_or(|b| *a != b))
-                                    {
-                                        return Err(env.error(format!(
-                                            "Expected shape to end with {} but found {}",
-                                            FormatShape(shape.as_slice()),
-                                            val.shape,
-                                        )));
-                                    }
-                                }
+                let specs = env.pop_n(sig.outputs())?;
+                let val = env.top()?;
+                fn validate(
+                    val: &Value,
+                    specs: &[Value],
+                    side: Option<SubSide>,
+                    env: &Uiua,
+                ) -> UiuaResult {
+                    let mut did_type = false;
+                    for spec in specs {
+                        if !did_type && let Ok(n) = spec.as_nat(env, "") {
+                            if val.type_id() != n as u8 {
+                                let expected = match n as u8 {
+                                    f64::TYPE_ID => "number",
+                                    char::TYPE_ID => "character",
+                                    Boxed::TYPE_ID => "box",
+                                    Complex::TYPE_ID => "complex",
+                                    _ => return Err(env.error(format!("Invalid type id: {n}"))),
+                                };
+                                return Err(env.error(format!(
+                                    "Expected {expected} but found {}",
+                                    val.type_name()
+                                )));
                             }
-                        } else if val.rank() != shape.len()
-                            || !(val.shape.iter().zip(&shape))
-                                .all(|(a, b)| b.is_none_or(|b| *a == b))
-                        {
-                            return Err(env.error(format!(
-                                "Expected shape {} but found {}",
-                                FormatShape(shape.as_slice()),
-                                val.shape,
-                            )));
+                            did_type = true;
+                        } else if let Value::Box(spec) = spec {
+                            if spec.rank() > 0 {
+                                return Err(env.error(format!(
+                                    "Box array type constraint must be a scalar box, \
+                                    but its shape is {}",
+                                    spec.shape
+                                )));
+                            }
+                            let Value::Box(arr) = val else {
+                                return Err(env
+                                    .error(format!("Expected box but found {}", val.type_name())));
+                            };
+                            for Boxed(inner) in &arr.data {
+                                validate(inner, slice::from_ref(&spec.data[0].0), side, env)?
+                            }
+                        } else {
+                            let shape = spec
+                                .as_nats_or_infs(
+                                    env,
+                                    "Type constraint must be an integer or infinity indicating \
+                                    a type or a list of integers indicating a shape",
+                                )
+                                .or_else(|e| {
+                                    spec.as_nat_or_inf(env, "").map(|n| vec![n]).map_err(|_| e)
+                                })?;
+                            if let Some(side) = side {
+                                match side {
+                                    SubSide::Left => {
+                                        if val.rank() < shape.len()
+                                            || (val.shape.iter().zip(&shape))
+                                                .any(|(a, b)| b.is_none_or(|b| *a != b))
+                                        {
+                                            return Err(env.error(format!(
+                                                "Expected shape to start with {} but found {}",
+                                                FormatShape(shape.as_slice()),
+                                                val.shape,
+                                            )));
+                                        }
+                                    }
+                                    SubSide::Right => {
+                                        if val.shape.len() < shape.len()
+                                            || (val.shape.iter().rev().zip(shape.iter().rev()))
+                                                .any(|(a, b)| b.is_none_or(|b| *a != b))
+                                        {
+                                            return Err(env.error(format!(
+                                                "Expected shape to end with {} but found {}",
+                                                FormatShape(shape.as_slice()),
+                                                val.shape,
+                                            )));
+                                        }
+                                    }
+                                }
+                            } else if val.rank() != shape.len()
+                                || !(val.shape.iter().zip(&shape))
+                                    .all(|(a, b)| b.is_none_or(|b| *a == b))
+                            {
+                                return Err(env.error(format!(
+                                    "Expected shape {} but found {}",
+                                    FormatShape(shape.as_slice()),
+                                    val.shape,
+                                )));
+                            }
                         }
                     }
+                    Ok(())
                 }
+
+                validate(val, &specs, sub.map(|s| s.side), env)?;
             }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

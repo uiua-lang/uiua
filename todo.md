@@ -2,7 +2,6 @@
 
 # 0.19
 - Type system
-  - Fix dipped argument hinting
   - Boxed type specification
   - Make `validate` a function?
   - Data def types

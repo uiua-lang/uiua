@@ -59,7 +59,7 @@ pub fn Site() -> impl IntoView {
         "An array-oriented tacit programming language",
         "A programming language for point-free enjoyers",
         "A programming language for variable dislikers",
-        "A programming language to make you smile 😊",
+        "You don't need AI when programming is fun",
     ];
     let subtitles_rare = [
         view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>"!").into_view(),

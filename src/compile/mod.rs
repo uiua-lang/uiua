@@ -1196,29 +1196,7 @@ impl Compiler {
             // Compile the word
             let node = self.word(word)?;
             let sig = node.sig().ok();
-            // Append the word
-            if let Some(last) = nodes.last_mut()
-                && let Node::Push(val) = last
-            {
-                // Simple inlining
-                match node {
-                    Node::Prim(Primitive::Box, _) => val.box_it(),
-                    Node::Prim(Primitive::Fix, _) => val.fix(),
-                    Node::Prim(Primitive::Len, _) => *last = Node::new_push(val.row_count()),
-                    Node::Prim(Primitive::Shape, _) => {
-                        *last = Node::Push(val.shape.iter().copied().collect())
-                    }
-                    Node::Prim(Primitive::Reverse, _) => val.reverse(),
-                    Node::Prim(Primitive::Transpose, _) => val.transpose(),
-                    Node::Prim(Primitive::Deshape, _) => val.deshape(),
-                    Node::Prim(Primitive::Sort, _) => val.sort_up(),
-                    Node::Prim(Primitive::Classify, _) => *val = val.classify(),
-                    node => nodes.push(node),
-                }
-            } else {
-                // Normal case
-                nodes.push(node);
-            }
+            nodes.push(node);
             a = b;
             b = Some(PrevWord(modif, prim, sig, span));
         }

@@ -17,8 +17,7 @@ use crate::{
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
-    types::Scalar,
-    types::{TypeError, pervade_dyn_shapes},
+    types::{Scalar, ScalarBox, TypeError, pervade_dyn_shapes},
 };
 
 /// A generic array value
@@ -1657,7 +1656,7 @@ impl<A, B> OutputScalarType for fn(A, B) -> Complex {
 }
 impl<A, B> OutputScalarType for fn(A, B) -> Boxed {
     fn scalar(&self) -> Scalar {
-        Scalar::Box(None)
+        Scalar::Box(ScalarBox::Any)
     }
 }
 
@@ -1672,10 +1671,10 @@ macro_rules! scalar_mon_impl {
                         #[allow(unreachable_patterns)]
                         $in => $out,
                     )*
-                    Scalar::Any | Scalar::Box(None) => self,
-                    Scalar::Box(Some(mut ty)) => {
+                    Scalar::Any | Scalar::Box(ScalarBox::Any) => self,
+                    Scalar::Box(ScalarBox::All(mut ty)) => {
                         ty.scalar = ty.scalar.$name()?;
-                        Scalar::Box(Some(ty))
+                        Scalar::Box(ScalarBox::All(ty))
                     }
                     #[allow(unreachable_patterns)]
                     val => return Err($name::error(val))
@@ -1947,20 +1946,20 @@ macro_rules! scalar_dy_impl {
                         ($a {..}, $b {..}) => $out,
                     )*
                     (Any, _) | (_, Any) => Any,
-                    (Box(None), _) | (_, Box(None)) => Box(None),
+                    (Box(ScalarBox::Any), _) | (_, Box(ScalarBox::Any)) => Box(ScalarBox::Any),
                         #[allow(unreachable_patterns)]
-                    (Box(Some(mut a)), Box(Some(b))) => {
+                    (Box(ScalarBox::All(mut a)), Box(ScalarBox::All(b))) => {
                         a.scalar = a.scalar.$name(b.scalar, a_fill, b_fill)?;
                         a.shape = pervade_dyn_shapes(a.shape, b.shape, a_fill, b_fill)?;
-                        Box(Some(a))
+                        Box(ScalarBox::All(a))
                     }
-                    (Box(Some(mut a)), b) => {
+                    (Box(ScalarBox::All(mut a)), b) => {
                         a.scalar = a.scalar.$name(b, a_fill, b_fill)?;
-                        Box(Some(a))
+                        Box(ScalarBox::All(a))
                     }
-                    (a, Box(Some(mut b))) => {
+                    (a, Box(ScalarBox::All(mut b))) => {
                         b.scalar = a.$name(b.scalar, a_fill, b_fill)?;
-                        Box(Some(b))
+                        Box(ScalarBox::All(b))
                     }
                     #[allow(unreachable_patterns)]
                     (a, b) => return Err($name::error(a, b).into())

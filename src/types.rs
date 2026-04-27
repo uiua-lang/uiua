@@ -211,6 +211,26 @@ impl TypeVal {
             TypeVal::Type(ty) => TypeVal::Type(ty.into_row()),
         }
     }
+    pub fn into_first_row(self) -> Self {
+        match self {
+            TypeVal::NumList(list) if !list.is_empty() => TypeVal::Num(list[0]),
+            TypeVal::Type(ty) => TypeVal::Type(ty.into_first_row()),
+            TypeVal::Val(val) if val.row_count() > 0 => {
+                TypeVal::Val(val.into_rows().next().unwrap())
+            }
+            tv => tv.into_row(),
+        }
+    }
+    pub fn into_last_row(self) -> Self {
+        match self {
+            TypeVal::NumList(list) if !list.is_empty() => TypeVal::Num(*list.last().unwrap()),
+            TypeVal::Type(ty) => TypeVal::Type(ty.into_last_row()),
+            TypeVal::Val(val) if val.row_count() > 0 => {
+                TypeVal::Val(val.into_rows().next_back().unwrap())
+            }
+            tv => tv.into_row(),
+        }
+    }
     pub fn prepend_dim(&mut self, dim: Dim) {
         match (&mut *self, dim) {
             (TypeVal::Num(n), Dim::Static(1)) => *self = TypeVal::NumList(eco_vec![*n]),
@@ -232,45 +252,35 @@ impl TypeVal {
             TypeVal::Num(n) => TypeVal::Val(Value::from(n).boxed_if(true)),
             TypeVal::NumList(list) => TypeVal::Val(Value::from(list).boxed_if(true)),
             TypeVal::Val(val) => TypeVal::Val(val.boxed_if(true)),
-            tv => Scalar::Box(Some(tv.ty().into())).into(),
+            tv => Scalar::Box(ScalarBox::All(tv.ty().into())).into(),
         }
     }
     pub fn unboxed(self) -> Self {
         match self {
             TypeVal::Val(val) => TypeVal::Val(val.unboxed()),
             TypeVal::Type(Type {
-                scalar: Scalar::Box(inner),
+                scalar: Scalar::Box(sb),
                 shape,
-            }) if shape.is_scalar() => inner.map_or_else(TypeVal::default, |ty| (*ty).into()),
+            }) if shape.is_scalar() => sb.into_inner().map_or_else(TypeVal::default, Into::into),
             tv => tv,
         }
     }
     pub fn is_boxed(&self) -> bool {
         match self {
             TypeVal::Type(ty) => matches!(ty.scalar, Scalar::Box(_)) && ty.shape.is_scalar(),
-            TypeVal::Val(Value::Box(_)) => true,
+            TypeVal::Val(Value::Box(arr)) => arr.rank() == 0,
             _ => false,
         }
     }
-    pub fn as_boxes(&self) -> Option<Vec<Self>> {
+    pub fn as_boxes(&self) -> Option<(Option<String>, Vec<Self>)> {
         match self {
-            TypeVal::Type(Type {
-                scalar: Scalar::Box(inner),
-                shape,
-            }) => {
-                let n = match shape.row_count() {
-                    Dim::Static(n) => n,
-                    Dim::Dyn => 1,
-                };
-                let tv = inner
-                    .as_ref()
-                    .map(|v| (**v).clone().into())
-                    .unwrap_or_default();
-                Some(vec![tv; n])
-            }
-            TypeVal::Val(Value::Box(arr)) => {
-                Some(arr.data.iter().map(|Boxed(v)| v.clone().into()).collect())
-            }
+            TypeVal::Type(ty) => ty
+                .as_boxes()
+                .map(|(name, v)| (name, v.into_iter().map(Into::into).collect())),
+            TypeVal::Val(Value::Box(arr)) => Some((
+                arr.meta.label.as_ref().map(Into::into),
+                arr.data.iter().map(|Boxed(v)| v.clone().into()).collect(),
+            )),
             _ => None,
         }
     }
@@ -490,20 +500,140 @@ impl Type {
         self.scalar.is_any() && self.shape.is_any()
     }
     pub fn into_row(self) -> Self {
+        let scalar = if self.shape.rank() == 1
+            && let Scalar::Box(ScalarBox::Def(_, fields)) = self.scalar
+        {
+            Scalar::Box(ScalarBox::All(
+                fields.into_iter().next().unwrap_or_default().into(),
+            ))
+        } else {
+            self.scalar
+        };
         Type {
-            scalar: self.scalar,
+            scalar,
+            shape: self.shape.into_row(),
+        }
+    }
+    pub fn into_first_row(self) -> Self {
+        let scalar = if self.shape.rank() == 1
+            && let Scalar::Box(ScalarBox::Def(_, fields)) = self.scalar
+        {
+            Scalar::Box(ScalarBox::All(
+                fields.into_iter().next().unwrap_or_default().into(),
+            ))
+        } else {
+            self.scalar
+        };
+        Type {
+            scalar,
+            shape: self.shape.into_row(),
+        }
+    }
+    pub fn into_last_row(self) -> Self {
+        let scalar = if self.shape.rank() == 1
+            && let Scalar::Box(ScalarBox::Def(_, fields)) = self.scalar
+        {
+            Scalar::Box(ScalarBox::All(
+                fields.into_iter().next_back().unwrap_or_default().into(),
+            ))
+        } else {
+            self.scalar
+        };
+        Type {
+            scalar,
             shape: self.shape.into_row(),
         }
     }
     pub fn is_string(&self) -> bool {
         self.shape.rank() <= 1 && self.scalar.compatible_with(&Scalar::Char)
-            || self.shape.rank() == 0 && self.scalar.compatible_with(&Scalar::Box(None))
+            || self.shape.rank() == 0 && self.scalar.compatible_with(&Scalar::Box(ScalarBox::Any))
     }
     pub fn boxed(self) -> Self {
-        Scalar::Box(Some(self.into())).scalar_type()
+        Scalar::Box(ScalarBox::All(self.into())).scalar_type()
     }
     pub fn box_list(self) -> Self {
-        Scalar::Box(Some(self.into())).shaped(Dim::Dyn)
+        Scalar::Box(ScalarBox::All(self.into())).shaped(Dim::Dyn)
+    }
+    pub fn as_boxes(&self) -> Option<(Option<String>, Vec<Self>)> {
+        let Scalar::Box(sb) = &self.scalar else {
+            return None;
+        };
+        let ty = match sb {
+            ScalarBox::Def(name, fields) => {
+                return Some((name.clone(), fields.clone()));
+            }
+            ScalarBox::Any => Type::default(),
+            ScalarBox::All(ty) => (**ty).clone(),
+        };
+        let n = match self.shape.row_count() {
+            Dim::Static(n) => n,
+            Dim::Dyn => 1,
+        };
+        Some((None, vec![ty; n]))
+    }
+    pub fn as_mut_fields(
+        &mut self,
+        name_hint: Option<&str>,
+        len_hint: usize,
+    ) -> Option<(&mut Option<String>, &mut [Self])> {
+        if let Scalar::Any = self.scalar {
+            self.scalar = Scalar::Box(ScalarBox::Any);
+        }
+        let Scalar::Box(sb) = &self.scalar else {
+            return None;
+        };
+        match sb {
+            ScalarBox::Any => {
+                self.scalar = Scalar::Box(ScalarBox::Def(
+                    name_hint.map(Into::into),
+                    vec![Type::default(); len_hint],
+                ));
+                let Scalar::Box(ScalarBox::Def(name, fields)) = &mut self.scalar else {
+                    unreachable!()
+                };
+                Some((name, fields))
+            }
+            ScalarBox::All(ty) => {
+                self.scalar = Scalar::Box(ScalarBox::Def(
+                    name_hint.map(Into::into),
+                    vec![(**ty).clone(); len_hint],
+                ));
+                let Scalar::Box(ScalarBox::Def(name, fields)) = &mut self.scalar else {
+                    unreachable!()
+                };
+                Some((name, fields))
+            }
+            ScalarBox::Def(..) => {
+                let Scalar::Box(ScalarBox::Def(name, fields)) = &mut self.scalar else {
+                    unreachable!()
+                };
+                Some((name, fields))
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+pub enum ScalarBox {
+    #[default]
+    Any,
+    All(Box<Type>),
+    Def(Option<String>, Vec<Type>),
+}
+impl ScalarBox {
+    pub fn into_inner(self) -> Option<Type> {
+        match self {
+            ScalarBox::Any => None,
+            ScalarBox::All(ty) => Some(*ty),
+            ScalarBox::Def(_, items) => items.into_iter().next(),
+        }
+    }
+    pub fn as_first(&self) -> Option<&Type> {
+        match self {
+            ScalarBox::Any => None,
+            ScalarBox::All(ty) => Some(ty),
+            ScalarBox::Def(_, items) => items.iter().next(),
+        }
     }
 }
 
@@ -513,7 +643,7 @@ pub enum Scalar {
     Any,
     Num,
     Char,
-    Box(Option<Box<Type>>),
+    Box(ScalarBox),
     Complex,
     Stream,
 }
@@ -557,7 +687,7 @@ impl Scalar {
     }
     pub fn compatible_with_boxes(&self, other: &Self) -> bool {
         match (self, other) {
-            (Scalar::Box(Some(a)), Scalar::Box(Some(b))) => {
+            (Scalar::Box(ScalarBox::All(a)), Scalar::Box(ScalarBox::All(b))) => {
                 a.scalar.compatible_with_boxes(&b.scalar) && a.shape.compatible_with(&b.shape)
             }
             _ => self.compatible_with(other),
@@ -565,11 +695,11 @@ impl Scalar {
     }
     pub fn union(self, other: Self) -> Self {
         match (self, other) {
-            (Scalar::Box(Some(a)), Scalar::Box(Some(b))) => {
+            (Scalar::Box(ScalarBox::All(a)), Scalar::Box(ScalarBox::All(b))) => {
                 if a.scalar.compatible_with_boxes(&b.scalar) && a.shape.compatible_with(&b.shape) {
-                    Scalar::Box(Some(a.max(b)))
+                    Scalar::Box(ScalarBox::All(a.max(b)))
                 } else {
-                    Scalar::Box(None)
+                    Scalar::Box(ScalarBox::Any)
                 }
             }
             (a, b) if a == b => a,
@@ -694,31 +824,31 @@ impl DynShape {
                 .zip(&other.dims)
                 .all(|(a, b)| Dim::row_compatible(*a, *b))
     }
-    pub fn merge(self, other: Self) -> Self {
-        fn merge(mut a: Vec<Dim>, mut b: Vec<Dim>) -> Vec<Dim> {
+    pub fn merge_from(&mut self, other: Self) {
+        fn merge(a: &mut Vec<Dim>, mut b: Vec<Dim>) {
             match (a.is_empty(), b.is_empty()) {
                 (false, false) => {
                     if b.len() > a.len() {
-                        swap(&mut a, &mut b);
+                        swap(a, &mut b);
                     }
                     for (i, a) in a.iter_mut().enumerate() {
                         if let Some(b) = b.get(i).copied() {
                             *a = (*a).max(b);
                         }
                     }
-                    a
                 }
-                (true, _) => b,
-                (_, true) => a,
+                (true, _) => *a = b,
+                (_, true) => {}
             }
         }
-        let dims = merge(self.dims, other.dims);
-        let suffix = match (self.suffix, other.suffix) {
-            (None, None) => None,
-            (Some(suf), None) | (None, Some(suf)) => Some(suf),
-            (Some(a), Some(b)) => Some(merge(a, b)),
-        };
-        DynShape { dims, suffix }
+        merge(&mut self.dims, other.dims);
+        match (&mut self.suffix, other.suffix) {
+            (None, None) => {}
+            (Some(suf), None) if suf.is_empty() => self.suffix = None,
+            (Some(_), None) => {}
+            (None, Some(b)) => self.suffix = Some(b),
+            (Some(a), Some(b)) => merge(a, b),
+        }
     }
 }
 
@@ -889,6 +1019,37 @@ impl fmt::Display for Type {
             && self.shape.suffix.is_none()
         {
             write!(f, "str")
+        } else if let Scalar::Box(ScalarBox::Def(name, fields)) = &self.scalar
+            && self.shape.rank() > 0
+        {
+            let mut shape = Cow::Borrowed(&self.shape);
+            if self.shape.rank() > 1 {
+                if let Some(suf) = &mut shape.to_mut().suffix {
+                    suf.pop();
+                } else {
+                    shape.to_mut().dims.pop();
+                }
+                write!(f, "[")?;
+                shape.fmt_inner(f)?;
+                write!(f, " ")?;
+            }
+
+            if let Some(name) = name {
+                write!(f, "{name}")?;
+            } else {
+                write!(f, "{{")?;
+                for (i, field) in fields.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " ")?;
+                    }
+                    write!(f, "{field}")?;
+                }
+                write!(f, "}}")?;
+            }
+            if self.shape.rank() > 1 {
+                write!(f, "]")?;
+            }
+            Ok(())
         } else {
             write!(f, "[")?;
             self.shape.fmt_inner(f)?;
@@ -930,8 +1091,19 @@ impl fmt::Display for Scalar {
             Scalar::Any => write!(f, "*"),
             Scalar::Num => write!(f, "ℝ"),
             Scalar::Char => write!(f, "@"),
-            Scalar::Box(None) => write!(f, "□"),
-            Scalar::Box(Some(inner)) => write!(f, "□{inner}"),
+            Scalar::Box(ScalarBox::Any) => write!(f, "□"),
+            Scalar::Box(ScalarBox::All(inner)) => write!(f, "□{inner}"),
+            Scalar::Box(ScalarBox::Def(Some(name), _)) => write!(f, "{name}"),
+            Scalar::Box(ScalarBox::Def(None, fields)) => {
+                write!(f, "□(")?;
+                for (i, field) in fields.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " ")?;
+                    }
+                    write!(f, "{field}")?;
+                }
+                write!(f, ")")
+            }
             Scalar::Complex => write!(f, "ℂ"),
             Scalar::Stream => write!(f, "stream"),
         }
@@ -943,7 +1115,10 @@ impl BitOr for Scalar {
     fn bitor(self, rhs: Self) -> Self::Output {
         use Scalar::*;
         match (self, rhs) {
-            (Box(a), Box(b)) => Box(a.zip(b).map(|(a, b)| (*a | *b).into())),
+            (Box(ScalarBox::All(a)), Box(ScalarBox::All(b))) => {
+                Box(ScalarBox::All((*a | *b).into()))
+            }
+            (Box(_), Box(_)) => Box(ScalarBox::Any),
             (a, b) if a == b => a,
             _ => Any,
         }
@@ -1022,11 +1197,11 @@ impl From<&Value> for Scalar {
             Value::Char(_) => Scalar::Char,
             Value::Complex(_) => Scalar::Complex,
             Value::Box(arr) => Scalar::Box(
-                arr.data
-                    .iter()
+                (arr.data.iter())
                     .map(|Boxed(v)| Type::from(v))
                     .reduce(BitOr::bitor)
-                    .map(Box::new),
+                    .map(Box::new)
+                    .map_or(ScalarBox::Any, ScalarBox::All),
             ),
         }
     }
@@ -1084,16 +1259,29 @@ impl<'a> TypeEnv<'a> {
 
         fn match_types(arg_ty: &mut Type, stack_ty: Type) {
             match (&mut arg_ty.scalar, stack_ty.scalar) {
-                (Scalar::Box(Some(arg_inner)), Scalar::Box(Some(stack_inner))) => {
-                    match_types(arg_inner, *stack_inner)
+                (
+                    Scalar::Box(ScalarBox::All(arg_inner)),
+                    Scalar::Box(ScalarBox::All(stack_inner)),
+                ) => match_types(arg_inner, *stack_inner),
+                (
+                    Scalar::Box(ScalarBox::Def(arg_name, arg_fields)),
+                    Scalar::Box(ScalarBox::Def(stack_name, stack_fields)),
+                ) => {
+                    if arg_name.is_none() {
+                        *arg_name = stack_name;
+                    }
+                    for (arg, stack) in arg_fields.iter_mut().zip(stack_fields) {
+                        match_types(arg, stack);
+                    }
                 }
+                (Scalar::Box(arg_sb @ ScalarBox::Any), Scalar::Box(stack_sb)) => *arg_sb = stack_sb,
                 (_, stack_scalar) => {
                     if arg_ty.scalar.is_any() {
                         arg_ty.scalar = stack_scalar;
                     }
                 }
             }
-            arg_ty.shape = take(&mut arg_ty.shape).merge(stack_ty.shape);
+            arg_ty.shape.merge_from(stack_ty.shape);
         }
 
         for (tv, arg) in self.stack.iter().rev().zip(&mut self.arg_types) {
@@ -1138,6 +1326,7 @@ impl<'a> TypeEnv<'a> {
                 ImplMod(DipN(_) | BothImpl(_), args, _) => {
                     args.iter().all(|sn| node_allows_more_arg_types(&sn.node))
                 }
+                Label(..) | RemoveLabel(..) => true,
                 _ => false,
             }
         }
@@ -1224,10 +1413,15 @@ impl<'a> TypeEnv<'a> {
                     let x = self.pop(1)?;
                     self.push(x.boxed());
                 }
-                First | Last => {
+                First => {
                     self.type_hint([Type::listy()]);
                     let x = self.pop(1)?;
-                    self.push(x.into_row());
+                    self.push(x.into_first_row());
+                }
+                Last => {
+                    self.type_hint([Type::listy()]);
+                    let x = self.pop(1)?;
+                    self.push(x.into_last_row());
                 }
                 Transpose => self.monadic(
                     |mut ty| {
@@ -1596,13 +1790,14 @@ impl<'a> TypeEnv<'a> {
                                     shape.dims.pop();
                                 }
                             }
-                            Scalar::Box(None) => {}
-                            Scalar::Box(Some(boxed)) => {
-                                let ty = parse(*boxed)?;
-                                if ty.shape.suffix.is_some() {
-                                    shape.suffix = Some(Vec::new());
-                                } else {
-                                    shape.dims.extend(ty.shape.dims);
+                            Scalar::Box(sb) => {
+                                if let Some(ty) = sb.into_inner() {
+                                    let ty = parse(ty)?;
+                                    if ty.shape.suffix.is_some() {
+                                        shape.suffix = Some(Vec::new());
+                                    } else {
+                                        shape.dims.extend(ty.shape.dims);
+                                    }
                                 }
                             }
                             scalar => {
@@ -1746,7 +1941,7 @@ impl<'a> TypeEnv<'a> {
                     self.monadic_pervasive(Scalar::complex_im, complex_im::num)?;
                 }
                 UnBox => {
-                    self.type_hint([Scalar::Box(None).any_shape()]);
+                    self.type_hint([Scalar::Box(ScalarBox::Any).any_shape()]);
                     let x = self.pop(1)?;
                     self.push(x.unboxed());
                 }
@@ -2178,9 +2373,21 @@ impl<'a> TypeEnv<'a> {
                     b.set_scalar(a.scalar())
                 }
                 if a.scalar().is_box() && !b.scalar().is_box() {
-                    b.set_scalar(Scalar::Box(b.scalar().maybe_scalar_type().map(Box::new)));
+                    b.set_scalar(Scalar::Box(
+                        b.scalar()
+                            .maybe_scalar_type()
+                            .map(Box::new)
+                            .map(ScalarBox::All)
+                            .unwrap_or_default(),
+                    ));
                 } else if !a.scalar().is_box() && b.scalar().is_box() {
-                    a.set_scalar(Scalar::Box(a.scalar().maybe_scalar_type().map(Box::new)));
+                    a.set_scalar(Scalar::Box(
+                        a.scalar()
+                            .maybe_scalar_type()
+                            .map(Box::new)
+                            .map(ScalarBox::All)
+                            .unwrap_or_default(),
+                    ));
                 }
             }
         }
@@ -2375,15 +2582,47 @@ pub fn validate(
     if spec.is_boxed() {
         let spec = spec.unboxed();
         match &mut ch.scalar {
-            Scalar::Box(Some(inner)) => validate(spec, inner, type_id, side)?,
-            Scalar::Any | Scalar::Box(None) => {
+            Scalar::Box(ScalarBox::All(inner)) => validate(spec, inner, type_id, side)?,
+            Scalar::Any | Scalar::Box(_) => {
                 let mut inner = Type::default();
                 validate(spec, &mut inner, type_id, side)?;
-                ch.scalar = Scalar::Box(Some(inner.into()));
+                ch.scalar = Scalar::Box(ScalarBox::All(inner.into()));
             }
             scalar => {
-                return Err(TypeError::ScalarMismatch(Scalar::Box(None), scalar.clone()));
+                return Err(TypeError::ScalarMismatch(
+                    Scalar::Box(ScalarBox::Any),
+                    scalar.clone(),
+                ));
             }
+        }
+    } else if let Some((spec_name, field_specs)) = spec.as_boxes() {
+        let len = field_specs.len();
+        let Some((name, fields)) = ch
+            .as_mut_fields(spec_name.as_deref(), field_specs.len())
+            .filter(|(_, fields)| fields.len() == field_specs.len())
+        else {
+            return Err(TypeError::ScalarMismatch(
+                Scalar::Box(ScalarBox::Def(
+                    spec_name,
+                    field_specs.into_iter().map(TypeVal::ty).collect(),
+                )),
+                ch.scalar.clone(),
+            ));
+        };
+        if name.is_none() {
+            *name = spec_name;
+        }
+        for (spec, ty) in field_specs.into_iter().zip(fields) {
+            validate(spec, ty, None, None)?;
+        }
+        if ch.shape.is_any() {
+            ch.shape = Dim::Static(len).into();
+        } else if let Some(suf) = &mut ch.shape.suffix {
+            if suf.ends_with(&[Dim::Dyn]) {
+                suf.push(Dim::Static(len));
+            }
+        } else if ch.shape.dims.ends_with(&[Dim::Dyn]) {
+            ch.shape.dims.push(Dim::Static(len));
         }
     } else if let Some(ty_id) = type_id.or_else(|| side.is_none().then(|| spec.as_nat()).flatten())
     {
@@ -2391,7 +2630,7 @@ pub fn validate(
         let expected = match ty_id as u8 {
             f64::TYPE_ID => Scalar::Num,
             char::TYPE_ID => Scalar::Char,
-            Boxed::TYPE_ID => Scalar::Box(None),
+            Boxed::TYPE_ID => Scalar::Box(ScalarBox::Any),
             crate::Complex::TYPE_ID => Scalar::Complex,
             type_id => return Err(format!("Invalid type id {type_id}").into()),
         };
@@ -2436,7 +2675,8 @@ pub fn validate(
                                 || !(ch_dims.iter()).eq(dims.iter().take(ch_dims.len()))
                                 || !(suf.iter().rev()).eq(dims[ch_dims.len()..].iter().rev())
                         } else {
-                            !ch_dims.iter().eq(&dims)
+                            ch_dims.len() != dims.len()
+                                || ch_dims.iter().zip(&dims).any(|(a, b)| !a.compatible(*b))
                         }
                     }
                 };
@@ -2455,7 +2695,7 @@ pub fn validate(
             if mismatch {
                 return Err(TypeError::ShapeMismatch(shape, ch.shape.clone()));
             } else {
-                ch.shape = take(&mut ch.shape).merge(shape);
+                ch.shape.merge_from(shape);
             }
         }
         Ok(())

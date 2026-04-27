@@ -792,13 +792,6 @@ impl Value {
     ) -> UiuaResult<Vec<Result<isize, bool>>> {
         self.as_number_list(env, requirement)
     }
-    pub(crate) fn as_nats_or_infs(
-        &self,
-        env: &Uiua,
-        requirement: &'static str,
-    ) -> UiuaResult<Vec<Option<usize>>> {
-        self.as_number_list(env, requirement)
-    }
     /// Attempt to convert the array to a single boolean
     ///
     /// The `requirement` parameter is used in error messages.

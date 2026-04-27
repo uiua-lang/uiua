@@ -1196,7 +1196,29 @@ impl Compiler {
             // Compile the word
             let node = self.word(word)?;
             let sig = node.sig().ok();
-            nodes.push(node);
+            // Append the word
+            if let Some(last) = nodes.last_mut()
+                && let Node::Push(val) = last
+            {
+                // Simple inlining
+                match node {
+                    Node::Prim(Primitive::Box, _) => val.box_it(),
+                    Node::Prim(Primitive::Fix, _) => val.fix(),
+                    Node::Prim(Primitive::Len, _) => *last = Node::new_push(val.row_count()),
+                    Node::Prim(Primitive::Shape, _) => {
+                        *last = Node::Push(val.shape.iter().copied().collect())
+                    }
+                    Node::Prim(Primitive::Reverse, _) => val.reverse(),
+                    Node::Prim(Primitive::Transpose, _) => val.transpose(),
+                    Node::Prim(Primitive::Deshape, _) => val.deshape(),
+                    Node::Prim(Primitive::Sort, _) => val.sort_up(),
+                    Node::Prim(Primitive::Classify, _) => *val = val.classify(),
+                    node => nodes.push(node),
+                }
+            } else {
+                // Normal case
+                nodes.push(node);
+            }
             a = b;
             b = Some(PrevWord(modif, prim, sig, span));
         }
@@ -2332,7 +2354,10 @@ impl Compiler {
     fn primitive(&mut self, prim: Primitive, span: CodeSpan) -> Node {
         self.validate_primitive(prim, &span);
         let spandex = self.add_span(span.clone());
-        Node::Prim(prim, spandex)
+        match prim {
+            Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
+            prim => Node::Prim(prim, spandex),
+        }
     }
     fn validate_binding_name(&mut self, name: &str, span: &CodeSpan) {
         if name.contains('&') {
@@ -2437,6 +2462,27 @@ impl Compiler {
                         Node::ImplPrim(ImplPrimitive::SidedJoin(side), self.add_span(span))
                     }
                 }
+            }
+            Validate => {
+                let sub = self.validate_subscript(scr);
+                Node::ImplPrim(
+                    ImplPrimitive::ValidateImpl(
+                        (sub.value.num).map(|n| self.positive_subscript(n, Validate, &sub.span)),
+                        sub.value.side.map(|ss| {
+                            if ss.n.is_some() {
+                                self.add_error(
+                                    sub.span.clone(),
+                                    format!(
+                                        "Side quantifiers are not allowed for {}",
+                                        Validate.format()
+                                    ),
+                                );
+                            }
+                            ss.side
+                        }),
+                    ),
+                    self.add_span(span),
+                )
             }
             prim => {
                 let Some(n) = self.subscript_n_only(&scr, prim.format()) else {

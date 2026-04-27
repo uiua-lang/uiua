@@ -14,21 +14,21 @@ use std::{
     collections::HashMap,
     f64::consts::{PI, TAU},
     iter::repeat_n,
-    slice,
     sync::OnceLock,
 };
 
 use rand::prelude::*;
 
 use crate::{
-    ArrayValue, Complex, FormatShape, FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive,
-    Shape, SubSide, SysOp, Uiua, UiuaErrorKind, UiuaResult,
+    FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive, Shape, SubSide, SysOp, Uiua,
+    UiuaErrorKind, UiuaResult,
     algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
     fill::FillFrame,
     grid_fmt::GridFmt,
     media, run_sys_op, run_sys_op_mod,
+    types::{Type, validate},
     value::*,
 };
 
@@ -1188,7 +1188,7 @@ impl ImplPrimitive {
             ImplPrimitive::Retropose => env.monadic_mut(|val| val.retropose_depth(0))?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
             // Implementation details
-            ImplPrimitive::ValidateType | ImplPrimitive::ValidateTypeConsume => {
+            ImplPrimitive::ValidateTypeOld | ImplPrimitive::ValidateTypeConsume => {
                 let type_num = env
                     .pop(1)?
                     .as_nat(env, "Type number must be a natural number")?;
@@ -1208,7 +1208,7 @@ impl ImplPrimitive {
                     };
                     return Err(env.error(format!("Expected {expected} but found {found}")));
                 }
-                if let ImplPrimitive::ValidateType = self {
+                if let ImplPrimitive::ValidateTypeOld = self {
                     env.push(val);
                 }
             }
@@ -1346,6 +1346,14 @@ impl ImplPrimitive {
                 let mut vals = env.pop(3)?;
                 vals.map_args(keys, Some(args), env)?;
                 env.push(vals);
+            }
+            &ImplPrimitive::ValidateImpl(type_id, side) => {
+                let spec = env.pop(1)?;
+                let val = env.pop(2)?;
+                if let Err(e) = validate(spec.into(), &mut Type::from(&val), type_id, side) {
+                    return Err(env.error(format!("Type error: {e}")));
+                }
+                env.push(val);
             }
             &ImplPrimitive::Ga(op, spec) => match op {
                 GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,
@@ -1805,104 +1813,6 @@ impl ImplPrimitive {
                 let [f] = get_ops(ops, env)?;
                 let bytes = media::fold_to_gif(f, env)?;
                 env.push(bytes);
-            }
-            ImplPrimitive::ValidateImpl(sub) => {
-                let [f] = get_ops(ops, env)?;
-                let sig = f.sig;
-                env.exec(f)?;
-                let specs = env.pop_n(sig.outputs())?;
-                let val = env.top()?;
-                fn validate(
-                    val: &Value,
-                    specs: &[Value],
-                    side: Option<SubSide>,
-                    env: &Uiua,
-                ) -> UiuaResult {
-                    let mut did_type = false;
-                    for spec in specs {
-                        if !did_type && let Ok(n) = spec.as_nat(env, "") {
-                            if val.type_id() != n as u8 {
-                                let expected = match n as u8 {
-                                    f64::TYPE_ID => "number",
-                                    char::TYPE_ID => "character",
-                                    Boxed::TYPE_ID => "box",
-                                    Complex::TYPE_ID => "complex",
-                                    _ => return Err(env.error(format!("Invalid type id: {n}"))),
-                                };
-                                return Err(env.error(format!(
-                                    "Expected {expected} but found {}",
-                                    val.type_name()
-                                )));
-                            }
-                            did_type = true;
-                        } else if let Value::Box(spec) = spec {
-                            if spec.rank() > 0 {
-                                return Err(env.error(format!(
-                                    "Box array type constraint must be a scalar box, \
-                                    but its shape is {}",
-                                    spec.shape
-                                )));
-                            }
-                            let Value::Box(arr) = val else {
-                                return Err(env
-                                    .error(format!("Expected box but found {}", val.type_name())));
-                            };
-                            for Boxed(inner) in &arr.data {
-                                validate(inner, slice::from_ref(&spec.data[0].0), side, env)?
-                            }
-                        } else {
-                            let shape = spec
-                                .as_nats_or_infs(
-                                    env,
-                                    "Type constraint must be an integer or infinity indicating \
-                                    a type or a list of integers indicating a shape",
-                                )
-                                .or_else(|e| {
-                                    spec.as_nat_or_inf(env, "").map(|n| vec![n]).map_err(|_| e)
-                                })?;
-                            if let Some(side) = side {
-                                match side {
-                                    SubSide::Left => {
-                                        if val.rank() < shape.len()
-                                            || (val.shape.iter().zip(&shape))
-                                                .any(|(a, b)| b.is_none_or(|b| *a != b))
-                                        {
-                                            return Err(env.error(format!(
-                                                "Expected shape to start with {} but found {}",
-                                                FormatShape(shape.as_slice()),
-                                                val.shape,
-                                            )));
-                                        }
-                                    }
-                                    SubSide::Right => {
-                                        if val.shape.len() < shape.len()
-                                            || (val.shape.iter().rev().zip(shape.iter().rev()))
-                                                .any(|(a, b)| b.is_none_or(|b| *a != b))
-                                        {
-                                            return Err(env.error(format!(
-                                                "Expected shape to end with {} but found {}",
-                                                FormatShape(shape.as_slice()),
-                                                val.shape,
-                                            )));
-                                        }
-                                    }
-                                }
-                            } else if val.rank() != shape.len()
-                                || !(val.shape.iter().zip(&shape))
-                                    .all(|(a, b)| b.is_none_or(|b| *a == b))
-                            {
-                                return Err(env.error(format!(
-                                    "Expected shape {} but found {}",
-                                    FormatShape(shape.as_slice()),
-                                    val.shape,
-                                )));
-                            }
-                        }
-                    }
-                    Ok(())
-                }
-
-                validate(val, &specs, sub.map(|s| s.side), env)?;
             }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

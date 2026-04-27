@@ -274,10 +274,10 @@ impl_primitive!(
     ([1], FixMatchRanks),
     ([2], RepeatWithInverse),
     ([1], RepeatCountConvergence),
-    (2(1), ValidateType),
+    (2(1), ValidateTypeOld),
     (2(0), ValidateTypeConsume),
     (2(0), TestAssert, Impure),
-    (1(1)[1], ValidateImpl(Option<SidedSubscript>)),
+    (2, ValidateImpl(Option<usize>, Option<SubSide>)),
     /// Validate that a non-boxed variant field has a valid type and rank
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),

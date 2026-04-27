@@ -356,6 +356,13 @@ impl Node {
             other => slice::from_mut(other),
         }
     }
+    /// Get a mutable reference to the last node
+    pub fn last_mut(&mut self) -> Option<&mut Node> {
+        match self {
+            Node::Run(nodes) => nodes.make_mut().last_mut(),
+            other => Some(other),
+        }
+    }
     /// Slice the node to get a subnode
     pub fn slice<R>(&self, range: R) -> Self
     where

@@ -249,6 +249,7 @@ impl Primitive {
                 | Classify,
                 _,
             ) => return self.sig(),
+            (Validate, _) => return self.sig(),
             (Args, Some(n)) if n >= 0 => Signature::new(n as usize, n as usize),
             _ => return None,
         })
@@ -263,8 +264,7 @@ impl Primitive {
             (Slf | Backward | On | By | With | Off | Both)
             | (Rows | Each | Inventory | Table)
             | (Repeat | Tuples | Stencil)
-            | Geometric
-            | Validate => 1,
+            | Geometric => 1,
             Bracket | Under | Fill => 2,
             Reach if sub.side.is_some() => 2,
             Reach | OldReach => 1,

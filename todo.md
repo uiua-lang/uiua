@@ -2,8 +2,7 @@
 
 # 0.19
 - Type system
-  - Boxed type specification
-  - Make `validate` a function?
+  - Tests
   - Data def types
   - Missing primitives
   - Documentation

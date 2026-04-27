@@ -70,7 +70,7 @@ pub enum TypeError {
     Underflow(String),
     DyadicPervasiveShapes(DynShape, DynShape),
     RowsShapes(DynShape, DynShape),
-    TypeMismatch(Scalar, Scalar),
+    ScalarMismatch(Scalar, Scalar),
     ShapeMismatch(DynShape, DynShape),
     Generic(String),
 }
@@ -89,7 +89,7 @@ impl fmt::Display for TypeError {
                 write!(f, "shapes {a} and {b} are not compatible")
             }
             TypeError::RowsShapes(a, b) => write!(f, "shapes {a} and {b} are not compatible"),
-            TypeError::TypeMismatch(expected, found) => {
+            TypeError::ScalarMismatch(expected, found) => {
                 write!(f, "expected {expected} but found {found}")
             }
             TypeError::ShapeMismatch(expected, found) => {
@@ -247,9 +247,31 @@ impl TypeVal {
     }
     pub fn is_boxed(&self) -> bool {
         match self {
-            TypeVal::Type(ty) => matches!(ty.scalar, Scalar::Box(_)),
+            TypeVal::Type(ty) => matches!(ty.scalar, Scalar::Box(_)) && ty.shape.is_scalar(),
             TypeVal::Val(Value::Box(_)) => true,
             _ => false,
+        }
+    }
+    pub fn as_boxes(&self) -> Option<Vec<Self>> {
+        match self {
+            TypeVal::Type(Type {
+                scalar: Scalar::Box(inner),
+                shape,
+            }) => {
+                let n = match shape.row_count() {
+                    Dim::Static(n) => n,
+                    Dim::Dyn => 1,
+                };
+                let tv = inner
+                    .as_ref()
+                    .map(|v| (**v).clone().into())
+                    .unwrap_or_default();
+                Some(vec![tv; n])
+            }
+            TypeVal::Val(Value::Box(arr)) => {
+                Some(arr.data.iter().map(|Boxed(v)| v.clone().into()).collect())
+            }
+            _ => None,
         }
     }
     pub fn as_nat(&self) -> Option<usize> {
@@ -556,7 +578,7 @@ impl Scalar {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct DynShape {
     dims: Vec<Dim>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -672,6 +694,32 @@ impl DynShape {
                 .zip(&other.dims)
                 .all(|(a, b)| Dim::row_compatible(*a, *b))
     }
+    pub fn merge(self, other: Self) -> Self {
+        fn merge(mut a: Vec<Dim>, mut b: Vec<Dim>) -> Vec<Dim> {
+            match (a.is_empty(), b.is_empty()) {
+                (false, false) => {
+                    if b.len() > a.len() {
+                        swap(&mut a, &mut b);
+                    }
+                    for (i, a) in a.iter_mut().enumerate() {
+                        if let Some(b) = b.get(i).copied() {
+                            *a = (*a).max(b);
+                        }
+                    }
+                    a
+                }
+                (true, _) => b,
+                (_, true) => a,
+            }
+        }
+        let dims = merge(self.dims, other.dims);
+        let suffix = match (self.suffix, other.suffix) {
+            (None, None) => None,
+            (Some(suf), None) | (None, Some(suf)) => Some(suf),
+            (Some(a), Some(b)) => Some(merge(a, b)),
+        };
+        DynShape { dims, suffix }
+    }
 }
 
 impl Default for DynShape {
@@ -732,6 +780,12 @@ impl Div for Dim {
 
 impl Dim {
     pub const MIN: Self = Dim::Static(1);
+    pub fn compatible(self, other: Self) -> bool {
+        match (self, other) {
+            (Dim::Dyn, _) | (_, Dim::Dyn) => true,
+            (Dim::Static(a), Dim::Static(b)) => a == b,
+        }
+    }
     pub fn row_compatible(self, other: Self) -> bool {
         match (self, other) {
             (Dim::Dyn | Dim::Static(1), _) | (_, Dim::Dyn | Dim::Static(1)) => true,
@@ -805,6 +859,12 @@ impl DynShape {
             }
         }
         Ok(())
+    }
+}
+
+impl fmt::Debug for DynShape {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
     }
 }
 
@@ -1021,23 +1081,25 @@ impl<'a> TypeEnv<'a> {
         if !self.can_set_arg_types || self.stack.len() > self.arg_types.len() {
             return;
         }
+
+        fn match_types(arg_ty: &mut Type, stack_ty: Type) {
+            match (&mut arg_ty.scalar, stack_ty.scalar) {
+                (Scalar::Box(Some(arg_inner)), Scalar::Box(Some(stack_inner))) => {
+                    match_types(arg_inner, *stack_inner)
+                }
+                (_, stack_scalar) => {
+                    if arg_ty.scalar.is_any() {
+                        arg_ty.scalar = stack_scalar;
+                    }
+                }
+            }
+            arg_ty.shape = take(&mut arg_ty.shape).merge(stack_ty.shape);
+        }
+
         for (tv, arg) in self.stack.iter().rev().zip(&mut self.arg_types) {
             if let TypeVal::Type(arg_ty) = arg {
                 if let TypeVal::Type(ty) = tv {
-                    if arg_ty.scalar.is_any() {
-                        arg_ty.scalar = ty.scalar.clone();
-                    }
-                    if arg_ty.shape.is_any() {
-                        arg_ty.shape = ty.shape.clone();
-                    }
-                    if (arg_ty.shape.suffix.as_ref()).is_some_and(|suf| suf.is_empty())
-                        && ty.shape.suffix.is_some()
-                    {
-                        arg_ty.shape.suffix = ty.shape.suffix.clone();
-                    }
-                    if arg_ty.shape.dims.is_empty() && arg_ty.shape.suffix.is_some() {
-                        arg_ty.shape.dims = ty.shape.dims.clone();
-                    }
+                    match_types(arg_ty, ty.clone());
                 } else if arg_ty.is_any() {
                     *arg = tv.clone();
                 }
@@ -1072,11 +1134,10 @@ impl<'a> TypeEnv<'a> {
                     prim.class() == PrimClass::Arguments
                         && args.iter().all(|sn| node_allows_more_arg_types(&sn.node))
                 }
-                ImplPrim(Over, _) => true,
+                ImplPrim(Over | ValidateImpl(..), _) => true,
                 ImplMod(DipN(_) | BothImpl(_), args, _) => {
                     args.iter().all(|sn| node_allows_more_arg_types(&sn.node))
                 }
-                ImplMod(ValidateImpl(_), ..) => true,
                 _ => false,
             }
         }
@@ -1756,6 +1817,15 @@ impl<'a> TypeEnv<'a> {
                     let x = self.pop(1)?;
                     self.push(x.into_row());
                 }
+                &ValidateImpl(type_id, side) => {
+                    let spec = self.pop(1)?;
+                    let val = self.top_mut("validated value")?;
+                    let mut ch = val.clone().ty();
+                    validate(spec, &mut ch, type_id, side)?;
+                    val.set_scalar(ch.scalar);
+                    val.set_shape(ch.shape);
+                    self.update_arg_types();
+                }
                 _ => return Err(TypeError::Unsupported(Some(format!("{prim:?}")))),
             },
             Mod(prim, ops, _) => match prim {
@@ -1845,124 +1915,6 @@ impl<'a> TypeEnv<'a> {
                 DipN(n) => self.dip_n(n, monad(ops))?,
                 BothImpl(sub) if sub.num.is_some() && sub.side.is_none() => {
                     self.both_n(sub.num.unwrap() as usize, monad(ops))?
-                }
-                ValidateImpl(sub) => {
-                    let side = sub.map(|sub| sub.side);
-                    let f = monad(ops);
-                    let can_set_arg_types = self.can_set_arg_types;
-                    self.exec(f)?;
-                    self.can_set_arg_types = can_set_arg_types;
-                    let specs = self.pop_n(f.sig.outputs())?;
-                    let val = self.top_mut("validated value")?;
-                    fn validate(
-                        ch: &mut Type,
-                        specs: Vec<TypeVal>,
-                        side: Option<SubSide>,
-                    ) -> TypeResult {
-                        let mut did_type = false;
-                        for spec in specs {
-                            if !did_type && let Some(type_id) = spec.as_nat() {
-                                // Type checking
-                                let expected = match type_id as u8 {
-                                    f64::TYPE_ID => Scalar::Num,
-                                    char::TYPE_ID => Scalar::Char,
-                                    Boxed::TYPE_ID => Scalar::Box(None),
-                                    crate::Complex::TYPE_ID => Scalar::Complex,
-                                    type_id => {
-                                        return Err(format!("Invalid type id {type_id}").into());
-                                    }
-                                };
-                                if let Scalar::Any = ch.scalar {
-                                    ch.scalar = expected;
-                                } else if discriminant(&expected) != discriminant(&ch.scalar) {
-                                    return Err(TypeError::TypeMismatch(
-                                        expected,
-                                        ch.scalar.clone(),
-                                    ));
-                                }
-                                did_type = true;
-                            } else if let Some(dims) =
-                                spec.as_dims().or_else(|| spec.as_dim().map(|d| vec![d]))
-                            {
-                                // Shape checking
-                                let val_dims = &ch.shape.dims;
-                                let mismatch = !ch.shape.is_any()
-                                    && match side {
-                                        Some(SubSide::Left) => {
-                                            val_dims.len() < dims.len()
-                                                || val_dims.iter().zip(&dims).any(|(a, b)| a != b)
-                                        }
-                                        Some(SubSide::Right) => {
-                                            let val_dims = if let Some(suf) = &ch.shape.suffix {
-                                                suf
-                                            } else {
-                                                val_dims
-                                            };
-                                            ch.shape.rank() < dims.len()
-                                                || (val_dims.iter().rev())
-                                                    .zip(dims.iter().rev())
-                                                    .any(|(a, b)| a != b)
-                                        }
-                                        None => {
-                                            if let Some(suf) = &ch.shape.suffix {
-                                                val_dims.len() + suf.len() > dims.len()
-                                                    || !(val_dims.iter())
-                                                        .eq(dims.iter().take(val_dims.len()))
-                                                    || !(suf.iter().rev())
-                                                        .eq(dims[val_dims.len()..].iter().rev())
-                                            } else {
-                                                !val_dims.iter().eq(&dims)
-                                            }
-                                        }
-                                    };
-                                let shape = match side {
-                                    None => DynShape { dims, suffix: None },
-                                    Some(SubSide::Left) => DynShape {
-                                        dims,
-                                        suffix: Some(Vec::new()),
-                                    },
-                                    Some(SubSide::Right) => DynShape {
-                                        dims: Vec::new(),
-                                        suffix: Some(dims),
-                                    },
-                                };
-                                if mismatch {
-                                    return Err(TypeError::ShapeMismatch(shape, ch.shape.clone()));
-                                } else if ch.shape.is_any() {
-                                    ch.shape = shape;
-                                } else {
-                                    if ch.shape.suffix == Some(Vec::new()) && shape.suffix.is_some()
-                                    {
-                                        ch.shape.suffix = shape.suffix;
-                                    }
-                                    if ch.shape.dims.is_empty() && ch.shape.suffix.is_some() {
-                                        ch.shape.dims = shape.dims
-                                    }
-                                }
-                            } else if spec.is_boxed() {
-                                let spec = spec.unboxed();
-                                match &mut ch.scalar {
-                                    sc @ (Scalar::Any | Scalar::Box(None)) => {
-                                        let mut inner = Type::default();
-                                        validate(&mut inner, vec![spec], side)?;
-                                        *sc = Scalar::Box(Some(inner.into()));
-                                    }
-                                    Scalar::Box(Some(inner)) => validate(inner, vec![spec], side)?,
-                                    scalar => {
-                                        return Err(TypeError::TypeMismatch(
-                                            Scalar::Box(None),
-                                            scalar.clone(),
-                                        ));
-                                    }
-                                }
-                            }
-                        }
-                        Ok(())
-                    }
-                    let mut ty = take(val).ty();
-                    validate(&mut ty, specs.into_iter().collect(), side)?;
-                    *val = ty.into();
-                    self.update_arg_types();
                 }
                 FixMatchRanks => {
                     let f = monad(ops);
@@ -2412,4 +2364,101 @@ fn dyad(ops: &[SigNode]) -> &[SigNode; 2] {
 
 fn get_ops<const N: usize>(ops: &[SigNode]) -> &[SigNode; N] {
     ops.try_into().unwrap()
+}
+
+pub fn validate(
+    spec: TypeVal,
+    ch: &mut Type,
+    type_id: Option<usize>,
+    side: Option<SubSide>,
+) -> TypeResult {
+    if spec.is_boxed() {
+        let spec = spec.unboxed();
+        match &mut ch.scalar {
+            Scalar::Box(Some(inner)) => validate(spec, inner, type_id, side)?,
+            Scalar::Any | Scalar::Box(None) => {
+                let mut inner = Type::default();
+                validate(spec, &mut inner, type_id, side)?;
+                ch.scalar = Scalar::Box(Some(inner.into()));
+            }
+            scalar => {
+                return Err(TypeError::ScalarMismatch(Scalar::Box(None), scalar.clone()));
+            }
+        }
+    } else if let Some(ty_id) = type_id.or_else(|| side.is_none().then(|| spec.as_nat()).flatten())
+    {
+        // Non-boxed type checking
+        let expected = match ty_id as u8 {
+            f64::TYPE_ID => Scalar::Num,
+            char::TYPE_ID => Scalar::Char,
+            Boxed::TYPE_ID => Scalar::Box(None),
+            crate::Complex::TYPE_ID => Scalar::Complex,
+            type_id => return Err(format!("Invalid type id {type_id}").into()),
+        };
+        if let Scalar::Any = ch.scalar {
+            ch.scalar = expected;
+        } else if discriminant(&expected) != discriminant(&ch.scalar) {
+            return Err(TypeError::ScalarMismatch(expected, ch.scalar.clone()));
+        }
+        // If the subscripted type id was used, do normal shape checking
+        if type_id.is_some() {
+            check_shape(spec, ch, side)?;
+        }
+    } else {
+        // Normal shape checking
+        check_shape(spec, ch, side)?;
+    }
+
+    fn check_shape(spec: TypeVal, ch: &mut Type, side: Option<SubSide>) -> TypeResult {
+        if let Some(dims) = spec.as_dims().or_else(|| spec.as_dim().map(|d| vec![d])) {
+            // Shape checking
+            let ch_dims = &ch.shape.dims;
+            let mismatch = !ch.shape.is_any()
+                && match side {
+                    Some(SubSide::Left) => {
+                        ch_dims.len() < dims.len() && ch.shape.suffix.is_none()
+                            || (ch_dims.iter().zip(&dims)).any(|(a, b)| !a.compatible(*b))
+                    }
+                    Some(SubSide::Right) => {
+                        let val_dims = if let Some(suf) = &ch.shape.suffix {
+                            suf
+                        } else {
+                            ch_dims
+                        };
+                        ch.shape.rank() < dims.len()
+                            || (val_dims.iter().rev())
+                                .zip(dims.iter().rev())
+                                .any(|(a, b)| !a.compatible(*b))
+                    }
+                    None => {
+                        if let Some(suf) = &ch.shape.suffix {
+                            ch_dims.len() + suf.len() > dims.len()
+                                || !(ch_dims.iter()).eq(dims.iter().take(ch_dims.len()))
+                                || !(suf.iter().rev()).eq(dims[ch_dims.len()..].iter().rev())
+                        } else {
+                            !ch_dims.iter().eq(&dims)
+                        }
+                    }
+                };
+
+            let shape = match side {
+                None => DynShape { dims, suffix: None },
+                Some(SubSide::Left) => DynShape {
+                    dims,
+                    suffix: Some(Vec::new()),
+                },
+                Some(SubSide::Right) => DynShape {
+                    dims: Vec::new(),
+                    suffix: Some(dims),
+                },
+            };
+            if mismatch {
+                return Err(TypeError::ShapeMismatch(shape, ch.shape.clone()));
+            } else {
+                ch.shape = take(&mut ch.shape).merge(shape);
+            }
+        }
+        Ok(())
+    }
+    Ok(())
 }

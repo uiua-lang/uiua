@@ -199,7 +199,7 @@ opt!(
             Push(val),
             ImplPrim(MatchPattern, span)
         ],
-        [Push(val.clone()), ImplPrim(ValidateType, *span)]
+        [Push(val.clone()), ImplPrim(ValidateTypeOld, *span)]
     ),
     (
         [Prim(Type, _), Push(val), ImplPrim(MatchPattern, span)],

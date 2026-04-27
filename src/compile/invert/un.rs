@@ -239,7 +239,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &(Select, (Dup, Len, Range)),
     &(Pick, (Dup, Shape, Range)),
     &(Orient, (Dup, Shape, Len, Range)),
-    &RequireVal((ValidateType, ValidateType)),
+    &RequireVal((ValidateTypeOld, ValidateTypeOld)),
     &RequireVal((TagVariant, ValidateVariant)),
     &RequireVal((ValidateVariant, TagVariant)),
     &(Dup, (Over, Flip, MatchPattern)),

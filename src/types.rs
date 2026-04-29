@@ -514,6 +514,26 @@ impl Type {
             shape: self.shape.into_row(),
         }
     }
+    pub fn into_nth_row(self, n: usize) -> Self {
+        let scalar = if self.shape.rank() == 1
+            && let Scalar::Box(ScalarBox::Def(_, mut fields)) = self.scalar
+        {
+            Scalar::Box(ScalarBox::All(
+                if n < fields.len() {
+                    fields.remove(n)
+                } else {
+                    fields.into_iter().next().unwrap_or_default()
+                }
+                .into(),
+            ))
+        } else {
+            self.scalar
+        };
+        Type {
+            scalar,
+            shape: self.shape.into_row(),
+        }
+    }
     pub fn into_first_row(self) -> Self {
         let scalar = if self.shape.rank() == 1
             && let Scalar::Box(ScalarBox::Def(_, fields)) = self.scalar
@@ -1690,6 +1710,16 @@ impl<'a> TypeEnv<'a> {
                                 format!("Index {index} is out of bounds of length {n}").into()
                             );
                         }
+                        if let Scalar::Box(ScalarBox::Def(_, fields)) = &ty.scalar
+                            && ty.shape.rank() == 1
+                        {
+                            return Ok(if index >= 0.0 {
+                                ty.into_nth_row(index as usize)
+                            } else {
+                                let n = fields.len().saturating_sub(index.abs() as usize);
+                                ty.into_nth_row(n)
+                            });
+                        }
                         Ok(ty.into_row())
                     },
                     |indices, mut ty| {
@@ -1704,6 +1734,38 @@ impl<'a> TypeEnv<'a> {
                         ty.shape.dims.insert(0, Dim::Static(indices.len()));
                         Ok(ty)
                     },
+                    |index, n| {
+                        if index != 0.0 && index != 1.0 {
+                            Err(format!("Index {index} is out of bounds of length 1").into())
+                        } else {
+                            Ok(n)
+                        }
+                    },
+                )?,
+                Pick => self.dyadic(
+                    |_, _| unsupported(),
+                    |index, ty| {
+                        if let Dim::Static(n) = ty.shape.row_count()
+                            && (index >= 0.0 && index as usize >= n
+                                || index < 0.0 && index.abs() as usize > n)
+                        {
+                            return Err(
+                                format!("Index {index} is out of bounds of length {n}").into()
+                            );
+                        }
+                        if let Scalar::Box(ScalarBox::Def(_, fields)) = &ty.scalar
+                            && ty.shape.rank() == 1
+                        {
+                            return Ok(if index >= 0.0 {
+                                ty.into_nth_row(index as usize)
+                            } else {
+                                let n = fields.len().saturating_sub(index.abs() as usize);
+                                ty.into_nth_row(n)
+                            });
+                        }
+                        Ok(ty.into_row())
+                    },
+                    |_, _| unsupported(),
                     |index, n| {
                         if index != 0.0 && index != 1.0 {
                             Err(format!("Index {index} is out of bounds of length 1").into())

@@ -906,7 +906,7 @@ impl Compiler {
             }
             Err(e) => self.add_error(span, e),
         }
-        self.asm.root.push(line_node);
+        self.asm.root.push_no_inline(line_node);
         Ok(())
     }
     fn compile_bind_function(
@@ -1230,7 +1230,7 @@ impl Compiler {
     }
     fn word(&mut self, word: Sp<Word>) -> UiuaResult<Node> {
         self.check_depth(&word.span)?;
-        Ok(match word.value {
+        let res = match word.value {
             Word::Number(NumWord::Real(n), _) => Node::new_push(n),
             Word::Number(NumWord::Infinity(false), _) => Node::new_push(f64::INFINITY),
             Word::Number(NumWord::Infinity(true), _) => Node::new_push(f64::NEG_INFINITY),
@@ -1530,7 +1530,8 @@ impl Compiler {
                 );
                 Node::empty()
             }
-        })
+        };
+        Ok(res)
     }
     fn force_sig(
         &mut self,

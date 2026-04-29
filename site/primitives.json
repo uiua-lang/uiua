@@ -1524,10 +1524,9 @@
     "description": "Convert a string to UTF-8 bytes"
   },
   "validate": {
-    "glyph": "⊲",
-    "args": 1,
+    "glyph": "⯾",
+    "args": 2,
     "outputs": 1,
-    "modifier_args": 1,
     "class": "Misc",
     "description": "Validate a value's type and/or shape",
     "experimental": true

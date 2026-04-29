@@ -464,7 +464,7 @@ impl Compiler {
                                 .insert(local.index, node.clone());
                         }
                         // Add binding instrs to root
-                        self.asm.root.push(node);
+                        self.asm.root.push_no_inline(node);
                         self.asm.root.push(Node::BindGlobal {
                             index: local.index,
                             span: spandex,

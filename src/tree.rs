@@ -444,19 +444,15 @@ impl Node {
     /// Push a node onto the end of the node
     ///
     /// Transforms the node into a [`Node::Run`] if it is not already a [`Node::Run`]
-    pub fn push(&mut self, mut node: Node) {
-        if let Some(last) = self.last_mut()
-            && let Node::Push(val) = last
-        {
+    pub fn push(&mut self, node: Node) {
+        if let Some(Node::Push(val)) = self.last_mut() {
             // Simple inlining
             'blk: {
                 match node {
                     Node::Prim(Primitive::Box, _) => val.box_it(),
                     Node::Prim(Primitive::Fix, _) => val.fix(),
-                    Node::Prim(Primitive::Len, _) => *last = Node::new_push(val.row_count()),
-                    Node::Prim(Primitive::Shape, _) => {
-                        *last = Node::Push(val.shape.iter().copied().collect())
-                    }
+                    Node::Prim(Primitive::Len, _) => *val = val.row_count().into(),
+                    Node::Prim(Primitive::Shape, _) => *val = val.shape.iter().copied().collect(),
                     Node::Prim(Primitive::Reverse, _) => val.reverse(),
                     Node::Prim(Primitive::Transpose, _) => val.transpose(),
                     Node::Prim(Primitive::Deshape, _) => val.deshape(),
@@ -468,6 +464,9 @@ impl Node {
                 return;
             }
         }
+        self.push_no_inline(node);
+    }
+    pub(crate) fn push_no_inline(&mut self, mut node: Node) {
         if let Node::Run(nodes) = self {
             if nodes.is_empty() {
                 *self = node;

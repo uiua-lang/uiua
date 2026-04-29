@@ -1011,8 +1011,7 @@ pub fn gen_code_view(id: &str, code: &str, hidden: &str) -> View {
                                     _ => {}
                                 }
                             }
-                            if docs.meta.comment.as_ref().is_none_or(|com| com.sig.is_none()) 
-                                && let Some((args, outputs)) = &docs.meta.types
+                            if docs.meta.comment.as_ref().is_none_or(|com| com.sig.is_none()) && let Some((args, outputs)) = &docs.meta.types
                                 && !(args.is_empty() && outputs.is_empty()) {
                                 if !title.ends_with('\n') {
                                     title.push('\n');

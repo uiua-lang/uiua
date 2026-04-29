@@ -15,8 +15,8 @@ use smallvec::SmallVec;
 use crate::{
     Array, ArrayValue, Boxed, CodeSpan, Complex, ExactDoubleIterator, Inputs, Ops, PersistentMeta,
     Shape, SigNode, Signature, Span, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
-    cowslice::ecovec_extend_cowslice, fill::FillValue, grid_fmt::GridFmt,
-    empty_types::push_empty_rows_value,
+    cowslice::ecovec_extend_cowslice, empty_types::push_empty_rows_value, fill::FillValue,
+    grid_fmt::GridFmt,
 };
 
 mod dyadic;

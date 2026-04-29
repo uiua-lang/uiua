@@ -5,12 +5,14 @@ Uiua is not yet stable.
 ## 0.19.0 - 2026-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
-- Add experimental [custom subscript functions](<https://www.uiua.org/docs/experimental#custom-subscript-functions>)
-  - Remove deprecated `log ₙ` function, which syntactically conflicted
 - Change module member access syntax from `~`/`≈` to `.`/`‥`, which is easier to type and looks nicer
 - Add [`oklch`](https://uiua.org/docs/oklch) function
 - Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape
 - Add `$_` syntax to remove labels
+- Add experimental [custom subscript functions](<https://www.uiua.org/docs/experimental#custom-subscript-functions>)
+  - Remove deprecated `log ₙ` function, which syntactically conflicted
+- Add experimental [Type Checking](https://uiua.org/docs/experimental#type-checking)
+- Add experimental [`validate ⯾`](https://uiua.org/docs/validate) function to help with type checking
 - Add experimental [`pattern ⍡`](https://uiua.org/docs/pattern) modifier, which makes big pattern match lists easier to debug and maintain
 - Allow for subfolder imports from Git repos specified like `~ "git: example.com/user/repo subfolder"`
 ### Interpreter

@@ -430,6 +430,40 @@ impl Compiler {
                     }
                 }
 
+                // Type check
+                if !node.is_empty() {
+                    if let Some(i) = prelude.type_sig {
+                        let sn = SigNode::new(sig, node.clone());
+                        self.experimental_error_them(&i.span, || "Type signature comments");
+                        match typecheck(&sn, &self.asm) {
+                            Ok((arg_types, output_types)) => {
+                                self.type_sigs
+                                    .insert(i.value, (arg_types.clone(), output_types.clone()));
+                                meta.types = Some((
+                                    arg_types.into_iter().collect(),
+                                    output_types.into_iter().collect(),
+                                ));
+                            }
+                            Err((e, span)) => {
+                                self.emit_diagnostic(
+                                    format!("Type error: {e}"),
+                                    DiagnosticKind::Warning,
+                                    self.get_span(span),
+                                );
+                            }
+                        }
+                    } else if self.scope.type_check {
+                        let sn = SigNode::new(sig, node.clone());
+                        if let Err((e, span)) = typecheck(&sn, &self.asm) {
+                            self.emit_diagnostic(
+                                format!("Type error: {e}"),
+                                DiagnosticKind::Warning,
+                                self.get_span(span),
+                            );
+                        }
+                    }
+                }
+
                 if sig == (0, 1)
                     && !self_referenced
                     && !is_func
@@ -511,28 +545,7 @@ impl Compiler {
                     }
                 } else {
                     // Binding is a normal function
-                    let sn = SigNode::new(sig, node);
-                    if let Some(i) = prelude.type_sig {
-                        self.experimental_error_them(&i.span, || "Type signature comments");
-                        match typecheck(&sn, &self.asm) {
-                            Ok((arg_types, output_types)) => {
-                                self.type_sigs
-                                    .insert(i.value, (arg_types.clone(), output_types.clone()));
-                                meta.types = Some((
-                                    arg_types.into_iter().collect(),
-                                    output_types.into_iter().collect(),
-                                ));
-                            }
-                            Err((e, span)) => {
-                                self.emit_diagnostic(
-                                    format!("Type error: {e}"),
-                                    DiagnosticKind::Warning,
-                                    self.get_span(span),
-                                );
-                            }
-                        }
-                    }
-                    let func = make_fn(sn.node, sn.sig, self);
+                    let func = make_fn(node, sig, self);
                     self.compile_bind_function(name, local, func, spandex, meta)?;
                 }
 

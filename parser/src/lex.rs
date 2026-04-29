@@ -863,6 +863,8 @@ pub enum SemanticComment {
     NoInline,
     /// Mark that a function should be bound externally
     External,
+    /// Mark a function or module to be type checked
+    TypeCheck,
     /// Mark a function as deprecated
     Deprecated(EcoString),
     #[doc(hidden)]
@@ -878,6 +880,7 @@ impl fmt::Display for SemanticComment {
             SemanticComment::NoInline => write!(f, "# No inline!"),
             SemanticComment::TrackCaller => write!(f, "# Track caller!"),
             SemanticComment::External => write!(f, "# External!"),
+            SemanticComment::TypeCheck => write!(f, "# Type check!"),
             SemanticComment::Deprecated(s) if s.is_empty() => write!(f, "# Deprecated!"),
             SemanticComment::Deprecated(s) => write!(f, "# Deprecated! {s}"),
             SemanticComment::Boo => write!(f, "# Boo!"),
@@ -1255,6 +1258,7 @@ impl<'a> Lexer<'a> {
                             "No inline!" => self.end(NoInline, start),
                             "Track caller!" => self.end(TrackCaller, start),
                             "External!" => self.end(External, start),
+                            "Type check!" => self.end(TypeCheck, start),
                             "Boo!" => self.end(Boo, start),
                             s => {
                                 if let Some(suf) = s.strip_prefix("Deprecated!") {
@@ -1716,7 +1720,11 @@ impl<'a> Lexer<'a> {
                 "'" => '\''.to_string(),
                 "_" => char::MAX.to_string(),
                 "W" => WILDCARD_CHAR.to_string(),
-                "Z" => '\u{200d}'.to_string(),
+                "z" => '\u{200d}'.to_string(),
+                "C" => 'ℂ'.to_string(),
+                "N" => 'ℕ'.to_string(),
+                "R" => 'ℝ'.to_string(),
+                "Z" => 'ℤ'.to_string(),
                 "x" => {
                     let mut code = 0;
                     for _ in 0..2 {

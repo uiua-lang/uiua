@@ -300,6 +300,8 @@ pub(crate) struct Scope {
     data_variants: IndexSet<EcoString>,
     /// Whether to allow experimental features
     pub experimental: bool,
+    /// Whether to type check all functions
+    pub type_check: bool,
     /// Whether an error has been emitted for experimental features
     experimental_error: bool,
 }
@@ -346,6 +348,7 @@ impl Default for Scope {
             is_data_func: false,
             data_variants: IndexSet::new(),
             experimental: false,
+            type_check: false,
             experimental_error: false,
         }
     }
@@ -513,7 +516,14 @@ impl Compiler {
         kind: ScopeKind,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<(Module, T)> {
-        self.higher_scopes.push(take(&mut self.scope));
+        let mut new_scope = Scope::default();
+        if matches!(
+            kind,
+            ScopeKind::Function | ScopeKind::Module(_) | ScopeKind::Test
+        ) {
+            new_scope.type_check = self.scope.type_check;
+        }
+        self.higher_scopes.push(replace(&mut self.scope, new_scope));
         self.scope.kind = kind;
 
         let res = f(self);
@@ -1641,6 +1651,11 @@ impl Compiler {
                 .into(),
             ),
             SemanticComment::External => inner,
+            SemanticComment::TypeCheck => {
+                self.experimental_error_it(&span, || "Type checking");
+                self.scope.type_check = true;
+                inner
+            }
             SemanticComment::Deprecated(_) => inner,
             SemanticComment::Boo => {
                 self.add_error(span, "The compiler is scared!");

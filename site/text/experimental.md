@@ -62,7 +62,7 @@ F ← ⍉⊟
 
 This system can catch some errors at compile time. They are currently emitted as warnings.
 
-```uiua should fail
+```uiua should diag
 # Experimental!
 #?
 F ← ↙10↯3_4
@@ -123,6 +123,15 @@ F ← °□⊏ ⊓(⯾₀[]|⯾₁□∞⯾∞)
 # Experimental!
 #? [_×_ □str] ? str
 F ← ⊜(⊜□⊸≠@ )⊸≠@\n⯾₁∞
+```
+
+The `# Type check!` semantic comment will type check all functions below it without generating a comment.
+
+```uiua should diag
+# Experimental!
+# Type check!
+F ← ↙5 ↯3
+G ← +@0 ⯾₁[]
 ```
 
 The type system implementation is such that most type information can only flow *forward* through the system, not backward. Except for at the very beginning of a function, type constaints cannot go backward to inform the argument types of the function.

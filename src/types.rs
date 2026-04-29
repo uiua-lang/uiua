@@ -1284,7 +1284,10 @@ impl<'a> TypeEnv<'a> {
             arg_ty.shape.merge_from(stack_ty.shape);
         }
 
-        for (tv, arg) in self.stack.iter().rev().zip(&mut self.arg_types) {
+        let arg_start = self.arg_types.len().saturating_sub(self.stack.len());
+        for (tv, arg) in
+            (self.stack.iter().rev()).zip(self.arg_types.iter_mut().rev().skip(arg_start))
+        {
             if let TypeVal::Type(arg_ty) = arg {
                 if let TypeVal::Type(ty) = tv {
                     match_types(arg_ty, ty.clone());

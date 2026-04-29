@@ -24,6 +24,7 @@ use crate::{
     ast::*,
     is_ident_char,
     parse::{flip_unsplit_items, flip_unsplit_lines, parse, split_words, trim_spaces},
+    types::TypeSig,
 };
 
 trait ConfigValue: Sized {
@@ -417,6 +418,7 @@ fn format_impl(input: &str, src: InputSrc, config: &FormatConfig) -> UiuaResult<
             end_of_line_comments: Vec::new(),
             prev_import_function: None,
             output_comments: None,
+            type_sig_comments: None,
             eval_output_comments: true,
         }
         .format_top_items(&items);
@@ -475,6 +477,7 @@ pub(crate) fn format_words(words: &[Sp<Word>], inputs: &Inputs) -> String {
         end_of_line_comments: Vec::new(),
         prev_import_function: None,
         output_comments: None,
+        type_sig_comments: None,
         eval_output_comments: false,
     };
     formatter.format_words(words, true, 0);
@@ -491,6 +494,7 @@ pub(crate) fn format_word(word: &Sp<Word>, inputs: &Inputs) -> String {
         end_of_line_comments: Vec::new(),
         prev_import_function: None,
         output_comments: None,
+        type_sig_comments: None,
         eval_output_comments: false,
     };
     formatter.format_word(word, 0);
@@ -507,6 +511,7 @@ struct Formatter<'a> {
     end_of_line_comments: Vec<EoLComment>,
     prev_import_function: Option<Ident>,
     output_comments: Option<HashMap<usize, Vec<Vec<Value>>>>,
+    type_sig_comments: Option<HashMap<usize, TypeSig>>,
     eval_output_comments: bool,
 }
 
@@ -1195,11 +1200,25 @@ impl Formatter<'_> {
                 }
                 self.push(&word.span, &sc.to_string());
             }
-            Word::OutputComment { i, n } => {
-                let stacks = self.eval_output_comment(*i);
+            &Word::TypeSigComment { i } => {
+                self.output.push_str("#?");
+                let Some((args, outputs)) = self.eval_type_sig_comment(i) else {
+                    return;
+                };
+                self.output.push(' ');
+                for output in outputs {
+                    self.output.push_str(&format!("{output} "));
+                }
+                self.output.push('?');
+                for arg in args {
+                    self.output.push_str(&format!(" {arg}"));
+                }
+            }
+            &Word::OutputComment { i, n } => {
+                let stacks = self.eval_output_comment(i);
                 let mut s = String::new();
                 if stacks.is_empty() {
-                    for _ in 0..=*n {
+                    for _ in 0..=n {
                         s.push('#');
                     }
                 }
@@ -1288,7 +1307,7 @@ impl Formatter<'_> {
                                 s.push(' ');
                             }
                         }
-                        s.extend(repeat_n('#', *n + 1));
+                        s.extend(repeat_n('#', n + 1));
                         s.push(' ');
                         s.push_str(&line);
                     }
@@ -1303,7 +1322,7 @@ impl Formatter<'_> {
                             }
                         }
                         self.end_of_line_comments
-                            .push((start_line + i, *n + 1, line));
+                            .push((start_line + i, n + 1, line));
                     }
                 }
             }
@@ -1459,6 +1478,21 @@ impl Formatter<'_> {
                 format!("#{}", comment.value)
             },
         );
+    }
+    fn eval_type_sig_comment(&mut self, index: usize) -> Option<TypeSig> {
+        let values = self.type_sig_comments.get_or_insert_with(|| {
+            if !self.eval_output_comments {
+                return HashMap::new();
+            }
+            let mut comp = Compiler::with_backend(FormatterBackend(self.config.backend.clone()));
+            let enabled = comp.backend().set_output_enabled(false);
+            _ = comp
+                .mode(RunMode::All)
+                .load_str_src(&self.inputs.get(&self.src), self.src.clone());
+            comp.backend().set_output_enabled(enabled);
+            comp.type_sigs
+        });
+        values.remove(&index)
     }
     fn eval_output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {
         let values = self.output_comments.get_or_insert_with(|| {
@@ -1713,6 +1747,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::BreakLine => true,
         Word::FlipLine => false,
         Word::SemanticComment(_) => true,
+        Word::TypeSigComment { .. } => true,
         Word::OutputComment { .. } => true,
     }
 }

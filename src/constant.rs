@@ -10,8 +10,8 @@ use ecow::EcoVec;
 use rand::prelude::*;
 
 use crate::{
-    Array, Boxed, PrimDocFragment, SysBackend, Uiua, Value, WILDCARD_NAN, media,
-    parse_doc_line_fragments,
+    Array, ArrayValue, Boxed, Complex, PrimDocFragment, SysBackend, Uiua, Value, WILDCARD_NAN,
+    media, parse_doc_line_fragments,
 };
 
 /// The definition of a shadowable constant
@@ -234,6 +234,7 @@ macro_rules! constant {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ConstClass {
     Math,
+    Types,
     External,
     Time,
     Media,
@@ -265,6 +266,14 @@ constant!(
     ///
     /// It is the difference between 1 and the next larger representable number.
     ("ε", Math, f64::EPSILON),
+    /// Tag for the number type
+    ("Num", Types, f64::TYPE_ID),
+    /// Tag for the character type
+    ("Char", Types, char::TYPE_ID),
+    /// Tag for the box type
+    ("Box", Types, Boxed::TYPE_ID),
+    /// Tag for the complex number type
+    ("Complex", Types, Complex::TYPE_ID),
     /// 1-dimensional adjacent neighbors offsets
     ("A₁", Spatial, [1, -1]),
     /// 2-dimensional adjacent neighbors offsets

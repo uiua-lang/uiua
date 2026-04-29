@@ -1335,9 +1335,10 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
                 b: 68,
             }),
             SpanKind::Subscript(Some(prim), n) => color_prim(prim, n.as_ref()),
-            SpanKind::Comment | SpanKind::OutputComment | SpanKind::Strand => {
-                Some(Color::BrightBlack)
-            }
+            SpanKind::Comment
+            | SpanKind::OutputComment
+            | SpanKind::TypeSigComment
+            | SpanKind::Strand => Some(Color::BrightBlack),
             SpanKind::MacroDelim(margs) => Some(color_mod(margs)),
             SpanKind::ArgSetter(_) => Some(MONADIC),
             SpanKind::Ident { .. }

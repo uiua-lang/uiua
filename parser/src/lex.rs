@@ -626,6 +626,7 @@ impl<T> From<Sp<T>> for Sp<T, Span> {
 pub enum Token {
     Comment,
     SemanticComment(SemanticComment),
+    TypeSigComment,
     OutputComment(usize),
     Ident(Ident),
     Number,
@@ -729,6 +730,7 @@ impl fmt::Display for Token {
         match self {
             Token::Comment => write!(f, "comment"),
             Token::SemanticComment(sc) => sc.fmt(f),
+            Token::TypeSigComment => write!(f, "#?"),
             Token::OutputComment(_) => write!(f, "output comment"),
             Token::Ident(_) => write!(f, "identifier"),
             Token::Number => write!(f, "number"),
@@ -861,6 +863,8 @@ pub enum SemanticComment {
     NoInline,
     /// Mark that a function should be bound externally
     External,
+    /// Mark a function or module to be type checked
+    TypeCheck,
     /// Mark a function as deprecated
     Deprecated(EcoString),
     #[doc(hidden)]
@@ -876,6 +880,7 @@ impl fmt::Display for SemanticComment {
             SemanticComment::NoInline => write!(f, "# No inline!"),
             SemanticComment::TrackCaller => write!(f, "# Track caller!"),
             SemanticComment::External => write!(f, "# External!"),
+            SemanticComment::TypeCheck => write!(f, "# Type check!"),
             SemanticComment::Deprecated(s) if s.is_empty() => write!(f, "# Deprecated!"),
             SemanticComment::Deprecated(s) => write!(f, "# Deprecated! {s}"),
             SemanticComment::Boo => write!(f, "# Boo!"),
@@ -1229,11 +1234,18 @@ impl<'a> Lexer<'a> {
                 }
                 // Comments
                 "#" => {
+                    if self.next_char_exact("?") {
+                        // Type sig comment
+                        while self.next_char_if(|c| !c.ends_with('\n')).is_some() {}
+                        self.end(TypeSigComment, start);
+                        continue;
+                    }
                     let mut n = 0;
                     while self.next_char_exact("#") {
                         n += 1;
                     }
                     if n == 0 {
+                        // Normal and semantic comments
                         let mut comment = String::new();
                         while let Some(c) = self.next_char_if(|c| !c.ends_with('\n')) {
                             comment.push_str(c);
@@ -1246,6 +1258,7 @@ impl<'a> Lexer<'a> {
                             "No inline!" => self.end(NoInline, start),
                             "Track caller!" => self.end(TrackCaller, start),
                             "External!" => self.end(External, start),
+                            "Type check!" => self.end(TypeCheck, start),
                             "Boo!" => self.end(Boo, start),
                             s => {
                                 if let Some(suf) = s.strip_prefix("Deprecated!") {
@@ -1256,6 +1269,7 @@ impl<'a> Lexer<'a> {
                             }
                         }
                     } else {
+                        // Output comments
                         loop {
                             while self.next_char_if(|c| !c.ends_with('\n')).is_some() {}
                             let restore = self.loc;
@@ -1422,6 +1436,7 @@ impl<'a> Lexer<'a> {
                                 PrimComponent::Epsilon => {
                                     Ident(PrimComponent::Epsilon.name().into())
                                 }
+                                PrimComponent::Infinity => Glyph(Primitive::Infinity),
                             };
                             self.tokens.push(self.make_span(start, end).sp(tok));
                             start = end;
@@ -1705,7 +1720,11 @@ impl<'a> Lexer<'a> {
                 "'" => '\''.to_string(),
                 "_" => char::MAX.to_string(),
                 "W" => WILDCARD_CHAR.to_string(),
-                "Z" => '\u{200d}'.to_string(),
+                "z" => '\u{200d}'.to_string(),
+                "C" => 'ℂ'.to_string(),
+                "N" => 'ℕ'.to_string(),
+                "R" => 'ℝ'.to_string(),
+                "Z" => 'ℤ'.to_string(),
                 "x" => {
                     let mut code = 0;
                     for _ in 0..2 {

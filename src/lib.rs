@@ -137,6 +137,7 @@ The `uiua` crate has the following noteable feature flags:
 
 #![allow(
     unknown_lints,
+    clippy::collapsible_match,
     clippy::single_match,
     clippy::needless_range_loop,
     clippy::mutable_key_type,
@@ -144,6 +145,7 @@ The `uiua` crate has the following noteable feature flags:
     mismatched_lifetime_syntaxes
 )]
 #![warn(missing_docs)]
+#![recursion_limit = "512"]
 
 mod algorithm;
 mod array;
@@ -153,6 +155,7 @@ mod check;
 mod compile;
 mod constant;
 mod cowslice;
+mod empty_types;
 mod error;
 mod ffi;
 mod fill;
@@ -166,6 +169,7 @@ pub mod profile;
 mod run;
 mod run_prim;
 mod shape;
+mod stack;
 #[cfg(feature = "stand")]
 #[doc(hidden)]
 pub mod stand;
@@ -201,6 +205,7 @@ pub use self::{
 pub use uiua_parser::*;
 
 use self::algorithm::get_ops;
+use crate::stack::*;
 
 /// The Uiua version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -119,8 +119,8 @@ pub fn Constants() -> impl IntoView {
     use ConstClass::*;
     use Primitive::*;
     let class_cols = [
-        vec![Math, Time, Color, Flags],
-        vec![External, Media, Spatial, System, Fun],
+        vec![Math, External, Time, Color, Flags],
+        vec![Types, Media, Spatial, System, Fun],
     ];
     let cols = class_cols.map(|col_classes| {
         let mut tables = Vec::new();

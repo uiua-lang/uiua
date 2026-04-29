@@ -44,6 +44,7 @@ use crate::{
         flip_unsplit_items, flip_unsplit_lines, has_subn, ident_modifier_args, max_placeholder,
         parse, split_items, split_words,
     },
+    types::TypeSig,
 };
 pub(crate) use modifier::*;
 pub use pre_eval::PreEvalMode;
@@ -93,6 +94,8 @@ pub struct Compiler {
     start_addrs: Vec<usize>,
     /// Primitive optional arg getter bindings
     prim_arg_bindings: HashMap<(Primitive, Ident), usize>,
+    /// Type signatures for type sig comments
+    pub(crate) type_sigs: HashMap<usize, TypeSig>,
 }
 
 impl Default for Compiler {
@@ -120,6 +123,7 @@ impl Default for Compiler {
             macro_env: Uiua::default(),
             start_addrs: Vec::new(),
             prim_arg_bindings: HashMap::new(),
+            type_sigs: HashMap::new(),
         }
     }
 }
@@ -130,6 +134,7 @@ struct BindingPrelude {
     track_caller: bool,
     no_inline: bool,
     external: bool,
+    type_sig: Option<Sp<usize>>,
     deprecation: Option<EcoString>,
 }
 
@@ -295,6 +300,8 @@ pub(crate) struct Scope {
     data_variants: IndexSet<EcoString>,
     /// Whether to allow experimental features
     pub experimental: bool,
+    /// Whether to type check all functions
+    pub type_check: bool,
     /// Whether an error has been emitted for experimental features
     experimental_error: bool,
 }
@@ -341,6 +348,7 @@ impl Default for Scope {
             is_data_func: false,
             data_variants: IndexSet::new(),
             experimental: false,
+            type_check: false,
             experimental_error: false,
         }
     }
@@ -508,7 +516,14 @@ impl Compiler {
         kind: ScopeKind,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<(Module, T)> {
-        self.higher_scopes.push(take(&mut self.scope));
+        let mut new_scope = Scope::default();
+        if matches!(
+            kind,
+            ScopeKind::Function | ScopeKind::Module(_) | ScopeKind::Test
+        ) {
+            new_scope.type_check = self.scope.type_check;
+        }
+        self.higher_scopes.push(replace(&mut self.scope, new_scope));
         self.scope.kind = kind;
 
         let res = f(self);
@@ -727,8 +742,8 @@ impl Compiler {
     }
     /// Handle comment words to modify a binding prelude.
     /// Returns whether the word was used.
-    fn prelude_word(&self, word: &Word, prelude: &mut BindingPrelude) -> bool {
-        match word {
+    fn prelude_word(&self, word: &Sp<Word>, prelude: &mut BindingPrelude) -> bool {
+        match &word.value {
             Word::Comment(c) => {
                 if let Some(curr_com) = &mut prelude.comment {
                     curr_com.push('\n');
@@ -737,6 +752,7 @@ impl Compiler {
                     prelude.comment = Some(c.as_str().into());
                 }
             }
+            Word::TypeSigComment { i } => prelude.type_sig = Some(word.span.clone().sp(*i)),
             Word::SemanticComment(SemanticComment::NoInline) => prelude.no_inline = true,
             Word::SemanticComment(SemanticComment::TrackCaller) => prelude.track_caller = true,
             Word::SemanticComment(SemanticComment::External) => prelude.external = true,
@@ -756,7 +772,7 @@ impl Compiler {
     ) -> UiuaResult {
         // Populate prelude
         let mut words = line.iter().filter(|w| !matches!(w.value, Word::Spaces));
-        if words.clone().count() == 1 && self.prelude_word(&words.next().unwrap().value, prelude) {
+        if words.clone().count() == 1 && self.prelude_word(words.next().unwrap(), prelude) {
             line.clear();
         } else {
             *prelude = BindingPrelude::default();
@@ -900,7 +916,7 @@ impl Compiler {
             }
             Err(e) => self.add_error(span, e),
         }
-        self.asm.root.push(line_node);
+        self.asm.root.push_no_inline(line_node);
         Ok(())
     }
     fn compile_bind_function(
@@ -1224,7 +1240,7 @@ impl Compiler {
     }
     fn word(&mut self, word: Sp<Word>) -> UiuaResult<Node> {
         self.check_depth(&word.span)?;
-        Ok(match word.value {
+        let res = match word.value {
             Word::Number(NumWord::Real(n), _) => Node::new_push(n),
             Word::Number(NumWord::Infinity(false), _) => Node::new_push(f64::INFINITY),
             Word::Number(NumWord::Infinity(true), _) => Node::new_push(f64::NEG_INFINITY),
@@ -1512,6 +1528,7 @@ impl Compiler {
                 // Semantic comments are handled higher up
                 Node::empty()
             }
+            Word::TypeSigComment { .. } => Node::empty(),
             Word::OutputComment { i, n } => Node::SetOutputComment { i, n },
             Word::Subscripted(sub) => self.subscripted(*sub, word.span)?,
             Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::FlipLine => Node::empty(),
@@ -1523,7 +1540,8 @@ impl Compiler {
                 );
                 Node::empty()
             }
-        })
+        };
+        Ok(res)
     }
     fn force_sig(
         &mut self,
@@ -1633,6 +1651,11 @@ impl Compiler {
                 .into(),
             ),
             SemanticComment::External => inner,
+            SemanticComment::TypeCheck => {
+                self.experimental_error_it(&span, || "Type checking");
+                self.scope.type_check = true;
+                inner
+            }
             SemanticComment::Deprecated(_) => inner,
             SemanticComment::Boo => {
                 self.add_error(span, "The compiler is scared!");
@@ -2325,7 +2348,10 @@ impl Compiler {
     fn primitive(&mut self, prim: Primitive, span: CodeSpan) -> Node {
         self.validate_primitive(prim, &span);
         let spandex = self.add_span(span.clone());
-        Node::Prim(prim, spandex)
+        match prim {
+            Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
+            prim => Node::Prim(prim, spandex),
+        }
     }
     fn validate_binding_name(&mut self, name: &str, span: &CodeSpan) {
         if name.contains('&') {
@@ -2430,6 +2456,27 @@ impl Compiler {
                         Node::ImplPrim(ImplPrimitive::SidedJoin(side), self.add_span(span))
                     }
                 }
+            }
+            Validate => {
+                let sub = self.validate_subscript(scr);
+                Node::ImplPrim(
+                    ImplPrimitive::ValidateImpl(
+                        (sub.value.num).map(|n| self.positive_subscript(n, Validate, &sub.span)),
+                        sub.value.side.map(|ss| {
+                            if ss.n.is_some() {
+                                self.add_error(
+                                    sub.span.clone(),
+                                    format!(
+                                        "Side quantifiers are not allowed for {}",
+                                        Validate.format()
+                                    ),
+                                );
+                            }
+                            ss.side
+                        }),
+                    ),
+                    self.add_span(span),
+                )
             }
             prim => {
                 let Some(n) = self.subscript_n_only(&scr, prim.format()) else {

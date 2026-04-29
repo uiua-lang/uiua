@@ -7,7 +7,6 @@ use std::{
     env, fmt,
     hash::{Hash, Hasher},
     mem::size_of,
-    ops::Deref,
 };
 
 use ecow::{EcoString, EcoVec};
@@ -17,7 +16,7 @@ use crate::{
     Array, ArrayValue, Boxed, CodeSpan, Complex, ExactDoubleIterator, Inputs, Ops, PersistentMeta,
     Shape, SigNode, Signature, Span, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
     cowslice::ecovec_extend_cowslice, fill::FillValue, grid_fmt::GridFmt,
-    types::push_empty_rows_value,
+    empty_types::push_empty_rows_value,
 };
 
 mod dyadic;
@@ -52,10 +51,6 @@ pub(crate) fn get_ops<const N: usize>(
         })
     })
 }
-
-pub trait Indexable: IntoIterator + Deref<Target = [Self::Item]> {}
-
-impl<T> Indexable for T where T: IntoIterator + Deref<Target = [T::Item]> {}
 
 type MultiOutput<T> = SmallVec<[T; 1]>;
 pub(crate) fn multi_output<T: Clone + Default>(n: usize, val: T) -> MultiOutput<T> {
@@ -731,7 +726,7 @@ pub fn format(parts: &[EcoString], env: &mut Uiua) -> UiuaResult {
     let mut chars = EcoVec::new();
     for (i, part) in parts.iter().enumerate() {
         if i > 0 {
-            let value = env.pop(("format argument", i))?;
+            let value = env.pop(("format argument ", i))?;
             format_val(&mut chars, value);
         }
         chars.extend(part.chars());

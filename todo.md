@@ -1,6 +1,11 @@
 # Uiua Todo
 
 # 0.19
+- Type system
+  - Tests
+  - Data def types
+  - Missing primitives
+  - Blog post
 - `match` subscripts
 - Macro signature comments
 - Data def method to construct with validators but not defaults/initializers

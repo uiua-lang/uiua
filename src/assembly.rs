@@ -20,6 +20,7 @@ use crate::{
     ast::Word,
     compile::{LocalIndex, Module},
     is_ident_char,
+    types::TypeVal,
 };
 
 /// A compiled Uiua assembly
@@ -680,6 +681,9 @@ pub struct BindingMeta {
     /// The deprecation message
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deprecation: Option<EcoString>,
+    /// The argument and output type(s) of the binding
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub types: Option<(EcoVec<TypeVal>, EcoVec<TypeVal>)>,
     /// Whether this binding's code was externally provided
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub external: bool,

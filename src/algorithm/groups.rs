@@ -7,7 +7,7 @@ use ecow::{EcoVec, eco_vec};
 
 use crate::{
     Array, ArrayValue, Boxed, Node, Ops, Primitive, ScalarNum, Shape, SigNode, Uiua, UiuaResult,
-    Value, cowslice::CowSlice, get_ops, types::push_empty_rows_value, val_as_arr,
+    Value, cowslice::CowSlice, get_ops, empty_types::push_empty_rows_value, val_as_arr,
 };
 
 use super::multi_output;
@@ -849,7 +849,7 @@ where
             }
             env.exec(f.clone())?;
             for i in 0..sig.outputs() {
-                let value = env.pop(|| format!("{}'s function result", prim.format()))?;
+                let value = env.pop((prim.format(), "'s function result"))?;
                 rows[i].push(value);
             }
             if sig.args() == 0 {

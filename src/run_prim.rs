@@ -28,6 +28,7 @@ use crate::{
     fill::FillFrame,
     grid_fmt::GridFmt,
     media, run_sys_op, run_sys_op_mod,
+    types::{Type, validate},
     value::*,
 };
 
@@ -335,7 +336,8 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         | Primitive::Anti
         | Primitive::Under
         | Primitive::Obverse
-        | Primitive::Switch => {
+        | Primitive::Switch
+        | Primitive::Validate => {
             return Err(env.error(format!(
                 "{} was not inlined. This is a bug in the interpreter",
                 prim.format()
@@ -353,13 +355,13 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             return Err(env.error(if prim.modifier_args().is_some() {
                 format!(
                     "{} was not handled as a modifier. \
-                        This is a bug in the interpreter",
+                    This is a bug in the interpreter",
                     prim.format()
                 )
             } else {
                 format!(
                     "{} was not handled as a function. \
-                        This is a bug in the interpreter",
+                    This is a bug in the interpreter",
                     prim.format()
                 )
             }));
@@ -550,13 +552,13 @@ pub fn run_prim_mod(prim: &Primitive, mut ops: Ops, env: &mut Uiua) -> UiuaResul
             return Err(env.error(if prim.modifier_args().is_some() {
                 format!(
                     "{} was not handled as a modifier. \
-                        This is a bug in the interpreter",
+                    This is a bug in the interpreter",
                     prim.format()
                 )
             } else {
                 format!(
                     "{} was called as a modifier. \
-                        This is a bug in the interpreter",
+                    This is a bug in the interpreter",
                     prim.format()
                 )
             }));
@@ -1186,7 +1188,7 @@ impl ImplPrimitive {
             ImplPrimitive::Retropose => env.monadic_mut(|val| val.retropose_depth(0))?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
             // Implementation details
-            ImplPrimitive::ValidateType | ImplPrimitive::ValidateTypeConsume => {
+            ImplPrimitive::ValidateTypeOld | ImplPrimitive::ValidateTypeConsume => {
                 let type_num = env
                     .pop(1)?
                     .as_nat(env, "Type number must be a natural number")?;
@@ -1206,7 +1208,7 @@ impl ImplPrimitive {
                     };
                     return Err(env.error(format!("Expected {expected} but found {found}")));
                 }
-                if let ImplPrimitive::ValidateType = self {
+                if let ImplPrimitive::ValidateTypeOld = self {
                     env.push(val);
                 }
             }
@@ -1344,6 +1346,14 @@ impl ImplPrimitive {
                 let mut vals = env.pop(3)?;
                 vals.map_args(keys, Some(args), env)?;
                 env.push(vals);
+            }
+            &ImplPrimitive::ValidateImpl(type_id, side) => {
+                let spec = env.pop(1)?;
+                let val = env.pop(2)?;
+                if let Err(e) = validate(spec.into(), &mut Type::from(&val), type_id, side) {
+                    return Err(env.error(format!("Type error: {e}")));
+                }
+                env.push(val);
             }
             &ImplPrimitive::Ga(op, spec) => match op {
                 GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,

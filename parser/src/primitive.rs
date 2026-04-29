@@ -249,6 +249,7 @@ impl Primitive {
                 | Classify,
                 _,
             ) => return self.sig(),
+            (Validate, _) => return self.sig(),
             (Args, Some(n)) if n >= 0 => Signature::new(n as usize, n as usize),
             _ => return None,
         })

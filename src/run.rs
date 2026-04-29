@@ -21,7 +21,8 @@ use threadpool::ThreadPool;
 use crate::{
     Array, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, Compiler, Function, FunctionId,
     Ident, Inputs, IntoSysBackend, LocalIndex, Node, Primitive, Report, SafeSys, SigNode,
-    Signature, Span, SysBackend, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
+    Signature, Span, StackArg, SysBackend, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult,
+    VERSION, Value,
     algorithm::{self, validate_size_impl},
     fill::{Fill, FillFrame, FillValue},
     invert::match_format_pattern,
@@ -439,25 +440,25 @@ at {}",
     }
 }
 
-/// Things that can be executed
-pub trait Exec {
+/// Things that can be executed on a [`Uiua`]
+pub trait UiuaExec {
     /// Execute
     fn exec(self, uiua: &mut Uiua) -> UiuaResult;
 }
 
-impl Exec for Node {
+impl UiuaExec for Node {
     fn exec(self, uiua: &mut Uiua) -> UiuaResult {
         uiua.exec_impl(self)
     }
 }
 
-impl Exec for SigNode {
+impl UiuaExec for SigNode {
     fn exec(self, uiua: &mut Uiua) -> UiuaResult {
         uiua.exec_with_span(self, 0)
     }
 }
 
-impl<T: Exec + Clone> Exec for Arc<T> {
+impl<T: UiuaExec + Clone> UiuaExec for Arc<T> {
     fn exec(self, uiua: &mut Uiua) -> UiuaResult {
         Arc::unwrap_or_clone(self).exec(uiua)
     }
@@ -465,7 +466,7 @@ impl<T: Exec + Clone> Exec for Arc<T> {
 
 impl Uiua {
     /// Execute an [`Exec`]
-    pub fn exec(&mut self, node: impl Exec) -> UiuaResult {
+    pub fn exec(&mut self, node: impl UiuaExec) -> UiuaResult {
         node.exec(self)
     }
     fn exec_impl(&mut self, node: Node) -> UiuaResult {
@@ -1281,6 +1282,10 @@ impl Uiua {
         let height = self.require_height(n)?;
         Ok(&self.rt.stack[height..])
     }
+    /// Get the top value
+    pub fn top(&self) -> UiuaResult<&Value> {
+        Ok(&self.top_n(1)?[0])
+    }
     /// Get a mutable slice of the top `n` stack values
     pub fn top_n_mut(&mut self, n: usize) -> UiuaResult<&mut [Value]> {
         let height = self.require_height(n)?;
@@ -1679,62 +1684,5 @@ impl Uiua {
                 .ok_or_else(|| self.error("Invalid thread id"))?
                 .channel
         })
-    }
-}
-
-/// A trait for types that can be used as argument specifiers for [`Uiua::pop`]
-///
-/// If the stack is empty, the error message will be "Missing {arg_name}"
-pub trait StackArg {
-    /// Get the name of the argument
-    fn arg_name(self) -> String;
-}
-
-impl StackArg for () {
-    fn arg_name(self) -> String {
-        "value".to_string()
-    }
-}
-
-impl StackArg for usize {
-    fn arg_name(self) -> String {
-        format!("argument {self}")
-    }
-}
-impl StackArg for u8 {
-    fn arg_name(self) -> String {
-        format!("argument {self}")
-    }
-}
-impl StackArg for i32 {
-    fn arg_name(self) -> String {
-        format!("argument {self}")
-    }
-}
-impl StackArg for &str {
-    fn arg_name(self) -> String {
-        self.to_string()
-    }
-}
-
-impl StackArg for String {
-    fn arg_name(self) -> String {
-        self
-    }
-}
-
-impl StackArg for (&'static str, usize) {
-    fn arg_name(self) -> String {
-        format!("{} {}", self.0, self.1)
-    }
-}
-
-impl<F, T> StackArg for F
-where
-    F: FnOnce() -> T,
-    T: StackArg,
-{
-    fn arg_name(self) -> String {
-        self().arg_name()
     }
 }

@@ -17,8 +17,8 @@ use rapidhash::quality::RapidHasher;
 use serde::*;
 
 use crate::{
-    AestheticHash, Assembly, BindingKind, DynamicFunction, Function, ImplPrimitive, Primitive,
-    Purity, Signature, Value,
+    AestheticHash, Assembly, BindingKind, DynamicFunction, Function, HasSig, ImplPrimitive,
+    Primitive, Purity, Signature, Value,
     check::SigCheckError,
     compile::invert::{InversionError, InversionResult},
 };
@@ -104,6 +104,13 @@ pub struct SigNode {
     pub node: Node,
     /// The signature
     pub sig: Signature,
+}
+
+impl HasSig for SigNode {
+    #[inline]
+    fn signature(&self) -> Signature {
+        self.sig
+    }
 }
 
 impl SigNode {
@@ -349,6 +356,13 @@ impl Node {
             other => slice::from_mut(other),
         }
     }
+    /// Get a mutable reference to the last node
+    pub fn last_mut(&mut self) -> Option<&mut Node> {
+        match self {
+            Node::Run(nodes) => nodes.make_mut().last_mut(),
+            other => Some(other),
+        }
+    }
     /// Slice the node to get a subnode
     pub fn slice<R>(&self, range: R) -> Self
     where
@@ -430,7 +444,29 @@ impl Node {
     /// Push a node onto the end of the node
     ///
     /// Transforms the node into a [`Node::Run`] if it is not already a [`Node::Run`]
-    pub fn push(&mut self, mut node: Node) {
+    pub fn push(&mut self, node: Node) {
+        if let Some(Node::Push(val)) = self.last_mut() {
+            // Simple inlining
+            'blk: {
+                match node {
+                    Node::Prim(Primitive::Box, _) => val.box_it(),
+                    Node::Prim(Primitive::Fix, _) => val.fix(),
+                    Node::Prim(Primitive::Len, _) => *val = val.row_count().into(),
+                    Node::Prim(Primitive::Shape, _) => *val = val.shape.iter().copied().collect(),
+                    Node::Prim(Primitive::Reverse, _) => val.reverse(),
+                    Node::Prim(Primitive::Transpose, _) => val.transpose(),
+                    Node::Prim(Primitive::Deshape, _) => val.deshape(),
+                    Node::Prim(Primitive::Sort, _) => val.sort_up(),
+                    Node::Prim(Primitive::Classify, _) => *val = val.classify(),
+                    Node::Label(label, _) => val.meta_mut().label = Some(label),
+                    _ => break 'blk,
+                }
+                return;
+            }
+        }
+        self.push_no_inline(node);
+    }
+    pub(crate) fn push_no_inline(&mut self, mut node: Node) {
         if let Node::Run(nodes) = self {
             if nodes.is_empty() {
                 *self = node;

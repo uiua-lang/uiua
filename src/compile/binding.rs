@@ -1,5 +1,7 @@
 //! Compiler code for bindings
 
+use crate::types::typecheck;
+
 use super::*;
 
 impl Compiler {
@@ -10,8 +12,7 @@ impl Compiler {
     ) -> UiuaResult {
         let public = binding.public;
 
-        if (binding.words.iter().last()).is_some_and(|w| self.prelude_word(&w.value, &mut prelude))
-        {
+        if (binding.words.iter().last()).is_some_and(|w| self.prelude_word(w, &mut prelude)) {
             binding.words.pop();
         }
 
@@ -28,10 +29,11 @@ impl Compiler {
 
         // Create meta
         let comment = prelude.comment.map(|text| DocComment::from(text.as_str()));
-        let meta = BindingMeta {
+        let mut meta = BindingMeta {
             comment,
             deprecation: prelude.deprecation,
             counts: Some(binding.counts),
+            types: None,
             external: prelude.external,
         };
 
@@ -88,6 +90,7 @@ impl Compiler {
                         comment: Some(comment),
                         counts: old_meta.counts.or(meta.counts),
                         deprecation: meta.deprecation.or(old_meta.deprecation),
+                        types: old_meta.types,
                         external: old_meta.external || meta.external,
                     };
                     let local = LocalIndex {
@@ -313,7 +316,7 @@ impl Compiler {
                 {
                     comp.emit_diagnostic(
                         "Functions should consume their arguments. \
-                                        Try removing this.",
+                        Try removing this.",
                         DiagnosticKind::Style,
                         dup_span,
                     );
@@ -348,7 +351,6 @@ impl Compiler {
             recurses: 0,
             global_index: local.index,
         });
-
         // Compile the words
         let (_, mut node) = self.in_scope(ScopeKind::Binding, |comp| {
             comp.line(binding.words).inspect_err(|_| {
@@ -428,6 +430,40 @@ impl Compiler {
                     }
                 }
 
+                // Type check
+                if !node.is_empty() {
+                    if let Some(i) = prelude.type_sig {
+                        let sn = SigNode::new(sig, node.clone());
+                        self.experimental_error_them(&i.span, || "Type signature comments");
+                        match typecheck(&sn, &self.asm) {
+                            Ok((arg_types, output_types)) => {
+                                self.type_sigs
+                                    .insert(i.value, (arg_types.clone(), output_types.clone()));
+                                meta.types = Some((
+                                    arg_types.into_iter().collect(),
+                                    output_types.into_iter().collect(),
+                                ));
+                            }
+                            Err((e, span)) => {
+                                self.emit_diagnostic(
+                                    format!("Type error: {e}"),
+                                    DiagnosticKind::Warning,
+                                    self.get_span(span),
+                                );
+                            }
+                        }
+                    } else if self.scope.type_check {
+                        let sn = SigNode::new(sig, node.clone());
+                        if let Err((e, span)) = typecheck(&sn, &self.asm) {
+                            self.emit_diagnostic(
+                                format!("Type error: {e}"),
+                                DiagnosticKind::Warning,
+                                self.get_span(span),
+                            );
+                        }
+                    }
+                }
+
                 if sig == (0, 1)
                     && !self_referenced
                     && !is_func
@@ -462,7 +498,7 @@ impl Compiler {
                                 .insert(local.index, node.clone());
                         }
                         // Add binding instrs to root
-                        self.asm.root.push(node);
+                        self.asm.root.push_no_inline(node);
                         self.asm.root.push(Node::BindGlobal {
                             index: local.index,
                             span: spandex,

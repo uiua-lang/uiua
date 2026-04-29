@@ -77,8 +77,7 @@ pub fn derive_new_shape(
     bsh: &Shape,
     a_fill_sh: Result<&Shape, &'static str>,
     b_fill_sh: Result<&Shape, &'static str>,
-    env: &Uiua,
-) -> UiuaResult<Shape> {
+) -> Result<Shape, String> {
     let new_rank = ash.len().max(bsh.len());
     let mut new_shape = Shape::with_capacity(new_rank);
     for i in 0..new_rank {
@@ -92,29 +91,25 @@ pub fn derive_new_shape(
                 } else if ad < bd {
                     match a_fill_sh {
                         Ok(sh) if !ash.row_slice().ends_with(sh) => {
-                            return Err(env.error(format!(
+                            return Err(format!(
                                 "Fill shape {sh} cannot be used to fill array with shape {ash}"
-                            )));
+                            ));
                         }
                         Ok(_) => ad.max(bd),
                         Err(e) => {
-                            return Err(
-                                env.error(format!("Shapes {ash} and {bsh} are not compatible{e}"))
-                            );
+                            return Err(format!("Shapes {ash} and {bsh} are not compatible{e}"));
                         }
                     }
                 } else {
                     match b_fill_sh {
                         Ok(sh) if !bsh.row_slice().ends_with(sh) => {
-                            return Err(env.error(format!(
+                            return Err(format!(
                                 "Fill shape {sh} cannot be used to fill array with shape {bsh}"
-                            )));
+                            ));
                         }
                         Ok(_) => ad.max(bd),
                         Err(e) => {
-                            return Err(
-                                env.error(format!("Shapes {ash} and {bsh} are not compatible{e}"))
-                            );
+                            return Err(format!("Shapes {ash} and {bsh} are not compatible{e}"));
                         }
                     }
                 }
@@ -141,8 +136,8 @@ where
         &b.shape,
         a_fill.as_ref().map(|_| &empty).map_err(|&e| e),
         b_fill.as_ref().map(|_| &empty).map_err(|&e| e),
-        env,
-    )?;
+    )
+    .map_err(|e| env.error(e))?;
 
     // dbg!(&a.shape, &b.shape, &new_shape);
 
@@ -728,8 +723,8 @@ pub(crate) fn bin_pervade_values(
         &b.shape,
         a_fill.as_ref().map(|a| &a.shape).map_err(|&e| e),
         b_fill.as_ref().map(|b| &b.shape).map_err(|&e| e),
-        env,
-    )?;
+    )
+    .map_err(|e| env.error(e))?;
 
     #[allow(clippy::too_many_arguments)]
     fn recur(
@@ -855,8 +850,8 @@ pub mod not {
     pub fn com(a: Complex) -> Complex {
         1.0 - a
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot not {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot not {a}")
     }
 }
 
@@ -894,8 +889,8 @@ pub mod scalar_neg {
     pub fn com(a: Complex) -> Complex {
         -a
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot negate {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot negate {a}")
     }
 }
 pub mod scalar_abs {
@@ -921,8 +916,8 @@ pub mod scalar_abs {
     pub fn com(a: Complex) -> f64 {
         a.abs()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot take the absolute value of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot take the absolute value of {a}")
     }
 }
 
@@ -950,8 +945,8 @@ pub mod sign {
     pub fn com(a: Complex) -> Complex {
         a.normalize()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the sign of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the sign of {a}")
     }
 }
 pub mod recip {
@@ -965,8 +960,8 @@ pub mod recip {
     pub fn com(a: Complex) -> Complex {
         a.recip()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the reciprocal of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the reciprocal of {a}")
     }
 }
 pub mod sqrt {
@@ -983,8 +978,8 @@ pub mod sqrt {
     pub fn com(a: Complex) -> Complex {
         a.sqrt()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot take the square root of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot take the square root of {a}")
     }
 }
 pub mod exp {
@@ -998,8 +993,8 @@ pub mod exp {
     pub fn com(a: Complex) -> Complex {
         a.exp()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot take the exponential of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot take the exponential of {a}")
     }
 }
 pub mod ln {
@@ -1013,8 +1008,8 @@ pub mod ln {
     pub fn com(a: Complex) -> Complex {
         a.ln()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot take the natural logarithm of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot take the natural logarithm of {a}")
     }
 }
 pub mod sin {
@@ -1028,8 +1023,8 @@ pub mod sin {
     pub fn com(a: Complex) -> Complex {
         a.sin()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the sine of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the sine of {a}")
     }
 }
 pub mod cos {
@@ -1043,8 +1038,8 @@ pub mod cos {
     pub fn com(a: Complex) -> Complex {
         a.cos()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the cosine of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the cosine of {a}")
     }
 }
 pub mod asin {
@@ -1058,8 +1053,8 @@ pub mod asin {
     pub fn com(a: Complex) -> Complex {
         a.asin()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the arcsine of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the arcsine of {a}")
     }
 }
 pub mod acos {
@@ -1073,8 +1068,8 @@ pub mod acos {
     pub fn com(a: Complex) -> Complex {
         a.acos()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the arcsine of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the arcsine of {a}")
     }
 }
 pub mod floor {
@@ -1088,8 +1083,8 @@ pub mod floor {
     pub fn com(a: Complex) -> Complex {
         a.floor()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the floor of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the floor of {a}")
     }
 }
 pub mod ceil {
@@ -1103,8 +1098,8 @@ pub mod ceil {
     pub fn com(a: Complex) -> Complex {
         a.ceil()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the ceiling of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the ceiling of {a}")
     }
 }
 pub mod round {
@@ -1118,8 +1113,8 @@ pub mod round {
     pub fn com(a: Complex) -> Complex {
         a.round()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the rounded value of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the rounded value of {a}")
     }
 }
 
@@ -1132,8 +1127,8 @@ pub mod complex_re {
     pub fn generic<T>(a: T) -> T {
         a
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the real part of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the real part of {a}")
     }
 }
 pub mod complex_im {
@@ -1148,8 +1143,8 @@ pub mod complex_im {
     pub fn byte(_a: u8) -> u8 {
         0
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the imaginary part of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the imaginary part of {a}")
     }
 }
 
@@ -1166,8 +1161,8 @@ pub mod exp2 {
         Complex::from(2.0).powc(a)
     }
 
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot raise {a} to the 2nd"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot raise {a} to the 2nd")
     }
 }
 pub mod exp10 {
@@ -1183,8 +1178,8 @@ pub mod exp10 {
         Complex::from(10.0).powc(a)
     }
 
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot raise {a} to the 10th"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot raise {a} to the 10th")
     }
 }
 pub mod log2 {
@@ -1200,8 +1195,8 @@ pub mod log2 {
         a.log(2.0)
     }
 
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the log₂ of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the log₂ of {a}")
     }
 }
 pub mod log10 {
@@ -1217,8 +1212,8 @@ pub mod log10 {
         a.log(10.0)
     }
 
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the log₁₀ of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the log₁₀ of {a}")
     }
 }
 
@@ -1235,8 +1230,8 @@ pub mod square_abs {
         a.re * a.re + a.im * a.im
     }
 
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot square {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot square {a}")
     }
 }
 
@@ -1263,8 +1258,8 @@ pub mod neg_abs {
     pub fn com(a: Complex) -> f64 {
         -a.abs()
     }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot take the absolute value of {a}"))
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot take the absolute value of {a}")
     }
 }
 
@@ -1299,7 +1294,7 @@ macro_rules! eq_impl {
             pub fn same_type<T: ArrayCmp + From<u8>>(a: T, b: T) -> T {
                ((b.array_cmp(&a) $eq $ordering) as u8).into()
             }
-            pub fn error<T: Display>(a: T, b: T, _env: &Uiua) -> UiuaError {
+            pub fn error<T: Display>(a: T, b: T) -> String {
                 unreachable!("Comparisons cannot fail, failed to compare {a} and {b}")
             }
         }
@@ -1345,7 +1340,7 @@ macro_rules! cmp_impl {
             pub fn same_type<T: ArrayCmp + From<u8>>(a: T, b: T) -> T {
                ((b.array_cmp(&a) $eq $ordering) as u8).into()
             }
-            pub fn error<T: Display>(a: T, b: T, _env: &Uiua) -> UiuaError {
+            pub fn error<T: Display>(a: T, b: T) -> String {
                 unreachable!("Comparisons cannot fail, failed to compare {a} and {b}")
             }
         }
@@ -1397,8 +1392,8 @@ pub mod add {
     pub fn char_byte(a: char, b: u8) -> char {
         on_i64(a as i64, b as i64)
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot add {a} and {b}"))
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot add {a} and {b}")
     }
 }
 
@@ -1432,8 +1427,8 @@ pub mod sub {
     pub fn byte_char(a: u8, b: char) -> char {
         char::from_u32(((b as i64) - (a as i64)) as u32).unwrap_or('\0')
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot subtract {a} from {b}"))
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot subtract {a} from {b}")
     }
 }
 
@@ -1467,8 +1462,8 @@ macro_rules! bin_op_mod {
                 let $a = $a.into();
                 $f
             }
-            pub fn error<T: Display>($a: T, $b: T, env: &Uiua) -> UiuaError {
-                env.error(format!($err))
+            pub fn error<T: Display>($a: T, $b: T) -> String {
+                format!($err)
             }
         }
     };
@@ -1509,8 +1504,8 @@ pub mod mul {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b * a.into()
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot multiply {a} and {b}"))
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot multiply {a} and {b}")
     }
 }
 
@@ -1553,8 +1548,8 @@ pub mod set_sign {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         a.into() * b.abs()
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot set sign of {b} to {a}"))
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot set sign of {b} to {a}")
     }
 }
 
@@ -1584,8 +1579,8 @@ pub mod div {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b / a.into()
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot divide {b} by {a}"))
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot divide {b} by {a}")
     }
 }
 
@@ -1612,8 +1607,8 @@ pub mod modulo {
     pub fn x_com(a: impl Into<f64>, b: Complex) -> Complex {
         b % a.into()
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot modulo {a} and {b}"))
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot modulo {a} and {b}")
     }
 }
 
@@ -1706,8 +1701,8 @@ pub mod or {
         let a = a.into();
         Complex::new(num_num(a.re, b.re), num_num(a.im, b.im))
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot or {a} and {b}"))
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot or {a} and {b}")
     }
 }
 
@@ -1740,8 +1735,8 @@ pub mod scalar_pow {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b.powc(a.into())
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the power of {a} to {b}"))
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot get the power of {a} to {b}")
     }
 }
 pub mod root {
@@ -1764,8 +1759,8 @@ pub mod root {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b.powc(1.0 / a.into())
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the {a} root of {b}"))
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot get the {a} root of {b}")
     }
 }
 bin_op_mod!(
@@ -1798,10 +1793,11 @@ pub mod complex {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b + a.into() * Complex::I
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!(
-            "Cannot make a complex number with {b} as the real part and {a} as the imaginary part"
-        ))
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!(
+            "Cannot make a complex number with {b} as the \
+            real part and {a} as the imaginary part"
+        )
     }
 }
 
@@ -1814,8 +1810,8 @@ pub mod abs_complex {
     pub fn com(a: impl Into<Complex>, b: impl Into<Complex>) -> f64 {
         complex::com_x(a.into(), b).abs()
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        complex::error(a, b, env)
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        complex::error(a, b)
     }
 }
 
@@ -1845,8 +1841,8 @@ pub mod max {
     pub fn generic<T: Ord>(a: T, b: T) -> T {
         a.max(b)
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the max of {a} and {b}"))
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot get the max of {a} and {b}")
     }
 }
 
@@ -1876,7 +1872,7 @@ pub mod min {
     pub fn generic<T: Ord>(a: T, b: T) -> T {
         a.min(b)
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the min of {a} and {b}"))
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot get the min of {a} and {b}")
     }
 }

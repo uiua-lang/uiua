@@ -2657,6 +2657,77 @@ primitive!(
     /// ex! ˙⍤ =8 9
     /// Errors thrown by [assert] can be caught with [try].
     (2(0), Assert, Misc, ("assert", '⍤'), Impure),
+    /// Validate a value's type and/or shape
+    ///
+    /// The first argument specifies the type or shape. The second argument is the array to be validated.
+    /// If successfully validated, the second argument will be returned unchanged. Failure to validate throws an error.
+    ///
+    /// [validate] is more useful when used in conjunction with [type checking](https://www.uiua.org/docs/experimental#type-checking).
+    ///
+    /// If the first argument is a scalar number, it will validate the scalar type of the array. The type ids match those returned by [type]:
+    /// - `0`: Numbers
+    /// - `1`: Character
+    /// - `2`: Boxes
+    /// - `3`: Complexes
+    /// ex: # Experimental!
+    ///   : ⯾0 5
+    ///   : ⯾0 [1 2 3]
+    /// ex! # Experimental!
+    ///   : ⯾1 [1 2 3]
+    /// If the first argument is a list of numbers, it will validate the shape of the array.
+    /// ex: # Experimental!
+    ///   : ⯾[] 5
+    ///   : ⯾[3] [1 2 3]
+    ///   : ⯾[2 3] ["abc" "def"]
+    /// [infinity] can be used as a wildard axis length in the shape requirement.
+    /// ex: # Experimental!
+    ///   : ⯾[∞ 2] [1_2]
+    ///   : ⯾[∞ 2] [1_2 3_4]
+    ///   : ⯾[∞ 2] [1_2 3_4 5_6]
+    /// ex! # Experimental!
+    ///   : ⯾[∞ 2] [1_2_3 4_5_6]
+    /// A scalar [infinity] is always interpreted as a shape. This is a simple way to require a list.
+    /// ex: # Experimental!
+    ///   : ⯾∞ [0 1 1 0 1 0 0 1 0 1 1]
+    ///   : ⯾∞ "neat"
+    /// Shape and type can both be validated by called [validate] twice.
+    /// ex: # Experimental!
+    ///   : ⯾1⯾[∞ 2] ["ab""cd"]
+    /// These can be combined by providing the type as a numeric subscript.
+    /// ex: # Experimental!
+    ///   : ⯾₀∞ [4 8 2 7 1]
+    ///   : ⯾₁[∞ 2] ["ab""cd"]
+    /// A sided subscript interprets the shape requirement as a prefix or suffix, rather than an exact match.
+    /// ex: # Experimental!
+    ///   : ⯾⌞[2] [1 2]
+    ///   : ⯾⌞[2] [1_2_3 4_5_6]
+    ///   : ⯾⌞∞ "abcdef"
+    ///   : ⯾⌞∞ [12_4 90_91 6_2]
+    /// ex: # Experimental!
+    ///   : ⯾⌟2 "xy"
+    ///   : ⯾⌟2 ["ab" "cd" "ef"]
+    /// ex! # Experimental!
+    ///   : ⯾⌟2 ["abc" "def"]
+    /// These can be combined to require a prefix *and* a suffix.
+    /// ex: # Experimental!
+    ///   : ⯾⌞2⯾⌟3 [1_2_3 4_5_6]
+    ///   : ⯾⌞2⯾⌟3 [[1_2_3] [4_5_6]]
+    /// ex! # Experimental!
+    ///   : ⯾⌞2⯾⌟3 [[1_2 3_5] [5_6 7_8]]
+    /// A [box]ed type or shape specification requires the validated array be parsed.
+    /// ex: # Experimental!
+    ///   : ⯾□1⯾□∞ □"a boxed string"
+    ///   : ⯾□1⯾□∞ {"some" "boxed" "strings"}
+    /// ex! # Experimental!
+    ///   : ⯾□1⯾□∞ {1_2 3_4_5}
+    /// This [box]ed form can also be shortened with a subscript.
+    /// ex: ⯾₁□∞ □"a boxed string"
+    /// An additional [validate] call can be used to validate the outer shape.
+    /// ex: # Experimental!
+    ///   : ⯾₁□∞ ⯾∞ {"some" "strings"}
+    /// ex! # Experimental!
+    ///   : ⯾₁□∞ ⯾∞ □"a boxed string"
+    (2, Validate, Misc, ("validate", '⯾'), { experimental: true }),
     /// Memoize a function
     ///
     /// If a function is [memo]ized, then its results are cached.

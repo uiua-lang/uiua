@@ -703,7 +703,7 @@ pub fn gen_code_view(id: &str, code: &str, hidden: &str) -> View {
                         SpanKind::Obverse(_) => prim_sig_class(Primitive::Obverse, None),
                         SpanKind::Number | SpanKind::Subscript(None, _) => number_class(),
                         SpanKind::String | SpanKind::ImportSrc(_) => string_class(),
-                        SpanKind::Comment | SpanKind::OutputComment => comment_class(),
+                        SpanKind::Comment | SpanKind::OutputComment | SpanKind::TypeSigComment => comment_class(),
                         SpanKind::Strand => "strand-span",
                         SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, n.as_ref()),
                         SpanKind::MacroDelim(margs) => modifier_class(*margs),
@@ -1009,6 +1009,20 @@ pub fn gen_code_view(id: &str, code: &str, hidden: &str) -> View {
                                     BindingDocsKind::Modifier(_) => title.push_str("macro"),
                                     BindingDocsKind::Error => title.push_str("error"),
                                     _ => {}
+                                }
+                            }
+                            if docs.meta.comment.as_ref().is_none_or(|com| com.sig.is_none()) 
+                                && let Some((args, outputs)) = &docs.meta.types
+                                && !(args.is_empty() && outputs.is_empty()) {
+                                if !title.ends_with('\n') {
+                                    title.push('\n');
+                                }
+                                for tv in outputs {
+                                    title.push_str(&format!("{} ", tv.clone().ty()));
+                                }
+                                title.push('?');
+                                for tv in args {
+                                    title.push_str(&format!(" {}", tv.clone().ty()));
                                 }
                             }
                             if let Some(counts) = &docs.meta.counts {

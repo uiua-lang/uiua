@@ -2662,6 +2662,8 @@ primitive!(
     /// The first argument specifies the type or shape. The second argument is the array to be validated.
     /// If successfully validated, the second argument will be returned unchanged. Failure to validate throws an error.
     ///
+    /// [validate] is more useful when used in conjunction with [type checking](https://www.uiua.org/docs/experimental#type-checking).
+    ///
     /// If the first argument is a scalar number, it will validate the scalar type of the array. The type ids match those returned by [type]:
     /// - `0`: Numbers
     /// - `1`: Character

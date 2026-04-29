@@ -28,6 +28,105 @@ G₂
 G₋₅
 ```
 
+## Type Checking
+
+The Uiua compiler can do limited compile-time analysis of how the scalar types and shapes of arrays change at compile time.
+
+*Note: Uiua type checking is and always will be best-effort. Uiua is a highly dynamic language, so not everything can be type checked completely.*
+
+By putting a `#?` comment above or at the end of a function definition, you can make the compiler check check the scalar types and shapes of arguments and outputs of the function, based on the function's body.
+
+The formatter will insert a representation of this type signature after the `#?`. The output types are to the left of the `?` and the argument types are to the right.
+
+```uiua
+# Experimental!
+#? Try formatting
+F ← ↙5
+```
+
+The `…` syntax on its own represents an array of any/unknown scalar type and any/unknown shape. `[5×…]` indicates an array with a leading axis of `5` and unknown additional dimensions.
+
+If we use a function such as [reshape](/docs/reshape) to ensure the shape, the output shape will be more refined.
+
+```uiua
+# Experimental!
+#? [5×12] ? …
+F ← ↙5 ↯10_12
+```
+
+```uiua
+# Experimental!
+#? […×2] ? … …
+F ← ⍉⊟
+```
+
+This system can catch some errors at compile time. They are currently emitted as warnings.
+
+```uiua should fail
+# Experimental!
+#?
+F ← ↙10↯3_4
+```
+
+Attempting to call the function will fail an runtime.
+
+```uiua should fail
+# Experimental!
+#?
+F ← ⊡3⊟
+F 1 2
+```
+
+The `ℝ` and `ℂ` symbols in this example indicate that those arrays are of numbers and complexes respectively.
+```uiua
+# Experimental!
+#? [3×… ℂ] ? [… ℝ] [… ℝ]
+F ← ↯3 ℂ
+```
+
+```uiua
+# Experimental!
+#? [_ □str] ? str
+F ← ⊜□⊸≠@\n &fras
+```
+
+This system is meant to often be used in conjunction with [validate](/docs/validate), which can more explicitly verify type/shape information. See its documentation for detail on how to use it.
+
+The lone `ℝ` in this example indicates a scalar number.
+```
+# Experimental!
+#? [_×_×_] ? ℝ …
+F ← ↯↯3 ⯾₀[]
+```
+
+```uiua
+# Experimental!
+#? Format me!
+F ← ⊟₃ ∩₃(⯾₀∞)
+```
+
+```uiua
+# Experimental!
+#? [_×_ @] ? ℝ [… @]
+F ← ↯ ⊟2 ⊓(⯾₀[]|⯾1)
+```
+
+The `str` alias indicates a list of characters.
+
+```uiua
+# Experimental!
+#? str ? ℝ [_ □str]
+F ← °□⊏ ⊓(⯾₀[]|⯾₁□∞⯾∞)
+```
+
+```uiua
+# Experimental!
+#? [_×_ □str] ? str
+F ← ⊜(⊜□⊸≠@ )⊸≠@\n⯾₁∞
+```
+
+The type system implementation is such that most type information can only flow *forward* through the system, not backward. Except for at the very beginning of a function, type constaints cannot go backward to inform the argument types of the function.
+
 ## Data Definitions
 
 [Data definitions](</tutorial/Data Definitions>) have a few experimental features.

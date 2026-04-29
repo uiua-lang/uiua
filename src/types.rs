@@ -1029,7 +1029,7 @@ impl fmt::Display for DynShape {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_any() {
-            write!(f, "…*")
+            write!(f, "…")
         } else if self.scalar.is_any() {
             write!(f, "{}", self.shape)
         } else if self.shape.is_scalar() {
@@ -1395,7 +1395,7 @@ impl<'a> TypeEnv<'a> {
                 Ceil => self.monadic_pervasive_hint(Scalar::Num, Scalar::ceil, ceil::num)?,
                 Round => self.monadic_pervasive_hint(Scalar::Num, Scalar::round, round::num)?,
                 Add => self.dyadic_pervasive_hint(Scalar::Num, Scalar::add, add::num_num)?,
-                Sub => self.dyadic_pervasive_hint(Scalar::Num, Scalar::sub, sub::num_num)?,
+                Sub => self.dyadic_pervasive(Scalar::sub, sub::num_num)?,
                 Mul => self.dyadic_pervasive_hint(Scalar::Num, Scalar::mul, mul::num_num)?,
                 Div => self.dyadic_pervasive_hint(Scalar::Num, Scalar::div, div::num_num)?,
                 Modulo => {
@@ -1775,6 +1775,7 @@ impl<'a> TypeEnv<'a> {
                     },
                 )?,
                 Take => {
+                    let has_fill = self.second_filled();
                     self.dyadic(
                         |amnt, mut ty| {
                             if !amnt.scalar.compatible_with(&Scalar::Num) {
@@ -1815,8 +1816,21 @@ impl<'a> TypeEnv<'a> {
                         },
                         |n, mut ty| {
                             if !n.is_infinite() {
+                                let n = n.abs() as usize;
+                                if !has_fill
+                                    && let Dim::Static(r) = ty.shape.row_count()
+                                    && n > r
+                                {
+                                    return Err(format!(
+                                        "Cannot {} {n} rows from an array with \
+                                            shape {} outside a fill context",
+                                        Take.format(),
+                                        ty.shape
+                                    )
+                                    .into());
+                                }
                                 ty = ty.into_row();
-                                ty.shape.dims.insert(0, Dim::Static(n.abs() as usize));
+                                ty.shape.dims.insert(0, Dim::Static(n));
                             }
                             Ok(ty)
                         },
@@ -1841,7 +1855,6 @@ impl<'a> TypeEnv<'a> {
                             })
                         },
                     )?;
-                    self.update_arg_types();
                 }
                 Rand => self.push(Scalar::Num.scalar_type()),
                 Parse => {
@@ -2388,6 +2401,9 @@ impl<'a> TypeEnv<'a> {
             TypeVal::Type(ty) => f(ty)?.into(),
         });
         Ok(())
+    }
+    fn second_filled(&self) -> bool {
+        self.stack.len() >= 2 && self.fill_for(&self.stack[self.stack.len() - 2].clone().ty())
     }
     fn dyadic<T, N, L, NN>(
         &mut self,

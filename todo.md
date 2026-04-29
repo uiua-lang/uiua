@@ -5,7 +5,6 @@
   - Tests
   - Data def types
   - Missing primitives
-  - Documentation
   - Blog post
 - `match` subscripts
 - Macro signature comments

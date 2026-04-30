@@ -738,7 +738,7 @@ impl Scalar {
             | (Scalar::Complex, Scalar::Complex)
             | (Scalar::Box(_), Scalar::Box(_))
             | (Scalar::Stream | Scalar::Box(_), Scalar::Stream | Scalar::Box(_)) => true,
-            _ => false,
+            _ => self.superset_of(other) || other.superset_of(self),
         }
     }
     pub fn compatible_with_boxes(&self, other: &Self) -> bool {

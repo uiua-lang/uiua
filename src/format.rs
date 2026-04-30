@@ -22,7 +22,6 @@ use crate::{
     CodeSpan, Compiler, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode, Primitive, RunMode,
     SUBSCRIPT_DIGITS, SafeSys, Signature, Sp, SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value,
     ast::*,
-    grid_fmt::format_char_inner_repr,
     is_ident_char,
     parse::{flip_unsplit_items, flip_unsplit_lines, parse, split_words, trim_spaces},
     types::TypeSig,
@@ -1058,23 +1057,7 @@ impl Formatter<'_> {
             }
             Word::Label(Some(label)) => self.push(&word.span, &format!("${label}")),
             Word::Label(None) => self.push(&word.span, "$_"),
-            Word::Char(s) => {
-                self.output.push('@');
-                if s.len() > 4 {
-                    self.output.push_str(s);
-                } else {
-                    let c = s.chars().next().unwrap_or_default();
-                    self.output.push_str(&format_char_inner_repr(c));
-                }
-            }
-            Word::String(s) => {
-                self.output.push('"');
-                for c in s.chars() {
-                    self.output.push_str(&format_char_inner_repr(c));
-                }
-                self.output.push('"');
-            }
-            Word::FormatString(_) => self
+            Word::Char(_) | Word::String(_) | Word::FormatString(_) => self
                 .output
                 .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
             Word::MultilineString(lines) => {

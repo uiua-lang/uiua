@@ -44,19 +44,19 @@ The formatter will insert a representation of this type signature after the `#?`
 F ← ↙5
 ```
 
-The `…` syntax on its own represents an array of any/unknown scalar type and any/unknown shape. `[5×…]` indicates an array with a leading axis of `5` and unknown additional dimensions.
+The `…` syntax on its own represents an array of any/unknown scalar type and any/unknown shape. `5×…` indicates an array with a leading axis of `5` and unknown additional dimensions.
 
 If we use a function such as [reshape](/docs/reshape) to ensure the shape, the output shape will be more refined.
 
 ```uiua
 # Experimental!
-#? [5×12] ? …
+#? 5×12 ? …
 F ← ↙5 ↯10_12
 ```
 
 ```uiua
 # Experimental!
-#? […×2] ? … …
+#? …×2 ? … …
 F ← ⍉⊟
 ```
 
@@ -80,13 +80,13 @@ F 1 2
 The `ℝ` and `ℂ` symbols in this example indicate that those arrays are of numbers and complexes respectively.
 ```uiua
 # Experimental!
-#? [3×… ℂ] ? [… ℝ] [… ℝ]
+#? 3×…ℂ ? …ℝ …ℝ
 F ← ↯3 ℂ
 ```
 
 ```uiua
 # Experimental!
-#? [_ □str] ? str
+#? _□str ? str
 F ← ⊜□⊸≠@\n &fras
 ```
 
@@ -95,7 +95,7 @@ This system is meant to often be used in conjunction with [validate](/docs/valid
 The lone `ℝ` in this example indicates a scalar number.
 ```
 # Experimental!
-#? [_×_×_] ? ℝ …
+#? _×_×_ ? ℝ …
 F ← ↯↯3 ⯾₀[]
 ```
 
@@ -107,7 +107,7 @@ F ← ⊟₃ ∩₃(⯾₀∞)
 
 ```uiua
 # Experimental!
-#? [_×_ @] ? ℝ [… @]
+#? _×_@ ? ℝ …@
 F ← ↯ ⊟2 ⊓(⯾₀[]|⯾1)
 ```
 
@@ -115,14 +115,28 @@ The `str` alias indicates a list of characters.
 
 ```uiua
 # Experimental!
-#? str ? ℝ [_ □str]
+#? str ? ℝ _□str
 F ← °□⊏ ⊓(⯾₀[]|⯾₁□∞⯾∞)
 ```
 
 ```uiua
 # Experimental!
-#? [_×_ □str] ? str
+#? _×_□str ? str
 F ← ⊜(⊜□⊸≠@ )⊸≠@\n⯾₁∞
+```
+
+The `ℝ`, `ℤ`, `ℕ`, and `𝔹` constants have values that are their exact characters. These characters can be used to specify scalar types in lieu of numbers. They represent reals, integers, naturals, and booleans respectively. They format from `num`, `int`, `nat`, and `bool` respectively (with a [validate](/docs/validate) in front).
+
+```uiua
+# Experimental!
+#? … ? …ℤ _ℕ
+F ← ⊡ ⊙(⯾ℕ⯾∞)
+```
+
+```uiua
+# Experimental!
+#? Try formatting!
+F ← ⊏ ⊓(boollist|⯾∞_2num)
 ```
 
 The `# Type check!` semantic comment will type check all functions below it without generating a comment.

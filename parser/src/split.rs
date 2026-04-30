@@ -294,7 +294,7 @@ impl Primitive {
                 (t, PrimComponent::Sub1),
                 (r, PrimComponent::Infinity)
             ),
-            alias!((re, Validate), (al, PrimComponent::Real)),
+            alias!((nu, Validate), (m, PrimComponent::Real)),
             alias!((in, Validate), (t, PrimComponent::Int)),
             alias!((na, Validate), (t, PrimComponent::Nat)),
             alias!((bo, Validate), (ol, PrimComponent::Bool)),

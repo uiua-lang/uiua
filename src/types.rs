@@ -13,8 +13,8 @@ use ecow::{EcoVec, eco_vec};
 use serde::*;
 
 use crate::{
-    Array, ArrayCmp, ArrayValue, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node,
-    PrimClass, Primitive, Shape, SigNode, StackArg, SubSide, SysOp, Value, grid_fmt::GridFmt,
+    Array, ArrayCmp, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node, PrimClass,
+    Primitive, Shape, SigNode, StackArg, SubSide, SysOp, Value, grid_fmt::GridFmt,
 };
 
 pub type TypeSig = (Vec<TypeVal>, Vec<TypeVal>);
@@ -284,17 +284,21 @@ impl TypeVal {
             _ => None,
         }
     }
-    pub fn as_nat(&self) -> Option<usize> {
-        let n = match self {
-            TypeVal::Num(n) => *n,
-            TypeVal::Val(Value::Num(arr)) if arr.rank() == 0 => arr.data[0],
-            TypeVal::Val(Value::Byte(arr)) if arr.rank() == 0 => arr.data[0] as f64,
-            _ => return None,
-        };
-        if n.fract() == 0.0 && n >= 0.0 {
-            Some(n as usize)
-        } else {
-            None
+    pub fn as_scalar(&self) -> Option<Scalar> {
+        match self {
+            TypeVal::Num(n) => Scalar::from_num(*n),
+            TypeVal::Val(Value::Num(arr)) if arr.rank() == 0 => Scalar::from_num(arr.data[0]),
+            TypeVal::Val(Value::Byte(arr)) if arr.rank() == 0 => {
+                Scalar::from_num(arr.data[0] as f64)
+            }
+            TypeVal::Val(Value::Char(arr)) if arr.rank() == 0 => Some(match arr.data[0] {
+                'ℝ' => Scalar::Num,
+                '@' => Scalar::Char,
+                '□' => Scalar::Box(ScalarBox::Any),
+                'ℂ' => Scalar::Complex,
+                _ => return None,
+            }),
+            _ => None,
         }
     }
     pub fn as_dim(&self) -> Option<Dim> {
@@ -565,7 +569,7 @@ impl Type {
         }
     }
     pub fn is_string(&self) -> bool {
-        self.shape.rank() <= 1 && self.scalar.compatible_with(&Scalar::Char)
+        self.shape.rank() <= 1 && Scalar::Char.superset_of(&self.scalar)
             || self.shape.rank() == 0 && self.scalar.compatible_with(&Scalar::Box(ScalarBox::Any))
     }
     pub fn boxed(self) -> Self {
@@ -680,6 +684,15 @@ impl Scalar {
     pub fn any_shape(self) -> Type {
         self.shaped(DynShape::any())
     }
+    fn from_num(n: f64) -> Option<Scalar> {
+        Some(match n {
+            0.0 => Scalar::Num,
+            1.0 => Scalar::Char,
+            2.0 => Scalar::Box(ScalarBox::Any),
+            3.0 => Scalar::Complex,
+            _ => return None,
+        })
+    }
     pub fn maybe_scalar_type(self) -> Option<Type> {
         if self.is_any() {
             None
@@ -691,6 +704,12 @@ impl Scalar {
         Type {
             scalar: self,
             shape: shape.into(),
+        }
+    }
+    pub fn superset_of(&self, sub: &Self) -> bool {
+        match (self, sub) {
+            (Scalar::Any, _) | (Scalar::Complex, Scalar::Num) => true,
+            (a, b) => discriminant(a) == discriminant(b),
         }
     }
     pub fn compatible_with(&self, other: &Self) -> bool {
@@ -1471,7 +1490,7 @@ impl<'a> TypeEnv<'a> {
                 Couple => self.pack(2, false, true, Some(Couple))?,
                 Range => self.monadic(
                     |ty| {
-                        if !ty.scalar.compatible_with(&Scalar::Num) {
+                        if !Scalar::Num.superset_of(&ty.scalar) {
                             return Err(format!("Cannot create range from {}", ty.scalar).into());
                         }
                         let shape = ty.shape;
@@ -1678,7 +1697,7 @@ impl<'a> TypeEnv<'a> {
                 }
                 Select => self.dyadic(
                     |indices, mut ty| {
-                        if !indices.scalar.compatible_with(&Scalar::Num) {
+                        if !Scalar::Num.superset_of(&indices.scalar) {
                             return Err(format!(
                                 "Cannot {} with {} indices",
                                 Select.format(),
@@ -1778,7 +1797,7 @@ impl<'a> TypeEnv<'a> {
                     let has_fill = self.second_filled();
                     self.dyadic(
                         |amnt, mut ty| {
-                            if !amnt.scalar.compatible_with(&Scalar::Num) {
+                            if !Scalar::Num.superset_of(&amnt.scalar) {
                                 return Err(format!(
                                     "Cannot {} with {} amount",
                                     Take.format(),
@@ -2149,7 +2168,7 @@ impl<'a> TypeEnv<'a> {
                     if markers.rank() > 1 {
                         return Err(TypeError::Unsupported(None));
                     }
-                    if !markers.scalar().compatible_with(&Scalar::Num) {
+                    if !Scalar::Num.superset_of(&markers.scalar()) {
                         return Err(format!(
                             "{}'s first argument must be numbers, not {}",
                             prim.format(),
@@ -2371,7 +2390,7 @@ impl<'a> TypeEnv<'a> {
     fn fill_for(&self, ty: &Type) -> bool {
         self.fill_stack
             .iter()
-            .any(|f| f.scalar().compatible_with(&ty.scalar))
+            .any(|f| f.scalar().superset_of(&ty.scalar))
     }
     fn monadic<T: Into<TypeVal>, N: Into<TypeVal>, L: Into<TypeVal>>(
         &mut self,
@@ -2709,16 +2728,15 @@ pub fn validate(
         } else if ch.shape.dims.ends_with(&[Dim::Dyn]) {
             ch.shape.dims.push(Dim::Static(len));
         }
-    } else if let Some(ty_id) = type_id.or_else(|| side.is_none().then(|| spec.as_nat()).flatten())
+    } else if let Some(expected) = type_id
+        .map(|type_id| {
+            Scalar::from_num(type_id as f64)
+                .ok_or_else(|| format!("Invalid scalar type id {type_id}"))
+        })
+        .transpose()?
+        .or_else(|| side.is_none().then(|| spec.as_scalar()).flatten())
     {
         // Non-boxed type checking
-        let expected = match ty_id as u8 {
-            f64::TYPE_ID => Scalar::Num,
-            char::TYPE_ID => Scalar::Char,
-            Boxed::TYPE_ID => Scalar::Box(ScalarBox::Any),
-            crate::Complex::TYPE_ID => Scalar::Complex,
-            type_id => return Err(format!("Invalid type id {type_id}").into()),
-        };
         if let Scalar::Any = ch.scalar {
             ch.scalar = expected;
         } else if discriminant(&expected) != discriminant(&ch.scalar) {

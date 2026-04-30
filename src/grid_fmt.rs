@@ -1,6 +1,7 @@
 //! Pretty printing Uiua arrays
 
 use std::{
+    borrow::Cow,
     collections::HashMap,
     f64::consts::{E, PI, TAU},
     iter::{once, repeat_n},
@@ -418,35 +419,37 @@ impl GridFmt for Value {
     }
 }
 
-pub fn format_char_inner_repr(c: char) -> String {
+pub fn format_char_inner_repr(c: char) -> Cow<'static, str> {
     match c {
-        char::MAX => return r"\_".into(),
-        WILDCARD_CHAR => return r"\W".into(),
-        ' ' => return r"\s".into(),
+        char::MAX => return Cow::Borrowed(r"\_"),
+        WILDCARD_CHAR => return Cow::Borrowed(r"\W"),
+        ' ' => return Cow::Borrowed(r"\s"),
         _ => {}
     }
     let formatted = format!("{c:?}");
     if c == '\'' {
-        "'".to_string()
-    } else if formatted.starts_with("'\\u{") {
-        let n = c as u32;
-        if n < 128 {
-            format!("\\x{n:02x}")
-        } else if n < 16u32.pow(4) {
-            format!("\\u{n:04x}")
-        } else {
-            format!("\\u{{{n:x}}}")
-        }
+        Cow::Borrowed("'")
     } else {
-        formatted[1..formatted.len() - 1].to_string()
+        Cow::Owned(if formatted.starts_with("'\\u{") {
+            let n = c as u32;
+            if n < 128 {
+                format!("\\x{n:02x}")
+            } else if n < 16u32.pow(4) {
+                format!("\\u{n:04x}")
+            } else {
+                format!("\\u{{{n:x}}}")
+            }
+        } else {
+            formatted[1..formatted.len() - 1].to_string()
+        })
     }
 }
 
-pub fn format_char_inner(c: char) -> String {
+pub fn format_char_inner(c: char) -> Cow<'static, str> {
     match c {
-        EMPTY_CHAR => r"\∅".into(),
-        TOMBSTONE_CHAR => r"\⊥".into(),
-        ' ' => " ".into(),
+        EMPTY_CHAR => Cow::Borrowed(r"\∅"),
+        TOMBSTONE_CHAR => Cow::Borrowed(r"\⊥"),
+        ' ' => Cow::Borrowed(" "),
         _ => format_char_inner_repr(c),
     }
 }

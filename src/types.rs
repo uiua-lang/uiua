@@ -1821,7 +1821,10 @@ impl<'a> TypeEnv<'a> {
                 Pick => {
                     self.type_hint([Scalar::Int.any_shape()]);
                     self.dyadic(
-                        |_, _| unsupported(),
+                        |_, mut ty| {
+                            ty.shape = DynShape::any();
+                            Ok(ty)
+                        },
                         |index, ty| {
                             if let Dim::Static(n) = ty.shape.row_count()
                                 && (index >= 0.0 && index as usize >= n
@@ -1844,7 +1847,10 @@ impl<'a> TypeEnv<'a> {
                             }
                             Ok(ty.into_row())
                         },
-                        |_, _| unsupported(),
+                        |_, mut ty| {
+                            ty.shape = DynShape::any();
+                            Ok(ty)
+                        },
                         |index, n| {
                             if index != 0.0 && index != 1.0 {
                                 Err(format!("Index {index} is out of bounds of length 1").into())
@@ -1853,6 +1859,49 @@ impl<'a> TypeEnv<'a> {
                             }
                         },
                     )?
+                }
+                Keep => {
+                    self.type_hint([Scalar::Num.any_shape()]);
+                    self.dyadic(
+                        |_, mut ty| {
+                            ty.shape = DynShape::any();
+                            Ok(ty)
+                        },
+                        |n, mut ty| {
+                            if n.is_infinite() {
+                                return Err(
+                                    format!("Cannot {} an infinite amount", Keep.format()).into()
+                                );
+                            }
+                            match ty.shape.dims.first_mut() {
+                                Some(d @ Dim::Dyn) if n == 0.0 => *d = Dim::Static(0),
+                                Some(Dim::Dyn) => {}
+                                Some(Dim::Static(d)) => *d = (n.abs() * *d as f64).round() as usize,
+                                None if ty.shape.suffix.is_none() => {
+                                    ty.shape.dims.insert(0, Dim::Static(n.abs() as usize))
+                                }
+                                None => {}
+                            }
+                            Ok(ty)
+                        },
+                        |_, mut ty| {
+                            ty.shape = DynShape::any();
+                            Ok(ty)
+                        },
+                        |n, f| {
+                            if n.is_infinite() {
+                                return Err(
+                                    format!("Cannot {} an infinite amount", Keep.format()).into()
+                                );
+                            }
+                            let n = n.abs() as usize;
+                            Ok(if n > 10 {
+                                Scalar::from([f].as_slice()).shaped(n).into()
+                            } else {
+                                TypeVal::NumList(eco_vec![f;n])
+                            })
+                        },
+                    )?;
                 }
                 Take => {
                     self.type_hint([Scalar::Int.any_shape()]);
@@ -1971,8 +2020,8 @@ impl<'a> TypeEnv<'a> {
                 Args => {}
                 // TODO (descending priority):
                 // - Input type suggestion
-                // - pick, drop
-                // - keep, rotate, where
+                // - drop
+                // - rotate, where
                 // - bits, base, memberof, indexin
                 // - classify, occurences, deduplicate, find, mask, orient
                 // - map functions

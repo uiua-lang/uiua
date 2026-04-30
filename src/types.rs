@@ -1312,7 +1312,7 @@ impl<'a> Exec<&SigNode> for TypeEnv<'a> {
 impl<'a> TypeEnv<'a> {
     fn type_hint(&mut self, tys: impl IntoIterator<Item = Type>) {
         for (tv, ty) in self.stack.iter_mut().rev().zip(tys) {
-            if tv.scalar().is_any() {
+            if ty.scalar.superset_of(&ty.scalar) {
                 tv.set_scalar(ty.scalar);
             }
             if tv.shape().is_any() {
@@ -1345,7 +1345,7 @@ impl<'a> TypeEnv<'a> {
                 }
                 (Scalar::Box(arg_sb @ ScalarBox::Any), Scalar::Box(stack_sb)) => *arg_sb = stack_sb,
                 (_, stack_scalar) => {
-                    if arg_ty.scalar.is_any() {
+                    if arg_ty.scalar.superset_of(&stack_scalar) {
                         arg_ty.scalar = stack_scalar;
                     }
                 }
@@ -1862,9 +1862,28 @@ impl<'a> TypeEnv<'a> {
                 }
                 Keep => {
                     self.type_hint([Scalar::Num.any_shape()]);
+                    if let Ok(mask) = self.top(1)
+                        && mask.shape().is_any()
+                    {
+                        self.type_hint([Scalar::Int.shaped([Dim::Dyn])]);
+                    }
                     self.dyadic(
-                        |_, mut ty| {
-                            ty.shape = DynShape::any();
+                        |mask, mut ty| {
+                            if mask.shape.rank() > 1 {
+                                return Err(format!(
+                                    "Cannot {} with array of shape {}",
+                                    Keep.format(),
+                                    mask.shape
+                                )
+                                .into());
+                            }
+                            match ty.shape.dims.first_mut() {
+                                Some(d) => *d = Dim::Dyn,
+                                None if ty.shape.suffix.is_none() => {
+                                    ty.shape.dims.insert(0, Dim::Dyn)
+                                }
+                                None => {}
+                            }
                             Ok(ty)
                         },
                         |n, mut ty| {
@@ -1884,8 +1903,15 @@ impl<'a> TypeEnv<'a> {
                             }
                             Ok(ty)
                         },
-                        |_, mut ty| {
-                            ty.shape = DynShape::any();
+                        |list, mut ty| {
+                            match ty.shape.dims.first_mut() {
+                                Some(d) if list.is_empty() => *d = Dim::Static(0),
+                                Some(d) => *d = Dim::Dyn,
+                                None if ty.shape.suffix.is_none() => {
+                                    ty.shape.dims.insert(0, Dim::Dyn)
+                                }
+                                None => {}
+                            }
                             Ok(ty)
                         },
                         |n, f| {

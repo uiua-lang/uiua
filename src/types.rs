@@ -673,16 +673,16 @@ impl ScalarBox {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub enum Scalar {
-    #[default]
-    Any,
-    Num,
+    Bool,
     Int,
     Nat,
-    Bool,
-    Char,
-    Box(ScalarBox),
+    Num,
     Complex,
+    Char,
     Stream,
+    Box(ScalarBox),
+    #[default]
+    Any,
 }
 impl Scalar {
     pub fn is_any(&self) -> bool {
@@ -759,6 +759,8 @@ impl Scalar {
                 }
             }
             (a, b) if a == b => a,
+            (a, b) if a.superset_of(&b) => a,
+            (a, b) if b.superset_of(&a) => b,
             _ => Scalar::Any,
         }
     }
@@ -1167,21 +1169,6 @@ impl fmt::Display for Scalar {
     }
 }
 
-impl BitOr for Scalar {
-    type Output = Self;
-    fn bitor(self, rhs: Self) -> Self::Output {
-        use Scalar::*;
-        match (self, rhs) {
-            (Box(ScalarBox::All(a)), Box(ScalarBox::All(b))) => {
-                Box(ScalarBox::All((*a | *b).into()))
-            }
-            (Box(_), Box(_)) => Box(ScalarBox::Any),
-            (a, b) if a == b => a,
-            _ => Any,
-        }
-    }
-}
-
 impl BitOr for DynShape {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self::Output {
@@ -1292,7 +1279,7 @@ impl From<&Value> for Scalar {
 impl BitOr for Type {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self::Output {
-        let scalar = self.scalar | rhs.scalar;
+        let scalar = self.scalar.union(rhs.scalar);
         let shape = self.shape | rhs.shape;
         Type { scalar, shape }
     }

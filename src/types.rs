@@ -157,7 +157,7 @@ impl TypeVal {
         }
     }
     pub fn set_scalar(&mut self, scalar: Scalar) {
-        if scalar.is_any() {
+        if scalar.superset_of(&self.scalar()) {
             return;
         }
         match (self, scalar) {

@@ -1032,8 +1032,14 @@ impl fmt::Display for Dim {
     }
 }
 
-impl DynShape {
-    fn fmt_inner(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl fmt::Debug for DynShape {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
+impl fmt::Display for DynShape {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_any() {
             return write!(f, "…");
         }
@@ -1055,20 +1061,6 @@ impl DynShape {
             }
         }
         Ok(())
-    }
-}
-
-impl fmt::Debug for DynShape {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
-    }
-}
-
-impl fmt::Display for DynShape {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[")?;
-        self.fmt_inner(f)?;
-        write!(f, "]")
     }
 }
 
@@ -1095,9 +1087,7 @@ impl fmt::Display for Type {
                 } else {
                     shape.to_mut().dims.pop();
                 }
-                write!(f, "[")?;
-                shape.fmt_inner(f)?;
-                write!(f, " ")?;
+                write!(f, "{shape}")?;
             }
 
             if let Some(name) = name {
@@ -1117,9 +1107,7 @@ impl fmt::Display for Type {
             }
             Ok(())
         } else {
-            write!(f, "[")?;
-            self.shape.fmt_inner(f)?;
-            write!(f, " {}]", self.scalar)
+            write!(f, "{}{}", self.shape, self.scalar)
         }
     }
 }

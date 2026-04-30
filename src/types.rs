@@ -2574,11 +2574,11 @@ impl<'a> TypeEnv<'a> {
         Ok(())
     }
     fn unpack(&mut self, n: usize, unbox: bool, prim: Option<Primitive>) -> TypeResult {
-        self.type_hint([DynShape::prefix([Dim::Static(n)]).with_scalar(if unbox {
-            Scalar::Box(ScalarBox::Any)
+        self.type_hint([if unbox {
+            DynShape::from(Dim::Static(n)).with_scalar(Scalar::Box(ScalarBox::Any))
         } else {
-            Scalar::Any
-        })]);
+            DynShape::prefix([Dim::Static(n)]).with_scalar(Scalar::Any)
+        }]);
         let x = self.pop(1)?;
         if x.row_count() != n {
             return Err(if let Some(prim) = prim {

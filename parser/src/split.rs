@@ -74,6 +74,14 @@ pub enum PrimComponent {
     Epsilon,
     /// ∞
     Infinity,
+    /// ℝ
+    Real,
+    /// ℤ
+    Int,
+    /// ℕ
+    Nat,
+    /// 𝔹
+    Bool,
 }
 
 impl From<Primitive> for PrimComponent {
@@ -101,6 +109,10 @@ impl PrimComponent {
             PrimComponent::CloseParen => ")",
             PrimComponent::Epsilon => "ε",
             PrimComponent::Infinity => "∞",
+            PrimComponent::Real => "ℝ",
+            PrimComponent::Int => "ℤ",
+            PrimComponent::Nat => "ℕ",
+            PrimComponent::Bool => "𝔹",
         }
     }
     /// Try to parse a component from a name prefix
@@ -185,7 +197,7 @@ impl Primitive {
         if let Some(prim) = SysOp::ALL.iter().find(|s| s.name() == name) {
             return Some(Primitive::Sys(*prim));
         }
-        if name.len() < 3 {
+        if name.len() < 3 || name == "int" {
             return None;
         }
         let mut matching = Primitive::non_deprecated()
@@ -276,11 +288,16 @@ impl Primitive {
             alias!((epsilon, PrimComponent::Epsilon)),
             alias!((r, Reduce), (a, Content), (ze, Join)),
             alias!((r, Reduce), (a, Content), (z, Join)),
+            alias!((li, Validate), (st, PrimComponent::Infinity)),
             alias!(
                 (s, Validate),
                 (t, PrimComponent::Sub1),
                 (r, PrimComponent::Infinity)
             ),
+            alias!((re, Validate), (al, PrimComponent::Real)),
+            alias!((in, Validate), (t, PrimComponent::Int)),
+            alias!((na, Validate), (t, PrimComponent::Nat)),
+            alias!((bo, Validate), (ol, PrimComponent::Bool)),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

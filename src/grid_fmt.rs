@@ -423,7 +423,6 @@ pub fn format_char_inner_repr(c: char) -> Cow<'static, str> {
     match c {
         char::MAX => return Cow::Borrowed(r"\_"),
         WILDCARD_CHAR => return Cow::Borrowed(r"\W"),
-        ' ' => return Cow::Borrowed(r"\s"),
         _ => {}
     }
     let formatted = format!("{c:?}");

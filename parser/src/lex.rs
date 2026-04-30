@@ -1427,16 +1427,13 @@ impl<'a> Lexer<'a> {
                             };
                             let tok = match prim {
                                 PrimComponent::Prim(prim) => Glyph(prim),
-                                PrimComponent::Num(num) => Ident(num.name().into()),
                                 PrimComponent::Sub0 => Subscr(0.into()),
                                 PrimComponent::Sub1 => Subscr(1.into()),
                                 PrimComponent::Sub2 => Subscr(2.into()),
                                 PrimComponent::OpenParen => OpenParen.into(),
                                 PrimComponent::CloseParen => CloseParen.into(),
-                                PrimComponent::Epsilon => {
-                                    Ident(PrimComponent::Epsilon.name().into())
-                                }
                                 PrimComponent::Infinity => Glyph(Primitive::Infinity),
+                                comp => Ident(comp.name().into()),
                             };
                             self.tokens.push(self.make_span(start, end).sp(tok));
                             start = end;
@@ -1721,6 +1718,7 @@ impl<'a> Lexer<'a> {
                 "_" => char::MAX.to_string(),
                 "W" => WILDCARD_CHAR.to_string(),
                 "z" => '\u{200d}'.to_string(),
+                "B" => '𝔹'.to_string(),
                 "C" => 'ℂ'.to_string(),
                 "N" => 'ℕ'.to_string(),
                 "R" => 'ℝ'.to_string(),

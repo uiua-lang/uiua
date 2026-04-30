@@ -1938,8 +1938,10 @@ macro_rules! scalar_dy_impl {
         impl Scalar {
             #[doc(hidden)]
             #[allow(clippy::wrong_self_convention)]
-            pub fn $name(self, other: Self, a_fill: bool, b_fill: bool) -> Result<Self, TypeError> {
+            pub fn $name(mut self, mut other: Self, a_fill: bool, b_fill: bool) -> Result<Self, TypeError> {
                 use Scalar::{*, Box, Num as Byte};
+                self.unrefine();
+                other.unrefine();
                 Ok(match (self, other) {
                     $(
                         #[allow(unreachable_patterns)]

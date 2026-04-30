@@ -10,8 +10,8 @@ use ecow::EcoVec;
 use rand::prelude::*;
 
 use crate::{
-    Array, ArrayValue, Boxed, Complex, PrimDocFragment, SysBackend, Uiua, Value, WILDCARD_NAN,
-    media, parse_doc_line_fragments,
+    Array, Boxed, PrimDocFragment, SysBackend, Uiua, Value, WILDCARD_NAN, media,
+    parse_doc_line_fragments,
 };
 
 /// The definition of a shadowable constant
@@ -253,8 +253,12 @@ constant!(
     /// The Euler-Mascheroni constant
     ("γ", Math, 0.577_215_664_901_532_9_f64),
     /// The real complex unit
+    ///
+    /// Also works as a tag for complexes for use with `validate`
     ("r", Math, crate::Complex::ONE),
     /// The imaginary unit
+    ///
+    /// Also works as a tag for complexes for use with `validate`
     ("i", Math, crate::Complex::I),
     /// IEEE 754-2008's `NaN`
     ("NaN", Math, f64::NAN),
@@ -267,13 +271,13 @@ constant!(
     /// It is the difference between 1 and the next larger representable number.
     ("ε", Math, f64::EPSILON),
     /// Tag for the number type
-    ("Num", Types, f64::TYPE_ID),
-    /// Tag for the character type
-    ("Char", Types, char::TYPE_ID),
-    /// Tag for the box type
-    ("Box", Types, Boxed::TYPE_ID),
-    /// Tag for the complex number type
-    ("Complex", Types, Complex::TYPE_ID),
+    ("ℝ", Types, 'ℝ'),
+    /// Tag for integer numbers for use with `validate`
+    ("ℤ", Types, 'ℤ'),
+    /// Tag for natural numbers for use with `validate`
+    ("ℕ", Types, 'ℕ'),
+    /// Tag for boolean numbers for use with `validate`
+    ("𝔹", Types, '𝔹'),
     /// 1-dimensional adjacent neighbors offsets
     ("A₁", Spatial, [1, -1]),
     /// 2-dimensional adjacent neighbors offsets

@@ -7,6 +7,7 @@ use std::{
     iter::repeat_n,
     mem::{discriminant, replace, swap, take},
     ops::{BitOr, Div, Mul},
+    slice,
 };
 
 use ecow::{EcoVec, eco_vec};
@@ -149,7 +150,8 @@ impl TypeVal {
     }
     pub fn scalar(&self) -> Scalar {
         match self {
-            TypeVal::Num(_) | TypeVal::NumList(_) => Scalar::Num,
+            TypeVal::Num(n) => slice::from_ref(n).into(),
+            TypeVal::NumList(nums) => nums.as_slice().into(),
             TypeVal::Val(val) => Scalar::from(val),
             TypeVal::Type(ty) => ty.scalar.clone(),
         }
@@ -284,15 +286,23 @@ impl TypeVal {
             _ => None,
         }
     }
-    pub fn as_scalar(&self) -> Option<Scalar> {
+    pub fn as_scalar_spec(&self) -> Option<Scalar> {
         match self {
             TypeVal::Num(n) => Scalar::from_num(*n),
             TypeVal::Val(Value::Num(arr)) if arr.rank() == 0 => Scalar::from_num(arr.data[0]),
             TypeVal::Val(Value::Byte(arr)) if arr.rank() == 0 => {
                 Scalar::from_num(arr.data[0] as f64)
             }
+            TypeVal::Val(Value::Complex(arr))
+                if arr.data.as_slice() == [Complex::I] || arr.data.as_slice() == [Complex::ONE] =>
+            {
+                Some(Scalar::Complex)
+            }
             TypeVal::Val(Value::Char(arr)) if arr.rank() == 0 => Some(match arr.data[0] {
                 'ℝ' => Scalar::Num,
+                'ℤ' => Scalar::Int,
+                'ℕ' => Scalar::Nat,
+                '𝔹' => Scalar::Bool,
                 '@' => Scalar::Char,
                 '□' => Scalar::Box(ScalarBox::Any),
                 'ℂ' => Scalar::Complex,
@@ -447,7 +457,7 @@ impl From<Dim> for TypeVal {
     fn from(dim: Dim) -> Self {
         match dim {
             Dim::Static(n) => n.into(),
-            Dim::Dyn => Scalar::Num.into(),
+            Dim::Dyn => Scalar::Nat.into(),
         }
     }
 }
@@ -455,13 +465,13 @@ impl From<Dim> for TypeVal {
 impl From<DynShape> for TypeVal {
     fn from(shape: DynShape) -> Self {
         if shape.suffix.is_some() {
-            TypeVal::Type(Scalar::Num.shaped(Dim::Dyn))
+            TypeVal::Type(Scalar::Nat.shaped(Dim::Dyn))
         } else {
             let mut list = EcoVec::new();
             for dim in shape.dims {
                 match dim {
                     Dim::Static(n) => list.push(n as f64),
-                    Dim::Dyn => return TypeVal::Type(Scalar::Num.shaped(Dim::Dyn)),
+                    Dim::Dyn => return TypeVal::Type(Scalar::Nat.shaped(Dim::Dyn)),
                 }
             }
             TypeVal::NumList(list)
@@ -666,6 +676,9 @@ pub enum Scalar {
     #[default]
     Any,
     Num,
+    Int,
+    Nat,
+    Bool,
     Char,
     Box(ScalarBox),
     Complex,
@@ -708,7 +721,11 @@ impl Scalar {
     }
     pub fn superset_of(&self, sub: &Self) -> bool {
         match (self, sub) {
-            (Scalar::Any, _) | (Scalar::Complex, Scalar::Num) => true,
+            (Scalar::Any, _) => true,
+            (Scalar::Complex, Scalar::Num | Scalar::Int | Scalar::Nat | Scalar::Bool) => true,
+            (Scalar::Num, Scalar::Int | Scalar::Nat | Scalar::Bool) => true,
+            (Scalar::Int, Scalar::Nat | Scalar::Bool) => true,
+            (Scalar::Nat, Scalar::Bool) => true,
             (a, b) => discriminant(a) == discriminant(b),
         }
     }
@@ -743,6 +760,16 @@ impl Scalar {
             }
             (a, b) if a == b => a,
             _ => Scalar::Any,
+        }
+    }
+    pub fn unrefine(&mut self) {
+        match self {
+            Scalar::Int | Scalar::Nat | Scalar::Bool => *self = Scalar::Num,
+            Scalar::Box(ScalarBox::All(ty)) => ty.scalar.unrefine(),
+            Scalar::Box(ScalarBox::Def(_, fields)) => {
+                fields.iter_mut().for_each(|t| t.scalar.unrefine())
+            }
+            _ => {}
         }
     }
 }
@@ -1129,6 +1156,9 @@ impl fmt::Display for Scalar {
         match self {
             Scalar::Any => write!(f, "*"),
             Scalar::Num => write!(f, "ℝ"),
+            Scalar::Int => write!(f, "ℤ"),
+            Scalar::Nat => write!(f, "ℕ"),
+            Scalar::Bool => write!(f, "𝔹"),
             Scalar::Char => write!(f, "@"),
             Scalar::Box(ScalarBox::Any) => write!(f, "□"),
             Scalar::Box(ScalarBox::All(inner)) => write!(f, "□{inner}"),
@@ -1229,10 +1259,35 @@ impl From<&Value> for Type {
     }
 }
 
+impl From<&[f64]> for Scalar {
+    fn from(nums: &[f64]) -> Self {
+        for &n in nums {
+            if n.fract() != 0.0 {
+                return Scalar::Num;
+            }
+            if n < 0.0 {
+                return Scalar::Int;
+            }
+            if n > 1.0 {
+                return Scalar::Nat;
+            }
+        }
+        Scalar::Bool
+    }
+}
+
 impl From<&Value> for Scalar {
     fn from(val: &Value) -> Self {
         match val {
-            Value::Num(_) | Value::Byte(_) => Scalar::Num,
+            Value::Num(arr) => arr.data.as_slice().into(),
+            Value::Byte(arr) => {
+                for &n in &arr.data {
+                    if n > 1 {
+                        return Scalar::Nat;
+                    }
+                }
+                Scalar::Bool
+            }
             Value::Char(_) => Scalar::Char,
             Value::Complex(_) => Scalar::Complex,
             Value::Box(arr) => Scalar::Box(
@@ -1292,7 +1347,7 @@ impl<'a> TypeEnv<'a> {
         self.update_arg_types();
     }
     fn update_arg_types(&mut self) {
-        if !self.can_set_arg_types || self.stack.len() > self.arg_types.len() {
+        if !self.can_set_arg_types {
             return;
         }
 
@@ -1324,8 +1379,9 @@ impl<'a> TypeEnv<'a> {
         }
 
         let arg_start = self.arg_types.len().saturating_sub(self.stack.len());
-        for (tv, arg) in
-            (self.stack.iter().rev()).zip(self.arg_types.iter_mut().rev().skip(arg_start))
+        let stack_start = self.stack.len().saturating_sub(self.arg_types.len());
+        for (tv, arg) in (self.stack.iter().rev().skip(stack_start))
+            .zip(self.arg_types.iter_mut().rev().skip(arg_start))
         {
             if let TypeVal::Type(arg_ty) = arg {
                 if let TypeVal::Type(ty) = tv {
@@ -1413,10 +1469,30 @@ impl<'a> TypeEnv<'a> {
                 Floor => self.monadic_pervasive_hint(Scalar::Num, Scalar::floor, floor::num)?,
                 Ceil => self.monadic_pervasive_hint(Scalar::Num, Scalar::ceil, ceil::num)?,
                 Round => self.monadic_pervasive_hint(Scalar::Num, Scalar::round, round::num)?,
-                Add => self.dyadic_pervasive_hint(Scalar::Num, Scalar::add, add::num_num)?,
-                Sub => self.dyadic_pervasive(Scalar::sub, sub::num_num)?,
-                Mul => self.dyadic_pervasive_hint(Scalar::Num, Scalar::mul, mul::num_num)?,
-                Div => self.dyadic_pervasive_hint(Scalar::Num, Scalar::div, div::num_num)?,
+                Add => self.dyadic_pervasive_hint2(
+                    Scalar::Num,
+                    Scalar::Int,
+                    Scalar::add,
+                    add::num_num,
+                )?,
+                Sub => self.dyadic_pervasive_hint2(
+                    Scalar::Num,
+                    Scalar::Char,
+                    Scalar::sub,
+                    sub::num_num,
+                )?,
+                Mul => self.dyadic_pervasive_hint2(
+                    Scalar::Num,
+                    Scalar::Int,
+                    Scalar::mul,
+                    mul::num_num,
+                )?,
+                Div => self.dyadic_pervasive_hint2(
+                    Scalar::Num,
+                    Scalar::Int,
+                    Scalar::div,
+                    div::num_num,
+                )?,
                 Modulo => {
                     self.dyadic_pervasive_hint(Scalar::Num, Scalar::modulo, modulo::num_num)?
                 }
@@ -1446,8 +1522,8 @@ impl<'a> TypeEnv<'a> {
                 )?,
                 Shape => self.monadic(
                     |ty| Ok(ty.shape),
-                    |_| Ok(Scalar::Num.scalar_type()),
-                    |list| Ok(Scalar::Num.shaped([list.len()])),
+                    |_| Ok(Scalar::Nat.scalar_type()),
+                    |list| Ok(Scalar::Nat.shaped([list.len()])),
                     |_| None,
                 )?,
                 Fix => self.top_mut(1)?.prepend_dim(1.into()),
@@ -1490,11 +1566,11 @@ impl<'a> TypeEnv<'a> {
                 Couple => self.pack(2, false, true, Some(Couple))?,
                 Range => self.monadic(
                     |ty| {
-                        if !Scalar::Num.superset_of(&ty.scalar) {
+                        if !Scalar::Int.superset_of(&ty.scalar) {
                             return Err(format!("Cannot create range from {}", ty.scalar).into());
                         }
                         let shape = ty.shape;
-                        Ok(Scalar::Num.shaped(if shape.rank() > 1 {
+                        Ok(Scalar::Int.shaped(if shape.rank() > 1 {
                             return Err(format!(
                                 "Cannot create range from array with shape {shape}"
                             )
@@ -1520,11 +1596,11 @@ impl<'a> TypeEnv<'a> {
                             }
                         }))
                     },
-                    |n| Ok(Type::new(Scalar::Num, n.abs() as usize)),
+                    |n| Ok(Type::new(Scalar::Int, n.abs() as usize)),
                     |list| {
                         let len = list.len();
                         Ok(Type::new(
-                            Scalar::Num,
+                            Scalar::Int,
                             list.into_iter()
                                 .map(|n| n.abs() as usize)
                                 .chain([len])
@@ -1661,7 +1737,7 @@ impl<'a> TypeEnv<'a> {
                     self.type_hint([Type::listy()]);
                     self.monadic(
                         |mut ty| {
-                            ty.scalar = Scalar::Num;
+                            ty.scalar = Scalar::Nat;
                             if ty.shape.suffix.take().is_some() && ty.shape.dims.is_empty() {
                                 ty.shape = DynShape::any();
                             } else {
@@ -1670,7 +1746,7 @@ impl<'a> TypeEnv<'a> {
                             Ok(ty)
                         },
                         |_| Ok(Value::from(0)),
-                        |list| Ok(Type::new(Scalar::Num, list.len())),
+                        |list| Ok(Type::new(Scalar::Nat, list.len())),
                         |val| Some(Value::from(val.rise())),
                     )?
                 }
@@ -1678,7 +1754,7 @@ impl<'a> TypeEnv<'a> {
                     self.type_hint([Type::listy()]);
                     self.monadic(
                         |mut ty| {
-                            ty.scalar = Scalar::Num;
+                            ty.scalar = Scalar::Nat;
                             if ty.shape.suffix.take().is_some() && ty.shape.dims.is_empty() {
                                 ty.shape = DynShape::any();
                             } else {
@@ -1687,113 +1763,124 @@ impl<'a> TypeEnv<'a> {
                             Ok(ty)
                         },
                         |_| Ok(Value::from(0)),
-                        |list| Ok(Type::new(Scalar::Num, list.len())),
+                        |list| Ok(Type::new(Scalar::Nat, list.len())),
                         |val| Some(Value::from(val.fall())),
                     )?
                 }
                 Match => {
                     self.pop_n(2)?;
-                    self.push(Scalar::Num);
+                    self.push(Scalar::Bool);
                 }
-                Select => self.dyadic(
-                    |indices, mut ty| {
-                        if !Scalar::Num.superset_of(&indices.scalar) {
-                            return Err(format!(
-                                "Cannot {} with {} indices",
-                                Select.format(),
-                                indices.scalar
-                            )
-                            .into());
-                        }
-                        ty = ty.into_row();
-                        let mut idx_shape = indices.shape;
-                        if let Some(suf) = &mut idx_shape.suffix {
-                            if ty.shape.suffix.is_some() {
-                                ty.shape.dims = idx_shape.dims;
-                            } else {
-                                suf.extend(ty.shape.dims);
-                                ty.shape = idx_shape;
+                Select => {
+                    self.type_hint([Scalar::Int.any_shape()]);
+                    self.dyadic(
+                        |indices, mut ty| {
+                            if !Scalar::Num.superset_of(&indices.scalar) {
+                                return Err(format!(
+                                    "Cannot {} with {} indices",
+                                    Select.format(),
+                                    indices.scalar
+                                )
+                                .into());
                             }
-                        } else {
-                            idx_shape.dims.extend(ty.shape.dims);
-                            ty.shape.dims = idx_shape.dims;
-                        }
-                        Ok(ty)
-                    },
-                    |index, ty| {
-                        if let Dim::Static(n) = ty.shape.row_count()
-                            && (index >= 0.0 && index as usize >= n
-                                || index < 0.0 && index.abs() as usize > n)
-                        {
-                            return Err(
-                                format!("Index {index} is out of bounds of length {n}").into()
-                            );
-                        }
-                        if let Scalar::Box(ScalarBox::Def(_, fields)) = &ty.scalar
-                            && ty.shape.rank() == 1
-                        {
-                            return Ok(if index >= 0.0 {
-                                ty.into_nth_row(index as usize)
+                            ty = ty.into_row();
+                            let mut idx_shape = indices.shape;
+                            if let Some(suf) = &mut idx_shape.suffix {
+                                if ty.shape.suffix.is_some() {
+                                    ty.shape.dims = idx_shape.dims;
+                                } else {
+                                    suf.extend(ty.shape.dims);
+                                    ty.shape = idx_shape;
+                                }
                             } else {
-                                let n = fields.len().saturating_sub(index.abs() as usize);
-                                ty.into_nth_row(n)
-                            });
-                        }
-                        Ok(ty.into_row())
-                    },
-                    |indices, mut ty| {
-                        if let Dim::Static(n) = ty.shape.row_count()
-                            && let Some(i) = indices.iter().find(|&&i| {
-                                i >= 0.0 && i as usize >= n || i < 0.0 && i.abs() as usize > n
-                            })
-                        {
-                            return Err(format!("Index {i} is out of bounds of length {n}").into());
-                        }
-                        ty = ty.into_row();
-                        ty.shape.dims.insert(0, Dim::Static(indices.len()));
-                        Ok(ty)
-                    },
-                    |index, n| {
-                        if index != 0.0 && index != 1.0 {
-                            Err(format!("Index {index} is out of bounds of length 1").into())
-                        } else {
-                            Ok(n)
-                        }
-                    },
-                )?,
-                Pick => self.dyadic(
-                    |_, _| unsupported(),
-                    |index, ty| {
-                        if let Dim::Static(n) = ty.shape.row_count()
-                            && (index >= 0.0 && index as usize >= n
-                                || index < 0.0 && index.abs() as usize > n)
-                        {
-                            return Err(
-                                format!("Index {index} is out of bounds of length {n}").into()
-                            );
-                        }
-                        if let Scalar::Box(ScalarBox::Def(_, fields)) = &ty.scalar
-                            && ty.shape.rank() == 1
-                        {
-                            return Ok(if index >= 0.0 {
-                                ty.into_nth_row(index as usize)
+                                idx_shape.dims.extend(ty.shape.dims);
+                                ty.shape.dims = idx_shape.dims;
+                            }
+                            Ok(ty)
+                        },
+                        |index, ty| {
+                            if let Dim::Static(n) = ty.shape.row_count()
+                                && (index >= 0.0 && index as usize >= n
+                                    || index < 0.0 && index.abs() as usize > n)
+                            {
+                                return Err(format!(
+                                    "Index {index} is out of bounds of length {n}"
+                                )
+                                .into());
+                            }
+                            if let Scalar::Box(ScalarBox::Def(_, fields)) = &ty.scalar
+                                && ty.shape.rank() == 1
+                            {
+                                return Ok(if index >= 0.0 {
+                                    ty.into_nth_row(index as usize)
+                                } else {
+                                    let n = fields.len().saturating_sub(index.abs() as usize);
+                                    ty.into_nth_row(n)
+                                });
+                            }
+                            Ok(ty.into_row())
+                        },
+                        |indices, mut ty| {
+                            if let Dim::Static(n) = ty.shape.row_count()
+                                && let Some(i) = indices.iter().find(|&&i| {
+                                    i >= 0.0 && i as usize >= n || i < 0.0 && i.abs() as usize > n
+                                })
+                            {
+                                return Err(
+                                    format!("Index {i} is out of bounds of length {n}").into()
+                                );
+                            }
+                            ty = ty.into_row();
+                            ty.shape.dims.insert(0, Dim::Static(indices.len()));
+                            Ok(ty)
+                        },
+                        |index, n| {
+                            if index != 0.0 && index != 1.0 {
+                                Err(format!("Index {index} is out of bounds of length 1").into())
                             } else {
-                                let n = fields.len().saturating_sub(index.abs() as usize);
-                                ty.into_nth_row(n)
-                            });
-                        }
-                        Ok(ty.into_row())
-                    },
-                    |_, _| unsupported(),
-                    |index, n| {
-                        if index != 0.0 && index != 1.0 {
-                            Err(format!("Index {index} is out of bounds of length 1").into())
-                        } else {
-                            Ok(n)
-                        }
-                    },
-                )?,
+                                Ok(n)
+                            }
+                        },
+                    )?
+                }
+                Pick => {
+                    self.type_hint([Scalar::Int.any_shape()]);
+                    self.dyadic(
+                        |_, _| unsupported(),
+                        |index, ty| {
+                            if let Dim::Static(n) = ty.shape.row_count()
+                                && (index >= 0.0 && index as usize >= n
+                                    || index < 0.0 && index.abs() as usize > n)
+                            {
+                                return Err(format!(
+                                    "Index {index} is out of bounds of length {n}"
+                                )
+                                .into());
+                            }
+                            if let Scalar::Box(ScalarBox::Def(_, fields)) = &ty.scalar
+                                && ty.shape.rank() == 1
+                            {
+                                return Ok(if index >= 0.0 {
+                                    ty.into_nth_row(index as usize)
+                                } else {
+                                    let n = fields.len().saturating_sub(index.abs() as usize);
+                                    ty.into_nth_row(n)
+                                });
+                            }
+                            Ok(ty.into_row())
+                        },
+                        |_, _| unsupported(),
+                        |index, n| {
+                            if index != 0.0 && index != 1.0 {
+                                Err(format!("Index {index} is out of bounds of length 1").into())
+                            } else {
+                                Ok(n)
+                            }
+                        },
+                    )?
+                }
                 Take => {
+                    self.type_hint([Scalar::Int.any_shape()]);
                     let has_fill = self.second_filled();
                     self.dyadic(
                         |amnt, mut ty| {
@@ -2355,6 +2442,30 @@ impl<'a> TypeEnv<'a> {
             |_| None,
         )
     }
+    fn dyadic_pervasive_hint2<N: Into<TypeVal>>(
+        &mut self,
+        num_hint: Scalar,
+        char_hint: Scalar,
+        f: impl Fn(Scalar, Scalar, bool, bool) -> Result<Scalar, TypeError>,
+        f64: impl Fn(f64, f64) -> N,
+    ) -> TypeResult {
+        if let Ok(a) = self.pop(1) {
+            if a.is_any() {
+                self.push(a);
+                let num_hint = num_hint.any_shape();
+                self.type_hint([num_hint.clone(), num_hint]);
+            } else {
+                self.type_hint([if Scalar::Char.superset_of(&a.scalar()) {
+                    char_hint
+                } else {
+                    num_hint
+                }
+                .any_shape()]);
+                self.push(a);
+            }
+        }
+        self.dyadic_pervasive(f, f64)
+    }
     fn dyadic_pervasive_hint<N: Into<TypeVal>>(
         &mut self,
         hint: Scalar,
@@ -2734,15 +2845,15 @@ pub fn validate(
                 .ok_or_else(|| format!("Invalid scalar type id {type_id}"))
         })
         .transpose()?
-        .or_else(|| side.is_none().then(|| spec.as_scalar()).flatten())
+        .or_else(|| side.is_none().then(|| spec.as_scalar_spec()).flatten())
     {
         // Non-boxed type checking
         if let Scalar::Any = ch.scalar {
             ch.scalar = expected;
-        } else if discriminant(&expected) != discriminant(&ch.scalar) {
+        } else if !expected.superset_of(&ch.scalar) {
             return Err(TypeError::ScalarMismatch(expected, ch.scalar.clone()));
         }
-        // If the subscripted type id was used, do normal shape checking
+        // If the subscripted type id was used, also do normal shape checking
         if type_id.is_some() {
             check_shape(spec, ch, side)?;
         }

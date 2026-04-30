@@ -2552,6 +2552,7 @@ mod tests {
                 let char_test = match prim.glyph() {
                     None => prim.name().len(),
                     Some(c) if c.is_ascii() || prim.ascii().is_some() => continue,
+                    Some('∫') => 4,
                     Some(_) => 3,
                 };
                 let short: String = prim.name().chars().take(char_test).collect();

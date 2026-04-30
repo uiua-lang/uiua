@@ -2,6 +2,7 @@
 
 use std::{
     any::Any,
+    borrow::Cow,
     collections::HashMap,
     env,
     fmt::Display,
@@ -1057,9 +1058,15 @@ impl Formatter<'_> {
             }
             Word::Label(Some(label)) => self.push(&word.span, &format!("${label}")),
             Word::Label(None) => self.push(&word.span, "$_"),
-            Word::Char(_) | Word::String(_) | Word::FormatString(_) => self
-                .output
-                .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
+            Word::Char(_) | Word::String(_) | Word::FormatString(_) => {
+                let mut s = Cow::Borrowed(&self.inputs.get(&word.span.src)[word.span.byte_range()]);
+                for (esc, c) in [("\\R", "ℝ"), ("\\Z", "ℤ"), ("\\N", "ℕ"), ("\\B", "𝔹")] {
+                    if s.contains(esc) {
+                        s = s.replace(esc, c).into();
+                    }
+                }
+                self.output.push_str(&s)
+            }
             Word::MultilineString(lines) => {
                 let curr_line_pos = self.curr_line_pos();
                 for (i, line) in lines.iter().enumerate() {
@@ -2181,6 +2188,8 @@ json by
 json  by
 Abc by
 Abc  by
+@\\Z
+\"\\B\\N\\R\"
 ";
     let output = "\
 F₁
@@ -2196,6 +2205,8 @@ json ⊸
 json ⊸
 Abc⊸
 Abc ⊸
+@ℤ
+\"𝔹ℕℝ\"
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     assert_eq!(formatted, output);

@@ -488,10 +488,10 @@ impl Type {
         }
     }
     pub fn listy() -> Type {
-        DynShape::prefix([Dim::Dyn]).any_scalar()
+        DynShape::prefix([Dim::Dyn]).with_scalar(Scalar::Any)
     }
     pub fn list() -> Type {
-        DynShape::from(Dim::Dyn).any_scalar()
+        DynShape::from(Dim::Dyn).with_scalar(Scalar::Any)
     }
     pub fn string() -> Type {
         Scalar::Char.shaped(Dim::Dyn)
@@ -799,9 +799,9 @@ impl DynShape {
             suffix: Some(Vec::new()),
         }
     }
-    pub fn any_scalar(self) -> Type {
+    pub fn with_scalar(self, scalar: Scalar) -> Type {
         Type {
-            scalar: Scalar::Any,
+            scalar,
             shape: self,
         }
     }
@@ -2574,7 +2574,11 @@ impl<'a> TypeEnv<'a> {
         Ok(())
     }
     fn unpack(&mut self, n: usize, unbox: bool, prim: Option<Primitive>) -> TypeResult {
-        self.type_hint([DynShape::prefix([Dim::Static(n)]).any_scalar()]);
+        self.type_hint([DynShape::prefix([Dim::Static(n)]).with_scalar(if unbox {
+            Scalar::Box(ScalarBox::Any)
+        } else {
+            Scalar::Any
+        })]);
         let x = self.pop(1)?;
         if x.row_count() != n {
             return Err(if let Some(prim) = prim {

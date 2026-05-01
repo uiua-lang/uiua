@@ -3309,6 +3309,10 @@ primitive!(
     ///
     /// See also: [derivative]
     ([1], Integral, Algorithm, ("integral", '∫'), { experimental: true }),
+    /// Decode HDF5 bytes into a nested map
+    ///
+    /// ex: hdf₅ &frab "data.hdf5"
+    (1, Hdf5, Encoding, "hdf"),
     /// Encode an array into a JSON string
     ///
     /// ex: json [1 2 3]

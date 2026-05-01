@@ -10,6 +10,10 @@ use crate::{
     algorithm::validate_size, cowslice::CowSlice, fill::FillValue,
 };
 
+use hdf5_pure::types::{AttrValue, DType};
+use hdf5_pure::{File as Hdf5File, reader::Group};
+use std::collections::HashMap;
+
 use super::FillContext;
 
 impl Value {
@@ -962,5 +966,141 @@ impl Value {
             }
         }
         Ok(data.into())
+    }
+}
+
+impl Value {
+    fn hdf5_attrs_to_value(attrs: HashMap<String, AttrValue>, env: &Uiua) -> UiuaResult<Value> {
+        let mut keys: EcoVec<Boxed> = EcoVec::with_capacity(attrs.len());
+        let mut values: Vec<Value> = Vec::with_capacity(attrs.len());
+        for (k, v) in attrs {
+            keys.push(Boxed(k.into()));
+            let val: Value = match v {
+                AttrValue::F64(f) => f.into(),
+                AttrValue::F64Array(arr) => {
+                    Array::new([arr.len()], arr.into_iter().collect::<EcoVec<f64>>()).into()
+                }
+                AttrValue::I64(i) => (i as f64).into(),
+                AttrValue::I64Array(arr) => Array::new(
+                    [arr.len()],
+                    arr.into_iter().map(|x| x as f64).collect::<EcoVec<f64>>(),
+                )
+                .into(),
+                AttrValue::U64(u) => (u as f64).into(),
+                AttrValue::String(s) => s.into(),
+                AttrValue::StringArray(arr) => Array::from(
+                    arr.into_iter()
+                        .map(|s| Boxed(Value::from(s)))
+                        .collect::<EcoVec<_>>(),
+                )
+                .into(),
+                _ => return Err(env.error("hdf,5: unsupported attribute type")),
+            };
+            values.push(val);
+        }
+        let mut values = if values.iter().all(|v| v.shape.is_empty())
+            && values.windows(2).all(|w| w[0].type_id() == w[1].type_id())
+        {
+            Value::from_row_values_infallible(values)
+        } else {
+            Array::from(values.into_iter().map(Boxed).collect::<EcoVec<_>>()).into()
+        };
+        values.map(keys.into(), env)?;
+        Ok(values)
+    }
+
+    fn from_hdf5_group(group: &Group, env: &Uiua) -> UiuaResult<Value> {
+        let mut keys: EcoVec<Boxed> = EcoVec::new();
+        let mut values: Vec<Value> = Vec::new();
+
+        // subgroups -> recurse
+        for name in group
+            .groups()
+            .map_err(|e| env.error(format!("hdf,5: {e}")))?
+        {
+            keys.push(Boxed(name.clone().into()));
+            let subgroup = group
+                .group(&name)
+                .map_err(|e| env.error(format!("hdf,5: {e}")))?;
+            values.push(Self::from_hdf5_group(&subgroup, env)?);
+        }
+
+        // datasets -> typed arrays
+        for name in group
+            .datasets()
+            .map_err(|e| env.error(format!("hdf,5: {e}")))?
+        {
+            let ds = group
+                .dataset(&name)
+                .map_err(|e| env.error(format!("hdf,5: {e}")))?;
+            let raw_shape = ds.shape().map_err(|e| env.error(format!("hdf,5: {e}")))?;
+            let shape: Shape = raw_shape.iter().map(|&d| d as usize).collect();
+
+            let val: Value = match ds.dtype().map_err(|e| env.error(format!("hdf,5: {e}")))? {
+                DType::F32 | DType::F64 => {
+                    let data: EcoVec<f64> = ds
+                        .read_f64()
+                        .map_err(|e| env.error(format!("hdf,5: {e}")))?
+                        .into_iter()
+                        .collect();
+                    Array::new(shape, data).into()
+                }
+                DType::I8 | DType::I16 | DType::I32 | DType::I64 => {
+                    let data: EcoVec<f64> = ds
+                        .read_i64()
+                        .map_err(|e| env.error(format!("hdf,5: {e}")))?
+                        .into_iter()
+                        .map(|x| x as f64)
+                        .collect();
+                    Array::new(shape, data).into()
+                }
+                DType::U8 | DType::U16 | DType::U32 | DType::U64 => {
+                    let data: EcoVec<f64> = ds
+                        .read_u64()
+                        .map_err(|e| env.error(format!("hdf,5: {e}")))?
+                        .into_iter()
+                        .map(|x| x as f64)
+                        .collect();
+                    Array::new(shape, data).into()
+                }
+                DType::String | DType::VariableLengthString => {
+                    let strings: EcoVec<Boxed> = ds
+                        .read_string()
+                        .map_err(|e| env.error(format!("hdf,5: {e}")))?
+                        .into_iter()
+                        .map(|s| Boxed(Value::from(s)))
+                        .collect();
+                    Array::new(shape, strings).into()
+                }
+                _ => return Err(env.error(format!("hdf,5: unsupported dtype in \"{name}\""))),
+            };
+            keys.push(Boxed(name.into()));
+            values.push(val);
+        }
+
+        // attrs as "__attrs__" if non-empty
+        let attrs = group
+            .attrs()
+            .map_err(|e| env.error(format!("hdf,5: {e}")))?;
+        if !attrs.is_empty() {
+            keys.push(Boxed("__attrs__".into()));
+            values.push(Self::hdf5_attrs_to_value(attrs, env)?);
+        }
+
+        let mut values = if values.iter().all(|v| v.shape.is_empty())
+            && values.windows(2).all(|w| w[0].type_id() == w[1].type_id())
+        {
+            Value::from_row_values_infallible(values)
+        } else {
+            Array::from(values.into_iter().map(Boxed).collect::<EcoVec<_>>()).into()
+        };
+        values.map(keys.into(), env)?;
+        Ok(values)
+    }
+
+    pub(crate) fn from_hdf5_bytes(bytes: &[u8], env: &Uiua) -> UiuaResult<Self> {
+        let file = Hdf5File::from_bytes(bytes.to_vec()) // or whatever hdf5-pure accepts
+            .map_err(|e| env.error(format!("hdf,5: {e}")))?;
+        Self::from_hdf5_group(&file.root(), env)
     }
 }

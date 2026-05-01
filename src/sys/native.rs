@@ -700,7 +700,7 @@ impl SysBackend for NativeSys {
     #[allow(clippy::print_stdout)]
     #[cfg(all(feature = "terminal_image", feature = "image"))]
     fn show_image(&self, image: image::DynamicImage, _label: Option<&str>) -> Result<(), String> {
-        let (_width, _height) = if let Some((w, h)) = terminal_size() {
+        let (width, height) = if let Some((w, h)) = terminal_size() {
             let (tw, th) = (w as u32, h.saturating_sub(1) as u32);
             let (iw, ih) = (image.width(), (image.height() / 2).max(1));
             let scaled_to_height = (iw * th / ih.max(1), th);
@@ -714,40 +714,32 @@ impl SysBackend for NativeSys {
         } else {
             (None, None)
         };
-        if std::env::var("TERM")
-            .unwrap_or("".to_owned())
-            .contains("sixel")
-            || std::env::var("UIUA_ENABLE_SIXEL").is_ok_and(|s| s == "1")
+        #[cfg(feature = "window")]
+        if crate::window::use_window() {
+            return crate::window::Request::Show(crate::media::SmartOutput::Png(
+                crate::media::image_to_bytes(&image, image::ImageFormat::Png)
+                    .map_err(|e| e.to_string())?,
+                _label.map(Into::into),
+            ))
+            .send();
+        }
+        if (std::env::var("TERM").is_ok_and(|term| term.contains("sixel"))
+            || std::env::var("UIUA_ENABLE_SIXEL").is_ok_and(|s| s == "1"))
+            && let Ok(s) = icy_sixel::SixelImage::from_rgba(
+                image.to_rgba8().into_raw(),
+                image.width() as usize,
+                image.height() as usize,
+            )
+            .encode()
         {
-            let img_rgba8 = image.to_rgba8();
-            let sixel = icy_sixel::sixel_string(
-                image.to_rgba8().as_raw(),
-                img_rgba8.width() as i32,
-                img_rgba8.height() as i32,
-                icy_sixel::PixelFormat::RGBA8888,
-                icy_sixel::DiffusionMethod::Stucki,
-                icy_sixel::MethodForLargest::Auto,
-                icy_sixel::MethodForRep::Auto,
-                icy_sixel::Quality::HIGH,
-            );
-            let s = sixel.map_err(|e| e.to_string())?;
             print!("{s}");
             Ok(())
         } else {
-            #[cfg(feature = "window")]
-            if crate::window::use_window() {
-                return crate::window::Request::Show(crate::media::SmartOutput::Png(
-                    crate::media::image_to_bytes(&image, image::ImageFormat::Png)
-                        .map_err(|e| e.to_string())?,
-                    _label.map(Into::into),
-                ))
-                .send();
-            }
             viuer::print(
                 &image,
                 &viuer::Config {
-                    width: _width,
-                    height: _height,
+                    width,
+                    height,
                     absolute_offset: false,
                     transparent: true,
                     ..Default::default()

@@ -1409,8 +1409,10 @@ pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaRes
     } else {
         [0.0, 1.0, 0.0]
     };
-    let u = norm(cross(up_hint, normal));
-    let v = cross(normal, u);
+    let mut u = norm(cross(up_hint, normal));
+    let v = cross(normal, u).map(|d| d * scale);
+    u = u.map(|d| d * scale);
+    let scaled_shell_radius = shell_radius * scale;
 
     // println!("im radius: {shell_radius:.3}");
     // println!("scene radius: {scene_radius:.3}");
@@ -1450,8 +1452,10 @@ pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaRes
     }
     // Fill indices and depth buffer
     for i in 0..arr.shape[0] {
+        let ci = i as f64 + offset[0];
         for j in 0..arr.shape[1] {
             env.respect_execution_limit()?;
+            let cj = j as f64 + offset[1];
             for k in 0..arr.shape[2] {
                 let arr_index = i * x_stride + j * y_stride + k;
                 match mode {
@@ -1461,14 +1465,14 @@ pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaRes
                     Mode::Rgba if arr.data[arr_index * 4 + 3] == 0.0 => continue,
                     _ => {}
                 }
-                let corner = add([i, j, k].map(|d| d as f64), offset);
+                let corner = [ci, cj, k as f64 + offset[2]];
                 for &offset in &voxel_surface_offsets {
                     let center = add(corner, offset);
                     let proj = plane_point(normal, d, center);
                     let delta = sub(center, proj);
                     let cam_delta = sub(proj, cam_center);
-                    let x = (shell_radius - dot(cam_delta, u)) * scale;
-                    let y = (shell_radius - dot(cam_delta, v)) * scale;
+                    let x = scaled_shell_radius - dot(cam_delta, u);
+                    let y = scaled_shell_radius - dot(cam_delta, v);
                     if x < 0.0 || y < 0.0 {
                         continue;
                     }

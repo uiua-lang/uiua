@@ -1130,10 +1130,10 @@ impl fmt::Display for TypeVal {
             }
             TypeVal::Val(val) => {
                 let s = val.grid_string(false);
-                if s.contains("\n") {
-                    write!(f, "{s}")
-                } else {
+                if s.contains("\n") || s.len() > 10 {
                     Type::from(val).fmt(f)
+                } else {
+                    write!(f, "{s}")
                 }
             }
             TypeVal::Type(ty) => ty.fmt(f),

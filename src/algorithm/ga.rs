@@ -98,6 +98,18 @@ pub struct Spec {
     #[serde(skip_serializing_if = "is_default", rename = "m")]
     pub metrics: Metrics,
 }
+impl Spec {
+    pub fn merge(&mut self, other: Self) -> Result<(), &'static str> {
+        if self.dims.zip(other.dims).is_some_and(|(a, b)| a != b) {
+            return Err("different number of dimensions");
+        }
+        if self.metrics != other.metrics {
+            return Err("incompatible metrics");
+        }
+        self.dims = self.dims.or(other.dims);
+        Ok(())
+    }
+}
 
 fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
     let arr = match value {

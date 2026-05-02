@@ -4,6 +4,7 @@ mod defs;
 mod error;
 mod inputs;
 mod lex;
+mod multivector;
 pub mod parse;
 mod primitive;
 mod signature;
@@ -12,8 +13,8 @@ mod subscript;
 
 use bytemuck::must_cast;
 pub use {
-    complex::*, defs::*, error::*, inputs::*, lex::*, parse::parse, primitive::*, signature::*,
-    split::*, subscript::*,
+    complex::*, defs::*, error::*, inputs::*, lex::*, multivector::*, parse::parse, primitive::*,
+    signature::*, split::*, subscript::*,
 };
 
 /// A Uiua identifier

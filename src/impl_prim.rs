@@ -274,7 +274,7 @@ impl_primitive!(
     (2(1), ValidateTypeOld),
     (2(0), ValidateTypeConsume),
     (2(0), TestAssert, Impure),
-    (1, MultivectorImpl(ga::Spec, SubSide)),
+    (1, MultivectorImpl(Option<u8>, ga::Metrics, SubSide)),
     (2, ValidateImpl(Option<usize>, Option<SubSide>)),
     /// Validate that a non-boxed variant field has a valid type and rank
     (1, ValidateNonBoxedVariant),

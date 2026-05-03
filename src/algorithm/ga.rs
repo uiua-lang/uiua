@@ -14,14 +14,11 @@ use crate::{
 };
 
 /// Specification for the kind of geometric algebra to perform
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
-)]
-#[serde(default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Spec {
-    #[serde(skip_serializing_if = "Option::is_none", rename = "d")]
-    pub dims: Option<u8>,
-    #[serde(skip_serializing_if = "is_default", rename = "m")]
+    #[serde(rename = "d")]
+    pub dims: u8,
+    #[serde(default, skip_serializing_if = "is_default", rename = "m")]
     pub metrics: Metrics,
 }
 
@@ -29,13 +26,12 @@ pub(crate) fn dyadic_spec(a: &Value, b: &Value) -> Option<Result<Spec, &'static 
     match (a.meta.ga_spec, b.meta.ga_spec) {
         (None, None) => None,
         (Some(s), None) | (None, Some(s)) => Some(Ok(s)),
-        (Some(mut a), Some(b)) => Some({
-            if a.dims.zip(b.dims).is_some_and(|(a, b)| a != b) {
+        (Some(a), Some(b)) => Some({
+            if a.dims != b.dims {
                 Err("different number of dimensions")
             } else if a.metrics != b.metrics {
                 Err("incompatible metrics")
             } else {
-                a.dims = a.dims.or(b.dims);
                 Ok(a)
             }
         }),
@@ -118,44 +114,33 @@ use super::{
 pub const MAX_DIMS: u8 = Metrics::COUNT as u8;
 const MAX_SIZE: usize = 1usize << (MAX_DIMS - 1);
 
-fn derive_dims_mode(dims: Option<u8>, size: usize, env: &Uiua) -> UiuaResult<(u8, Mode)> {
-    Ok(if let Some(dims) = dims {
-        if dims > MAX_DIMS {
-            return Err(env.error(format!(
-                "{dims} is too many dimensions. Why would you need that many?"
-            )));
-        }
-        let full_size = 1usize << dims;
-        let even_size = 1usize << dims.saturating_sub(1);
-        if size == full_size {
-            (dims, Full)
-        } else if size == even_size {
-            (dims, Even)
-        } else if size == dims as usize {
-            (dims, Vector)
-        } else if size == 1 {
-            (dims, Scalar)
-        } else {
-            return Err(env.error(format!(
-                "{size} is not a valid array size \
-                for geometric algebra in {dims} dimension{}",
-                if dims == 1 { "" } else { "s" }
-            )));
-        }
+fn derive_dims_mode(dims: u8, size: usize, env: &Uiua) -> UiuaResult<(u8, Mode)> {
+    if dims > MAX_DIMS {
+        return Err(env.error(format!(
+            "{dims} is too many dimensions. Why would you need that many?"
+        )));
+    }
+    let full_size = 1usize << dims;
+    let even_size = 1usize << dims.saturating_sub(1);
+    Ok(if size == full_size {
+        (dims, Full)
+    } else if size == even_size {
+        (dims, Even)
+    } else if size == dims as usize {
+        (dims, Vector)
+    } else if size == 1 {
+        (dims, Scalar)
     } else {
-        if size > MAX_SIZE {
-            return Err(env.error(format!("{size} is too large for geometric algebra")));
-        }
-        if size.is_power_of_two() {
-            ((size as f64).log2().round() as u8 + 1, Even)
-        } else {
-            (size as u8, Vector)
-        }
+        return Err(env.error(format!(
+            "{size} is not a valid array size \
+            for geometric algebra in {dims} dimension{}",
+            if dims == 1 { "" } else { "s" }
+        )));
     })
 }
 
 fn dim_selector(dims: u8, elem_size: usize, env: &Uiua) -> UiuaResult<(Sel, Mode)> {
-    let (_, this_mode) = derive_dims_mode(Some(dims), elem_size, env)?;
+    let (_, this_mode) = derive_dims_mode(dims, elem_size, env)?;
     let sel = match this_mode {
         Full => (0..1 << dims).map(Some).collect(),
         Even => {
@@ -278,11 +263,11 @@ fn is_complex(dims: u8, a: &Array<f64>) -> bool {
 }
 
 fn fast_monadic_complex(
-    dims: Option<u8>,
+    dims: u8,
     mut arr: Array<f64>,
     f: impl Fn(f64, f64) -> [f64; 2],
 ) -> Result<Array<f64>, Array<f64>> {
-    if arr.shape.last() != Some(&2) || dims.unwrap_or(2) != 2 {
+    if arr.shape.last() != Some(&2) || dims != 2 {
         return Err(arr);
     }
     arr.meta.take_sorted_flags();
@@ -296,12 +281,12 @@ fn fast_monadic_complex(
 }
 
 fn fast_dyadic_complex(
-    dims: Option<u8>,
+    dims: u8,
     mut a: Array<f64>,
     mut b: Array<f64>,
     f: impl Fn(f64, f64, f64, f64) -> [f64; 2],
 ) -> Result<Array<f64>, [Array<f64>; 2]> {
-    if a.shape.last() != Some(&2) || b.shape.last() != Some(&2) || dims.unwrap_or(2) != 2 {
+    if a.shape.last() != Some(&2) || b.shape.last() != Some(&2) || dims != 2 {
         return Err([a, b]);
     }
     a.meta.take_sorted_flags();
@@ -651,7 +636,7 @@ fn product_impl_not_transposed(
     }
 
     // Fast case for complex numbers
-    let [a_arr, b_arr] = match fast_dyadic_complex(Some(dims), a.arr, b.arr, |ar, ai, br, bi| {
+    let [a_arr, b_arr] = match fast_dyadic_complex(dims, a.arr, b.arr, |ar, ai, br, bi| {
         [ar * br - ai * bi, ar * bi + ai * br]
     }) {
         Ok(res) => return Ok(res),
@@ -945,9 +930,7 @@ pub fn metrics_from_val(val: &Value) -> Result<Metrics, String> {
 }
 
 pub fn pad_blades(spec: Spec, grade: u8, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let Some(dims) = spec.dims else {
-        return Err(env.error("Blade padding requires a specified number of dimensions"));
-    };
+    let dims = spec.dims;
     // Process grades
     if grade > dims {
         return Err(env.error(format!(
@@ -979,9 +962,7 @@ pub fn pad_blades(spec: Spec, grade: u8, val: Value, env: &Uiua) -> UiuaResult<A
 }
 
 pub fn extract_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let Some(dims) = spec.dims else {
-        return Err(env.error("Blade padding requires a specified number of dimensions"));
-    };
+    let dims = spec.dims;
     // Process grades
     let grades = grades.as_bytes(env, "Grades must be a list of natural numbers")?;
     for &grade in &*grades {

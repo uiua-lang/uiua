@@ -2351,7 +2351,7 @@ impl Compiler {
         match prim {
             Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
             Primitive::Multivector => Node::ImplPrim(
-                ImplPrimitive::MultivectorImpl(ga::Spec::default(), SubSide::Left),
+                ImplPrimitive::MultivectorImpl(None, ga::Metrics::VANILLA, SubSide::Left),
                 spandex,
             ),
             prim => Node::Prim(prim, spandex),
@@ -2487,21 +2487,16 @@ impl Compiler {
                 let sub = self.validate_subscript(scr);
                 Node::ImplPrim(
                     ImplPrimitive::MultivectorImpl(
-                        Spec {
-                            dims: sub.value.side.and_then(|ss| ss.n).map(|n| n as u8),
-                            metrics: sub.value.num.map_or(Metrics::VANILLA, |n| match n {
-                                0 => Metrics::PROJECTIVE,
-                                1 => Metrics::CONFORMAL,
-                                -1 => Metrics::SPACETIME,
-                                n => {
-                                    self.add_error(
-                                        span.clone(),
-                                        format!("Invalid GA flavor code {n}"),
-                                    );
-                                    Metrics::VANILLA
-                                }
-                            }),
-                        },
+                        sub.value.side.and_then(|ss| ss.n).map(|n| n as u8),
+                        sub.value.num.map_or(Metrics::VANILLA, |n| match n {
+                            0 => Metrics::PROJECTIVE,
+                            1 => Metrics::CONFORMAL,
+                            -1 => Metrics::SPACETIME,
+                            n => {
+                                self.add_error(span.clone(), format!("Invalid GA flavor code {n}"));
+                                Metrics::VANILLA
+                            }
+                        }),
                         sub.value.side.map(|ss| ss.side).unwrap_or(SubSide::Left),
                     ),
                     self.add_span(span),

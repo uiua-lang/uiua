@@ -12,7 +12,10 @@ use ecow::EcoString;
 
 use crate::{
     Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
-    algorithm::map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
+    algorithm::{
+        ga,
+        map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
+    },
     array::{Array, ArrayValue},
     boxed::Boxed,
     terminal_size, val_as_arr,
@@ -88,6 +91,10 @@ pub trait GridFmt: Sized {
     }
     /// Get SoA rows
     fn soa_rows(_arr: &Array<Self>) -> Option<Vec<(&EcoString, &Value)>> {
+        None
+    }
+    /// Get multivector rows
+    fn multivector_rows(_arr: &Array<Self>) -> Option<Grid> {
         None
     }
 }
@@ -297,6 +304,9 @@ impl GridFmt for f64 {
         } else {
             max_whole_len
         }
+    }
+    fn multivector_rows(arr: &Array<Self>) -> Option<Grid> {
+        Some(ga::format(arr, arr.meta.ga_metrics?))
     }
 }
 
@@ -680,10 +690,10 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             };
             self.data[0].fmt_grid(params)
         } else if self.rank() == 1
-            && let Some(spec) = self.meta.ga_spec
+            && let Some(grid) = T::multivector_rows(self)
         {
             // Multivector
-            todo!()
+            grid
         } else if self.shape == [0] && !self.is_map() {
             // Empty list
             let (left, right) = T::grid_fmt_delims();

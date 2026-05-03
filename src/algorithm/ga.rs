@@ -1,110 +1,211 @@
 //! Geometric Algebra
 
-use std::{
-    array, fmt,
-    iter::{once, repeat_n},
-};
+use std::{fmt, iter::repeat_n, mem::take};
 
-use ecow::{EcoVec, eco_vec};
+use ecow::eco_vec;
 use serde::*;
 
 use crate::{
-    Array, Boxed, Shape, Uiua, UiuaResult, Value, algorithm::pervade::derive_new_shape,
-    grid_fmt::GridFmt, is_default,
+    Array, Shape, SubSide, Uiua, UiuaResult, Value, algorithm::pervade::derive_new_shape,
+    grid_fmt::GridFmt,
 };
 
-/// Specification for the kind of geometric algebra to perform
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Spec {
-    #[serde(rename = "d")]
-    pub dims: u8,
-    #[serde(default, skip_serializing_if = "is_default", rename = "m")]
-    pub metrics: Metrics,
+type GaResult<T = ()> = Result<T, String>;
+
+impl Value {
+    pub(crate) fn make_multivector(
+        self,
+        met: Metrics,
+        dims: Option<u8>,
+        blade_side: SubSide,
+    ) -> GaResult<Array<f64>> {
+        let mut arr = match self {
+            Value::Num(arr) => arr,
+            Value::Byte(arr) => arr.convert(),
+            Value::Complex(arr) => {
+                let elem_count = arr.element_count();
+                let mut data = eco_vec![0.0; elem_count * 4];
+                let slice = data.make_mut();
+                for (i, c) in arr.data.into_iter().enumerate() {
+                    slice[i] = c.re;
+                    slice[elem_count * 3 + i] = c.im;
+                }
+                let mut shape = arr.shape;
+                shape.insert(0, 4);
+                let mut arr = Array::new(shape, data);
+                arr.meta.ga_metrics = Some(met);
+                return Ok(arr);
+            }
+            val => {
+                return Err(format!(
+                    "Cannot make multivector from {} array",
+                    val.type_name()
+                ));
+            }
+        };
+        if arr.meta.ga_metrics.is_some() {
+            return Ok(arr);
+        }
+        arr.meta.take_sorted_flags();
+        arr.untranspose();
+        let coef_count = arr.row_count();
+        match (coef_count, dims, blade_side) {
+            (0 | 1, None, _) => {}
+            (0 | 1, Some(d), SubSide::Left) => pad_blades(d, 0, &mut arr)?,
+            (0 | 1, Some(d), SubSide::Right) => pad_blades(d, d, &mut arr)?,
+            (n, None, SubSide::Left) => pad_blades(n as u8, 1, &mut arr)?,
+            (n, None, SubSide::Right) => pad_blades(n as u8, n as u8, &mut arr)?,
+            (n, Some(d), side) => {
+                if n == 1 << d {
+                    // Full multivector
+                } else if n == even_odd_blade_count(d, side == SubSide::Right) {
+                    // Even or odd blades
+                    pad_blades_even_odd(d, side == SubSide::Right, &mut arr)?
+                } else {
+                    // Single blades
+                    let (start, end) = match side {
+                        SubSide::Left => (0, (d as f32 / 2.0).floor() as u8),
+                        SubSide::Right => ((d as f32 / 2.0).ceil() as u8, d),
+                    };
+                    (start..=end)
+                        .find(|&i| grade_size(d, i) == n)
+                        .map(|i| pad_blades(d, i, &mut arr))
+                        .transpose()?
+                        .ok_or_else(|| {
+                            format!("{n} is not a valid blade size for {d} dimensions")
+                        })?
+                }
+            }
+        };
+        arr.meta.ga_metrics = Some(met);
+        arr.validate();
+        Ok(arr)
+    }
 }
 
-pub(crate) fn dyadic_spec(a: &Value, b: &Value) -> Option<Result<Spec, &'static str>> {
-    match (a.meta.ga_spec, b.meta.ga_spec) {
+pub(crate) fn monadic_metrics(val: &mut Value) -> Option<GaResult<(Metrics, Array<f64>)>> {
+    let metrics = val.meta.ga_metrics?;
+    Some(
+        take(val)
+            .make_multivector(metrics, None, SubSide::Left)
+            .map(|arr| (metrics, arr)),
+    )
+}
+
+#[allow(clippy::type_complexity)]
+pub(crate) fn dyadic_metrics(
+    a: &mut Value,
+    b: &mut Value,
+) -> Option<GaResult<(Metrics, Array<f64>, Array<f64>)>> {
+    match (a.meta.ga_metrics, b.meta.ga_metrics) {
         (None, None) => None,
-        (Some(s), None) | (None, Some(s)) => Some(Ok(s)),
-        (Some(a), Some(b)) => Some({
-            if a.dims != b.dims {
-                Err("different number of dimensions")
-            } else if a.metrics != b.metrics {
-                Err("incompatible metrics")
+        (Some(am), None) => Some(
+            take(a)
+                .make_multivector(am, None, SubSide::Left)
+                .and_then(|a| {
+                    take(b)
+                        .make_multivector(am, Some(a.ga_dims()), SubSide::Left)
+                        .map(|b| (am, a, b))
+                }),
+        ),
+        (None, Some(_)) => Some(dyadic_metrics(b, a)?.map(|(m, b, a)| (m, a, b))),
+        (Some(am), Some(bm)) => Some({
+            if am != bm {
+                Err("incompatible metrics".into())
+            } else if a.row_count() != b.row_count() {
+                Err("different number of dimensions".into())
             } else {
-                Ok(a)
+                take(a)
+                    .make_multivector(am, None, SubSide::Left)
+                    .and_then(|a| {
+                        take(b)
+                            .make_multivector(bm, None, SubSide::Left)
+                            .map(|b| (am, a, b))
+                    })
             }
         }),
     }
 }
 
-fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
-    let arr = match value {
-        Value::Byte(arr) => arr.convert(),
-        Value::Num(arr) => arr,
-        val => {
-            return Err(env.error(format!(
-                "Cannot do geometric algebra on {}",
-                val.type_name_plural()
-            )));
-        }
-    };
-    let mut semishape = arr.shape.clone();
-    let blade_count = semishape.pop().unwrap_or(1);
-    Ok((arr, semishape, blade_count))
-}
-
-/// Mapping from coefficient index to array index
-type Sel = Vec<Option<usize>>;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-enum Mode {
-    Scalar,
-    Vector,
-    Even,
-    #[default]
-    Full,
-}
-use Mode::*;
-impl Mode {
-    fn size(self, dims: u8) -> usize {
-        match self {
-            Scalar => 1,
-            Vector => dims as usize,
-            Even => 1 << dims.saturating_sub(1),
-            Full => 1 << dims,
-        }
+fn pad_blades(dims: u8, grade: u8, arr: &mut Array<f64>) -> GaResult {
+    if dims > MAX_DIMS {
+        return Err(format!(
+            "{dims} dimensions is too many for the geometric algebra system"
+        ));
     }
-    fn combine(self, other: Self, vector_hint: VectorHint) -> Self {
-        match (self, other) {
-            (Scalar, Scalar) => Scalar,
-            (Scalar, m) | (m, Scalar) => match (vector_hint, m) {
-                (SameSize, Vector) => Full,
-                _ => m,
-            },
-            (Full, _) | (_, Full) => Full,
-            (Vector, Vector) => match vector_hint {
-                SameSize => Vector,
-                Rotor => Even,
-                ExpandFull => Full,
-            },
-            (Even, Vector) | (Vector, Even) => Full,
-            (Even, Even) => Even,
-        }
+    if grade > dims {
+        return Err(format!(
+            "Cannot pad grade {grade} blades in {dims} dimensions"
+        ));
     }
+    // Validate size
+    let correct_size: usize = grade_size(dims, grade);
+    let row_len = arr.row_len();
+    let size = arr.row_count();
+    if size != correct_size {
+        return Err(format!(
+            "{dims}D multivector should have {correct_size} \
+            grade-{grade} blades, but the array has {size}"
+        ));
+    }
+
+    let full_size = 1usize << dims;
+    let mut new_shape = arr.ga_semi_shape();
+    new_shape.insert(0, full_size);
+    arr.data.extend_repeat(&0.0, (full_size - size) * row_len);
+    let slice = arr.data.as_mut_slice();
+    let left_size: usize = (0..grade).map(|g| grade_size(dims, g)).sum();
+    slice.rotate_right(left_size * row_len);
+    arr.shape = new_shape;
+    Ok(())
 }
 
-/// What to do with the size of a vector input
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum VectorHint {
-    /// Keep the size of the vector
-    SameSize,
-    /// Form a rotor
-    Rotor,
-    /// Expand to the full multivector
-    ExpandFull,
+fn pad_blades_even_odd(dims: u8, odd: bool, arr: &mut Array<f64>) -> GaResult {
+    if dims > MAX_DIMS {
+        return Err(format!(
+            "{dims} dimensions is too many for the geometric algebra system"
+        ));
+    }
+    // Validate size
+    let correct_size = even_odd_blade_count(dims, odd);
+    let row_len = arr.row_len();
+    let size = arr.row_count();
+    if size != correct_size {
+        return Err(format!(
+            "{dims}D multivector should have {correct_size} \
+            {}-graded blades, but the array has {size}",
+            if odd { "odd" } else { "even" }
+        ));
+    }
+    let full_size = 1usize << dims;
+    let mut new_shape = arr.ga_semi_shape();
+    new_shape.insert(0, full_size);
+    let mut new_data = eco_vec![0.0; new_shape.elements()];
+    let slice = new_data.make_mut();
+    let mut dst_start = 0;
+    let mut src_start = 0;
+    for d in 0..=dims {
+        let g = grade_size(dims, d);
+        if d % 2 == odd as u8 {
+            slice[dst_start * row_len..][..g * row_len]
+                .copy_from_slice(&arr.data[src_start * row_len..][..g * row_len]);
+            src_start += g;
+        }
+        dst_start += g;
+    }
+    arr.data = new_data.into();
+    arr.shape = new_shape;
+    Ok(())
 }
-use VectorHint::*;
+
+impl Array<f64> {
+    fn ga_dims(&self) -> u8 {
+        (self.row_count() as f32).log2() as u8
+    }
+    fn ga_semi_shape(&self) -> Shape {
+        self.shape.row()
+    }
+}
 
 use super::{
     pervade::{self, InfalliblePervasiveFn, bin_pervade_mut, bin_pervade_recursive},
@@ -112,315 +213,47 @@ use super::{
 };
 
 pub const MAX_DIMS: u8 = Metrics::COUNT as u8;
-const MAX_SIZE: usize = 1usize << (MAX_DIMS - 1);
 
-fn derive_dims_mode(dims: u8, size: usize, env: &Uiua) -> UiuaResult<(u8, Mode)> {
-    if dims > MAX_DIMS {
-        return Err(env.error(format!(
-            "{dims} is too many dimensions. Why would you need that many?"
-        )));
-    }
-    let full_size = 1usize << dims;
-    let even_size = 1usize << dims.saturating_sub(1);
-    Ok(if size == full_size {
-        (dims, Full)
-    } else if size == even_size {
-        (dims, Even)
-    } else if size == dims as usize {
-        (dims, Vector)
-    } else if size == 1 {
-        (dims, Scalar)
-    } else {
-        return Err(env.error(format!(
-            "{size} is not a valid array size \
-            for geometric algebra in {dims} dimension{}",
-            if dims == 1 { "" } else { "s" }
-        )));
-    })
-}
-
-fn dim_selector(dims: u8, elem_size: usize, env: &Uiua) -> UiuaResult<(Sel, Mode)> {
-    let (_, this_mode) = derive_dims_mode(dims, elem_size, env)?;
-    let sel = match this_mode {
-        Full => (0..1 << dims).map(Some).collect(),
-        Even => {
-            let mut i = 0;
-            blade_grades(dims)
-                .map(|g| {
-                    (g % 2 == 0).then(|| {
-                        i += 1;
-                        i - 1
-                    })
-                })
-                .collect()
-        }
-        Vector => {
-            let mut sel = vec![None; 1 << dims];
-            for i in 0..dims as usize {
-                sel[i + 1] = Some(i);
-            }
-            sel
-        }
-        Scalar => once(Some(0))
-            .chain(repeat_n(None, (1 << dims) - 1))
-            .collect(),
-    };
-    Ok((sel, this_mode))
-}
-
-pub(crate) fn grade_size(dims: u8, grade: u8) -> usize {
+fn grade_size(dims: u8, grade: u8) -> usize {
     combinations(dims as usize, grade as usize, false) as usize
 }
 
+fn even_odd_blade_count(dims: u8, odd: bool) -> usize {
+    (0..=dims)
+        .filter(|&i| i % 2 == odd as u8)
+        .map(|i| grade_size(dims, i))
+        .sum()
+}
+
+/// Iterator over the grades of each blade in a multivector of the given number of dimensions
 fn blade_grades(dims: u8) -> impl Iterator<Item = u8> {
     (0..=dims).flat_map(move |i| repeat_n(i, grade_size(dims, i)))
 }
 
-#[derive(Clone, Default)]
-struct Arg {
-    arr: Array<f64>,
-    semi: Shape,
-    sel: Sel,
-    mode: Mode,
-}
-fn init_arr<const N: usize>(
-    spec: Spec,
-    vals: [Value; N],
-    vector_hint: VectorHint,
-    env: &Uiua,
-) -> UiuaResult<(u8, usize, [Arg; N])> {
-    let mut args = array::from_fn(|_| Arg::default());
-    let mut sizes = [0; N];
-    let mut max_size = 0;
-    for (i, val) in vals.into_iter().enumerate() {
-        let (arr, semi, size) = ga_arg(val, env)?;
-        max_size = max_size.max(size);
-        args[i].arr = arr;
-        args[i].semi = semi;
-        sizes[i] = size;
-    }
-    let (dims, _) = derive_dims_mode(spec.dims, max_size, env)?;
-    for i in 0..N {
-        let (sel, mode) = dim_selector(dims, sizes[i], env)?;
-        args[i].sel = sel;
-        args[i].mode = mode;
-    }
-    let size = args
-        .iter()
-        .map(|a| a.mode)
-        .reduce(|a, b| a.combine(b, vector_hint))
-        .unwrap_or_default()
-        .size(dims);
-    Ok((dims, size, args))
-}
-fn init(
-    spec: Spec,
-    val: Value,
-    vector_hint: VectorHint,
-    env: &Uiua,
-) -> UiuaResult<(u8, usize, Arg)> {
-    let (dims, size, [arg]) = init_arr(spec, [val], vector_hint, env)?;
-    Ok((dims, size, arg))
-}
-impl Arg {
-    fn map(self, f: impl FnOnce(Self) -> Array<f64>) -> Self {
-        let (semi, sel, mode) = (self.semi.clone(), self.sel.clone(), self.mode);
-        let arr = f(self);
-        Self {
-            arr,
-            semi,
-            sel,
-            mode,
+pub fn reverse(mut arr: Array<f64>, _: Metrics, _: &Uiua) -> UiuaResult<Array<f64>> {
+    for (g, slice) in blade_grades(arr.ga_dims()).zip(arr.row_slices_mut()) {
+        if g / 2 % 2 == 1 {
+            for f in slice {
+                *f = -*f;
+            }
         }
-    }
-    fn from_not_transposed(dims: u8, arr: Array<f64>, env: &Uiua) -> UiuaResult<Self> {
-        let mut semi = arr.shape.clone();
-        let size = semi.pop().unwrap_or(1);
-        let (sel, mode) = dim_selector(dims, size, env)?;
-        Ok(Arg {
-            arr,
-            semi,
-            sel,
-            mode,
-        })
-    }
-}
-impl fmt::Debug for Arg {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Arg({:?}, {:?}, ", self.arr, self.semi)?;
-        for i in &self.sel {
-            match i {
-                Some(i) => write!(f, "{i}"),
-                None => write!(f, "_"),
-            }?
-        }
-        write!(f, ")")
-    }
-}
-
-fn is_complex(dims: u8, a: &Array<f64>) -> bool {
-    a.shape.last() == Some(&2) && dims == 2
-}
-
-fn fast_monadic_complex(
-    dims: u8,
-    mut arr: Array<f64>,
-    f: impl Fn(f64, f64) -> [f64; 2],
-) -> Result<Array<f64>, Array<f64>> {
-    if arr.shape.last() != Some(&2) || dims != 2 {
-        return Err(arr);
-    }
-    arr.meta.take_sorted_flags();
-    for chunk in arr.data.as_mut_slice().chunks_exact_mut(2) {
-        let [r, i] = [chunk[0], chunk[1]];
-        let [r, i] = f(r, i);
-        chunk[0] = r;
-        chunk[1] = i;
     }
     Ok(arr)
 }
 
-fn fast_dyadic_complex(
-    dims: u8,
-    mut a: Array<f64>,
-    mut b: Array<f64>,
-    f: impl Fn(f64, f64, f64, f64) -> [f64; 2],
-) -> Result<Array<f64>, [Array<f64>; 2]> {
-    if a.shape.last() != Some(&2) || b.shape.last() != Some(&2) || dims != 2 {
-        return Err([a, b]);
-    }
-    a.meta.take_sorted_flags();
-    b.meta.take_sorted_flags();
-    if a.data.is_copy_of(&b.data) {
-        drop(b);
-        for chunk in a.data.as_mut_slice().chunks_exact_mut(2) {
-            let [ar, ai] = [chunk[0], chunk[1]];
-            let [r, i] = f(ar, ai, ar, ai);
-            chunk[0] = r;
-            chunk[1] = i;
-        }
-        Ok(a)
-    } else {
-        match (&*a.shape, &*b.shape) {
-            (ash, bsh) if ash == bsh => {
-                for (a, b) in a
-                    .data
-                    .chunks_exact(2)
-                    .zip(b.data.as_mut_slice().chunks_exact_mut(2))
-                {
-                    let [ar, ai, br, bi] = [a[0], a[1], b[0], b[1]];
-                    let [r, i] = f(ar, ai, br, bi);
-                    b[0] = r;
-                    b[1] = i;
-                }
-                Ok(b)
-            }
-            (_, [2]) => {
-                let [br, bi] = [b.data[0], b.data[1]];
-                for a in a.data.as_mut_slice().chunks_exact_mut(2) {
-                    let [ar, ai] = [a[0], a[1]];
-                    let [r, i] = f(ar, ai, br, bi);
-                    a[0] = r;
-                    a[1] = i;
-                }
-                Ok(a)
-            }
-            ([2], _) => {
-                let [ar, ai] = [a.data[0], a.data[1]];
-                for b in b.data.as_mut_slice().chunks_exact_mut(2) {
-                    let [br, bi] = [b[0], b[1]];
-                    let [r, i] = f(ar, ai, br, bi);
-                    b[0] = r;
-                    b[1] = i;
-                }
-                Ok(b)
-            }
-            _ => Err([a, b]),
-        }
-    }
+fn pseudo(dims: u8) -> Array<f64> {
+    let mut data = eco_vec![0.0; 1 << dims];
+    *data.make_mut().last_mut().unwrap() = 1.0;
+    data.into()
 }
 
-pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, _, arg) = init(spec, val, SameSize, env)?;
-    Ok(reverse_impl_not_transposed(dims, arg))
+pub fn dual(arr: Array<f64>, _: Metrics, env: &Uiua) -> UiuaResult<Array<f64>> {
+    product(pseudo(arr.ga_dims()), arr, Metrics::VANILLA, env)
 }
 
-fn reverse_impl_not_transposed(dims: u8, mut arg: Arg) -> Array<f64> {
-    let size = arg.arr.shape.last().copied().unwrap_or(1);
-    let slice = arg.arr.data.as_mut_slice();
-    for (i, g) in blade_grades(dims).enumerate() {
-        if let Some(i) = arg.sel[i]
-            && g / 2 % 2 == 1
-        {
-            for v in slice.chunks_exact_mut(size) {
-                v[i] = -v[i];
-            }
-        }
-    }
-    arg.arr.meta.take_sorted_flags();
-    arg.arr
-}
-
-fn reverse_impl_transposed(dims: u8, mut arg: Arg) -> Array<f64> {
-    for (i, g) in blade_grades(dims).enumerate() {
-        if let Some(i) = arg.sel[i]
-            && g / 2 % 2 == 1
-        {
-            for v in arg.arr.row_slice_mut(i) {
-                *v = -*v;
-            }
-        }
-    }
-    arg.arr.meta.take_sorted_flags();
-    arg.arr
-}
-
-fn pseudo(dims: u8, env: &Uiua) -> UiuaResult<Arg> {
-    let mut pseudoscalar = eco_vec![0.0; 1 << dims];
-    *pseudoscalar.make_mut().last_mut().unwrap() = 1.0;
-    Arg::from_not_transposed(dims, pseudoscalar.into(), env)
-}
-
-pub fn dual(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, _, arg) = init(spec, val, ExpandFull, env)?;
-    let mode = arg.mode;
-    let pseudoscalar = pseudo(dims, env)?;
-    let semi = arg.semi.clone();
-    let mut arr = dual_impl(dims, pseudoscalar, arg, env)?;
-    if mode == Vector && dims % 2 == 1 {
-        let grades: Vec<u8> = (0..=dims).filter(|&d| d % 2 == 0).collect();
-        arr = extract_blades_impl(dims, 1 << dims, arr, semi, &grades, env)?;
-    }
-    Ok(arr)
-}
-
-fn dual_impl(dims: u8, pseu: Arg, arg: Arg, env: &Uiua) -> UiuaResult<Array<f64>> {
-    product_impl_not_transposed(dims, Metrics::VANILLA, 1 << dims, false, pseu, arg, env)
-}
-
-pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, _, arg) = init(spec, val, ExpandFull, env)?;
-    magnitude_impl(dims, spec.metrics, arg, env)
-}
-
-fn magnitude_impl(dims: u8, metrics: Metrics, mut arg: Arg, env: &Uiua) -> UiuaResult<Array<f64>> {
-    if is_complex(dims, &arg.arr) {
-        let slice = arg.arr.data.as_mut_slice();
-        for i in 0..slice.len() / 2 {
-            let [re, im] = [slice[i * 2], slice[i * 2 + 1]];
-            slice[i] = (re * re + im * im).sqrt();
-        }
-        let new_len = slice.len() / 2;
-        arg.arr.data.truncate(new_len);
-        arg.arr.shape.pop();
-        arg.arr.meta.take_sorted_flags();
-        arg.arr.validate();
-        return Ok(arg.arr);
-    }
-
-    arg.arr.untranspose();
-    let rev = arg.clone().map(|arg| reverse_impl_transposed(dims, arg));
-    let prod = product_impl_transposed(dims, metrics, 1 << dims, false, rev, arg, env)?;
+pub fn magnitude(arr: Array<f64>, met: Metrics, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let rev = reverse(arr.clone(), met, env)?;
+    let prod = product(rev, arr, met, env)?;
     let mut arr = prod.first(env)?;
     for v in arr.data.as_mut_slice() {
         *v = v.abs().sqrt();
@@ -428,260 +261,105 @@ fn magnitude_impl(dims: u8, metrics: Metrics, mut arg: Arg, env: &Uiua) -> UiuaR
     Ok(arr)
 }
 
-pub fn normalize(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, _, arg) = init(spec, val, Rotor, env)?;
-    normalize_impl_not_transposed(dims, spec.metrics, arg, env)
-}
-
-fn normalize_impl_not_transposed(
-    dims: u8,
-    metrics: Metrics,
-    arg: Arg,
-    env: &Uiua,
-) -> UiuaResult<Array<f64>> {
-    let mut arr = arg.arr.clone();
-    let mag = magnitude_impl(dims, metrics, arg, env)?;
+pub fn normalize(mut arr: Array<f64>, met: Metrics, env: &Uiua) -> UiuaResult<Array<f64>> {
+    fn div(num: f64, denom: f64) -> f64 {
+        if denom == 0.0 { 0.0 } else { num / denom }
+    }
+    let mag = magnitude(arr.clone(), met, env)?;
     bin_pervade_mut(mag, &mut arr, false, env, |a, b| div(b, a))?;
     Ok(arr)
 }
 
-fn div(num: f64, denom: f64) -> f64 {
-    if denom == 0.0 { 0.0 } else { num / denom }
-}
-
-pub fn sqrt(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (arr, ..) = ga_arg(val, env)?;
-    fast_monadic_complex(spec.dims, arr, |re, im| {
-        if im == 0.0 {
-            if re >= 0.0 {
-                [re.sqrt(), 0.0]
-            } else {
-                [0.0, re.abs().sqrt()]
-            }
-        } else {
-            let r = (re * re + im * im).sqrt().sqrt();
-            let theta = im.atan2(re) / 2.0;
-            [r * theta.cos(), r * theta.sin()]
-        }
-    })
-    .map_err(|_| env.error("Geometric square root is only implemented for complexes"))
-}
-
-pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, [mut a, mut b]) = init_arr(spec, [a, b], SameSize, env)?;
-
-    // println!("a: {a}, semi: {asemi}, sel: {a_sel:?}");
-    // println!("b: {b}, semi: {bsemi}, sel: {b_sel:?}");
-    // println!("size: {size}");
-
-    let [a_arr, b_arr] =
-        match fast_dyadic_complex(spec.dims, a.arr, b.arr, |ar, ai, br, bi| [ar + br, ai + bi]) {
-            Ok(res) => return Ok(res),
-            Err(ab) => ab,
-        };
-    a.arr = a_arr;
-    b.arr = b_arr;
-
-    a.arr.untranspose();
-    b.arr.untranspose();
-
-    let (csel, _) = dim_selector(dims, size, env)?;
-    let mut csemi =
-        derive_new_shape(&a.semi, &b.semi, Err(""), Err("")).map_err(|e| env.error(e))?;
-    let mut c_data = eco_vec![0.0; size * csemi.elements()];
-
-    if csemi.contains(&0) {
-        csemi.push(size);
-        return Ok(Array::new(csemi, c_data));
-    }
-
-    let a_row_len = a.semi.elements();
-    let b_row_len = b.semi.elements();
-    let c_row_len = csemi.elements();
-    let a_slice = a.arr.data.as_slice();
-    let b_slice = b.arr.data.as_slice();
-    let c_slice = c_data.make_mut();
-
-    let add = InfalliblePervasiveFn::new(pervade::add::num_num);
-    for i in 0..1usize << dims {
-        let Some(ci) = csel[i] else {
-            continue;
-        };
-        match (a.sel[i], b.sel[i]) {
-            (Some(ai), Some(bi)) => {
-                let asl = &a_slice[ai * a_row_len..][..a_row_len];
-                let bsl = &b_slice[bi * b_row_len..][..b_row_len];
-                let c = &mut c_slice[ci * c_row_len..][..c_row_len];
-                bin_pervade_recursive((asl, &a.semi), (bsl, &b.semi), c, None, None, add, env)?;
-            }
-            (Some(ai), None) => {
-                let asl = &a_slice[ai * a_row_len..][..a_row_len];
-                for c in c_slice[ci * c_row_len..][..c_row_len].chunks_exact_mut(a_row_len) {
-                    c.copy_from_slice(asl);
-                }
-            }
-            (None, Some(bi)) => {
-                let bsl = &b_slice[bi * b_row_len..][..b_row_len];
-                for c in c_slice[ci * c_row_len..][..c_row_len].chunks_exact_mut(b_row_len) {
-                    c.copy_from_slice(bsl);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    csemi.prepend(size);
-    let mut result = Array::new(csemi, c_data);
-    result.transpose();
-    Ok(result)
-}
-
-pub fn rotor(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    // |1+|ab̃||
-    let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
-    let revb = b.map(|b| reverse_impl_not_transposed(dims, b));
-    let prod = product_impl_not_transposed(dims, spec.metrics, size, false, revb, a, env)?;
-    let prod = Arg::from_not_transposed(dims, prod, env)?;
-    let mut norm = normalize_impl_not_transposed(dims, spec.metrics, prod, env)?;
-    for chunk in norm.data.as_mut_slice().chunks_exact_mut(size) {
-        chunk[0] += 1.0;
-    }
-    let arg = Arg::from_not_transposed(dims, norm, env)?;
-    normalize_impl_not_transposed(dims, spec.metrics, arg, env)
-}
-
-pub fn divide(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (a, ..) = ga_arg(a, env)?;
-    let (b, ..) = ga_arg(b, env)?;
-    Ok(
-        match fast_dyadic_complex(spec.dims, a, b, |ar, ai, br, bi| {
-            let denom = ar * ar + ai * ai;
-            [(ar * br + ai * bi) / denom, (ar * bi - ai * br) / denom]
-        }) {
-            Ok(res) => res,
-            Err([a, mut b]) => {
-                if a.rank() >= b.rank() {
-                    return Err(env.error(format!(
-                        "Only scalar division on multivectors and complex division \
-                        are supported, but the arrays are shape {} and {}",
-                        a.shape, b.shape
-                    )));
-                }
-                bin_pervade_mut(a, &mut b, false, env, pervade::div::num_num)?;
-                b
-            }
-        },
-    )
-}
-
-pub fn sandwich(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
-    let (amode, bmode) = (a.mode, b.mode);
-    let rev_a = a.clone().map(|a| reverse_impl_not_transposed(dims, a));
-    let ab = product_impl_not_transposed(dims, spec.metrics, size, false, b, a, env)?;
-    let ab = Arg::from_not_transposed(dims, ab, env)?;
-    let mut res = product_impl_not_transposed(dims, spec.metrics, size, false, rev_a, ab, env)?;
-    if let (Vector, Even) | (Even, Vector) = (amode, bmode) {
-        extract_single(&mut res, 1, dims as usize);
-    }
-    Ok(res)
-}
-
-pub fn inner_product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, [a, b]) = init_arr(spec, [a, b], ExpandFull, env)?;
-    product_impl_not_transposed(dims, spec.metrics, size, true, a, b, env)
-}
-
-pub fn wedge_product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
-    product_impl_not_transposed(dims, Metrics::NULL, size, false, a, b, env)
-}
-
-pub fn regressive_product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, _, [a, b]) = init_arr(spec, [a, b], ExpandFull, env)?;
-    let pseudoscalar = pseudo(dims, env)?;
-    let modes = (a.mode, b.mode);
-    let adual =
-        Arg::from_not_transposed(dims, dual_impl(dims, pseudoscalar.clone(), a, env)?, env)?;
-    let bdual =
-        Arg::from_not_transposed(dims, dual_impl(dims, pseudoscalar.clone(), b, env)?, env)?;
-    let wedge =
-        product_impl_not_transposed(dims, Metrics::NULL, 1 << dims, false, adual, bdual, env)?;
-    let arg = Arg::from_not_transposed(dims, wedge, env)?;
-    let mut arr = dual_impl(dims, pseudoscalar, arg, env)?;
-    if modes == (Even, Even) {
-        extract_vectors(dims, &mut arr);
-    }
+pub fn add(mut a: Array<f64>, mut b: Array<f64>, _: Metrics, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let am = take(&mut a.meta.ga_metrics);
+    let bm = take(&mut b.meta.ga_metrics);
+    let Value::Num(mut arr) = Value::from(a).add(b.into(), env)? else {
+        unreachable!()
+    };
+    arr.meta.ga_metrics = am.or(bm);
     Ok(arr)
 }
 
-pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
-    product_impl_not_transposed(dims, spec.metrics, size, false, a, b, env)
-}
-fn product_impl_not_transposed(
-    dims: u8,
-    metrics: Metrics,
-    size: usize,
-    dot: bool,
-    mut a: Arg,
-    mut b: Arg,
-    env: &Uiua,
-) -> UiuaResult<Array<f64>> {
-    // Scalar case
-    if a.arr.rank() == 0 || b.arr.rank() == 0 {
-        bin_pervade_mut(a.arr, &mut b.arr, false, env, pervade::mul::num_num)?;
-        b.arr.meta.take_sorted_flags();
-        return Ok(b.arr);
-    }
-
-    // Fast case for complex numbers
-    let [a_arr, b_arr] = match fast_dyadic_complex(dims, a.arr, b.arr, |ar, ai, br, bi| {
-        [ar * br - ai * bi, ar * bi + ai * br]
-    }) {
-        Ok(res) => return Ok(res),
-        Err(ab) => ab,
+pub fn sub(mut a: Array<f64>, mut b: Array<f64>, _: Metrics, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let am = take(&mut a.meta.ga_metrics);
+    let bm = take(&mut b.meta.ga_metrics);
+    let Value::Num(mut arr) = Value::from(a).sub(b.into(), env)? else {
+        unreachable!()
     };
-    a.arr = a_arr;
-    b.arr = b_arr;
-
-    a.arr.untranspose();
-    b.arr.untranspose();
-    let mut res = product_impl_transposed(dims, metrics, size, dot, a, b, env)?;
-    res.transpose();
-    res.meta.take_sorted_flags();
-    Ok(res)
+    arr.meta.ga_metrics = am.or(bm);
+    Ok(arr)
 }
-fn product_impl_transposed(
-    dims: u8,
-    metrics: Metrics,
-    size: usize,
-    dot: bool,
-    a: Arg,
-    b: Arg,
+
+pub fn rotor(a: Array<f64>, b: Array<f64>, met: Metrics, env: &Uiua) -> UiuaResult<Array<f64>> {
+    // |1+|ab̃||
+    let revb = reverse(b, met, env)?;
+    let prod = product(revb, a, met, env)?;
+    let mut norm = normalize(prod, met, env)?;
+    let row_len = norm.row_len();
+    for n in &mut norm.data.as_mut_slice()[..row_len] {
+        *n += 1.0;
+    }
+    normalize(norm, met, env)
+}
+
+pub fn div(mut a: Array<f64>, mut b: Array<f64>, _: Metrics, env: &Uiua) -> UiuaResult<Array<f64>> {
+    if a.rank() == 1 && a.data.iter().skip(1).all(|&n| n == 0.0) {
+        a = a.first(env)?;
+    } else if a.rank() > 0 {
+        return Err(env.error(format!(
+            "Only scalar division is supported,
+            but the arrays are shape {} and {}",
+            a.shape, b.shape
+        )));
+    }
+    bin_pervade_mut(a, &mut b, false, env, pervade::div::num_num)?;
+    Ok(b)
+}
+
+pub fn inner_product(
+    a: Array<f64>,
+    b: Array<f64>,
+    met: Metrics,
     env: &Uiua,
 ) -> UiuaResult<Array<f64>> {
-    let Arg {
-        arr: a,
-        semi: asemi,
-        sel: asel,
-        ..
-    } = a;
-    let Arg {
-        arr: b,
-        semi: bsemi,
-        sel: bsel,
-        ..
-    } = b;
+    product_impl(a, b, met, true, env)
+}
 
-    let (csel, _) = dim_selector(dims, size, env)?;
+pub fn wedge_product(
+    a: Array<f64>,
+    b: Array<f64>,
+    _: Metrics,
+    env: &Uiua,
+) -> UiuaResult<Array<f64>> {
+    product_impl(a, b, Metrics::NULL, false, env)
+}
+
+pub fn regressive_product(
+    _a: Array<f64>,
+    _b: Array<f64>,
+    _met: Metrics,
+    _env: &Uiua,
+) -> UiuaResult<Array<f64>> {
+    todo!()
+}
+
+pub fn product(a: Array<f64>, b: Array<f64>, met: Metrics, env: &Uiua) -> UiuaResult<Array<f64>> {
+    product_impl(a, b, met, false, env)
+}
+fn product_impl(
+    a: Array<f64>,
+    b: Array<f64>,
+    met: Metrics,
+    dot: bool,
+    env: &Uiua,
+) -> UiuaResult<Array<f64>> {
+    assert_eq!(a.row_count(), b.row_count());
+    let size = a.row_count();
+    let dims = a.ga_dims();
+    let asemi = a.ga_semi_shape();
+    let bsemi = b.ga_semi_shape();
     let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err("")).map_err(|e| env.error(e))?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
-
-    // println!("dims: {dims}, metrics: {metrics:?}, size: {size}");
-    // println!("a_sel: {asel:?}");
-    // println!("b_sel: {bsel:?}");
-    // println!("c_sel: {csel:?}");
 
     if csemi.contains(&0) {
         csemi.prepend(size);
@@ -717,23 +395,20 @@ fn product_impl_transposed(
         let i_mask = mask_table[i];
         for j in 0..1usize << dims {
             let j_mask = mask_table[j];
-            let (sign, metric) = blade_sign_and_metric(dims, metrics, dot, i_mask, j_mask);
+            let (sign, metric) = blade_sign_and_metric(dims, met, dot, i_mask, j_mask);
             if metric == 0.0 {
                 continue;
             }
             let k_mask = j_mask ^ i_mask;
             let k = rev_mask_table[k_mask];
-            let (Some(ai), Some(aj), Some(ci)) = (asel[j], bsel[i], csel[k]) else {
-                continue;
-            };
             // println!(
             //     "i: {:<4}, j: {:<4}, k: {:<4}, sign: {sign}, metric: {metric}",
             //     blade_name(dims, i_mask),
             //     blade_name(dims, j_mask),
             //     blade_name(dims, k_mask),
             // );
-            let a = &a[ai * a_row_len..][..a_row_len];
-            let b = &b[aj * b_row_len..][..b_row_len];
+            let a = &a[j * a_row_len..][..a_row_len];
+            let b = &b[i * b_row_len..][..b_row_len];
             bin_pervade_recursive((a, &asemi), (b, &bsemi), &mut temp, None, None, mul, env)?;
             if sign == -1 {
                 for v in &mut temp {
@@ -745,14 +420,16 @@ fn product_impl_transposed(
                     *v *= metric;
                 }
             }
-            for (c, t) in c_slice[ci * c_row_len..][..c_row_len].iter_mut().zip(&temp) {
+            for (c, t) in c_slice[k * c_row_len..][..c_row_len].iter_mut().zip(&temp) {
                 *c += *t;
             }
         }
     }
 
     csemi.prepend(size);
-    Ok(Array::new(csemi, c_data))
+    let mut arr = Array::new(csemi, c_data);
+    arr.meta.ga_metrics = Some(met);
+    Ok(arr)
 }
 
 fn mask_table(dims: u8) -> Vec<usize> {
@@ -761,7 +438,7 @@ fn mask_table(dims: u8) -> Vec<usize> {
     mask_table
 }
 
-fn blade_sign_and_metric(dims: u8, metrics: Metrics, dot: bool, a: usize, b: usize) -> (i32, f64) {
+fn blade_sign_and_metric(dims: u8, met: Metrics, dot: bool, a: usize, b: usize) -> (i32, f64) {
     let mut sign = 1;
     if dims >= 3 {
         let ab = a ^ b;
@@ -782,7 +459,7 @@ fn blade_sign_and_metric(dims: u8, metrics: Metrics, dot: bool, a: usize, b: usi
             }
         }
         if (a & bit_i != 0) && (b & bit_i != 0) {
-            metric *= metrics.get(i as usize) as f64;
+            metric *= met.get(i as usize) as f64;
         }
     }
     (sign, metric)
@@ -862,285 +539,17 @@ impl fmt::Debug for Metrics {
     }
 }
 
-pub fn metrics_from_val(val: &Value) -> Result<Metrics, String> {
-    if val.rank() > 2 {
-        return Err(format!(
-            "Metrics array must be rank 0 or 1, but its rank is {}",
-            val.rank()
-        ));
-    }
-    if val.row_count() > Metrics::COUNT {
-        return Err(format!(
-            "Metrics array must have at most {} elements, but it has {}",
-            Metrics::COUNT,
-            val.row_count()
-        ));
-    }
-    Ok(match val {
-        Value::Num(arr) => {
-            if let Some(m) = arr.data.iter().find(|&v| ![1.0, 0.0, -1.0].contains(v)) {
-                return Err(format!(
-                    "Metrics may only be 1, 0, or ¯1, but the array contains {}",
-                    m.grid_string(false)
-                ));
-            }
-            if arr.rank() == 0 {
-                Metrics::all(arr.data[0] as i8)
-            } else {
-                let mut metrics = Metrics::default();
-                for (i, v) in arr.data.iter().enumerate() {
-                    metrics.set(i, *v as i8);
-                }
-                if let Some(last) = arr.data.last() {
-                    for i in arr.data.len()..Metrics::COUNT {
-                        metrics.set(i, *last as i8);
-                    }
-                }
-                metrics
-            }
-        }
-        Value::Byte(arr) => {
-            if let Some(m) = arr.data.iter().find(|&v| ![1, 0].contains(v)) {
-                return Err(format!(
-                    "Metrics may only be 1, 0, or ¯1, but the array contains {m}"
-                ));
-            }
-            if arr.rank() == 0 {
-                Metrics::all(arr.data[0] as i8)
-            } else {
-                let mut metrics = Metrics::default();
-                for (i, v) in arr.data.iter().enumerate() {
-                    metrics.set(i, *v as i8);
-                }
-                if let Some(last) = arr.data.last() {
-                    for i in arr.data.len()..Metrics::COUNT {
-                        metrics.set(i, *last as i8);
-                    }
-                }
-                metrics
-            }
-        }
-        val => {
-            return Err(format!(
-                "Metrics array must be numbers, but it is {}",
-                val.type_name_plural()
-            ));
-        }
-    })
-}
-
-pub fn pad_blades(spec: Spec, grade: u8, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let dims = spec.dims;
-    // Process grades
-    if grade > dims {
-        return Err(env.error(format!(
-            "Cannot pad grade {grade} blades in {dims} dimensions"
-        )));
-    }
-    // Process arg
-    let (arr, semi, size) = ga_arg(val, env)?;
-    // Validate size
-    let correct_size: usize = grade_size(dims, grade);
-    if size != correct_size {
-        return Err(env.error(format!(
-            "{dims}D multivector should have {correct_size} \
-            grade-{grade} blades, but the array has {size}"
-        )));
-    }
-
-    let full_size = 1usize << dims;
-    let mut new_shape = semi;
-    new_shape.push(full_size);
-    let mut new_data = eco_vec![0.0; new_shape.elements()];
-    let slice = new_data.make_mut();
-
-    let left_size: usize = (0..grade).map(|g| grade_size(dims, g)).sum();
-    for (src, dst) in (arr.data.chunks_exact(size)).zip(slice.chunks_exact_mut(full_size)) {
-        dst[left_size..][..size].copy_from_slice(src);
-    }
-    Ok(Array::new(new_shape, new_data))
-}
-
-pub fn extract_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let dims = spec.dims;
-    // Process grades
-    let grades = grades.as_bytes(env, "Grades must be a list of natural numbers")?;
-    for &grade in &*grades {
-        if grade > dims {
-            return Err(env.error(format!(
-                "Cannot extract grade {grade} blades in {dims} dimensions"
-            )));
-        }
-    }
-    // Process arg
-    let (arr, semi, size) = ga_arg(val, env)?;
-    if grades.is_empty() {
-        let mut shape = semi;
-        shape.push(0);
-        return Ok(Array::new(shape, EcoVec::new()));
-    }
-    // Validate size
-    let full_size = 1usize << dims;
-    let half_size = full_size / 2;
-    if size != full_size {
-        if size == half_size {
-            for &grade in &*grades {
-                if grade % 2 == 1 {
-                    return Err(env.error(format!(
-                        "Cannot extract odd grade {grade} blades from \
-                        even multivector of size {half_size} in {dims} dimensions"
-                    )));
-                }
-            }
-        } else {
-            return Err(env.error(format!(
-                "{dims}D multivector should have {full_size} \
-                or {half_size} blades, but the array has {size}"
-            )));
-        }
-    }
-    if (grades.iter().enumerate()).any(|(i, grade)| grades[i + 1..].contains(grade)) {
-        return Err(env.error("Selected grades must be unique"));
-    }
-    extract_blades_impl(dims, size, arr, semi, &grades, env)
-}
-
-fn extract_blades_impl(
-    dims: u8,
-    size: usize,
-    mut arr: Array<f64>,
-    semi: Shape,
-    grades: &[u8],
-    env: &Uiua,
-) -> UiuaResult<Array<f64>> {
-    let slice = arr.data.as_mut_slice();
-    let new_size: usize = grades.iter().map(|&grade| grade_size(dims, grade)).sum();
-    let full_size = 1usize << dims;
-    let left_size = |grade| {
-        if size == full_size {
-            (0..grade).map(|g| grade_size(dims, g)).sum::<usize>()
-        } else {
-            (0..grade)
-                .filter(|&g| g % 2 == 0)
-                .map(|g| grade_size(dims, g))
-                .sum()
-        }
-    };
-    if let [grade] = *grades {
-        let left_size = left_size(grade);
-        extract_single(&mut arr, left_size, new_size);
-    } else if grades.is_sorted() {
-        let mut left_sizes = Vec::with_capacity(grades.len());
-        for &grade in grades {
-            let left_size = left_size(grade);
-            let size = grade_size(dims, grade);
-            left_sizes.push((left_size, size));
-        }
-        let arr_size = size;
-        for i in 0..semi.elements() {
-            let mut offset = 0;
-            for &(left_size, size) in &left_sizes {
-                let src_start = i * arr_size + left_size;
-                let dst_start = i * new_size + offset;
-                let src_end = src_start + size;
-                slice.copy_within(src_start..src_end, dst_start);
-                offset += size;
-            }
-        }
-    } else {
-        return Err(env.error("Grades must be sorted"));
-    }
-    *arr.shape.last_mut().unwrap() = new_size;
-    arr.data.truncate(arr.shape.elements());
-    arr.validate();
-    Ok(arr)
-}
-
-fn extract_vectors(dims: u8, arr: &mut Array<f64>) {
-    extract_single(arr, 1, dims as usize)
-}
-
-fn extract_single(arr: &mut Array<f64>, left_size: usize, new_size: usize) {
-    let elems: usize = arr.shape.iter().rev().skip(1).product();
-    let size = *arr.shape.last().unwrap();
-    let slice = arr.data.as_mut_slice();
-    for i in 0..elems {
-        let src_start = i * size + left_size;
-        let dst_start = i * new_size;
-        let src_end = src_start + new_size;
-        slice.copy_within(src_start..src_end, dst_start);
-    }
-    *arr.shape.last_mut().unwrap() = new_size;
-    arr.data.truncate(arr.shape.elements());
-}
-
-pub fn couple(mut a: Value, mut b: Value, env: &Uiua) -> UiuaResult<Value> {
-    match (&a, &b) {
-        (Value::Num(_) | Value::Byte(_), Value::Num(_) | Value::Byte(_)) => {}
-        (a, b) => {
-            return Err(env.error(format!(
-                "Cannot geometric couple {} and {} arrays",
-                a.type_name(),
-                b.type_name()
-            )));
-        }
-    }
-    if a.shape.ends_with(&b.shape) || b.shape.ends_with(&a.shape) {
-        a.retropose_depth(0);
-        b.retropose_depth(0);
-        let mut coupled = a.couple_infallible(b, true);
-        coupled.retropose_depth(0);
-        Ok(coupled)
-    } else {
-        Err(env.error(format!(
-            "Arrays with shapes {} and {} cannot be geometric coupled",
-            a.shape, b.shape
-        )))
-    }
-}
-
-pub fn uncouple(mut val: Value, env: &Uiua) -> UiuaResult<(Value, Value)> {
-    match val {
-        Value::Num(_) | Value::Byte(_) => {}
-        val => {
-            return Err(env.error(format!(
-                "Cannot geometric uncouple {}",
-                val.type_name_plural()
-            )));
-        }
-    }
-    if val.shape.last().is_none_or(|&d| d == 1) {
-        val.shape.pop();
-        let imag = Array::<u8>::new(val.shape.clone(), eco_vec![0; val.shape.elements()]);
-        return Ok((val, imag.into()));
-    }
-    let depth = val.rank().saturating_sub(1);
-    val.uncouple_depth(depth, env)
-}
-
-pub fn parse(_: Spec, _: Value, env: &Uiua) -> UiuaResult<Value> {
-    Err(env.error("Geometric parse is not implemented"))
-}
-
-pub fn unparse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Value> {
-    let (dims, size, arg) = init(spec, val, ExpandFull, env)?;
-    let dim_offset = (spec.metrics.get(0) != 0) as usize;
-    if dims as usize + dim_offset > 9 {
-        return Err(env.error(format!(
-            "Cannot format {dims} dimensional multivector \
-            starting at {dim_offset}"
-        )));
-    }
-    let mut formatted = EcoVec::with_capacity(arg.semi.elements());
+pub fn format(arr: &Array<f64>, met: Metrics) -> Vec<Vec<char>> {
+    let dims = arr.ga_dims();
     let mask_table = mask_table(dims);
-    let is_complex = dims == 2 && size == 2;
-    for chunk in arg.arr.data.chunks_exact(size) {
-        let mut s = EcoVec::new();
-        for (i, &sel) in arg.sel.iter().enumerate() {
-            let Some(sel) = sel else {
-                continue;
-            };
-            let n = chunk[sel];
+    let row_len = arr.row_len();
+    let row_count = arr.row_count();
+    let mut strings = Vec::with_capacity(row_len);
+    let dim_offset = (met.get(0) != 0) as usize;
+    for i in 0..row_len {
+        let mut s = Vec::new();
+        for j in 0..row_count {
+            let n = arr.data[j * row_len + i];
             if n == 0.0 {
                 continue;
             }
@@ -1149,26 +558,14 @@ pub fn unparse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Value> {
                     s.push('-');
                 }
             } else {
-                s.extend(
-                    match (n > 0.0, is_complex) {
-                        (true, false) => " + ",
-                        (true, true) => "+",
-                        (false, false) => " - ",
-                        (false, true) => "-",
-                    }
-                    .chars(),
-                );
+                s.extend(if n > 0.0 { " + " } else { " - " }.chars());
             }
-            let mask = mask_table[i];
+            let mask = mask_table[j];
             if n.abs() != 1.0 || mask == 0 {
                 let n_grid = n.abs().fmt_grid(Default::default());
                 s.extend(n_grid.into_iter().next().unwrap());
             }
             if mask == 0 {
-                continue;
-            }
-            if is_complex {
-                s.push('i');
                 continue;
             }
             s.push('e');
@@ -1179,14 +576,10 @@ pub fn unparse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Value> {
             }
             if dims > 2 && (mask ^ (mask >> 1)).count_ones() == dims as u32 {
                 let (a, b) = (s.len() - 1, s.len() - 2);
-                s.make_mut().swap(a, b);
+                s.swap(a, b);
             }
         }
-        formatted.push(Boxed(Value::from(s)))
+        strings.push(s);
     }
-    Ok(if arg.semi.is_empty() {
-        formatted.into_iter().next().unwrap().0
-    } else {
-        Array::new(arg.semi, formatted).into()
-    })
+    strings
 }

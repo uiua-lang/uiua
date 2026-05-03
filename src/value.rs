@@ -371,6 +371,19 @@ impl Value {
     #[track_caller]
     pub(crate) fn validate(&self) {
         val_as_arr!(self, |arr| arr.validate());
+        #[cfg(debug_assertions)]
+        if self.meta.ga_metrics.is_some() {
+            match self {
+                Value::Num(arr) => {
+                    assert!(
+                        arr.row_count().is_power_of_two(),
+                        "Mutivector length is not a power of 2"
+                    )
+                }
+                Value::Byte(_) => panic!("Multivector is a byte array"),
+                val => panic!("Multivector is a {} array", val.type_name()),
+            }
+        }
     }
     /// Get the row at the given index
     #[track_caller]
@@ -1692,12 +1705,16 @@ macro_rules! value_mon_impl {
             $(($make_new:ident, $f2:ident))?
         ),*
         $(|$sorted_val:ident, $sorted_flags:ident| $sorted_body:expr)?
+        $(,{ ga = $ga:path })?
     ) => {
         impl Value {
             #[doc(hidden)]
             #[allow(unused_mut, clippy::redundant_closure_call)]
             pub fn $name(mut self, env: &Uiua) -> UiuaResult<Self> {
                 let _sorted_flags = self.meta.take_sorted_flags();
+                $(if let Some((metrics, arr)) = ga::monadic_metrics(&mut self).transpose().map_err(|e| env.error(e))? {
+                    return $ga(arr, metrics, env).map(Into::into);
+                })?
                 let mut val: Value = self.keep_meta(|val| Ok(match val {
                     $($(Self::$in_place(mut array) $(if (|$meta: &ArrayMeta| $pred)(&array.meta))* => {
                         for val in &mut array.data {
@@ -1742,7 +1759,8 @@ value_mon_impl!(
     [Num, num],
     (Byte, byte),
     [Complex, com],
-    [Char, char]
+    [Char, char],
+    { ga = ga::reverse }
 );
 value_mon_impl!(
     not,
@@ -1750,14 +1768,16 @@ value_mon_impl!(
     [|meta| meta.flags.is_boolean(), Byte, bool],
     (Byte, byte),
     [Complex, com],
-    |val, flags| val.or_sorted_flags_rev(flags)
+    |val, flags| val.or_sorted_flags_rev(flags),
+    { ga = ga::dual }
 );
 value_mon_impl!(
     scalar_abs,
     [Num, num],
     (Byte, byte),
     (Complex, com),
-    [Char, char]
+    [Char, char],
+    { ga = ga::magnitude }
 );
 value_mon_impl!(
     sign,
@@ -1767,7 +1787,8 @@ value_mon_impl!(
     (Char, char),
     |val, flags| if val.rank() < 2 && !matches!(val, Value::Complex(_)) {
         val.meta.or_sorted_flags(flags)
-    }
+    },
+    { ga = ga::normalize }
 );
 value_mon_impl!(recip, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(
@@ -1983,7 +2004,7 @@ macro_rules! value_dy_impl {
             get_pre: |$get_pre_a:ident, $get_pre_b:ident, $get_pre_left:ident| $get_pre_body:expr,
             handle_pre: |$pre_a:ident: $pre_ty:ty, $pre_b:ident, $handle_val:ident| $handle_body:expr,
         })?
-        $(,{ ga: $ga:path })?
+        $(,{ ga = $ga:path })?
     ) => {
         impl Value {
             #[doc(hidden)]
@@ -1993,11 +2014,6 @@ macro_rules! value_dy_impl {
                 let mut handle_pre: Option<&dyn Fn(&mut Value)> = None;
                 a.match_fill(env);
                 b.match_fill(env);
-                $(
-                    if let Some(spec) = ga::dyadic_spec(&a, &b).transpose().map_err(|e| env.error(e))? {
-                        return $ga(spec, a, b, env).map(Into::into);
-                    }
-                )?
                 $(
                     let get_pre = |$get_pre_a: &mut Value, $get_pre_b: &Value, $get_pre_left: bool| $get_pre_body;
                     let pre_a = get_pre(&mut a, &b, false);
@@ -2011,6 +2027,9 @@ macro_rules! value_dy_impl {
                 )?
                 a.meta.take_sorted_flags();
                 b.meta.take_sorted_flags();
+                $(if let Some((metrics, a, b)) = ga::dyadic_metrics(&mut a, &mut b).transpose().map_err(|e| env.error(e))? {
+                    return $ga(a, b, metrics, env).map(Into::into);
+                })?
                 let mut val = a.keep_metas(b, |a, b| { Ok(match (a, b) {
                     $($((Value::$ip(mut a), Value::$ip(mut b)) $(if {
                         let f = |$meta: &ArrayMeta| $pred;
@@ -2086,7 +2105,7 @@ macro_rules! value_dy_math_impl {
     // The generated function will maintain the sortedness of
     // the result if one of the inputs is a scalar number.
     // The $left parameter determines whether the scalar is the left argument.
-    ($name:ident $(,($($tt:tt)*))? , maintain_scalar_sortedness$(($left:expr))?) => {
+    ($name:ident $(,($($tt:tt)*))? , maintain_scalar_sortedness$(($left:expr))? $(, {$($after:tt)*})?) => {
         value_dy_math_impl!(
             $name
             $(,($($tt)*))?,
@@ -2107,11 +2126,12 @@ macro_rules! value_dy_math_impl {
                     }
                 },
             }
+            $(,{$($after)*})?
         );
     };
     // The generated function will maintain the sortedness of
     // the result if both of the inputs have the same sortedness.
-    ($name:ident $(,($($tt:tt)*))? , maintain_both_sortedness) => {
+    ($name:ident $(,($($tt:tt)*))? , maintain_both_sortedness $(, {$($after:tt)*})?) => {
         value_dy_math_impl!(
             $name
             $(,($($tt)*))?,
@@ -2133,6 +2153,7 @@ macro_rules! value_dy_math_impl {
                     }
                 },
             }
+            $(,{$($after)*})?
         );
     };
     // The generated function will maintain the sortedness of
@@ -2208,7 +2229,8 @@ value_dy_math_impl!(
         (Char, Byte, char_byte),
         [|meta| meta.flags.is_boolean(), Byte, bool_bool, true],
     ),
-    maintain_both_sortedness
+    maintain_both_sortedness,
+    { ga = ga::add }
 );
 value_dy_math_impl!(
     sub,
@@ -2217,7 +2239,8 @@ value_dy_math_impl!(
         (Char, Char, char_char),
         (Byte, Char, byte_char),
     ),
-    maintain_scalar_sortedness(true)
+    maintain_scalar_sortedness(true),
+    { ga = ga::sub }
 );
 value_dy_math_impl!(
     mul,
@@ -2229,7 +2252,7 @@ value_dy_math_impl!(
         [|meta| meta.flags.is_boolean(), Byte, bool_bool],
     ),
     signed_scalar_sortedness,
-    { ga: ga::product }
+    { ga = ga::product }
 );
 value_dy_math_impl!(
     set_sign,
@@ -2243,14 +2266,17 @@ value_dy_math_impl!(
 value_dy_math_impl!(
     div,
     ((Num, Char, num_char), (Byte, Char, byte_char)),
-    signed_scalar_sortedness(true)
+    signed_scalar_sortedness(true),
+    { ga = ga::div }
 );
 value_dy_math_impl!(modulo, ((Complex, Complex, com_com)));
-value_dy_math_impl!(or, ([|meta| meta.flags.is_boolean(), Byte, bool_bool]));
+value_dy_math_impl!(or, ([|meta| meta.flags.is_boolean(), Byte, bool_bool]), {
+    ga = ga::regressive_product
+});
 value_dy_math_impl!(scalar_pow);
 value_dy_math_impl!(root);
 value_dy_math_impl!(log);
-value_dy_math_impl!(atan2);
+value_dy_math_impl!(atan2, { ga = ga::rotor });
 value_dy_math_impl!(
     min,
     (
@@ -2258,7 +2284,8 @@ value_dy_math_impl!(
         (Box, Box, generic, Boxed, Boxed),
         [|meta| meta.flags.is_boolean(), Byte, bool_bool],
     ),
-    maintain_both_sortedness
+    maintain_both_sortedness,
+    { ga = ga::wedge_product }
 );
 value_dy_math_impl!(
     max,
@@ -2267,7 +2294,8 @@ value_dy_math_impl!(
         (Box, Box, generic, Boxed, Boxed),
         [|meta| meta.flags.is_boolean(), Byte, bool_bool],
     ),
-    maintain_both_sortedness
+    maintain_both_sortedness,
+    { ga = ga::inner_product }
 );
 
 value_dy_impl!(

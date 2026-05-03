@@ -14,15 +14,14 @@ use std::{
     collections::HashMap,
     f64::consts::{PI, TAU},
     iter::repeat_n,
-    mem::take,
     sync::OnceLock,
 };
 
 use rand::prelude::*;
 
 use crate::{
-    ArrayValue, FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive, Shape, SubSide, SysOp,
-    Uiua, UiuaErrorKind, UiuaResult,
+    FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive, Shape, SubSide, SysOp, Uiua,
+    UiuaErrorKind, UiuaResult,
     algorithm::{self, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
@@ -1357,47 +1356,11 @@ impl ImplPrimitive {
                 env.push(val);
             }
             &ImplPrimitive::MultivectorImpl(dims, metrics, side) => {
-                use ga::*;
-                let mut val = env.pop(1)?;
-                if val.type_id() != f64::TYPE_ID {
-                    return Err(env.error(format!(
-                        "Cannot make multivector from {} array",
-                        val.type_name()
-                    )));
-                }
-                let coef_count = val.shape.last().copied().unwrap_or(1);
-                let mut pad = |dims: u8, n: u8| -> UiuaResult<Spec> {
-                    let spec = Spec { dims, metrics };
-                    val = pad_blades(spec, n, take(&mut val), env)?.into();
-                    Ok(spec)
-                };
-                let spec = match (coef_count, dims, side) {
-                    (dims @ (0 | 1), None, _) => Spec {
-                        dims: dims as u8,
-                        metrics,
-                    },
-                    (0 | 1, Some(d), SubSide::Left) => pad(d, 0)?,
-                    (0 | 1, Some(d), SubSide::Right) => pad(d, d)?,
-                    (n, None, SubSide::Left) => pad(n as u8, 1)?,
-                    (n, None, SubSide::Right) => pad(n as u8, n as u8)?,
-                    (n, Some(d), side) => {
-                        let (start, end) = match side {
-                            SubSide::Left => (0, (d as f32 / 2.0).floor() as u8),
-                            SubSide::Right => ((d as f32 / 2.0).ceil() as u8, d),
-                        };
-                        (start..=end)
-                            .find(|&i| grade_size(d, i) == n)
-                            .map(|i| pad(d, i))
-                            .transpose()?
-                            .ok_or_else(|| {
-                                env.error(format!(
-                                    "{n} is not a valid blade size for {d} dimensions"
-                                ))
-                            })?
-                    }
-                };
-                val.meta_mut().ga_spec = Some(spec);
-                env.push(val);
+                let arr = env
+                    .pop(1)?
+                    .make_multivector(metrics, dims, side)
+                    .map_err(|e| env.error(e))?;
+                env.push(arr);
             }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

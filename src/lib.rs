@@ -213,10 +213,6 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// A Uiua identifier
 pub type Ident = ecow::EcoString;
 
-fn is_default<T: Default + PartialEq>(v: &T) -> bool {
-    v == &T::default()
-}
-
 const _: () = {
     assert!(
         size_of::<usize>() >= size_of::<u32>(),

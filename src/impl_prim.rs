@@ -47,7 +47,6 @@ macro_rules! impl_primitive {
             MaxRank(usize),
             BothImpl(Subscript<u32>),
             UnBothImpl(Subscript<u32>),
-            Ga(ga::GaOp, ga::Spec),
         }
 
         impl ImplPrimitive {
@@ -62,7 +61,6 @@ macro_rules! impl_primitive {
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) | ImplPrimitive::MaxRank(n) => *n,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 2,
-                    ImplPrimitive::Ga(op, _) => op.args(),
                     ImplPrimitive::MultiJoin(n) => *n,
                     _ => return None
                 })
@@ -76,7 +74,6 @@ macro_rules! impl_primitive {
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) | ImplPrimitive::MaxRank(n) => *n + 1,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 1,
-                    ImplPrimitive::Ga(op, _) => op.outputs(),
                     _ if self.modifier_args().is_some() => return None,
                     _ => 1
                 })
@@ -277,6 +274,7 @@ impl_primitive!(
     (2(1), ValidateTypeOld),
     (2(0), ValidateTypeConsume),
     (2(0), TestAssert, Impure),
+    (1, MultivectorImpl(ga::Spec, SubSide)),
     (2, ValidateImpl(Option<usize>, Option<SubSide>)),
     /// Validate that a non-boxed variant field has a valid type and rank
     (1, ValidateNonBoxedVariant),

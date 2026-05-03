@@ -9,83 +9,9 @@ use ecow::{EcoVec, eco_vec};
 use serde::*;
 
 use crate::{
-    Array, Boxed, Primitive, Shape, Uiua, UiuaResult, Value, algorithm::pervade::derive_new_shape,
+    Array, Boxed, Shape, Uiua, UiuaResult, Value, algorithm::pervade::derive_new_shape,
     grid_fmt::GridFmt, is_default,
 };
-
-macro_rules! ga_op {
-    ($(($args:literal $(($outputs:literal))?, $name:ident)),* $(,)?) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-        pub enum GaOp {
-            $($name,)*
-        }
-
-        impl GaOp {
-            pub fn args(&self) -> usize {
-                match self {
-                    $(GaOp::$name => $args,)*
-                }
-            }
-            pub fn outputs(&self) -> usize {
-                match self {
-                    $($(GaOp::$name => $outputs,)?)*
-                    _ => 1
-                }
-            }
-        }
-    };
-}
-
-ga_op!(
-    (1, GeometricMagnitude),
-    (1, GeometricNormalize),
-    (1, GeometricSqrt),
-    (1, GeometricReverse),
-    (1, GeometricDual),
-    (2, GeometricAdd),
-    (2, GeometricSub),
-    (2, GeometricProduct),
-    (2, GeometricInner),
-    (2, GeometricWedge),
-    (2, GeometricRegressive),
-    (2, GeometricDivide),
-    (2, GeometricRotor),
-    (2, GeometricSandwich),
-    (2, PadBlades),
-    (2, ExtractBlades),
-    (2, GeometricCouple),
-    (1(2), GeometricUnCouple),
-    (1, GeometricParse),
-    (1, GeometricUnParse),
-);
-
-impl fmt::Display for GaOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use {GaOp::*, Primitive::*};
-        match self {
-            GeometricMagnitude => write!(f, "{Geometric}{Abs}"),
-            GeometricNormalize => write!(f, "{Geometric}{Sign}"),
-            GeometricSqrt => write!(f, "{Geometric}{Sqrt}"),
-            GeometricReverse => write!(f, "{Geometric}{Neg}"),
-            GeometricDual => write!(f, "{Geometric}{Not}"),
-            GeometricAdd => write!(f, "{Geometric}{Add}"),
-            GeometricSub => write!(f, "{Geometric}{Sub}"),
-            GeometricProduct => write!(f, "{Geometric}{Mul}"),
-            GeometricInner => write!(f, "{Geometric}{Modulo}"),
-            GeometricWedge => write!(f, "{Geometric}{Min}"),
-            GeometricRegressive => write!(f, "{Geometric}{Max}"),
-            GeometricDivide => write!(f, "{Geometric}{Div}"),
-            GeometricRotor => write!(f, "{Geometric}{Atan}"),
-            GeometricSandwich => write!(f, "{Geometric}{Rotate}"),
-            PadBlades => write!(f, "{Geometric}{Anti}{Select}"),
-            ExtractBlades => write!(f, "{Geometric}{Select}"),
-            GeometricCouple => write!(f, "{Geometric}{Couple}"),
-            GeometricUnCouple => write!(f, "{Geometric}{Un}{Couple}"),
-            GeometricParse => write!(f, "{Geometric}{Parse}"),
-            GeometricUnParse => write!(f, "{Geometric}{Un}{Parse}"),
-        }
-    }
-}
 
 /// Specification for the kind of geometric algebra to perform
 #[derive(
@@ -98,16 +24,21 @@ pub struct Spec {
     #[serde(skip_serializing_if = "is_default", rename = "m")]
     pub metrics: Metrics,
 }
-impl Spec {
-    pub fn merge(&mut self, other: Self) -> Result<(), &'static str> {
-        if self.dims.zip(other.dims).is_some_and(|(a, b)| a != b) {
-            return Err("different number of dimensions");
-        }
-        if self.metrics != other.metrics {
-            return Err("incompatible metrics");
-        }
-        self.dims = self.dims.or(other.dims);
-        Ok(())
+
+pub(crate) fn dyadic_spec(a: &Value, b: &Value) -> Option<Result<Spec, &'static str>> {
+    match (a.meta.ga_spec, b.meta.ga_spec) {
+        (None, None) => None,
+        (Some(s), None) | (None, Some(s)) => Some(Ok(s)),
+        (Some(mut a), Some(b)) => Some({
+            if a.dims.zip(b.dims).is_some_and(|(a, b)| a != b) {
+                Err("different number of dimensions")
+            } else if a.metrics != b.metrics {
+                Err("incompatible metrics")
+            } else {
+                a.dims = a.dims.or(b.dims);
+                Ok(a)
+            }
+        }),
     }
 }
 
@@ -252,7 +183,7 @@ fn dim_selector(dims: u8, elem_size: usize, env: &Uiua) -> UiuaResult<(Sel, Mode
     Ok((sel, this_mode))
 }
 
-fn grade_size(dims: u8, grade: u8) -> usize {
+pub(crate) fn grade_size(dims: u8, grade: u8) -> usize {
     combinations(dims as usize, grade as usize, false) as usize
 }
 
@@ -479,7 +410,7 @@ pub fn dual(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
 }
 
 fn dual_impl(dims: u8, pseu: Arg, arg: Arg, env: &Uiua) -> UiuaResult<Array<f64>> {
-    product_impl_not_transposed(dims, Metrics::EUCLIDEAN, 1 << dims, false, pseu, arg, env)
+    product_impl_not_transposed(dims, Metrics::VANILLA, 1 << dims, false, pseu, arg, env)
 }
 
 pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -890,12 +821,23 @@ fn blade_name(dims: u8, mask: usize) -> String {
 pub struct Metrics(u32);
 impl Default for Metrics {
     fn default() -> Self {
-        Metrics::EUCLIDEAN
+        Metrics::VANILLA
     }
 }
 impl Metrics {
     pub const COUNT: usize = size_of::<u32>() << 3 >> 1;
-    pub const EUCLIDEAN: Self = Self::all(1);
+    pub const VANILLA: Self = Self::all(1);
+    pub const PROJECTIVE: Self = {
+        let mut metrics = Self::all(1);
+        metrics.set(0, 1);
+        metrics
+    };
+    pub const CONFORMAL: Self = {
+        let mut metrics = Self::all(1);
+        metrics.set(0, -1);
+        metrics
+    };
+    pub const SPACETIME: Self = Self::all(-1);
     pub const NULL: Self = Self::all(0);
     pub const fn all(val: i8) -> Self {
         let mut metrics = Self(0);
@@ -1002,38 +944,25 @@ pub fn metrics_from_val(val: &Value) -> Result<Metrics, String> {
     })
 }
 
-pub fn pad_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+pub fn pad_blades(spec: Spec, grade: u8, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let Some(dims) = spec.dims else {
         return Err(env.error("Blade padding requires a specified number of dimensions"));
     };
     // Process grades
-    let grades = grades.as_bytes(env, "Grades must be a list of natural numbers")?;
-    for &grade in &*grades {
-        if grade > dims {
-            return Err(env.error(format!(
-                "Cannot pad grade {grade} blades in {dims} dimensions"
-            )));
-        }
+    if grade > dims {
+        return Err(env.error(format!(
+            "Cannot pad grade {grade} blades in {dims} dimensions"
+        )));
     }
     // Process arg
     let (arr, semi, size) = ga_arg(val, env)?;
     // Validate size
-    let correct_size: usize = grades.iter().map(|&grade| grade_size(dims, grade)).sum();
+    let correct_size: usize = grade_size(dims, grade);
     if size != correct_size {
-        return Err(env.error(if let [grade] = *grades {
-            format!(
-                "{dims}D multivector should have {correct_size} \
-                grade-{grade} blades, but the array has {size}"
-            )
-        } else {
-            format!(
-                "{dims}D multivector should have {correct_size} \
-                blades for the given selector, but the array has {size}"
-            )
-        }));
-    }
-    if (grades.iter().enumerate()).any(|(i, grade)| grades[i + 1..].contains(grade)) {
-        return Err(env.error("Selected grades must be unique"));
+        return Err(env.error(format!(
+            "{dims}D multivector should have {correct_size} \
+            grade-{grade} blades, but the array has {size}"
+        )));
     }
 
     let full_size = 1usize << dims;
@@ -1042,25 +971,9 @@ pub fn pad_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> UiuaResu
     let mut new_data = eco_vec![0.0; new_shape.elements()];
     let slice = new_data.make_mut();
 
-    if let [grade] = *grades {
-        let left_size: usize = (0..grade).map(|g| grade_size(dims, g)).sum();
-        for (src, dst) in (arr.data.chunks_exact(size)).zip(slice.chunks_exact_mut(full_size)) {
-            dst[left_size..][..size].copy_from_slice(src);
-        }
-    } else {
-        let mut left_sizes = Vec::with_capacity(grades.len());
-        for &grade in &*grades {
-            let left_size: usize = (0..grade).map(|g| grade_size(dims, g)).sum();
-            let size = grade_size(dims, grade);
-            left_sizes.push((left_size, size));
-        }
-        for (src, dst) in (arr.data.chunks_exact(size)).zip(slice.chunks_exact_mut(full_size)) {
-            let mut offset = 0;
-            for &(left_size, size) in &left_sizes {
-                dst[left_size..][..size].copy_from_slice(&src[offset..][..size]);
-                offset += size;
-            }
-        }
+    let left_size: usize = (0..grade).map(|g| grade_size(dims, g)).sum();
+    for (src, dst) in (arr.data.chunks_exact(size)).zip(slice.chunks_exact_mut(full_size)) {
+        dst[left_size..][..size].copy_from_slice(src);
     }
     Ok(Array::new(new_shape, new_data))
 }

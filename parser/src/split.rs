@@ -40,6 +40,7 @@ static ALIASES: LazyLock<HashMap<Primitive, &[&str]>> = LazyLock::new(|| {
         (Primitive::Repr, &["rpr"]),
         (Primitive::Sign, &["sgn"]),
         (Primitive::Backward, &["bw"]),
+        (Primitive::Multivector, &["mv"]),
     ]
     .into()
 });

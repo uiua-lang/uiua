@@ -679,6 +679,11 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 ..params
             };
             self.data[0].fmt_grid(params)
+        } else if self.rank() == 1
+            && let Some(spec) = self.meta.ga_spec
+        {
+            // Multivector
+            todo!()
         } else if self.shape == [0] && !self.is_map() {
             // Empty list
             let (left, right) = T::grid_fmt_delims();

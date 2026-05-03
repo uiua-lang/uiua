@@ -14,15 +14,16 @@ use std::{
     collections::HashMap,
     f64::consts::{PI, TAU},
     iter::repeat_n,
+    mem::take,
     sync::OnceLock,
 };
 
 use rand::prelude::*;
 
 use crate::{
-    FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive, Shape, SubSide, SysOp, Uiua,
-    UiuaErrorKind, UiuaResult,
-    algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
+    ArrayValue, FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive, Shape, SubSide, SysOp,
+    Uiua, UiuaErrorKind, UiuaResult,
+    algorithm::{self, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
     fill::FillFrame,
@@ -1355,38 +1356,53 @@ impl ImplPrimitive {
                 }
                 env.push(val);
             }
-            &ImplPrimitive::Ga(op, spec) => match op {
-                GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,
-                GaOp::GeometricInner => env.dyadic_oo_env_with(spec, ga::inner_product)?,
-                GaOp::GeometricWedge => env.dyadic_oo_env_with(spec, ga::wedge_product)?,
-                GaOp::GeometricRegressive => {
-                    env.dyadic_oo_env_with(spec, ga::regressive_product)?
+            &ImplPrimitive::MultivectorImpl(mut spec, side) => {
+                let mut val = env.pop(1)?;
+                if val.type_id() != f64::TYPE_ID {
+                    return Err(env.error(format!(
+                        "Cannot make multivector from {} array",
+                        val.type_name()
+                    )));
                 }
-                GaOp::GeometricDivide => env.dyadic_oo_env_with(spec, ga::divide)?,
-                GaOp::GeometricMagnitude => env.monadic_env_with(spec, ga::magnitude)?,
-                GaOp::GeometricNormalize => env.monadic_env_with(spec, ga::normalize)?,
-                GaOp::GeometricSqrt => env.monadic_env_with(spec, ga::sqrt)?,
-                GaOp::GeometricReverse => env.monadic_env_with(spec, ga::reverse)?,
-                GaOp::GeometricDual => env.monadic_env_with(spec, ga::dual)?,
-                GaOp::GeometricAdd => env.dyadic_oo_env_with(spec, ga::add)?,
-                GaOp::GeometricSub => env.dyadic_oo_env_with(spec, |spec, a, b, env| {
-                    let a = a.neg(env)?;
-                    ga::add(spec, a, b, env)
-                })?,
-                GaOp::GeometricRotor => env.dyadic_oo_env_with(spec, ga::rotor)?,
-                GaOp::GeometricSandwich => env.dyadic_oo_env_with(spec, ga::sandwich)?,
-                GaOp::PadBlades => env.dyadic_oo_env_with(spec, ga::pad_blades)?,
-                GaOp::ExtractBlades => env.dyadic_oo_env_with(spec, ga::extract_blades)?,
-                GaOp::GeometricCouple => env.dyadic_oo_env(ga::couple)?,
-                GaOp::GeometricUnCouple => {
-                    let val = env.pop(1)?;
-                    let (a, b) = ga::uncouple(val, env)?;
-                    env.push(b);
-                    env.push(a);
+                let coef_count = val.shape.last().copied().unwrap_or(1);
+                let mut pad = |spec: ga::Spec, n: u8| -> UiuaResult {
+                    val = ga::pad_blades(spec, n, take(&mut val), env)?.into();
+                    Ok(())
+                };
+                match (coef_count, spec.dims, side) {
+                    (0, ..) => {}
+                    (1, None, _) => {}
+                    (1, Some(_), SubSide::Left) => pad(spec, 0)?,
+                    (1, Some(n), SubSide::Right) => pad(spec, n)?,
+                    (n, None, SubSide::Left) => {
+                        spec.dims = Some(n as u8);
+                        pad(spec, 1)?;
+                    }
+                    (n, None, SubSide::Right) => {
+                        spec.dims = Some(n as u8);
+                        pad(spec, n as u8 - 1)?;
+                    }
+                    (n, Some(d), side) => {
+                        let (start, end) = match side {
+                            SubSide::Left => (0, (d as f32 / 2.0).floor() as u8),
+                            SubSide::Right => ((d as f32 / 2.0).ceil() as u8, d),
+                        };
+                        'find: {
+                            for i in start..=end {
+                                if ga::grade_size(d, i) == n {
+                                    pad(spec, i)?;
+                                    break 'find;
+                                }
+                            }
+                            return Err(env.error(format!(
+                                "{n} is not a valid blade size for {d} dimensions"
+                            )));
+                        }
+                    }
                 }
-                GaOp::GeometricParse => env.monadic_env_with(spec, ga::parse)?,
-                GaOp::GeometricUnParse => env.monadic_env_with(spec, ga::unparse)?,
-            },
+                val.meta_mut().ga_spec = Some(spec);
+                env.push(val);
+            }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {
                     format!(

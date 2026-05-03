@@ -34,7 +34,7 @@ use crate::{
     Primitive, Purity, RunMode, SUBSCRIPT_DIGITS, SemanticComment, SidedSubscript, SigNode,
     Signature, Sp, Span, SubSide, Subscript, SubscriptToken, SysBackend, Uiua, UiuaError,
     UiuaErrorKind, UiuaResult, VERSION, Value,
-    algorithm::ga::{self, Spec},
+    algorithm::ga,
     ast::*,
     check::nodes_sig,
     format::{format_word, format_words},
@@ -2350,6 +2350,10 @@ impl Compiler {
         let spandex = self.add_span(span.clone());
         match prim {
             Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
+            Primitive::Multivector => Node::ImplPrim(
+                ImplPrimitive::MultivectorImpl(ga::Spec::default(), SubSide::Left),
+                spandex,
+            ),
             prim => Node::Prim(prim, spandex),
         }
     }
@@ -2474,6 +2478,31 @@ impl Compiler {
                             }
                             ss.side
                         }),
+                    ),
+                    self.add_span(span),
+                )
+            }
+            Multivector => {
+                use ga::*;
+                let sub = self.validate_subscript(scr);
+                Node::ImplPrim(
+                    ImplPrimitive::MultivectorImpl(
+                        Spec {
+                            dims: sub.value.side.and_then(|ss| ss.n).map(|n| n as u8),
+                            metrics: sub.value.num.map_or(Metrics::VANILLA, |n| match n {
+                                0 => Metrics::PROJECTIVE,
+                                1 => Metrics::CONFORMAL,
+                                -1 => Metrics::SPACETIME,
+                                n => {
+                                    self.add_error(
+                                        span.clone(),
+                                        format!("Invalid GA flavor code {n}"),
+                                    );
+                                    Metrics::VANILLA
+                                }
+                            }),
+                        },
+                        sub.value.side.map(|ss| ss.side).unwrap_or(SubSide::Left),
                     ),
                     self.add_span(span),
                 )

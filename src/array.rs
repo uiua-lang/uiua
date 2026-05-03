@@ -17,7 +17,7 @@ use crate::{
     Boxed, Complex, ExactDoubleIterator, FfiType, HandleKind, Shape, Value, WILDCARD_CHAR,
     WILDCARD_NAN,
     algorithm::{
-        ArrayCmpSlice,
+        ArrayCmpSlice, ga,
         map::{EMPTY_NAN, MapKeys, TOMBSTONE_NAN},
     },
     cowslice::{CowSlice, cowslice},
@@ -58,6 +58,9 @@ pub struct ArrayMetaInner {
     /// The keys of a map array
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub map_keys: Option<MapKeys>,
+    /// The Geometric Algebra space
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ga_spec: Option<ga::Spec>,
     /// The pointer value for FFI
     #[serde(skip)]
     pub pointer: Option<MetaPtr>,
@@ -71,6 +74,7 @@ static DEFAULT_META_INNER: ArrayMetaInner = ArrayMetaInner {
     label: None,
     flags: ArrayFlags::NONE,
     map_keys: None,
+    ga_spec: None,
     pointer: None,
     handle_kind: None,
 };

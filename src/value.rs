@@ -13,7 +13,7 @@ use serde::*;
 
 use crate::{
     Boxed, Complex, Shape, Uiua, UiuaResult,
-    algorithm::{ErrorContext, FillContext, pervade::*},
+    algorithm::{ErrorContext, FillContext, ga, pervade::*},
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
@@ -1983,6 +1983,7 @@ macro_rules! value_dy_impl {
             get_pre: |$get_pre_a:ident, $get_pre_b:ident, $get_pre_left:ident| $get_pre_body:expr,
             handle_pre: |$pre_a:ident: $pre_ty:ty, $pre_b:ident, $handle_val:ident| $handle_body:expr,
         })?
+        $(,{ ga: $ga:path })?
     ) => {
         impl Value {
             #[doc(hidden)]
@@ -1992,6 +1993,11 @@ macro_rules! value_dy_impl {
                 let mut handle_pre: Option<&dyn Fn(&mut Value)> = None;
                 a.match_fill(env);
                 b.match_fill(env);
+                $(
+                    if let Some(spec) = ga::dyadic_spec(&a, &b).transpose().map_err(|e| env.error(e))? {
+                        return $ga(spec, a, b, env).map(Into::into);
+                    }
+                )?
                 $(
                     let get_pre = |$get_pre_a: &mut Value, $get_pre_b: &Value, $get_pre_left: bool| $get_pre_body;
                     let pre_a = get_pre(&mut a, &b, false);
@@ -2133,7 +2139,7 @@ macro_rules! value_dy_math_impl {
     // the result if one of the inputs is a scalar number,
     // reversing the sortedness if the number is negative.
     // The $left parameter determines whether the scalar is the left argument.
-    ($name:ident $(,($($tt:tt)*))? , signed_scalar_sortedness$(($left:expr))?) => {
+    ($name:ident $(,($($tt:tt)*))? , signed_scalar_sortedness$(($left:expr))? $(, {$($after:tt)*})?) => {
         value_dy_math_impl!(
             $name
             $(,($($tt)*))?,
@@ -2171,9 +2177,10 @@ macro_rules! value_dy_math_impl {
                     }
                 },
             }
+            $(,{$($after)*})?
         );
     };
-    ($name:ident $(,($($tt:tt)*))? $(,pre {$($after:tt)*})?) => {
+    ($name:ident $(,($($tt:tt)*))? $(,pre {$($pre_after:tt)*})? $(, {$($after:tt)*})?) => {
         value_dy_impl!(
             $name,
             $($($tt)*)?
@@ -2186,7 +2193,8 @@ macro_rules! value_dy_math_impl {
             (Num, Complex, x_com, f64, crate::Complex),
             (Complex, Byte, com_x, crate::Complex, u8),
             (Byte, Complex, x_com, u8, crate::Complex),
-            $({$($after)*})?
+            $({$($pre_after)*})?
+            $(, {$($after)*})?
         );
     };
 }
@@ -2220,7 +2228,8 @@ value_dy_math_impl!(
         (Char, Byte, char_byte),
         [|meta| meta.flags.is_boolean(), Byte, bool_bool],
     ),
-    signed_scalar_sortedness
+    signed_scalar_sortedness,
+    { ga: ga::product }
 );
 value_dy_math_impl!(
     set_sign,

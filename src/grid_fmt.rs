@@ -1,6 +1,7 @@
 //! Pretty printing Uiua arrays
 
 use std::{
+    any::type_name,
     borrow::Cow,
     collections::HashMap,
     f64::consts::{E, PI, TAU},
@@ -1059,7 +1060,8 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         }
 
         // Add complex marker
-        if T::TYPE_ID == Complex::TYPE_ID && !grid.iter().flatten().any(|&c| c == 'ℂ' || c == 'i')
+        if type_name::<T>() == type_name::<Complex>()
+            && !grid.iter().flatten().any(|&c| c == 'ℂ' || c == 'i')
         {
             if self.shape.is_empty() {
                 grid[0].push('ℂ');
@@ -1076,6 +1078,28 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     row.rotate_right(2);
                 }
                 grid[0][0] = 'ℂ';
+            }
+        }
+        // Add multivector marker
+        #[cfg(feature = "ga")]
+        if type_name::<T>() == type_name::<crate::Multivector>()
+            && !(grid.iter().flatten()).any(|c| crate::SUBSCRIPT_DIGITS.contains(c))
+        {
+            if self.shape.is_empty() {
+                grid[0].push('𝕍');
+            } else if grid.len() == 1 {
+                let offset = outlined as usize;
+                grid[0].insert(offset, '𝕍');
+                grid[0].insert(offset + 1, ' ');
+            } else if outlined {
+                grid[0][2] = '𝕍';
+            } else {
+                for row in &mut grid {
+                    row.push(' ');
+                    row.push(' ');
+                    row.rotate_right(2);
+                }
+                grid[0][0] = '𝕍';
             }
         }
 

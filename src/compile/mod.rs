@@ -30,10 +30,11 @@ use crate::{
     Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan,
     CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
     ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GitTarget, Ident, ImplPrimitive,
-    IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass,
-    Primitive, Purity, RunMode, SUBSCRIPT_DIGITS, SemanticComment, SidedSubscript, SigNode,
-    Signature, Sp, Span, SubSide, Subscript, SubscriptNumber, SubscriptToken, SysBackend, Uiua,
-    UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
+    IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript,
+    OTHER_SUBSCRIPT_NUMBERS, PrimClass, Primitive, Purity, RunMode, SUBSCRIPT_DIGITS,
+    SemanticComment, SidedSubscript, SigNode, Signature, Sp, Span, SubSide, Subscript,
+    SubscriptNumber, SubscriptToken, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
+    VERSION, Value,
     algorithm::ga::{self, Spec},
     ast::*,
     check::nodes_sig,
@@ -2017,12 +2018,15 @@ impl Compiler {
         } else if let Some(i) = ident
             .find('₋')
             .or_else(|| ident.find(SUBSCRIPT_DIGITS))
-            .or_else(|| ident.find(['ᵢ']))
+            .or_else(|| ident.find(OTHER_SUBSCRIPT_NUMBERS))
             .filter(|&i| !ident[i..].contains(['⌞', '⌟']))
         {
             // Name has a subscript
             let n = match &ident[i..] {
                 "ᵢ" => SubscriptNumber::I,
+                "₋ᵢ" => SubscriptNumber::NegI,
+                "ᵣ" => SubscriptNumber::R,
+                "₋ᵣ" => SubscriptNumber::NegR,
                 "₋" => {
                     self.add_error(span.clone(), "Subscript is incomplete");
                     SubscriptNumber::Int(0)
@@ -2773,7 +2777,10 @@ impl Compiler {
     ) -> Option<i32> {
         match self.numeric_subscript_n(num, span)? {
             SubscriptNumber::Int(i) => Some(i),
-            SubscriptNumber::I | SubscriptNumber::NegI => {
+            SubscriptNumber::I
+            | SubscriptNumber::NegI
+            | SubscriptNumber::R
+            | SubscriptNumber::NegR => {
                 self.add_error(
                     span.clone(),
                     format!("Imaginary subscripts are not allowed for {for_what}"),
@@ -2818,7 +2825,12 @@ impl Compiler {
     ) -> Option<SubNOrSide> {
         Some(match self.subscript_n_or_side(sub, for_what)? {
             SubNOrSide::N(SubscriptNumber::Int(i)) => SubNOrSide::N(i),
-            SubNOrSide::N(SubscriptNumber::I | SubscriptNumber::NegI) => {
+            SubNOrSide::N(
+                SubscriptNumber::I
+                | SubscriptNumber::NegI
+                | SubscriptNumber::R
+                | SubscriptNumber::NegR,
+            ) => {
                 self.add_error(
                     sub.span.clone(),
                     format!("Imaginary subscripts are not allowed for {for_what}"),

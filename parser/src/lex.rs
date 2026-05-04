@@ -21,6 +21,7 @@ use crate::{
 
 /// Subscript digit characters
 pub const SUBSCRIPT_DIGITS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
+pub const OTHER_SUBSCRIPT_NUMBERS: [char; 2] = ['ᵣ', 'ᵢ'];
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub(crate) struct FormatSubscript(pub i32);
 impl fmt::Display for FormatSubscript {
@@ -1577,6 +1578,7 @@ impl<'a> Lexer<'a> {
             for (ascii, glyph, val, allow_neg) in [
                 ("n", "ₙ", None, false),
                 ("i", "ᵢ", Some(SubscriptNumber::I), true),
+                ("r", "ᵣ", Some(SubscriptNumber::R), true),
             ] {
                 if (!got_neg || allow_neg)
                     && (*can_parse_ascii && self.next_char_exact(ascii)
@@ -1641,6 +1643,7 @@ impl<'a> Lexer<'a> {
         match init {
             "ₙ" => num = Some(None),
             "ᵢ" => num = Some(Some(SubscriptNumber::I)),
+            "ᵣ" => num = Some(Some(SubscriptNumber::R)),
             "⌞" => side = Some(SubSide::Left),
             "⌟" => side = Some(SubSide::Right),
             "₋" => got_neg = true,
@@ -1876,7 +1879,9 @@ pub fn is_custom_glyph(c: &str) -> bool {
 }
 
 fn is_formatted_subscript(c: &str) -> bool {
-    "₋⌞⌟ₙᵢ".contains(c) || c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c))
+    "₋⌞⌟ₙ".contains(c)
+        || c.chars()
+            .all(|c| SUBSCRIPT_DIGITS.contains(&c) || OTHER_SUBSCRIPT_NUMBERS.contains(&c))
 }
 
 pub(crate) fn canonicalize_ident(ident: &str) -> Ident {

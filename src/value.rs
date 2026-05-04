@@ -1593,6 +1593,8 @@ impl From<SubscriptNumber> for Value {
             SubscriptNumber::Int(i) => i.into(),
             SubscriptNumber::I => Complex::I.into(),
             SubscriptNumber::NegI => (-Complex::I).into(),
+            SubscriptNumber::R => Complex::ONE.into(),
+            SubscriptNumber::NegR => (-Complex::ONE).into(),
         }
     }
 }

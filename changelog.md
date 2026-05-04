@@ -9,8 +9,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`oklch`](https://uiua.org/docs/oklch) function
 - Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape
 - Add `$_` syntax to remove labels
-- Add `ᵢ` subscripts, which format from `,i`
-  - Only currently compatible with dyadic pervasives
+- Add `ᵢ` and `ᵣ` subscripts, which format from `,i` and `,r` respectively
+  - Only currently compatible with dyadic pervasives and custom subscripts, but may be used for other things in the future
 - Add experimental [custom subscript functions](<https://www.uiua.org/docs/experimental#custom-subscript-functions>)
   - Remove deprecated `log ₙ` function, which syntactically conflicted
 - Add experimental [Type Checking](https://uiua.org/docs/experimental#type-checking)

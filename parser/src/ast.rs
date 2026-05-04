@@ -896,6 +896,8 @@ impl From<SubscriptNumber> for NumWord {
             SubscriptNumber::Int(i) => NumWord::Real(i.into()),
             SubscriptNumber::I => NumWord::Complex(Complex::I),
             SubscriptNumber::NegI => NumWord::Complex(-Complex::I),
+            SubscriptNumber::R => NumWord::Complex(Complex::ONE),
+            SubscriptNumber::NegR => NumWord::Complex(-Complex::ONE),
         }
     }
 }

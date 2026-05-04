@@ -893,6 +893,10 @@ pub mod scalar_neg {
     pub fn com(a: Complex) -> Complex {
         -a
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        -a
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot negate {a}")
     }

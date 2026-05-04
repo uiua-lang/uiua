@@ -1217,7 +1217,7 @@ impl ArrayValue for Complex {
 impl ArrayValue for crate::Multivector {
     const NAME: &'static str = "multivector";
     const SYMBOL: char = '𝕍';
-    const TYPE_ID: u8 = 5;
+    const TYPE_ID: u8 = 3;
     fn get_scalar_fill(fill: &Fill) -> Result<FillValue<Self>, &'static str> {
         fill.multivector_scalar()
     }

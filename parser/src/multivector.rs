@@ -373,6 +373,16 @@ impl<const N: usize> PartialEq<[f64; N]> for Multivector {
     }
 }
 
+impl Neg for Multivector {
+    type Output = Self;
+    fn neg(mut self) -> Self::Output {
+        for c in &mut self {
+            *c = -*c;
+        }
+        self
+    }
+}
+
 impl AddAssign<f64> for Multivector {
     fn add_assign(&mut self, rhs: f64) {
         if self.coefs.is_empty() {

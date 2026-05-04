@@ -1807,6 +1807,8 @@ value_mon_impl!(
     [Num, num],
     (Byte, byte),
     [Complex, com],
+    #[cfg(feature = "ga")]
+    (Mv, mv),
     [Char, char]
 );
 value_mon_impl!(

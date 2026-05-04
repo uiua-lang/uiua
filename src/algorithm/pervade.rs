@@ -850,6 +850,10 @@ pub mod not {
     pub fn com(a: Complex) -> Complex {
         1.0 - a
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.dualed()
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot not {a}")
     }
@@ -916,6 +920,10 @@ pub mod scalar_abs {
     pub fn com(a: Complex) -> f64 {
         a.abs()
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> f64 {
+        a.magnitude()
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot take the absolute value of {a}")
     }
@@ -944,6 +952,10 @@ pub mod sign {
     }
     pub fn com(a: Complex) -> Complex {
         a.normalize()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.normalized()
     }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot get the sign of {a}")
@@ -1160,7 +1172,6 @@ pub mod exp2 {
     pub fn com(a: Complex) -> Complex {
         Complex::from(2.0).powc(a)
     }
-
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot raise {a} to the 2nd")
     }
@@ -1177,7 +1188,6 @@ pub mod exp10 {
     pub fn com(a: Complex) -> Complex {
         Complex::from(10.0).powc(a)
     }
-
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot raise {a} to the 10th")
     }
@@ -1194,7 +1204,6 @@ pub mod log2 {
     pub fn com(a: Complex) -> Complex {
         a.log(2.0)
     }
-
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot get the log₂ of {a}")
     }
@@ -1211,7 +1220,6 @@ pub mod log10 {
     pub fn com(a: Complex) -> Complex {
         a.log(10.0)
     }
-
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot get the log₁₀ of {a}")
     }
@@ -1229,7 +1237,10 @@ pub mod square_abs {
     pub fn com(a: Complex) -> f64 {
         a.re * a.re + a.im * a.im
     }
-
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> f64 {
+        a.magnitude().powi(2)
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot square {a}")
     }
@@ -1257,6 +1268,10 @@ pub mod neg_abs {
     }
     pub fn com(a: Complex) -> f64 {
         -a.abs()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> f64 {
+        -a.magnitude()
     }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot take the absolute value of {a}")

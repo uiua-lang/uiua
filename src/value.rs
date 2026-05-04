@@ -1682,6 +1682,12 @@ impl<T> OutputScalarType for fn(T) -> Complex {
         Scalar::Complex
     }
 }
+#[cfg(feature = "ga")]
+impl<T> OutputScalarType for fn(T) -> crate::Multivector {
+    fn scalar(&self) -> Scalar {
+        Scalar::Multivector
+    }
+}
 
 impl<A, B> OutputScalarType for fn(A, B) -> f64 {
     fn scalar(&self) -> Scalar {
@@ -1721,6 +1727,9 @@ macro_rules! scalar_mon_impl {
             #[doc(hidden)]
             pub fn $name(self) -> Result<Self, String> {
                 use Scalar::{*, Num as Byte};
+                #[cfg(feature = "ga")]
+                #[allow(unused_imports)]
+                use Scalar::Multivector as Mv;
                 Ok(match self {
                     $(
                         #[allow(unreachable_patterns)]
@@ -1744,7 +1753,7 @@ macro_rules! value_mon_impl {
         $name:ident,
         $(
             $([$(|$meta:ident| $pred:expr,)* $in_place:ident, $f:ident])?
-            $(($make_new:ident, $f2:ident))?
+            $($(#[$attr:meta])? ($make_new:ident, $f2:ident))?
         ),*
         $(|$sorted_val:ident, $sorted_flags:ident| $sorted_body:expr)?
     ) => {
@@ -1760,7 +1769,7 @@ macro_rules! value_mon_impl {
                         }
                         array.into()
                     },)*)*
-                    $($(Self::$make_new(array) => {
+                    $($($(#[$attr])? Self::$make_new(array) => {
                         let mut new = EcoVec::with_capacity(array.element_count());
                         for val in array.data {
                             new.push($name::$f2(val));
@@ -1805,6 +1814,8 @@ value_mon_impl!(
     [|meta| meta.flags.is_boolean(), Byte, bool],
     (Byte, byte),
     [Complex, com],
+    #[cfg(feature = "ga")]
+    (Mv, mv),
     |val, flags| val.or_sorted_flags_rev(flags)
 );
 value_mon_impl!(
@@ -1812,6 +1823,8 @@ value_mon_impl!(
     [Num, num],
     (Byte, byte),
     (Complex, com),
+    #[cfg(feature = "ga")]
+    (Mv, mv),
     [Char, char]
 );
 value_mon_impl!(
@@ -1819,6 +1832,8 @@ value_mon_impl!(
     [Num, num],
     [Byte, byte],
     [Complex, com],
+    #[cfg(feature = "ga")]
+    (Mv, mv),
     (Char, char),
     |val, flags| if val.rank() < 2 && !matches!(val, Value::Complex(_)) {
         val.meta.or_sorted_flags(flags)
@@ -1871,12 +1886,21 @@ value_mon_impl!(exp2, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(exp10, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(log2, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(log10, [Num, num], (Byte, byte), [Complex, com]);
-value_mon_impl!(square_abs, [Num, num], (Byte, byte), (Complex, com));
+value_mon_impl!(
+    square_abs,
+    [Num, num],
+    (Byte, byte),
+    (Complex, com),
+    #[cfg(feature = "ga")]
+    (Mv, mv),
+);
 value_mon_impl!(
     neg_abs,
     [Num, num],
     (Byte, byte),
     (Complex, com),
+    #[cfg(feature = "ga")]
+    (Mv, mv),
     [Char, char]
 );
 

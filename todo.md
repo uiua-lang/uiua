@@ -1,6 +1,10 @@
 # Uiua Todo
 
 # 0.19
+- Multivector scalar
+  - Update tests
+  - Update docs
+  - Inverses
 - Type system
   - Tests
   - Data def types
@@ -10,7 +14,6 @@
 - Macro signature comments
 - Data def method to construct with validators but not defaults/initializers
 - Optimize `rows match`
-- Improve GA API
 - `first group/partition` optimization
 - `under group/partition inventory` optimization
 

@@ -1389,30 +1389,58 @@ impl ImplPrimitive {
                     (0, ..) => {
                         Array::new(new_shape, eco_vec![Mv::default().flavor(flavor);elem_count])
                     }
-                    (1, _, SubSide::Left) | (1, None, SubSide::Right) => Array::new(
-                        new_shape,
-                        arr.data.into_iter().map(|n| Mv::from(n).flavor(flavor)),
-                    ),
-                    (1, Some(d), SubSide::Right) => Array::new(
+                    (1, _, None | Some(SubSide::Left)) | (1, None, Some(SubSide::Right)) => {
+                        Array::new(
+                            new_shape,
+                            arr.data.into_iter().map(|n| Mv::from(n).flavor(flavor)),
+                        )
+                    }
+                    (1, Some(d), Some(SubSide::Right)) => Array::new(
                         new_shape,
                         arr.data
                             .into_iter()
                             .map(|n| Mv::pseudoscalar(d, n).flavor(flavor)),
                     ),
-                    (n, None, side) => {
-                        if n as u8 > MAX_DIMS {
+                    (n, None, None) => {
+                        if n > MAX_DIMS as usize {
                             return Err(env.error(format!(
                                 "{n} multivector dimensions \
                                 (from a {old_shape} array) would be too many"
                             )));
                         }
+                        Array::new(
+                            new_shape,
+                            arr.data
+                                .chunks_exact(n)
+                                .map(|n| Mv::vector(n).flavor(flavor)),
+                        )
+                    }
+                    (n, None, Some(side)) => {
+                        let d = (n as f32 * 2.0).log2();
+                        if d.fract() != 0.0 {
+                            return Err(env.error(format!(
+                                "Cannot create {}-bladed multivector from {n} blades",
+                                match side {
+                                    SubSide::Left => "even",
+                                    SubSide::Right => "odd",
+                                }
+                            )));
+                        }
+                        let d = d as usize;
+                        if d > MAX_DIMS as usize {
+                            return Err(env.error(format!(
+                                "{n} multivector dimensions \
+                                (from a {old_shape} array) would be too many"
+                            )));
+                        }
+                        let d = d as u8;
                         let f = match side {
-                            SubSide::Left => Mv::vector,
-                            SubSide::Right => Mv::n_1_blades,
+                            SubSide::Left => Mv::blades_left,
+                            SubSide::Right => Mv::blades_right,
                         };
                         Array::new(
                             new_shape,
-                            arr.data.chunks_exact(n).map(|n| f(n).flavor(flavor)),
+                            (arr.data.chunks_exact(n)).map(|n| f(d, n).unwrap().flavor(flavor)),
                         )
                     }
                     (n, Some(d), side) => {
@@ -1421,7 +1449,7 @@ impl ImplPrimitive {
                                 env.error(format!("{d} multivector dimensions would be too many"))
                             );
                         }
-                        let f = match side {
+                        let f = match side.unwrap_or(SubSide::Left) {
                             SubSide::Left => Mv::blades_left,
                             SubSide::Right => Mv::blades_right,
                         };

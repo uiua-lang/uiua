@@ -2365,7 +2365,7 @@ impl Compiler {
         match prim {
             Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
             Primitive::Multivector => Node::ImplPrim(
-                ImplPrimitive::MvImpl(GaFlavor::Vanilla, None, SubSide::Left),
+                ImplPrimitive::MvImpl(GaFlavor::Vanilla, None, None),
                 spandex,
             ),
             prim => Node::Prim(prim, spandex),
@@ -2521,7 +2521,7 @@ impl Compiler {
                     }
                     d as u8
                 });
-                let side = sub.value.side.map_or(SubSide::Left, |ss| ss.side);
+                let side = sub.value.side.map(|ss| ss.side);
                 let span = self.add_span(span);
                 Node::ImplPrim(ImplPrimitive::MvImpl(flavor, dims, side), span)
             }

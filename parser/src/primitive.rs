@@ -304,6 +304,13 @@ impl Primitive {
             Each => || format!("use {} instead", Rows.format()),
             Unique => || format!("use {Occurrences}₁"),
             IndexOf => || format!("use {} {} instead", Backward.format(), IndexIn.format()),
+            Complex => || {
+                format!(
+                    "use +×ᵢ or {}{} (written as `comp` or `mv,i`) instead",
+                    Multivector,
+                    SubscriptNumber::I
+                )
+            },
             _ => return None,
         })
     }

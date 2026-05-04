@@ -250,7 +250,7 @@ impl_primitive!(
     (1, Log2),
     (1, Log10),
     (1, Conj),
-    (1, ReConj),
+    (1, NegConj),
     (1, Dual),
     (1, UnDual),
     // Implementation details

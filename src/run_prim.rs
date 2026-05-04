@@ -611,7 +611,7 @@ impl ImplPrimitive {
             ImplPrimitive::Log2 => env.monadic_env(Value::log2)?,
             ImplPrimitive::Log10 => env.monadic_env(Value::log10)?,
             ImplPrimitive::Conj => env.monadic_env(Value::conj)?,
-            ImplPrimitive::ReConj => env.monadic_env(Value::reconj)?,
+            ImplPrimitive::NegConj => env.monadic_env(Value::negconj)?,
             ImplPrimitive::Dual => env.monadic_env(Value::dual)?,
             ImplPrimitive::UnDual => env.monadic_env(Value::undual)?,
             ImplPrimitive::UnPop => {

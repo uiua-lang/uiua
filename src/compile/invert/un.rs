@@ -1405,7 +1405,7 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         Log2 => ImplPrim(Exp2, span),
         Log10 => ImplPrim(Exp10, span),
         Conj => ImplPrim(Conj, span),
-        ReConj => ImplPrim(ReConj, span),
+        NegConj => ImplPrim(NegConj, span),
         Dual => ImplPrim(UnDual, span),
         UnDual => ImplPrim(Dual, span),
         SortDown => ImplPrim(UnSort, span),

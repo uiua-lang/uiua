@@ -117,8 +117,8 @@ impl Complex {
         self.im = -self.im;
         self
     }
-    /// Calculate the real conjugate of a complex number
-    pub fn re_conj(mut self) -> Self {
+    /// Calculate the negative conjugate of a complex number
+    pub fn neg_conj(mut self) -> Self {
         self.re = -self.re;
         self
     }

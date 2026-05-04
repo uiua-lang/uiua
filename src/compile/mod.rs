@@ -2560,7 +2560,7 @@ impl Compiler {
                         };
                         Node::from_iter([Node::new_push(rotation), self.primitive(Mul, span)])
                     }
-                    SubNOrSide::Side(SubSide::Left) => Node::ImplPrim(ReConj, self.add_span(span)),
+                    SubNOrSide::Side(SubSide::Left) => Node::ImplPrim(NegConj, self.add_span(span)),
                     SubNOrSide::Side(SubSide::Right) => Node::ImplPrim(Conj, self.add_span(span)),
                 }
             }

@@ -1183,11 +1183,11 @@ pub mod conj {
         format!("Cannot get the conjugate of {a}")
     }
 }
-pub mod reconj {
+pub mod negconj {
     use super::*;
 
     pub fn com(a: impl Into<Complex>) -> Complex {
-        a.into().re_conj()
+        a.into().neg_conj()
     }
     #[cfg(feature = "ga")]
     pub fn mv(a: crate::Multivector) -> crate::Multivector {
@@ -1200,7 +1200,7 @@ pub mod reconj {
         com(a)
     }
     pub fn error<T: Display>(a: T) -> String {
-        format!("Cannot get the real conjugate of {a}")
+        format!("Cannot get the negative conjugate of {a}")
     }
 }
 pub mod dual {

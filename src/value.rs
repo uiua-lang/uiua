@@ -1894,7 +1894,7 @@ value_mon_impl!(
     (Mv, mv)
 );
 value_mon_impl!(
-    reconj,
+    negconj,
     (Num, num),
     (Byte, byte),
     [Complex, com],

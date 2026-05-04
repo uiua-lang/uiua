@@ -681,6 +681,8 @@ pub enum Scalar {
     Nat,
     Num,
     Complex,
+    #[cfg(feature = "ga")]
+    Multivector,
     Char,
     Stream,
     Box(ScalarBox),
@@ -706,6 +708,8 @@ impl Scalar {
             1.0 => Scalar::Char,
             2.0 => Scalar::Box(ScalarBox::Any),
             3.0 => Scalar::Complex,
+            #[cfg(feature = "ga")]
+            5.0 => Scalar::Multivector,
             _ => return None,
         })
     }
@@ -725,6 +729,11 @@ impl Scalar {
     pub fn superset_of(&self, sub: &Self) -> bool {
         match (self, sub) {
             (Scalar::Any, _) => true,
+            #[cfg(feature = "ga")]
+            (
+                Scalar::Multivector,
+                Scalar::Complex | Scalar::Num | Scalar::Int | Scalar::Nat | Scalar::Bool,
+            ) => true,
             (Scalar::Complex, Scalar::Num | Scalar::Int | Scalar::Nat | Scalar::Bool) => true,
             (Scalar::Num, Scalar::Int | Scalar::Nat | Scalar::Bool) => true,
             (Scalar::Int, Scalar::Nat | Scalar::Bool) => true,
@@ -736,9 +745,6 @@ impl Scalar {
         match (self, other) {
             (Scalar::Any, _)
             | (_, Scalar::Any)
-            | (Scalar::Num, Scalar::Num)
-            | (Scalar::Char, Scalar::Char)
-            | (Scalar::Complex, Scalar::Complex)
             | (Scalar::Box(_), Scalar::Box(_))
             | (Scalar::Stream | Scalar::Box(_), Scalar::Stream | Scalar::Box(_)) => true,
             _ => self.superset_of(other) || other.superset_of(self),
@@ -1168,6 +1174,8 @@ impl fmt::Display for Scalar {
             }
             Scalar::Complex => write!(f, "ℂ"),
             Scalar::Stream => write!(f, "stream"),
+            #[cfg(feature = "ga")]
+            Scalar::Multivector => write!(f, "𝕍"),
         }
     }
 }
@@ -1276,7 +1284,7 @@ impl From<&Value> for Scalar {
                     .map_or(ScalarBox::Any, ScalarBox::All),
             ),
             #[cfg(feature = "ga")]
-            Value::Mv(_) => todo!(),
+            Value::Mv(_) => Scalar::Multivector,
         }
     }
 }

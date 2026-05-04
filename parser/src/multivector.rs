@@ -49,7 +49,8 @@ impl Flavor {
     fn is_vanilla(&self) -> bool {
         matches!(self, Flavor::Vanilla)
     }
-    fn metric(&self, index: usize) -> i32 {
+    #[doc(hidden)]
+    pub fn metric(&self, index: usize) -> i32 {
         match self {
             Flavor::Vanilla => 1,
             Flavor::Null => 0,
@@ -230,7 +231,8 @@ fn blade_grades(dims: u8) -> impl Iterator<Item = u8> {
 }
 
 #[allow(clippy::type_complexity)]
-fn mask_tables<F, T>(dims: u8, f: F) -> T
+#[doc(hidden)]
+pub fn mask_tables<F, T>(dims: u8, f: F) -> T
 where
     F: FnOnce(&[usize], &[usize]) -> T,
 {
@@ -480,7 +482,53 @@ impl From<Complex> for Multivector {
 
 impl fmt::Display for Multivector {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
+        let dims = self.dims();
+        let dim_offset = (self.flavor.metric(0) != 0) as usize;
+        mask_tables(dims, |mask_table, _| -> fmt::Result {
+            let mut wrote = false;
+            for (i, n) in self.iter().enumerate() {
+                if n == 0.0 {
+                    continue;
+                }
+                if wrote {
+                    if n > 0.0 {
+                        write!(f, " + ")?;
+                    } else {
+                        write!(f, " - ")?;
+                    }
+                    wrote = true;
+                } else {
+                    if n < 0.0 {
+                        write!(f, "-")?;
+                        wrote = true;
+                    }
+                }
+                let mask = mask_table[i];
+                if n.abs() != 1.0 || mask == 0 {
+                    write!(f, "{}", n.abs())?;
+                    wrote = true;
+                }
+                if mask == 0 {
+                    continue;
+                }
+                write!(f, "e")?;
+                wrote = true;
+                if dims > 2 && (mask ^ (mask >> 1)).count_ones() == dims as u32 {
+                    for j in (0..dims).rev() {
+                        if mask & (1 << j) != 0 {
+                            write!(f, "{}", crate::SUBSCRIPT_DIGITS[j as usize + dim_offset])?;
+                        }
+                    }
+                } else {
+                    for j in 0..dims {
+                        if mask & (1 << j) != 0 {
+                            write!(f, "{}", crate::SUBSCRIPT_DIGITS[j as usize + dim_offset])?;
+                        }
+                    }
+                }
+            }
+            Ok(())
+        })
     }
 }
 

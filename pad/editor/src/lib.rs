@@ -2573,6 +2573,7 @@ fn prim_sig_class(prim: Primitive, subscript: Option<&SubscriptToken>) -> &'stat
                 .and_then(|s| s.num.as_ref())
                 .and_then(|n| n.i())
                 .flatten()
+                .and_then(|n| n.as_int())
                 .filter(|&i| i != 0)
             {
                 if i > 0 {
@@ -2585,14 +2586,24 @@ fn prim_sig_class(prim: Primitive, subscript: Option<&SubscriptToken>) -> &'stat
             }
         }
         Primitive::Both if at_least_a_little_gay() => {
-            match subscript.and_then(Subscript::n).flatten().unwrap_or(2) {
+            match subscript
+                .and_then(Subscript::n)
+                .flatten()
+                .and_then(|n| n.as_int())
+                .unwrap_or(2)
+            {
                 0 => code_font!("monadic-function aroace text-gradient"),
                 1 => code_font!("monadic-function aro text-gradient"),
                 2 => code_font!("monadic-modifier bi text-gradient"),
                 _ => code_font!("dyadic-function pan text-gradient"),
             }
         }
-        Primitive::Couple => match subscript.and_then(Subscript::n).flatten().unwrap_or(2) {
+        Primitive::Couple => match subscript
+            .and_then(Subscript::n)
+            .flatten()
+            .and_then(|n| n.as_int())
+            .unwrap_or(2)
+        {
             0 if at_least_a_little_gay() => {
                 code_font!("monadic-function aroace text-gradient")
             }

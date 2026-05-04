@@ -2022,7 +2022,7 @@ fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
     let span = format!(
         "{}?{} {}",
         if inverse { "°" } else { "" },
-        NumericSubscript::N(n as i32),
+        NumericSubscript::N(crate::SubscriptNumber::Int(n as i32)),
         env.span()
     );
     let max_line_len = span.chars().count() + 2;

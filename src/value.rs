@@ -12,7 +12,7 @@ use ecow::EcoVec;
 use serde::*;
 
 use crate::{
-    Boxed, Complex, Shape, Uiua, UiuaResult,
+    Boxed, Complex, Shape, SubscriptNumber, Uiua, UiuaResult,
     algorithm::{ErrorContext, FillContext, pervade::*},
     array::*,
     cowslice::CowSlice,
@@ -1584,6 +1584,16 @@ impl<'a> From<&'a [&str]> for Value {
 impl From<i32> for Value {
     fn from(i: i32) -> Self {
         Value::from(i as f64)
+    }
+}
+
+impl From<SubscriptNumber> for Value {
+    fn from(sn: SubscriptNumber) -> Self {
+        match sn {
+            SubscriptNumber::Int(i) => i.into(),
+            SubscriptNumber::I => Complex::I.into(),
+            SubscriptNumber::NegI => (-Complex::I).into(),
+        }
     }
 }
 

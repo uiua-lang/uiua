@@ -32,8 +32,8 @@ use crate::{
     ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GitTarget, Ident, ImplPrimitive,
     IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass,
     Primitive, Purity, RunMode, SUBSCRIPT_DIGITS, SemanticComment, SidedSubscript, SigNode,
-    Signature, Sp, Span, SubSide, Subscript, SubscriptToken, SysBackend, Uiua, UiuaError,
-    UiuaErrorKind, UiuaResult, VERSION, Value,
+    Signature, Sp, Span, SubSide, Subscript, SubscriptNumber, SubscriptToken, SysBackend, Uiua,
+    UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
     algorithm::ga::{self, Spec},
     ast::*,
     check::nodes_sig,
@@ -2017,22 +2017,30 @@ impl Compiler {
         } else if let Some(i) = ident
             .find('₋')
             .or_else(|| ident.find(SUBSCRIPT_DIGITS))
+            .or_else(|| ident.find(['ᵢ']))
             .filter(|&i| !ident[i..].contains(['⌞', '⌟']))
         {
             // Name has a subscript
-            let mut n = 0i32;
-            for c in (ident[i..].chars()).skip(ident.contains('₋') as usize) {
-                if c != '₋' {
-                    n *= 10
-                }
-                n += SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32;
-            }
-            if ident[i..].starts_with('₋') {
-                if &ident[i..] == "₋" {
+            let n = match &ident[i..] {
+                "ᵢ" => SubscriptNumber::I,
+                "₋" => {
                     self.add_error(span.clone(), "Subscript is incomplete");
+                    SubscriptNumber::Int(0)
                 }
-                n = -n;
-            }
+                suffix => {
+                    let mut n = 0i32;
+                    for c in (suffix.chars()).skip(ident.contains('₋') as usize) {
+                        if c != '₋' {
+                            n *= 10
+                        }
+                        n += SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32;
+                    }
+                    if suffix.starts_with('₋') {
+                        n = -n;
+                    }
+                    SubscriptNumber::Int(n)
+                }
+            };
             self.sub_name(&ident[..i], n, span)
         } else if ident.contains('ₙ') {
             self.add_error(
@@ -2048,7 +2056,7 @@ impl Compiler {
             Node::new_push(Value::default())
         }
     }
-    fn sub_name(&mut self, name: &str, sub: i32, span: CodeSpan) -> Node {
+    fn sub_name(&mut self, name: &str, sub: SubscriptNumber, span: CodeSpan) -> Node {
         if let Some(local) = self.find_name_macro(name, &span) {
             if let Some(index_macro) = self.asm.index_macros.get(&local.index).cloned() {
                 match self.index_macro(
@@ -2368,7 +2376,7 @@ impl Compiler {
                         scr.span,
                         "ₙ is not valid outside a custom subscript function",
                     );
-                    2
+                    2.into()
                 })
             })
         }));
@@ -2407,7 +2415,7 @@ impl Compiler {
         use Primitive::*;
         Ok(match prim {
             prim if prim.class() == PrimClass::DyadicPervasive => {
-                let Some(nos) = self.subscript_n_or_side(&scr, prim.format()) else {
+                let Some(nos) = self.subscript_n_or_side(&scr, &prim.format()) else {
                     return Ok(self.primitive(prim, span));
                 };
                 self.validate_primitive(prim, &span);
@@ -2434,7 +2442,7 @@ impl Compiler {
                 }
             }
             EncodeBytes => {
-                let Some(side) = self.subscript_side_only(&scr, EncodeBytes.format()) else {
+                let Some(side) = self.subscript_side_only(&scr, &EncodeBytes.format()) else {
                     return Ok(self.primitive(EncodeBytes, span));
                 };
                 self.validate_primitive(prim, &span);
@@ -2442,7 +2450,7 @@ impl Compiler {
                 Node::ImplPrim(ImplPrimitive::SidedEncodeBytes(side), span)
             }
             Join => {
-                let Some(nos) = self.subscript_n_or_side(&scr, Join.format()) else {
+                let Some(nos) = self.subscript_int_or_side(&scr, &Join.format()) else {
                     return Ok(self.primitive(Join, span));
                 };
                 match nos {
@@ -2458,7 +2466,7 @@ impl Compiler {
                 }
             }
             Validate => {
-                let sub = self.validate_subscript(scr);
+                let sub = self.validate_subscript_int(scr, &Validate.format());
                 Node::ImplPrim(
                     ImplPrimitive::ValidateImpl(
                         (sub.value.num).map(|n| self.positive_subscript(n, Validate, &sub.span)),
@@ -2479,14 +2487,14 @@ impl Compiler {
                 )
             }
             prim => {
-                let Some(n) = self.subscript_n_only(&scr, prim.format()) else {
+                let Some(n) = self.subscript_int_only(&scr, &prim.format()) else {
                     return Ok(self.primitive(prim, span));
                 };
                 self.validate_primitive(prim, &span);
                 match prim {
                     prim if prim.sig().is_some_and(|sig| sig == (2, 1))
                         && prim
-                            .subscript_sig(Some(&SubscriptToken::numeric(Some(2))))
+                            .subscript_sig(Some(&SubscriptToken::numeric(Some(2.into()))))
                             .is_some_and(|sig| sig == (1, 1)) =>
                     {
                         Node::from_iter([Node::new_push(n), self.primitive(prim, span)])
@@ -2718,7 +2726,21 @@ impl<N: PartialEq> PartialEq<N> for SubNOrSide<N> {
 }
 
 impl Compiler {
-    fn validate_subscript(&mut self, sub: Sp<Subscript>) -> Sp<Subscript<i32>> {
+    fn validate_subscript_int(
+        &mut self,
+        sub: Sp<Subscript>,
+        for_what: &dyn fmt::Display,
+    ) -> Sp<Subscript<i32>> {
+        let side = sub.value.side;
+        let num = (sub.value.num.as_ref())
+            .and_then(|num| self.numeric_subscript_int(num, &sub.span, for_what));
+        if num.is_none() && side.is_none() {
+            self.add_error(sub.span.clone(), "Subscript is incomplete");
+        }
+        sub.span.sp(Subscript { num, side })
+    }
+    #[allow(dead_code)]
+    fn validate_subscript_n(&mut self, sub: Sp<Subscript>) -> Sp<Subscript<SubscriptNumber>> {
         let side = sub.value.side;
         let num = (sub.value.num.as_ref()).and_then(|num| self.numeric_subscript_n(num, &sub.span));
         if num.is_none() && side.is_none() {
@@ -2726,7 +2748,11 @@ impl Compiler {
         }
         sub.span.sp(Subscript { num, side })
     }
-    fn numeric_subscript_n(&mut self, num: &NumericSubscript, span: &CodeSpan) -> Option<i32> {
+    fn numeric_subscript_n(
+        &mut self,
+        num: &NumericSubscript,
+        span: &CodeSpan,
+    ) -> Option<SubscriptNumber> {
         match num {
             NumericSubscript::N(n) => Some(*n),
             NumericSubscript::NegOnly => {
@@ -2739,11 +2765,28 @@ impl Compiler {
             }
         }
     }
+    fn numeric_subscript_int(
+        &mut self,
+        num: &NumericSubscript,
+        span: &CodeSpan,
+        for_what: &dyn fmt::Display,
+    ) -> Option<i32> {
+        match self.numeric_subscript_n(num, span)? {
+            SubscriptNumber::Int(i) => Some(i),
+            SubscriptNumber::I | SubscriptNumber::NegI => {
+                self.add_error(
+                    span.clone(),
+                    format!("Imaginary subscripts are not allowed for {for_what}"),
+                );
+                None
+            }
+        }
+    }
     fn subscript_n_or_side(
         &mut self,
         sub: &Sp<Subscript>,
-        for_what: impl fmt::Display,
-    ) -> Option<SubNOrSide> {
+        for_what: &dyn fmt::Display,
+    ) -> Option<SubNOrSide<SubscriptNumber>> {
         match (&sub.value.num, sub.value.side) {
             (None, None) => {
                 self.add_error(sub.span.clone(), "Subscript is incomplete");
@@ -2768,12 +2811,47 @@ impl Compiler {
             }
         }
     }
+    fn subscript_int_or_side(
+        &mut self,
+        sub: &Sp<Subscript>,
+        for_what: &dyn fmt::Display,
+    ) -> Option<SubNOrSide> {
+        Some(match self.subscript_n_or_side(sub, for_what)? {
+            SubNOrSide::N(SubscriptNumber::Int(i)) => SubNOrSide::N(i),
+            SubNOrSide::N(SubscriptNumber::I | SubscriptNumber::NegI) => {
+                self.add_error(
+                    sub.span.clone(),
+                    format!("Imaginary subscripts are not allowed for {for_what}"),
+                );
+                return None;
+            }
+            SubNOrSide::Side(side) => SubNOrSide::Side(side),
+        })
+    }
+    #[allow(dead_code)]
     fn subscript_n_only(
         &mut self,
         sub: &Sp<Subscript>,
-        for_what: impl fmt::Display + Copy,
-    ) -> Option<i32> {
+        for_what: &dyn fmt::Display,
+    ) -> Option<SubscriptNumber> {
         let nos = self.subscript_n_or_side(sub, for_what)?;
+        match nos {
+            SubNOrSide::N(n) => Some(n),
+            SubNOrSide::Side(_) => {
+                self.add_error(
+                    sub.span.clone(),
+                    format!("Sided subscripts are not allowed for {for_what}"),
+                );
+                None
+            }
+        }
+    }
+    fn subscript_int_only(
+        &mut self,
+        sub: &Sp<Subscript>,
+        for_what: &dyn fmt::Display,
+    ) -> Option<i32> {
+        let nos = self.subscript_int_or_side(sub, for_what)?;
         match nos {
             SubNOrSide::N(n) => Some(n),
             SubNOrSide::Side(_) => {
@@ -2788,7 +2866,7 @@ impl Compiler {
     fn subscript_sided_only(
         &mut self,
         sub: &Sp<Subscript>,
-        for_what: impl fmt::Display + Copy,
+        for_what: &dyn fmt::Display,
     ) -> Option<SidedSubscript> {
         if sub.value.num.is_some() {
             self.add_error(
@@ -2801,7 +2879,7 @@ impl Compiler {
     fn subscript_side_only(
         &mut self,
         sub: &Sp<Subscript>,
-        for_what: impl fmt::Display + Copy,
+        for_what: &dyn fmt::Display,
     ) -> Option<SubSide> {
         let nos = self.subscript_n_or_side(sub, for_what)?;
         match nos {

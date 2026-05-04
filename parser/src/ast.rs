@@ -7,7 +7,7 @@ use serde::*;
 
 use crate::{
     BindingCounts, CodeSpan, Complex, Ident, Primitive, SemanticComment, Signature, Sp, Subscript,
-    SubscriptToken, parse::ident_modifier_args,
+    SubscriptNumber, SubscriptToken, parse::ident_modifier_args,
 };
 
 /// A top-level item
@@ -887,6 +887,16 @@ pub enum NumWord {
 impl From<f64> for NumWord {
     fn from(value: f64) -> Self {
         Self::Real(value).normalize()
+    }
+}
+
+impl From<SubscriptNumber> for NumWord {
+    fn from(sn: SubscriptNumber) -> Self {
+        match sn {
+            SubscriptNumber::Int(i) => NumWord::Real(i.into()),
+            SubscriptNumber::I => NumWord::Complex(Complex::I),
+            SubscriptNumber::NegI => NumWord::Complex(-Complex::I),
+        }
     }
 }
 

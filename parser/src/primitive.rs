@@ -5,7 +5,9 @@ use std::{
 
 use enum_iterator::{Sequence, all};
 
-use crate::{AsciiToken, NumericSubscript, Primitive, Signature, Subscript, SubscriptToken};
+use crate::{
+    AsciiToken, NumericSubscript, Primitive, Signature, Subscript, SubscriptNumber, SubscriptToken,
+};
 
 /// Categories of primitives
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Sequence)]
@@ -239,8 +241,12 @@ impl Primitive {
             (Select | Pick | Take | Drop | Rerank | Rotate | Orient | Windows | Base, Some(_)) => {
                 Signature::new(1, 1)
             }
-            (First | Last, Some(n)) if n >= 0 => Signature::new(1, n as usize),
-            (Couple | Join | Box, Some(n)) if n >= 0 => Signature::new(n as usize, 1),
+            (First | Last, Some(SubscriptNumber::Int(n))) if n >= 0 => {
+                Signature::new(1, n as usize)
+            }
+            (Couple | Join | Box, Some(SubscriptNumber::Int(n))) if n >= 0 => {
+                Signature::new(n as usize, 1)
+            }
             (Couple | Join, None) => Signature::new(2, 1),
             (Box, None) => Signature::new(1, 1),
             (Json, _) => Signature::new(1, 1),
@@ -250,7 +256,9 @@ impl Primitive {
                 _,
             ) => return self.sig(),
             (Validate, _) => return self.sig(),
-            (Args, Some(n)) if n >= 0 => Signature::new(n as usize, n as usize),
+            (Args, Some(SubscriptNumber::Int(n))) if n >= 0 => {
+                Signature::new(n as usize, n as usize)
+            }
             _ => return None,
         })
     }

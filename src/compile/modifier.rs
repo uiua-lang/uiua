@@ -553,7 +553,7 @@ impl Compiler {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 if let Some(n) = subscript
                     .and_then(|sub| {
-                        self.subscript_n_only(&sub, On)
+                        self.subscript_int_only(&sub, &On.format())
                             .map(|n| self.positive_subscript(n, On, &sub.span))
                     })
                     .filter(|&n| n > 1)
@@ -586,7 +586,7 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 if let Some(n) = subscript
                     .and_then(|sub| {
-                        self.subscript_n_only(&sub, On)
+                        self.subscript_int_only(&sub, &By.format())
                             .map(|n| self.positive_subscript(n, By, &sub.span))
                     })
                     .filter(|&n| n > 1)
@@ -631,7 +631,9 @@ impl Compiler {
                 let mut dip_count = 1;
                 let mut pop_count = 1;
                 let mut side = None;
-                if let Some(subscript) = subscript.map(|sub| self.validate_subscript(sub)) {
+                if let Some(subscript) =
+                    subscript.map(|sub| self.validate_subscript_int(sub, &Reach.format()))
+                {
                     if let Some(n) = subscript.value.num {
                         dip_count = self.positive_subscript(n, Reach, &subscript.span);
                     }
@@ -716,7 +718,7 @@ impl Compiler {
             Both => {
                 func!({
                     let (mut sub, sub_span) = subscript.map_or((Subscript::from(2), None), |sub| {
-                        let sub = self.validate_subscript(sub);
+                        let sub = self.validate_subscript_int(sub, &Both.format());
                         let sub_span = sub.span;
                         let sub = (sub.value)
                             .map_num(|n| self.positive_subscript(n, Both, &sub_span) as u32);
@@ -755,7 +757,7 @@ impl Compiler {
                 let Some(sub) = subscript else {
                     return Ok(None);
                 };
-                let Some(sided) = self.subscript_sided_only(&sub, Bracket.format()) else {
+                let Some(sided) = self.subscript_sided_only(&sub, &Bracket.format()) else {
                     return Ok(None);
                 };
                 if sided.n == Some(0) {
@@ -810,7 +812,7 @@ impl Compiler {
                 let sig = sn.sig;
                 let sub_n = subscript
                     .and_then(|sub| {
-                        self.subscript_n_only(&sub, prim.format())
+                        self.subscript_int_only(&sub, &prim.format())
                             .map(|n| self.positive_subscript(n, prim, &sub.span))
                     })
                     .filter(|&n| n > 1);
@@ -920,7 +922,9 @@ impl Compiler {
                     return Ok(Some(node));
                 }
                 let span = self.add_span(modified.modifier.span.clone());
-                if let Some(sub) = subscript.map(|sub| self.validate_subscript(sub)) {
+                if let Some(sub) =
+                    subscript.map(|sub| self.validate_subscript_int(sub, &Slf.format()))
+                {
                     let (sub, sub_span) = sub.into();
                     self.subscript_experimental(Slf, &sub_span);
                     if sub.num.is_some() {
@@ -971,7 +975,7 @@ impl Compiler {
             Backward => {
                 let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;
                 let side = subscript.and_then(|sub| {
-                    self.subscript_side_only(&sub, Backward.format())
+                    self.subscript_side_only(&sub, &Backward.format())
                         .map(|side| sub.span.sp(side))
                 });
                 if let Some(side) = side {
@@ -1116,7 +1120,7 @@ impl Compiler {
                     Node::Mod(Primitive::Repeat, eco_vec![sn], spandex)
                 };
                 if let Some(n) =
-                    subscript.and_then(|sub| self.subscript_n_only(&sub, Repeat.format()))
+                    subscript.and_then(|sub| self.subscript_int_only(&sub, &Repeat.format()))
                 {
                     node.prepend(Node::new_push(n));
                 }
@@ -1138,7 +1142,7 @@ impl Compiler {
                             ),
                         );
                     }
-                    self.subscript_n_only(&sub, Tuples.format())
+                    self.subscript_int_only(&sub, &Tuples.format())
                 }) {
                     node.prepend(Node::new_push(n));
                 }
@@ -1160,7 +1164,7 @@ impl Compiler {
                             ),
                         );
                     }
-                    let sub = self.validate_subscript(sub);
+                    let sub = self.validate_subscript_int(sub, &Stencil.format());
                     n = sub.value.num;
                     if let Some(ss) = sub.value.side {
                         side = Some(ss.side);
@@ -1222,7 +1226,7 @@ impl Compiler {
             Under => {
                 let sub_side = subscript.and_then(|sub| {
                     self.subscript_experimental(Under, &sub.span);
-                    self.subscript_side_only(&sub, Under.format())
+                    self.subscript_side_only(&sub, &Under.format())
                         .map(|side| sub.span.sp(side))
                 });
                 let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
@@ -1340,7 +1344,7 @@ impl Compiler {
                 let fill = self.word_sig(fill_word)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 if let Some(side) = subscript.and_then(|sub| {
-                    let side = self.subscript_side_only(&sub, Fill.format())?;
+                    let side = self.subscript_side_only(&sub, &Fill.format())?;
                     self.experimental_error_it(&sub.span, || format!("Sided {}", Fill.format()));
                     Some(side)
                 }) {
@@ -1355,12 +1359,16 @@ impl Compiler {
             }
             Each => {
                 // Each pervasive
+                let sub = subscript.and_then(|sub| {
+                    self.subscript_int_or_side(&sub, &Each.format())
+                        .map(|n| (n, sub.span))
+                });
                 let operand = modified.code_operands().next().unwrap().clone();
                 let op_span = operand.span.clone();
                 let full_span = modified.modifier.span.clone().merge(op_span);
-                let words_look_pervasive = subscript
+                let words_look_pervasive = sub
                     .as_ref()
-                    .is_none_or(|sub| sub.value.num == Some(NumericSubscript::N(0)))
+                    .is_none_or(|(nos, _)| matches!(nos, SubNOrSide::N(0)))
                     && words_look_pervasive(slice::from_ref(&operand));
                 let sn = self.word_sig(operand)?;
                 if words_look_pervasive {
@@ -1387,13 +1395,7 @@ impl Compiler {
                     );
                 }
                 let span = self.add_span(modified.modifier.span.clone());
-                if let Some((nos, nos_span)) = subscript
-                    .and_then(|sub| {
-                        self.subscript_n_or_side(&sub, Each.format())
-                            .map(|n| (n, sub.span))
-                    })
-                    .filter(|&(n, _)| n != 0)
-                {
+                if let Some((nos, nos_span)) = sub.filter(|&(n, _)| n != 0) {
                     if nos == SubNOrSide::N(-1) {
                         Node::Mod(Rows, eco_vec![sn], span)
                     } else {
@@ -1441,7 +1443,7 @@ impl Compiler {
                         self,
                     )));
                 };
-                let sub = self.validate_subscript(sub);
+                let sub = self.validate_subscript_int(sub, &prim.format());
                 let sub_span = sub.span;
                 let mut sub = sub.value;
                 if let Some(n) = &mut sub.num
@@ -1526,7 +1528,7 @@ impl Compiler {
                 }
                 let table_span = self.add_span(modified.modifier.span.clone());
                 if let Some(i) =
-                    subscript.and_then(|sub| self.subscript_n_only(&sub, Table.format()))
+                    subscript.and_then(|sub| self.subscript_int_only(&sub, &Table.format()))
                 {
                     Node::ImplMod(ImplPrimitive::TableSub(i), eco_vec![sn], table_span)
                 } else {
@@ -1859,7 +1861,7 @@ impl Compiler {
         &mut self,
         mut mac: IndexMacro,
         operands: Vec<Sp<Word>>,
-        subscript: Option<i32>,
+        subscript: Option<SubscriptNumber>,
         name: Sp<Ident>,
         local: LocalIndex,
         ref_span: CodeSpan,
@@ -2108,7 +2110,7 @@ impl Compiler {
         name: Option<Ident>,
         macro_words: &mut Vec<Sp<Word>>,
         operands: Vec<Sp<Word>>,
-        subscript: Option<i32>,
+        subscript: Option<SubscriptNumber>,
         mut span: CodeSpan,
     ) -> UiuaResult<CodeSpan> {
         if let Some(last) = operands.last() {
@@ -2125,7 +2127,7 @@ impl Compiler {
         &self,
         words: &mut Vec<Sp<Word>>,
         initial: &[Sp<Word>],
-        subscript: Option<i32>,
+        subscript: Option<SubscriptNumber>,
     ) -> UiuaResult {
         let mut error = None;
         recurse_words_mut(words, &mut |word| match &mut word.value {
@@ -2146,8 +2148,7 @@ impl Compiler {
             }
             Word::PlaceholderN => {
                 if let Some(i) = subscript {
-                    word.value =
-                        Word::Number(NumWord::Real(i.into()), i.to_string().replace('-', "¯"));
+                    word.value = Word::Number(i.into(), i.to_string().replace('-', "¯"));
                 }
             }
             Word::Subscripted(sub) => {
@@ -2156,20 +2157,10 @@ impl Compiler {
                 }
             }
             Word::Ref(r, _) if r.name.value.contains('ₙ') => {
-                if let Some(mut n) = subscript {
-                    let mut new_num = String::new();
-                    if n < 0 {
-                        new_num.push('₋');
-                    }
-                    n = n.abs();
-                    let pow = (n as f64).log10() as u32;
-                    for i in (0..=pow).rev() {
-                        new_num.push(SUBSCRIPT_DIGITS[(n / 10i32.pow(i)) as usize]);
-                        n /= 10;
-                    }
+                if let Some(n) = subscript {
                     r.name.value = (r.name.value.chars())
                         .map(|c| match c {
-                            'ₙ' => new_num.clone(),
+                            'ₙ' => n.to_string(),
                             c => c.to_string(),
                         })
                         .collect::<String>()
@@ -2354,7 +2345,7 @@ impl Compiler {
             }
         }
         let dims = if let Some(sub) = subscript {
-            let sub = self.validate_subscript(sub);
+            let sub = self.validate_subscript_int(sub, &Primitive::Geometric.format());
             let dims = sub.value.num.map(|n| {
                 let mut n = self.positive_subscript(n, Primitive::Geometric, &sub.span);
                 const MAX_DIMS: usize = ga::MAX_DIMS as usize;

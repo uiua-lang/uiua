@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, ops::Neg};
 
 use ecow::EcoString;
 use serde::*;
@@ -8,7 +8,7 @@ use crate::{FormatSubscript, SUBSCRIPT_DIGITS};
 /// A subscripts
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(default)]
-pub struct Subscript<N = NumericSubscript<i32>> {
+pub struct Subscript<N = NumericSubscript<SubscriptNumber>> {
     /// The numeric part of the subscript
     #[serde(skip_serializing_if = "Option::is_none")]
     pub num: Option<N>,
@@ -55,21 +55,6 @@ impl From<u32> for Subscript<u32> {
     }
 }
 
-impl From<i32> for SubscriptToken {
-    fn from(i: i32) -> Self {
-        Some(i).into()
-    }
-}
-
-impl From<Option<i32>> for SubscriptToken {
-    fn from(i: Option<i32>) -> Self {
-        Subscript {
-            num: Some(i.into()),
-            side: None,
-        }
-    }
-}
-
 impl<N> From<SubSide> for Subscript<N> {
     fn from(side: SubSide) -> Self {
         Subscript {
@@ -82,7 +67,7 @@ impl<N> From<SubSide> for Subscript<N> {
 /// The numeric part of a subscript
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
-pub enum NumericSubscript<I = i32> {
+pub enum NumericSubscript<I = SubscriptNumber> {
     /// Only a negative sign
     NegOnly,
     /// The number is too large to be represented
@@ -92,7 +77,48 @@ pub enum NumericSubscript<I = i32> {
     N(I),
 }
 
-pub type NumericSubscriptToken = NumericSubscript<Option<i32>>;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SubscriptNumber {
+    Int(i32),
+    I,
+    NegI,
+}
+impl SubscriptNumber {
+    /// Get the integer
+    pub fn as_int(&self) -> Option<i32> {
+        match self {
+            SubscriptNumber::Int(i) => Some(*i),
+            _ => None,
+        }
+    }
+    /// Get a mutable reference to the integer
+    pub fn as_int_mut(&mut self) -> Option<&mut i32> {
+        match self {
+            SubscriptNumber::Int(i) => Some(i),
+            _ => None,
+        }
+    }
+}
+
+impl Neg for SubscriptNumber {
+    type Output = Self;
+    fn neg(self) -> Self::Output {
+        match self {
+            SubscriptNumber::Int(i) => SubscriptNumber::Int(-i),
+            SubscriptNumber::I => SubscriptNumber::NegI,
+            SubscriptNumber::NegI => SubscriptNumber::I,
+        }
+    }
+}
+
+impl From<i32> for SubscriptNumber {
+    fn from(i: i32) -> Self {
+        SubscriptNumber::Int(i)
+    }
+}
+
+pub type NumericSubscriptToken = NumericSubscript<Option<SubscriptNumber>>;
 
 impl<I> From<I> for NumericSubscript<I> {
     fn from(i: I) -> Self {
@@ -100,9 +126,27 @@ impl<I> From<I> for NumericSubscript<I> {
     }
 }
 
+impl From<i32> for NumericSubscriptToken {
+    fn from(i: i32) -> Self {
+        NumericSubscript::N(Some(i.into()))
+    }
+}
+
+impl From<i32> for NumericSubscript {
+    fn from(i: i32) -> Self {
+        NumericSubscript::N(i.into())
+    }
+}
+
 impl From<Subscript> for SubscriptToken {
     fn from(sub: Subscript) -> Self {
         sub.map_num(|n| n.map(Some))
+    }
+}
+
+impl From<i32> for SubscriptToken {
+    fn from(i: i32) -> Self {
+        Subscript::<NumericSubscript>::from(i).into()
     }
 }
 
@@ -183,11 +227,21 @@ impl fmt::Display for SubSide {
     }
 }
 
+impl fmt::Display for SubscriptNumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SubscriptNumber::Int(n) => FormatSubscript(*n).fmt(f),
+            SubscriptNumber::I => write!(f, "ᵢ"),
+            SubscriptNumber::NegI => write!(f, "₋ᵢ"),
+        }
+    }
+}
+
 impl fmt::Display for NumericSubscript {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             NumericSubscript::NegOnly => write!(f, "₋"),
-            NumericSubscript::N(n) => FormatSubscript(*n).fmt(f),
+            NumericSubscript::N(n) => n.fmt(f),
             NumericSubscript::TooLarge(s) => s.fmt(f),
         }
     }
@@ -199,7 +253,7 @@ impl fmt::Display for NumericSubscriptToken {
             NumericSubscript::NegOnly => write!(f, "₋"),
             NumericSubscript::N(n) => {
                 if let Some(n) = n {
-                    FormatSubscript(*n).fmt(f)
+                    n.fmt(f)
                 } else {
                     write!(f, "ₙ")
                 }

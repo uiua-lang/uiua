@@ -14,7 +14,11 @@ mod subscript;
 
 use bytemuck::must_cast;
 #[cfg(feature = "multivector")]
-pub use multivector::*;
+pub use multivector::{Flavor as GaFlavor, Multivector};
+#[cfg(feature = "multivector")]
+pub mod ga {
+    pub use super::multivector::*;
+}
 pub use {
     complex::*, defs::*, error::*, inputs::*, lex::*, parse::parse, primitive::*, signature::*,
     split::*, subscript::*,

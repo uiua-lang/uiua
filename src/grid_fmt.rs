@@ -54,9 +54,9 @@ pub trait GridFmt: Sized {
     fn empty_list_inner() -> &'static str {
         ""
     }
-    /// Separator for formatting
-    fn format_sep() -> &'static str {
-        " "
+    /// How much to separate items when formatting
+    fn separation() -> usize {
+        1
     }
     /// Delimiters for grid formatting
     fn grid_fmt_delims() -> (char, char) {
@@ -69,6 +69,10 @@ pub trait GridFmt: Sized {
     /// Whether to divide cells with box drawing lines when grid formatting
     fn box_lines() -> bool {
         false
+    }
+    /// Whether to allow list elements to be shown on the same line
+    fn list_same_line() -> bool {
+        true
     }
     /// Summarize the elements of an array of this type
     fn summarize(_: &[Self]) -> String {
@@ -397,7 +401,7 @@ impl GridFmt for crate::Multivector {
     fn fmt_grid(&self, _: GridFmtParams) -> Grid {
         let dims = self.dims();
         let dim_offset = (self.flavor.metric(0) != 0) as usize;
-        crate::mask_tables(dims, |mask_table, _| {
+        crate::ga::mask_tables(dims, |mask_table, _| {
             let mut s = Vec::new();
             for (i, n) in self.iter().enumerate() {
                 if n == 0.0 {
@@ -431,6 +435,15 @@ impl GridFmt for crate::Multivector {
             }
             vec![s]
         })
+    }
+    fn list_same_line() -> bool {
+        false
+    }
+    fn separation() -> usize {
+        2
+    }
+    fn alignment() -> ElemAlign {
+        ElemAlign::DelimOrLeft("+")
     }
 }
 
@@ -505,8 +518,8 @@ impl GridFmt for char {
     fn format_delims() -> (&'static str, &'static str) {
         ("", "")
     }
-    fn format_sep() -> &'static str {
-        ""
+    fn separation() -> usize {
+        0
     }
     fn grid_fmt_delims() -> (char, char) {
         ('"', '"')
@@ -802,7 +815,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     parent_rank: self.rank(),
                     ..params
                 };
-                fmt_array(&self.shape, &self.data, params, &mut metagrid);
+                fmt_array(self.rank(), &self.shape, &self.data, params, &mut metagrid);
                 metagrid
             });
 
@@ -1210,6 +1223,7 @@ fn value_requires_summary(val: &Value) -> bool {
 }
 
 fn fmt_array<T: GridFmt + ArrayValue>(
+    max_rank: usize,
     shape: &[usize],
     data: &[T],
     params: GridFmtParams,
@@ -1238,7 +1252,8 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         metagrid.push(vec![data[0].fmt_grid(params)]);
         return;
     }
-    if rank == 1 {
+    let vertical_list = max_rank == 1 && !T::list_same_line();
+    if rank == 1 && !vertical_list {
         let mut row = Vec::with_capacity(shape[0]);
         if T::compress_list_grid() {
             let s: String = data
@@ -1253,7 +1268,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
             for (i, val) in data.iter().enumerate() {
                 let mut grid = val.fmt_grid(params);
                 if i > 0 && !T::box_lines() {
-                    pad_grid_min(grid[0].len() + 1, grid.len(), &mut grid);
+                    pad_grid_min(grid[0].len() + T::separation(), grid.len(), &mut grid);
                 }
                 row.push(grid);
             }
@@ -1269,15 +1284,16 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     let row_shape = &shape[1..];
     let cell_size = data.len() / cell_count;
     let start_len = metagrid.len();
+    let adjusted_rank = rank + vertical_list as usize;
     for (i, cell) in data.chunks(cell_size).enumerate() {
-        if i > 0 && rank > 2 && !T::box_lines() && rank.is_multiple_of(2) {
-            for _ in 0..(rank - 2) / 2 {
+        if i > 0 && adjusted_rank > 2 && !T::box_lines() && adjusted_rank.is_multiple_of(2) {
+            for _ in 0..(adjusted_rank - 2) / 2 {
                 metagrid.push(vec![vec![vec![' ']]; metagrid.last().unwrap().len()]);
             }
         }
         let len_before = metagrid.len();
-        fmt_array(row_shape, cell, params, metagrid);
-        if T::compress_list_grid() && rank == 2 {
+        fmt_array(max_rank, row_shape, cell, params, metagrid);
+        if T::compress_list_grid() && adjusted_rank == 2 {
             let (left, right) = T::grid_fmt_delims();
             for grid in metagrid.last_mut().unwrap() {
                 for row in grid.iter_mut() {
@@ -1286,14 +1302,14 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                 }
             }
         }
-        if i > 0 && (rank > 2 || T::box_lines()) && rank % 2 == 1 {
+        if i > 0 && (adjusted_rank > 2 || T::box_lines()) && adjusted_rank % 2 == 1 {
             let elem_rows = metagrid.iter().flatten().flatten();
             let max_width = elem_rows.map(|r| r.len()).max().unwrap_or(0);
             let div = if max_width > 10 { 1 } else { 2 };
             let rows = metagrid.split_off(len_before);
             for (mrow, row) in metagrid.iter_mut().skip(start_len).zip(rows) {
                 if !T::box_lines() {
-                    mrow.push(vec![vec![' '; rank.div_ceil(div)]]);
+                    mrow.push(vec![vec![' '; adjusted_rank.div_ceil(div)]]);
                 }
                 mrow.extend(row);
             }

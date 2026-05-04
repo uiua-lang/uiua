@@ -61,14 +61,32 @@ impl Flavor {
     }
 }
 
+pub const MAX_DIMS: u8 = 15;
+pub const MAX_BLADES: u8 = 225;
+
 impl Multivector {
+    /// The the maximum number of dimensions
+    ///
+    /// # Panics
+    /// Panics if `d < self.dims()`
+    pub fn set_dims(&mut self, dims: u8) {
+        let low_dims = self.dims();
+        self.coefs
+            .extend(repeat_n(0.0, (1 << dims) - (1 << low_dims)));
+        let slice = self.coefs.make_mut();
+        let mut left = 0;
+        for d in 0..=low_dims {
+            let ai = grade_size(low_dims, d);
+            let bi = grade_size(dims, d);
+            slice[left..].rotate_right(bi - ai);
+            left += bi;
+        }
+    }
     fn conform(&mut self, other: &mut Self) {
         match self.dims().cmp(&other.dims()) {
             Ordering::Equal => {}
-            Ordering::Greater => other.conform(self),
-            Ordering::Less => {
-                todo!()
-            }
+            Ordering::Greater => other.set_dims(self.dims()),
+            Ordering::Less => self.set_dims(other.dims()),
         }
     }
     /// Get the maximum number of dimensions
@@ -92,7 +110,7 @@ impl Multivector {
             flavor: Flavor::Vanilla,
         }
     }
-    /// Create a multivector from its vectors coefficients
+    /// Create a multivector from its vector coefficients
     pub fn vector(vector: impl Into<EcoVec<f64>>) -> Self {
         let mut coefs = vector.into();
         let dims = coefs.len();
@@ -103,10 +121,65 @@ impl Multivector {
             flavor: Flavor::Vanilla,
         }
     }
+    /// Create a multivector from its n-1 blade coefficients
+    pub fn n_1_blades(blades: impl Into<EcoVec<f64>>) -> Self {
+        let blades = blades.into();
+        let len = blades.len();
+        let mut mv = Self::vector(blades);
+        mv.coefs.make_mut().rotate_left(len + 1);
+        mv
+    }
+    /// Create a multivector from some low-grade, even, or all blades
+    pub fn blades_left(dims: u8, blades: impl Into<EcoVec<f64>>) -> Result<Self, EcoVec<f64>> {
+        Self::blades_impl(dims, blades.into(), false)
+    }
+    /// Create a multivector from some high-grade, even, or all blades
+    pub fn blades_right(dims: u8, blades: impl Into<EcoVec<f64>>) -> Result<Self, EcoVec<f64>> {
+        Self::blades_impl(dims, blades.into(), true)
+    }
+    fn blades_impl(dims: u8, mut blades: EcoVec<f64>, odd: bool) -> Result<Self, EcoVec<f64>> {
+        let blade_count = 1 << dims;
+        Ok(if blades.len() == blade_count {
+            Self::all(blades)
+        } else if blades.len() * 2 == blade_count {
+            blades.extend(repeat_n(0.0, blade_count / 2));
+            let slice = blades.make_mut();
+            let mut left = 0;
+            for d in 0..=dims {
+                let i = grade_size(dims, d);
+                if d % 2 == odd as u8 {
+                    slice[left..].rotate_right(i)
+                }
+                left += i;
+            }
+            Self::all(blades)
+        } else {
+            let (start, end) = if odd {
+                ((dims as f32 / 2.0).floor() as u8, dims)
+            } else {
+                (0, (dims as f32 / 2.0).ceil() as u8)
+            };
+            let mut left: usize = (0..start).map(|d| grade_size(dims, d)).sum();
+            for d in start..end {
+                let grade_size = grade_size(dims, d);
+                if grade_size == blades.len() {
+                    blades.extend(repeat_n(0.0, blade_count - grade_size));
+                    blades.make_mut().rotate_right(left);
+                    return Ok(Self::all(blades));
+                }
+                left += grade_size;
+            }
+            return Err(blades);
+        })
+    }
+    /// Create a unit pseudoscalar
+    pub fn pseudo_unit(dims: u8) -> Self {
+        Self::pseudoscalar(dims, 1.0)
+    }
     /// Create a pseudoscalar
-    pub fn pseudo(dims: u8) -> Self {
+    pub fn pseudoscalar(dims: u8, n: f64) -> Self {
         let mut coefs = eco_vec![0.0; 1 << dims];
-        *coefs.make_mut().last_mut().unwrap() = 1.0;
+        *coefs.make_mut().last_mut().unwrap() = n;
         Self::all(coefs)
     }
     /// Set the flavor
@@ -137,7 +210,7 @@ impl Multivector {
     pub fn dual(&mut self) {
         let flavor = take(&mut self.flavor);
         let dims = self.dims();
-        *self *= Self::pseudo(dims);
+        *self *= Self::pseudo_unit(dims);
         self.flavor = flavor;
     }
     /// Get the geometric dual of the multivector
@@ -213,7 +286,8 @@ impl Multivector {
     }
 }
 
-fn grade_size(dims: u8, grade: u8) -> usize {
+/// Get the size of a grade for some number of dimensions
+pub fn grade_size(dims: u8, grade: u8) -> usize {
     fn combinations(n: usize, k: usize) -> f64 {
         if k > n {
             return 0.0;
@@ -535,6 +609,22 @@ impl fmt::Display for Multivector {
 #[cfg(test)]
 mod test {
     use super::Multivector as Mv;
+
+    #[test]
+    fn conform() {
+        let mut a = Mv::all([1.0, 2.0, 3.0, 4.0]);
+        a.set_dims(4);
+        assert_eq!(a, [1.0, 2.0, 3.0, 0.0, 4.0, 0.0, 0.0, 0.0]);
+
+        let mut a = Mv::all([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        a.set_dims(4);
+        assert_eq!(
+            a,
+            [
+                1.0, 2.0, 3.0, 4.0, 0.0, 5.0, 6.0, 7.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 0.0
+            ]
+        );
+    }
 
     #[test]
     fn product() {

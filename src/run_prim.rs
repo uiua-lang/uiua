@@ -22,7 +22,7 @@ use rand::prelude::*;
 use crate::{
     FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive, Shape, SubSide, SysOp, Uiua,
     UiuaErrorKind, UiuaResult,
-    algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
+    algorithm::{self, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
     context::FillFrame,
@@ -1355,38 +1355,92 @@ impl ImplPrimitive {
                 }
                 env.push(val);
             }
-            &ImplPrimitive::Ga(op, spec) => match op {
-                GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,
-                GaOp::GeometricInner => env.dyadic_oo_env_with(spec, ga::inner_product)?,
-                GaOp::GeometricWedge => env.dyadic_oo_env_with(spec, ga::wedge_product)?,
-                GaOp::GeometricRegressive => {
-                    env.dyadic_oo_env_with(spec, ga::regressive_product)?
-                }
-                GaOp::GeometricDivide => env.dyadic_oo_env_with(spec, ga::divide)?,
-                GaOp::GeometricMagnitude => env.monadic_env_with(spec, ga::magnitude)?,
-                GaOp::GeometricNormalize => env.monadic_env_with(spec, ga::normalize)?,
-                GaOp::GeometricSqrt => env.monadic_env_with(spec, ga::sqrt)?,
-                GaOp::GeometricReverse => env.monadic_env_with(spec, ga::reverse)?,
-                GaOp::GeometricDual => env.monadic_env_with(spec, ga::dual)?,
-                GaOp::GeometricAdd => env.dyadic_oo_env_with(spec, ga::add)?,
-                GaOp::GeometricSub => env.dyadic_oo_env_with(spec, |spec, a, b, env| {
-                    let a = a.neg(env)?;
-                    ga::add(spec, a, b, env)
-                })?,
-                GaOp::GeometricRotor => env.dyadic_oo_env_with(spec, ga::rotor)?,
-                GaOp::GeometricSandwich => env.dyadic_oo_env_with(spec, ga::sandwich)?,
-                GaOp::PadBlades => env.dyadic_oo_env_with(spec, ga::pad_blades)?,
-                GaOp::ExtractBlades => env.dyadic_oo_env_with(spec, ga::extract_blades)?,
-                GaOp::GeometricCouple => env.dyadic_oo_env(ga::couple)?,
-                GaOp::GeometricUnCouple => {
-                    let val = env.pop(1)?;
-                    let (a, b) = ga::uncouple(val, env)?;
-                    env.push(b);
-                    env.push(a);
-                }
-                GaOp::GeometricParse => env.monadic_env_with(spec, ga::parse)?,
-                GaOp::GeometricUnParse => env.monadic_env_with(spec, ga::unparse)?,
-            },
+            #[cfg(not(feature = "ga"))]
+            ImplPrimitive::MvImpl(..) => {
+                return Err(env.error("Multivectors are not supported in this environment"));
+            }
+            #[cfg(feature = "ga")]
+            &ImplPrimitive::MvImpl(flavor, dims, side) => {
+                use crate::{Multivector as Mv, ga::*};
+                use ecow::eco_vec;
+                let arr = match env.pop(1)? {
+                    Value::Num(arr) => arr,
+                    Value::Byte(arr) => arr.convert(),
+                    Value::Complex(arr) => {
+                        env.push(arr.convert::<Mv>());
+                        return Ok(());
+                    }
+                    Value::Mv(mv) => {
+                        env.push(mv);
+                        return Ok(());
+                    }
+                    val => {
+                        return Err(env.error(format!(
+                            "Cannot create multivector from {} array",
+                            val.type_name()
+                        )));
+                    }
+                };
+                let old_shape = arr.shape.clone();
+                let mut new_shape = arr.shape;
+                let n = new_shape.pop().unwrap_or(1);
+                let elem_count = new_shape.elements();
+                let mv_arr: Array<Mv> = match (n, dims, side) {
+                    (0, ..) => {
+                        Array::new(new_shape, eco_vec![Mv::default().flavor(flavor);elem_count])
+                    }
+                    (1, _, SubSide::Left) | (1, None, SubSide::Right) => Array::new(
+                        new_shape,
+                        arr.data.into_iter().map(|n| Mv::from(n).flavor(flavor)),
+                    ),
+                    (1, Some(d), SubSide::Right) => Array::new(
+                        new_shape,
+                        arr.data
+                            .into_iter()
+                            .map(|n| Mv::pseudoscalar(d, n).flavor(flavor)),
+                    ),
+                    (n, None, side) => {
+                        if n as u8 > MAX_DIMS {
+                            return Err(env.error(format!(
+                                "{n} multivector dimensions \
+                                (from a {old_shape} array) would be too many"
+                            )));
+                        }
+                        let f = match side {
+                            SubSide::Left => Mv::vector,
+                            SubSide::Right => Mv::n_1_blades,
+                        };
+                        Array::new(
+                            new_shape,
+                            arr.data.chunks_exact(n).map(|n| f(n).flavor(flavor)),
+                        )
+                    }
+                    (n, Some(d), side) => {
+                        if d > MAX_DIMS {
+                            return Err(
+                                env.error(format!("{d} multivector dimensions would be too many"))
+                            );
+                        }
+                        let f = match side {
+                            SubSide::Left => Mv::blades_left,
+                            SubSide::Right => Mv::blades_right,
+                        };
+                        let mut data = EcoVec::with_capacity(elem_count);
+                        for slice in arr.data.chunks_exact(n) {
+                            match f(d, slice) {
+                                Ok(mv) => data.push(mv),
+                                Err(_) => {
+                                    return Err(env.error(format!(
+                                        "Cannot create {d}D multivector from {n} blades"
+                                    )));
+                                }
+                            }
+                        }
+                        Array::new(new_shape, data)
+                    }
+                };
+                env.push(mv_arr);
+            }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {
                     format!(

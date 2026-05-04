@@ -2644,7 +2644,17 @@ impl Value {
                 Value::Char(arr) => format!("@{}", format_char_inner_repr(arr.data[0])),
                 Value::Box(arr) => format!("□{}", arr.data[0].0.representation()),
                 #[cfg(feature = "ga")]
-                Value::Mv(arr) => todo!(),
+                Value::Mv(arr) => {
+                    let mut s = "⩜[".to_string();
+                    for (i, c) in arr.data[0].iter().enumerate() {
+                        if i > 0 {
+                            s.push(' ');
+                        }
+                        s.push_str(&f64_repr(c));
+                    }
+                    s.push(']');
+                    s
+                }
             },
             1 => match self {
                 Value::Char(arr) => format!("{:?}", arr.data.iter().collect::<String>()),
@@ -2657,6 +2667,18 @@ impl Value {
                         s.push_str(&v.0.representation());
                     }
                     s.push('}');
+                    s
+                }
+                #[cfg(feature = "ga")]
+                value @ Value::Mv(_) => {
+                    let mut s = "⩜[".to_string();
+                    for (i, v) in value.rows().enumerate() {
+                        if i > 0 {
+                            s.push(' ');
+                        }
+                        s.extend(v.representation().chars().filter(|&c| c != '⩜'));
+                    }
+                    s.push(']');
                     s
                 }
                 value => {
@@ -2685,7 +2707,7 @@ impl Value {
                     Value::Complex(_) => format!("ℂ0{s}"),
                     Value::Box(_) => format!("≡₀□{s}"),
                     #[cfg(feature = "ga")]
-                    Value::Mv(_) => todo!(),
+                    Value::Mv(_) => format!("≡₀⩜{s}"),
                 }
             }
             _ => {

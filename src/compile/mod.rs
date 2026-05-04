@@ -29,13 +29,12 @@ use serde::{Deserialize, Serialize};
 use crate::{
     Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan, Context,
     CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
-    ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GitTarget, Ident, ImplPrimitive,
-    IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript,
+    ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GaFlavor, GitTarget, Ident,
+    ImplPrimitive, IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript,
     OTHER_SUBSCRIPT_NUMBERS, PrimClass, Primitive, Purity, RunMode, SUBSCRIPT_DIGITS,
     SemanticComment, SidedSubscript, SigNode, Signature, Sp, Span, SubSide, Subscript,
     SubscriptNumber, SubscriptToken, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
     VERSION, Value,
-    algorithm::ga::{self, Spec},
     ast::*,
     check::nodes_sig,
     format::{format_word, format_words},
@@ -2365,6 +2364,10 @@ impl Compiler {
         let spandex = self.add_span(span.clone());
         match prim {
             Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
+            Primitive::Multivector => Node::ImplPrim(
+                ImplPrimitive::MvImpl(GaFlavor::Vanilla, None, SubSide::Left),
+                spandex,
+            ),
             prim => Node::Prim(prim, spandex),
         }
     }

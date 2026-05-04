@@ -371,7 +371,9 @@ where
                 write!(f, "{start}")?;
                 for (i, x) in self.data.iter().enumerate() {
                     if i > 0 {
-                        write!(f, "{}", T::format_sep())?;
+                        for _ in 0..T::separation() {
+                            write!(f, " ")?;
+                        }
                     }
                     write!(f, "{x}")?;
                 }

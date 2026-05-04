@@ -1722,7 +1722,7 @@ impl<A, B> OutputScalarType for fn(A, B) -> crate::Multivector {
 }
 
 macro_rules! scalar_mon_impl {
-    ($name:ident, $(($in:pat,$out:expr),)*) => {
+    ($name:ident, $($(#[$attr:meta])? ($in:pat,$out:expr),)*) => {
         impl Scalar {
             #[doc(hidden)]
             pub fn $name(self) -> Result<Self, String> {
@@ -1733,6 +1733,7 @@ macro_rules! scalar_mon_impl {
                 Ok(match self {
                     $(
                         #[allow(unreachable_patterns)]
+                        $(#[$attr])?
                         $in => $out,
                     )*
                     Scalar::Any | Scalar::Box(ScalarBox::Any) => self,
@@ -1796,7 +1797,7 @@ macro_rules! value_mon_impl {
         scalar_mon_impl!(
             $name,
             $($(($in_place, $in_place),)*)*
-            $($(($make_new, ($name::$f2 as fn(_) -> _).scalar()),)*)*
+            $($($(#[$attr])? ($make_new, ($name::$f2 as fn(_) -> _).scalar()),)*)*
         );
     }
 }
@@ -2019,7 +2020,7 @@ fn optimize_types(a: Value, b: Value) -> (Value, Value) {
 }
 
 macro_rules! scalar_dy_impl {
-    ($name:ident, $(($a:ident, $b:ident, $out:expr),)*) => {
+    ($name:ident, $($(#[$attr:meta])? ($a:ident, $b:ident, $out:expr),)*) => {
         impl Scalar {
             #[doc(hidden)]
             #[allow(clippy::wrong_self_convention)]
@@ -2033,6 +2034,7 @@ macro_rules! scalar_dy_impl {
                 Ok(match (self, other) {
                     $(
                         #[allow(unreachable_patterns)]
+                        $(#[$attr])?
                         ($a {..}, $b {..}) => $out,
                     )*
                     (Any, _) | (_, Any) => Any,
@@ -2158,7 +2160,7 @@ macro_rules! value_dy_impl {
         scalar_dy_impl!(
             $name,
             $($(($ip, $ip, $ip),)*)*
-            $($(($na, $nb, ($name::$f1 $(as fn ($ta, $tb) -> _)* as fn(_, _) -> _).scalar()),)*)*
+            $($($(#[$attr])? ($na, $nb, ($name::$f1 $(as fn ($ta, $tb) -> _)* as fn(_, _) -> _).scalar()),)*)*
         );
     };
 }

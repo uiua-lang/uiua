@@ -2,9 +2,12 @@
 
 # 0.19
 - Multivector scalar
+  - Inverses
+  - Output flavor?
+  - Output summary
+  - Unify with complex?
   - Update tests
   - Update docs
-  - Inverses
 - Type system
   - Tests
   - Data def types

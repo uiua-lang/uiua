@@ -12,57 +12,20 @@ use std::{
 use ecow::{EcoVec, eco_vec};
 use serde::*;
 
-use crate::Complex;
+use crate::{Complex, ga::Flavor};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Multivector {
     #[serde(default, skip_serializing_if = "EcoVec::is_empty", rename = "c")]
     coefs: EcoVec<f64>,
     /// The geometric algebra flavor
-    #[serde(default, skip_serializing_if = "Flavor::is_vanilla", rename = "f")]
+    #[serde(default, skip_serializing_if = "is_vanilla", rename = "f")]
     pub flavor: Flavor,
 }
 
-/// A geometric algebra flavor
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
-)]
-pub enum Flavor {
-    /// Cl(n, 0, 0)
-    #[default]
-    #[serde(rename = "v")]
-    Vanilla,
-    /// Cl(n, 0, 1)
-    #[serde(rename = "p")]
-    Projective,
-    /// Cl(n+1, 1, 0)
-    #[serde(rename = "c")]
-    Conformal,
-    /// Cl(1, n, 0)
-    #[serde(rename = "s")]
-    Spacetime,
-    /// Cl(0, 0, n)
-    #[serde(rename = "n")]
-    Null,
+fn is_vanilla(flavor: &Flavor) -> bool {
+    matches!(flavor, Flavor::Vanilla)
 }
-impl Flavor {
-    fn is_vanilla(&self) -> bool {
-        matches!(self, Flavor::Vanilla)
-    }
-    #[doc(hidden)]
-    pub fn metric(&self, index: usize) -> i32 {
-        match self {
-            Flavor::Vanilla => 1,
-            Flavor::Null => 0,
-            Flavor::Projective => index.min(1) as i32,
-            Flavor::Conformal => 2 * index.min(1) as i32 - 1,
-            Flavor::Spacetime => 1 - 2 * index.min(1) as i32,
-        }
-    }
-}
-
-pub const MAX_DIMS: u8 = 15;
-pub const MAX_BLADES: u8 = 225;
 
 impl Multivector {
     /// The the maximum number of dimensions

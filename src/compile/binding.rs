@@ -648,14 +648,14 @@ impl Compiler {
                 Word::Strand(items) => {
                     self.analyze_macro_body(mac_name, items, code_macro, subn, recursive, loc)
                 }
-                Word::Array(arr) => {
-                    if self
-                        .analyze_macro_items(mac_name, &arr.lines, code_macro, subn, recursive, loc)
-                    {
-                        return;
-                    }
+                Word::Array(arr)
+                    if self.analyze_macro_items(
+                        mac_name, &arr.lines, code_macro, subn, recursive, loc,
+                    ) =>
+                {
+                    return;
                 }
-                Word::Func(func) => {
+                Word::Func(func)
                     if self.analyze_macro_items(
                         mac_name,
                         &func.lines,
@@ -663,10 +663,11 @@ impl Compiler {
                         subn,
                         recursive,
                         loc,
-                    ) {
-                        return;
-                    }
+                    ) =>
+                {
+                    return;
                 }
+                Word::Func(_) => {}
                 Word::Pack(pack) => {
                     for branch in &pack.branches {
                         if self.analyze_macro_items(

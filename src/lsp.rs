@@ -1194,24 +1194,22 @@ mod server {
                             underable,
                             pure,
                             ..
-                        } => {
-                            if pure || invertible || underable {
-                                value.push_str("\n\n");
+                        } if (pure || invertible || underable) => {
+                            value.push_str("\n\n");
+                            if pure {
+                                value.push_str("pure");
+                            }
+                            if invertible {
                                 if pure {
-                                    value.push_str("pure");
+                                    value.push_str(" | ");
                                 }
-                                if invertible {
-                                    if pure {
-                                        value.push_str(" | ");
-                                    }
-                                    value.push_str("[`° un`](https://uiua.org/docs/un)");
+                                value.push_str("[`° un`](https://uiua.org/docs/un)");
+                            }
+                            if underable {
+                                if pure || invertible {
+                                    value.push_str(" | ");
                                 }
-                                if underable {
-                                    if pure || invertible {
-                                        value.push_str(" | ");
-                                    }
-                                    value.push_str("[`⍜ under`](https://uiua.org/docs/under)");
-                                }
+                                value.push_str("[`⍜ under`](https://uiua.org/docs/under)");
                             }
                         }
                         _ => {}

@@ -20,8 +20,8 @@ use std::{
 use rand::prelude::*;
 
 use crate::{
-    FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive, Shape, SubSide, SysOp, Uiua,
-    UiuaErrorKind, UiuaResult,
+    Complex, FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive, Shape, SubSide, SysOp,
+    Uiua, UiuaErrorKind, UiuaResult,
     algorithm::{self, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
@@ -610,6 +610,10 @@ impl ImplPrimitive {
             ImplPrimitive::Exp10 => env.monadic_env(Value::exp10)?,
             ImplPrimitive::Log2 => env.monadic_env(Value::log2)?,
             ImplPrimitive::Log10 => env.monadic_env(Value::log10)?,
+            ImplPrimitive::Conj => env.monadic_env(Value::conj)?,
+            ImplPrimitive::ReConj => env.monadic_env(Value::reconj)?,
+            ImplPrimitive::Dual => env.monadic_env(Value::dual)?,
+            ImplPrimitive::UnDual => env.monadic_env(Value::undual)?,
             ImplPrimitive::UnPop => {
                 let frame = (env.last_fill()).ok_or_else(|| env.error("No fill set").fill())?;
                 env.push(frame.values.first().cloned().unwrap_or_default());
@@ -1355,21 +1359,25 @@ impl ImplPrimitive {
                 }
                 env.push(val);
             }
-            #[cfg(not(feature = "ga"))]
-            ImplPrimitive::MvImpl(..) => {
-                return Err(env.error("Multivectors are not supported in this environment"));
-            }
-            #[cfg(feature = "ga")]
             &ImplPrimitive::MvImpl(flavor, dims, side) => {
-                use crate::{Multivector as Mv, ga::*};
+                #[cfg(feature = "ga")]
+                use crate::Multivector as Mv;
+                use crate::ga::*;
                 use ecow::eco_vec;
+                let is_vanilla = flavor == Flavor::Vanilla;
                 let arr = match env.pop(1)? {
                     Value::Num(arr) => arr,
                     Value::Byte(arr) => arr.convert(),
+                    Value::Complex(arr) if is_vanilla => {
+                        env.push(arr);
+                        return Ok(());
+                    }
+                    #[cfg(feature = "ga")]
                     Value::Complex(arr) => {
                         env.push(arr.convert::<Mv>());
                         return Ok(());
                     }
+                    #[cfg(feature = "ga")]
                     Value::Mv(mv) => {
                         env.push(mv);
                         return Ok(());
@@ -1382,25 +1390,47 @@ impl ImplPrimitive {
                     }
                 };
                 let old_shape = arr.shape.clone();
-                let mut new_shape = arr.shape;
+                let mut new_shape = arr.shape.clone();
                 let n = new_shape.pop().unwrap_or(1);
                 let elem_count = new_shape.elements();
-                let mv_arr: Array<Mv> = match (n, dims, side) {
-                    (0, ..) => {
-                        Array::new(new_shape, eco_vec![Mv::default().flavor(flavor);elem_count])
+                let val: Value = match (n, dims, side) {
+                    (0, None, _) if is_vanilla => {
+                        Array::<Complex>::new(new_shape, eco_vec![Complex::ZERO; elem_count]).into()
                     }
+                    (0, Some(d), _) if is_vanilla && d <= 2 => {
+                        Array::<Complex>::new(new_shape, eco_vec![Complex::ZERO; elem_count]).into()
+                    }
+                    (1, None | Some(2), Some(SubSide::Left)) if is_vanilla => {
+                        arr.convert::<Complex>().into()
+                    }
+                    (2, None | Some(2), Some(SubSide::Left)) if is_vanilla => Array::new(
+                        new_shape,
+                        arr.data.chunks_exact(n).map(|n| Complex::new(n[0], n[1])),
+                    )
+                    .into(),
+                    #[cfg(feature = "ga")]
+                    (0, ..) => Array::new(
+                        new_shape,
+                        eco_vec![Mv::default().flavor(flavor); elem_count],
+                    )
+                    .into(),
+                    #[cfg(feature = "ga")]
                     (1, _, None | Some(SubSide::Left)) | (1, None, Some(SubSide::Right)) => {
                         Array::new(
                             new_shape,
                             arr.data.into_iter().map(|n| Mv::from(n).flavor(flavor)),
                         )
+                        .into()
                     }
+                    #[cfg(feature = "ga")]
                     (1, Some(d), Some(SubSide::Right)) => Array::new(
                         new_shape,
                         arr.data
                             .into_iter()
                             .map(|n| Mv::pseudoscalar(d, n).flavor(flavor)),
-                    ),
+                    )
+                    .into(),
+                    #[cfg(feature = "ga")]
                     (n, None, None) => {
                         if n > MAX_DIMS as usize {
                             return Err(env.error(format!(
@@ -1414,6 +1444,7 @@ impl ImplPrimitive {
                                 .chunks_exact(n)
                                 .map(|n| Mv::vector(n).flavor(flavor)),
                         )
+                        .into()
                     }
                     (n, None, Some(side)) => {
                         let d = (n as f32 * 2.0).log2();
@@ -1442,7 +1473,9 @@ impl ImplPrimitive {
                             new_shape,
                             (arr.data.chunks_exact(n)).map(|n| f(d, n).unwrap().flavor(flavor)),
                         )
+                        .into()
                     }
+                    #[cfg(feature = "ga")]
                     (n, Some(d), side) => {
                         if d > MAX_DIMS {
                             return Err(
@@ -1464,10 +1497,16 @@ impl ImplPrimitive {
                                 }
                             }
                         }
-                        Array::new(new_shape, data)
+                        Array::new(new_shape, data).into()
+                    }
+                    #[cfg_attr(feature = "ga", allow(unreachable_patterns))]
+                    _ => {
+                        return Err(env.error(
+                            "Non-complex multivectors are not supported in this environment",
+                        ));
                     }
                 };
-                env.push(mv_arr);
+                env.push(val);
             }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

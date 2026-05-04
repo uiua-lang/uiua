@@ -2498,7 +2498,7 @@ impl Compiler {
             }
             Multivector => {
                 use crate::ga::*;
-                let sub = self.validate_subscript(scr);
+                let sub = self.validate_subscript_int(scr, &Multivector.format());
                 let flavor = match sub.value.num {
                     None => Flavor::Vanilla,
                     Some(0) => Flavor::Projective,
@@ -2524,6 +2524,27 @@ impl Compiler {
                 let side = sub.value.side.map(|ss| ss.side);
                 let span = self.add_span(span);
                 Node::ImplPrim(ImplPrimitive::MvImpl(flavor, dims, side), span)
+            }
+            Neg => {
+                use {crate::Complex, ImplPrimitive::*};
+                let Some(nos) = self.subscript_int_or_side(&scr, &Neg.format()) else {
+                    return Ok(self.primitive(Neg, span));
+                };
+                match nos {
+                    SubNOrSide::N(n) => {
+                        let rotation = match n {
+                            // Ensure that common cases are exact
+                            -1..=1 => Complex::ONE,
+                            2 | -2 => -Complex::ONE,
+                            4 => return Ok(Node::ImplPrim(Dual, self.add_span(span))),
+                            -4 => return Ok(Node::ImplPrim(UnDual, self.add_span(span))),
+                            _ => Complex::from_polar(1.0, std::f64::consts::TAU / n as f64),
+                        };
+                        Node::from_iter([Node::new_push(rotation), self.primitive(Mul, span)])
+                    }
+                    SubNOrSide::Side(SubSide::Left) => Node::ImplPrim(ReConj, self.add_span(span)),
+                    SubNOrSide::Side(SubSide::Right) => Node::ImplPrim(Conj, self.add_span(span)),
+                }
             }
             prim => {
                 let Some(n) = self.subscript_int_only(&scr, &prim.format()) else {
@@ -2559,18 +2580,6 @@ impl Compiler {
                             Node::new_push(n - 1),
                             Node::ImplPrim(ImplPrimitive::AntiOrient, self.add_span(span)),
                         ])
-                    }
-                    Neg => {
-                        use crate::Complex;
-                        let rotation = match n {
-                            // Ensure that common cases are exact
-                            -1..=1 => Complex::ONE,
-                            2 | -2 => -Complex::ONE,
-                            4 => Complex::I,
-                            -4 => -Complex::I,
-                            _ => Complex::from_polar(1.0, std::f64::consts::TAU / n as f64),
-                        };
-                        Node::from_iter([Node::new_push(rotation), self.primitive(Mul, span)])
                     }
                     Sqrt => {
                         if n == 0 {

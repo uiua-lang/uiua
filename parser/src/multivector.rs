@@ -189,9 +189,22 @@ impl Multivector {
             }
         }
     }
+    /// Geometrically inverse reverse the multivector
+    pub fn inv_reverse(&mut self) {
+        for (g, c) in blade_grades(self.dims()).zip(self) {
+            if g / 2 % 2 == 0 {
+                *c = -*c;
+            }
+        }
+    }
     /// Get the geometric reverse of the multivector
     pub fn reversed(mut self) -> Self {
         self.reverse();
+        self
+    }
+    /// Get the geometric inverse reverse of the multivector
+    pub fn inv_reversed(mut self) -> Self {
+        self.inv_reverse();
         self
     }
     /// Get the magnitude of the multivector

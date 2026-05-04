@@ -249,6 +249,10 @@ impl_primitive!(
     (1, Exp10),
     (1, Log2),
     (1, Log10),
+    (1, Conj),
+    (1, ReConj),
+    (1, Dual),
+    (1, UnDual),
     // Implementation details
     (2(3), Over),
     ([1], DipN(usize)),

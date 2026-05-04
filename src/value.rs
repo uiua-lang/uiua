@@ -1885,6 +1885,38 @@ value_mon_impl!(
 );
 value_mon_impl!(complex_re, [Num, generic], [Byte, generic], (Complex, com));
 value_mon_impl!(complex_im, [Num, num], [Byte, byte], (Complex, com));
+value_mon_impl!(
+    conj,
+    (Num, num),
+    (Byte, byte),
+    [Complex, com],
+    #[cfg(feature = "ga")]
+    (Mv, mv)
+);
+value_mon_impl!(
+    reconj,
+    (Num, num),
+    (Byte, byte),
+    [Complex, com],
+    #[cfg(feature = "ga")]
+    (Mv, mv)
+);
+value_mon_impl!(
+    dual,
+    (Num, num),
+    (Byte, byte),
+    [Complex, com],
+    #[cfg(feature = "ga")]
+    (Mv, mv)
+);
+value_mon_impl!(
+    undual,
+    (Num, num),
+    (Byte, byte),
+    [Complex, com],
+    #[cfg(feature = "ga")]
+    (Mv, mv)
+);
 value_mon_impl!(exp2, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(exp10, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(log2, [Num, num], (Byte, byte), [Complex, com]);

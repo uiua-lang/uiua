@@ -1163,6 +1163,86 @@ pub mod complex_im {
         format!("Cannot get the imaginary part of {a}")
     }
 }
+pub mod conj {
+    use super::*;
+
+    pub fn com(a: impl Into<Complex>) -> Complex {
+        a.into().conj()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.reversed()
+    }
+    pub fn byte(a: u8) -> Complex {
+        com(a)
+    }
+    pub fn num(a: f64) -> Complex {
+        com(a)
+    }
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the conjugate of {a}")
+    }
+}
+pub mod reconj {
+    use super::*;
+
+    pub fn com(a: impl Into<Complex>) -> Complex {
+        a.into().re_conj()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.inv_reversed()
+    }
+    pub fn byte(a: u8) -> Complex {
+        com(a)
+    }
+    pub fn num(a: f64) -> Complex {
+        com(a)
+    }
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the real conjugate of {a}")
+    }
+}
+pub mod dual {
+    use super::*;
+
+    pub fn com(a: impl Into<Complex>) -> Complex {
+        a.into().dual()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.dualed()
+    }
+    pub fn byte(a: u8) -> Complex {
+        com(a)
+    }
+    pub fn num(a: f64) -> Complex {
+        com(a)
+    }
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the dual of {a}")
+    }
+}
+pub mod undual {
+    use super::*;
+
+    pub fn com(a: impl Into<Complex>) -> Complex {
+        a.into().inv_dual()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.dualed().dualed().dualed()
+    }
+    pub fn byte(a: u8) -> Complex {
+        com(a)
+    }
+    pub fn num(a: f64) -> Complex {
+        com(a)
+    }
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the inverse dual of {a}")
+    }
+}
 
 pub mod exp2 {
     use super::*;

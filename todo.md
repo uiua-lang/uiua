@@ -5,7 +5,6 @@
   - Inverses
   - Output flavor?
   - Output summary
-  - Unify with complex?
   - Update tests
   - Update docs
 - Type system

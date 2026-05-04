@@ -258,7 +258,7 @@ impl Primitive {
             (Args, Some(SubscriptNumber::Int(n))) if n >= 0 => {
                 Signature::new(n as usize, n as usize)
             }
-            (Validate | Multivector, _) => return self.sig(),
+            (Neg | Validate | Multivector, _) => return self.sig(),
             _ => return None,
         })
     }

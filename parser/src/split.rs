@@ -67,6 +67,8 @@ pub enum PrimComponent {
     Sub1,
     /// Subscript 2
     Sub2,
+    /// Subscript i
+    SubI,
     /// (
     OpenParen,
     /// )
@@ -106,6 +108,7 @@ impl PrimComponent {
             PrimComponent::Sub0 => "₀",
             PrimComponent::Sub1 => "₁",
             PrimComponent::Sub2 => "₂",
+            PrimComponent::SubI => "ᵢ",
             PrimComponent::OpenParen => "(",
             PrimComponent::CloseParen => ")",
             PrimComponent::Epsilon => "ε",
@@ -299,6 +302,9 @@ impl Primitive {
             alias!((in, Validate), (t, PrimComponent::Int)),
             alias!((na, Validate), (t, PrimComponent::Nat)),
             alias!((bo, Validate), (ol, PrimComponent::Bool)),
+            alias!((co, Multivector), (mp, PrimComponent::SubI)),
+            alias!((com, Multivector), (pl, PrimComponent::SubI)),
+            alias!((comp, Multivector), (plex, PrimComponent::SubI)),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

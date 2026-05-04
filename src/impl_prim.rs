@@ -278,7 +278,7 @@ impl_primitive!(
     (2(0), ValidateTypeConsume),
     (2(0), TestAssert, Impure),
     (2, ValidateImpl(Option<usize>, Option<SubSide>)),
-    (1, MvImpl(crate::GaFlavor, Option<u8>, Option<SubSide>)),
+    (1, MvImpl(MvMode)),
     /// Validate that a non-boxed variant field has a valid type and rank
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),
@@ -288,3 +288,11 @@ impl_primitive!(
     (2, VoxelsArgs),
     ([1], FoldGif),
 );
+
+#[doc(hidden)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum MvMode {
+    Flavor(crate::GaFlavor, Option<u8>, Option<SubSide>),
+    Even,
+}

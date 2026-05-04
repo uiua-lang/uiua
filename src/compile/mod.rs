@@ -30,11 +30,11 @@ use crate::{
     Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan, Context,
     CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
     ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GaFlavor, GitTarget, Ident,
-    ImplPrimitive, IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript,
-    OTHER_SUBSCRIPT_NUMBERS, PrimClass, Primitive, Purity, RunMode, SUBSCRIPT_DIGITS,
-    SemanticComment, SidedSubscript, SigNode, Signature, Sp, Span, SubSide, Subscript,
-    SubscriptNumber, SubscriptToken, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
-    VERSION, Value,
+    ImplPrimitive, IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, MvMode, Node,
+    NumericSubscript, OTHER_SUBSCRIPT_NUMBERS, PrimClass, Primitive, Purity, RunMode,
+    SUBSCRIPT_DIGITS, SemanticComment, SidedSubscript, SigNode, Signature, Sp, Span, SubSide,
+    Subscript, SubscriptNumber, SubscriptToken, SysBackend, Uiua, UiuaError, UiuaErrorKind,
+    UiuaResult, VERSION, Value,
     ast::*,
     check::nodes_sig,
     format::{format_word, format_words},
@@ -2365,7 +2365,7 @@ impl Compiler {
         match prim {
             Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
             Primitive::Multivector => Node::ImplPrim(
-                ImplPrimitive::MvImpl(GaFlavor::Vanilla, None, None),
+                ImplPrimitive::MvImpl(MvMode::Flavor(GaFlavor::Vanilla, None, None)),
                 spandex,
             ),
             prim => Node::Prim(prim, spandex),
@@ -2498,12 +2498,29 @@ impl Compiler {
             }
             Multivector => {
                 use crate::ga::*;
-                let sub = self.validate_subscript_int(scr, &Multivector.format());
+                let sub = self.validate_subscript_n(scr);
+                let side = sub.value.side.map(|ss| ss.side);
                 let flavor = match sub.value.num {
                     None => Flavor::Vanilla,
-                    Some(0) => Flavor::Projective,
-                    Some(1) => Flavor::Conformal,
-                    Some(-1) => Flavor::Spacetime,
+                    Some(SubscriptNumber::Int(0)) => Flavor::Projective,
+                    Some(SubscriptNumber::Int(1)) => Flavor::Conformal,
+                    Some(SubscriptNumber::Int(-1)) => Flavor::Spacetime,
+                    Some(SubscriptNumber::I) => {
+                        if side.is_some() {
+                            self.add_error(
+                                sub.span.clone(),
+                                format!(
+                                    "Mixed subscripts are not allow for {} \
+                                    when creating even-bladed multivectors",
+                                    Multivector.format()
+                                ),
+                            );
+                        }
+                        return Ok(Node::ImplPrim(
+                            ImplPrimitive::MvImpl(MvMode::Even),
+                            self.add_span(span),
+                        ));
+                    }
                     Some(n) => {
                         self.add_error(
                             sub.span.clone(),
@@ -2521,9 +2538,10 @@ impl Compiler {
                     }
                     d as u8
                 });
-                let side = sub.value.side.map(|ss| ss.side);
-                let span = self.add_span(span);
-                Node::ImplPrim(ImplPrimitive::MvImpl(flavor, dims, side), span)
+                Node::ImplPrim(
+                    ImplPrimitive::MvImpl(MvMode::Flavor(flavor, dims, side)),
+                    self.add_span(span),
+                )
             }
             Neg => {
                 use {crate::Complex, ImplPrimitive::*};

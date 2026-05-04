@@ -20,8 +20,8 @@ use std::{
 use rand::prelude::*;
 
 use crate::{
-    Complex, FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive, Shape, SubSide, SysOp,
-    Uiua, UiuaErrorKind, UiuaResult,
+    Complex, FunctionId, ImplPrimitive, MvMode, NumericSubscript, Ops, Primitive, Shape, SubSide,
+    SysOp, Uiua, UiuaErrorKind, UiuaResult,
     algorithm::{self, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
@@ -1359,16 +1359,15 @@ impl ImplPrimitive {
                 }
                 env.push(val);
             }
-            &ImplPrimitive::MvImpl(flavor, dims, side) => {
+            &ImplPrimitive::MvImpl(mode) => {
                 #[cfg(feature = "ga")]
                 use crate::Multivector as Mv;
                 use crate::ga::*;
                 use ecow::eco_vec;
-                let is_vanilla = flavor == Flavor::Vanilla;
                 let arr = match env.pop(1)? {
                     Value::Num(arr) => arr,
                     Value::Byte(arr) => arr.convert(),
-                    Value::Complex(arr) if is_vanilla => {
+                    Value::Complex(arr) if mode == MvMode::Even => {
                         env.push(arr);
                         return Ok(());
                     }
@@ -1389,41 +1388,48 @@ impl ImplPrimitive {
                         )));
                     }
                 };
-                let old_shape = arr.shape.clone();
+                let _old_shape = arr.shape.clone();
                 let mut new_shape = arr.shape.clone();
                 let n = new_shape.pop().unwrap_or(1);
                 let elem_count = new_shape.elements();
-                let val: Value = match (n, dims, side) {
-                    (0, None, _) if is_vanilla => {
+                let val: Value = match (n, mode) {
+                    (0, MvMode::Even | MvMode::Flavor(Flavor::Vanilla, None, _)) => {
                         Array::<Complex>::new(new_shape, eco_vec![Complex::ZERO; elem_count]).into()
                     }
-                    (0, Some(d), _) if is_vanilla && d <= 2 => {
+                    (0, MvMode::Flavor(Flavor::Vanilla, Some(d), _)) if d <= 2 => {
                         Array::<Complex>::new(new_shape, eco_vec![Complex::ZERO; elem_count]).into()
                     }
-                    (1, None | Some(2), Some(SubSide::Left)) if is_vanilla => {
-                        arr.convert::<Complex>().into()
-                    }
-                    (2, None | Some(2), Some(SubSide::Left)) if is_vanilla => Array::new(
+                    (
+                        1,
+                        MvMode::Even
+                        | MvMode::Flavor(Flavor::Vanilla, None | Some(2), Some(SubSide::Left)),
+                    ) => arr.convert::<Complex>().into(),
+                    (
+                        2,
+                        MvMode::Even
+                        | MvMode::Flavor(Flavor::Vanilla, None | Some(2), Some(SubSide::Left)),
+                    ) => Array::new(
                         new_shape,
                         arr.data.chunks_exact(n).map(|n| Complex::new(n[0], n[1])),
                     )
                     .into(),
                     #[cfg(feature = "ga")]
-                    (0, ..) => Array::new(
+                    (0, MvMode::Flavor(flavor, ..)) => Array::new(
                         new_shape,
                         eco_vec![Mv::default().flavor(flavor); elem_count],
                     )
                     .into(),
+                    #[cfg(not(feature = "ga"))]
+                    (0, _) => Array::new(new_shape, eco_vec![Mv::default(); elem_count]).into(),
                     #[cfg(feature = "ga")]
-                    (1, _, None | Some(SubSide::Left)) | (1, None, Some(SubSide::Right)) => {
-                        Array::new(
-                            new_shape,
-                            arr.data.into_iter().map(|n| Mv::from(n).flavor(flavor)),
-                        )
-                        .into()
-                    }
+                    (1, MvMode::Flavor(flavor, _, None | Some(SubSide::Left)))
+                    | (1, MvMode::Flavor(flavor, None, Some(SubSide::Right))) => Array::new(
+                        new_shape,
+                        arr.data.into_iter().map(|n| Mv::from(n).flavor(flavor)),
+                    )
+                    .into(),
                     #[cfg(feature = "ga")]
-                    (1, Some(d), Some(SubSide::Right)) => Array::new(
+                    (1, MvMode::Flavor(flavor, Some(d), Some(SubSide::Right))) => Array::new(
                         new_shape,
                         arr.data
                             .into_iter()
@@ -1431,11 +1437,11 @@ impl ImplPrimitive {
                     )
                     .into(),
                     #[cfg(feature = "ga")]
-                    (n, None, None) => {
+                    (n, MvMode::Flavor(flavor, None, None)) => {
                         if n > MAX_DIMS as usize {
                             return Err(env.error(format!(
                                 "{n} multivector dimensions \
-                                (from a {old_shape} array) would be too many"
+                                (from a {_old_shape} array) would be too many"
                             )));
                         }
                         Array::new(
@@ -1446,37 +1452,48 @@ impl ImplPrimitive {
                         )
                         .into()
                     }
-                    (n, None, Some(side)) => {
+                    #[cfg(feature = "ga")]
+                    (n, MvMode::Even) => {
                         let d = (n as f32 * 2.0).log2();
                         if d.fract() != 0.0 {
                             return Err(env.error(format!(
-                                "Cannot create {}-bladed multivector from {n} blades",
-                                match side {
-                                    SubSide::Left => "even",
-                                    SubSide::Right => "odd",
-                                }
+                                "Cannot create even-bladed multivector from {n} blades",
                             )));
                         }
                         let d = d as usize;
                         if d > MAX_DIMS as usize {
                             return Err(env.error(format!(
                                 "{n} multivector dimensions \
-                                (from a {old_shape} array) would be too many"
+                                (from a {_old_shape} array) would be too many"
                             )));
                         }
                         let d = d as u8;
-                        let f = match side {
-                            SubSide::Left => Mv::blades_left,
-                            SubSide::Right => Mv::blades_right,
-                        };
                         Array::new(
                             new_shape,
-                            (arr.data.chunks_exact(n)).map(|n| f(d, n).unwrap().flavor(flavor)),
+                            (arr.data.chunks_exact(n)).map(|n| Mv::blades_left(d, n).unwrap()),
                         )
                         .into()
                     }
                     #[cfg(feature = "ga")]
-                    (n, Some(d), side) => {
+                    (n, MvMode::Flavor(flavor, None, Some(side))) => {
+                        if n > MAX_DIMS as usize {
+                            return Err(env.error(format!(
+                                "{n} multivector dimensions \
+                                (from a {_old_shape} array) would be too many"
+                            )));
+                        }
+                        let f = match side {
+                            SubSide::Left => Mv::vector,
+                            SubSide::Right => Mv::n_1_blades,
+                        };
+                        Array::new(
+                            new_shape,
+                            (arr.data.chunks_exact(n)).map(|n| f(n).flavor(flavor)),
+                        )
+                        .into()
+                    }
+                    #[cfg(feature = "ga")]
+                    (n, MvMode::Flavor(flavor, Some(d), side)) => {
                         if d > MAX_DIMS {
                             return Err(
                                 env.error(format!("{d} multivector dimensions would be too many"))
@@ -1489,7 +1506,7 @@ impl ImplPrimitive {
                         let mut data = EcoVec::with_capacity(elem_count);
                         for slice in arr.data.chunks_exact(n) {
                             match f(d, slice) {
-                                Ok(mv) => data.push(mv),
+                                Ok(mv) => data.push(mv.flavor(flavor)),
                                 Err(_) => {
                                     return Err(env.error(format!(
                                         "Cannot create {d}D multivector from {n} blades"
@@ -1499,7 +1516,7 @@ impl ImplPrimitive {
                         }
                         Array::new(new_shape, data).into()
                     }
-                    #[cfg_attr(feature = "ga", allow(unreachable_patterns))]
+                    #[cfg(not(feature = "ga"))]
                     _ => {
                         return Err(env.error(
                             "Non-complex multivectors are not supported in this environment",

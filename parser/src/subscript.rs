@@ -37,6 +37,15 @@ impl From<i32> for Subscript {
     }
 }
 
+impl From<SubscriptNumber> for Subscript {
+    fn from(i: SubscriptNumber) -> Self {
+        Subscript {
+            num: Some(i.into()),
+            side: None,
+        }
+    }
+}
+
 impl From<i32> for Subscript<i32> {
     fn from(i: i32) -> Self {
         Subscript {
@@ -150,6 +159,12 @@ impl From<Subscript> for SubscriptToken {
 
 impl From<i32> for SubscriptToken {
     fn from(i: i32) -> Self {
+        Subscript::<NumericSubscript>::from(i).into()
+    }
+}
+
+impl From<SubscriptNumber> for SubscriptToken {
+    fn from(i: SubscriptNumber) -> Self {
         Subscript::<NumericSubscript>::from(i).into()
     }
 }

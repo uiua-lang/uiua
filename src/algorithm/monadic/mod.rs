@@ -1392,6 +1392,8 @@ impl Value {
             Value::Char(_) => false,
             Value::Box(arr) => arr.data.iter().all(|Boxed(val)| val.all_true()),
             Value::Complex(arr) => arr.data.iter().all(|&c| c.re == 1.0 && c.im == 1.0),
+            #[cfg(feature = "ga")]
+            Value::Mv(_) => false,
         }
     }
     /// Count which occurrence of each row that row is
@@ -2641,6 +2643,8 @@ impl Value {
                 }
                 Value::Char(arr) => format!("@{}", format_char_inner_repr(arr.data[0])),
                 Value::Box(arr) => format!("□{}", arr.data[0].0.representation()),
+                #[cfg(feature = "ga")]
+                Value::Mv(arr) => todo!(),
             },
             1 => match self {
                 Value::Char(arr) => format!("{:?}", arr.data.iter().collect::<String>()),
@@ -2680,6 +2684,8 @@ impl Value {
                     Value::Char(_) => format!("+@a{s}"),
                     Value::Complex(_) => format!("ℂ0{s}"),
                     Value::Box(_) => format!("≡₀□{s}"),
+                    #[cfg(feature = "ga")]
+                    Value::Mv(_) => todo!(),
                 }
             }
             _ => {

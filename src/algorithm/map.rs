@@ -465,6 +465,8 @@ impl MapKeys {
             Value::Char(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
             Value::Box(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
             Value::Byte(_) => unreachable!(),
+            #[cfg(feature = "ga")]
+            Value::Mv(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
         }
     }
     fn grow_impl<K>(keys: &mut Array<K>, indices: &mut Vec<usize>, new_capacity: usize)
@@ -766,6 +768,8 @@ impl MapKeys {
                 set_tombstones(&mut nums, dropped);
                 self.keys = Value::Num(nums);
             }
+            #[cfg(feature = "ga")]
+            Value::Mv(keys) => set_tombstones(keys, dropped),
         }
         for &not_dropped in &present_indices[n..] {
             self.indices[not_dropped] -= n;
@@ -786,6 +790,8 @@ impl MapKeys {
                 set_tombstones(&mut nums, not_taken);
                 self.keys = Value::Num(nums);
             }
+            #[cfg(feature = "ga")]
+            Value::Mv(keys) => set_tombstones(keys, not_taken),
         }
         self.len = n;
     }
@@ -1056,6 +1062,22 @@ impl MapItem for Boxed {
     }
 }
 
+#[cfg(feature = "ga")]
+impl MapItem for crate::Multivector {
+    fn empty_cell() -> Self {
+        f64::empty_cell().into()
+    }
+    fn tombstone_cell() -> Self {
+        f64::tombstone_cell().into()
+    }
+    fn is_any_empty_cell(&self) -> bool {
+        self.iter().any(|f| f.is_any_empty_cell())
+    }
+    fn is_any_tombstone(&self) -> bool {
+        self.iter().any(|f| f.is_any_tombstone())
+    }
+}
+
 impl MapItem for Value {
     fn empty_cell() -> Self {
         Value::from(EMPTY_NAN)
@@ -1070,6 +1092,8 @@ impl MapItem for Value {
             Value::Complex(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
             Value::Char(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
             Value::Box(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
+            #[cfg(feature = "ga")]
+            Value::Mv(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
         }
     }
     fn is_any_tombstone(&self) -> bool {
@@ -1079,6 +1103,8 @@ impl MapItem for Value {
             Value::Complex(num) => num.data.iter().any(|v| v.is_any_tombstone()),
             Value::Char(num) => num.data.iter().any(|v| v.is_any_tombstone()),
             Value::Box(num) => num.data.iter().any(|v| v.is_any_tombstone()),
+            #[cfg(feature = "ga")]
+            Value::Mv(num) => num.data.iter().any(|v| v.is_any_tombstone()),
         }
     }
     fn is_all_empty_cell(&self) -> bool {
@@ -1088,6 +1114,8 @@ impl MapItem for Value {
             Value::Complex(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
             Value::Char(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
             Value::Box(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
+            #[cfg(feature = "ga")]
+            Value::Mv(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
         }
     }
     fn is_all_tombstone(&self) -> bool {
@@ -1097,6 +1125,8 @@ impl MapItem for Value {
             Value::Complex(num) => num.data.iter().all(|v| v.is_any_tombstone()),
             Value::Char(num) => num.data.iter().all(|v| v.is_any_tombstone()),
             Value::Box(num) => num.data.iter().all(|v| v.is_any_tombstone()),
+            #[cfg(feature = "ga")]
+            Value::Mv(num) => num.data.iter().all(|v| v.is_any_tombstone()),
         }
     }
 }

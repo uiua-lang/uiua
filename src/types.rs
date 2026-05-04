@@ -1275,6 +1275,8 @@ impl From<&Value> for Scalar {
                     .map(Box::new)
                     .map_or(ScalarBox::Any, ScalarBox::All),
             ),
+            #[cfg(feature = "ga")]
+            Value::Mv(_) => todo!(),
         }
     }
 }

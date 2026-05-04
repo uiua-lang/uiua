@@ -227,6 +227,7 @@ debug = []
 default = [
   # "window", # Comment in for dev
   # "webcam", # Comment in for dev
+  "ga", # Comment in for dev
   "binary",
   "batteries",
   "binary_batteries",
@@ -245,6 +246,7 @@ ffi = ["libffi", "libloading"]
 fft = ["rustfft", "num-complex"]
 font_shaping = ["cosmic-text", "sys-locale"]
 full = ["audio", "webcam", "window"] # Enables all optional features
+ga = ["uiua_parser/multivector"]
 gif = ["dep:gif", "image"]
 invoke = ["open"]
 lsp = ["tower-lsp", "tokio", "native_sys"]

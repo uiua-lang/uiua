@@ -2,6 +2,7 @@ use std::{
     cell::RefCell,
     cmp::Ordering,
     collections::HashMap,
+    fmt,
     iter::{self, repeat_n},
     mem::{replace, take},
     ops::*,
@@ -9,32 +10,45 @@ use std::{
 };
 
 use ecow::{EcoVec, eco_vec};
+use serde::*;
 
 use crate::Complex;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Multivector {
+    #[serde(default, skip_serializing_if = "EcoVec::is_empty", rename = "c")]
     coefs: EcoVec<f64>,
     /// The geometric algebra flavor
+    #[serde(default, skip_serializing_if = "Flavor::is_vanilla", rename = "f")]
     pub flavor: Flavor,
 }
 
 /// A geometric algebra flavor
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
 pub enum Flavor {
     /// Cl(n, 0, 0)
     #[default]
+    #[serde(rename = "v")]
     Vanilla,
     /// Cl(n, 0, 1)
+    #[serde(rename = "p")]
     Projective,
     /// Cl(n+1, 1, 0)
+    #[serde(rename = "c")]
     Conformal,
     /// Cl(1, n, 0)
+    #[serde(rename = "s")]
     Spacetime,
     /// Cl(0, 0, n)
+    #[serde(rename = "n")]
     Null,
 }
 impl Flavor {
+    fn is_vanilla(&self) -> bool {
+        matches!(self, Flavor::Vanilla)
+    }
     fn metric(&self, index: usize) -> i32 {
         match self {
             Flavor::Vanilla => 1,
@@ -278,6 +292,27 @@ impl PartialEq for Multivector {
 
 impl Eq for Multivector {}
 
+impl PartialOrd for Multivector {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Multivector {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.coefs.len().cmp(&other.coefs.len()).then_with(|| {
+            self.iter()
+                .zip(other)
+                .map(|(a, b)| {
+                    a.partial_cmp(&b)
+                        .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
+                })
+                .find(|&o| o != Ordering::Equal)
+                .unwrap_or(Ordering::Equal)
+        })
+    }
+}
+
 impl PartialEq<[f64]> for Multivector {
     fn eq(&self, other: &[f64]) -> bool {
         self.coefs == other
@@ -440,6 +475,12 @@ impl From<f64> for Multivector {
 impl From<Complex> for Multivector {
     fn from(c: Complex) -> Self {
         Multivector::complex(c.re, c.im)
+    }
+}
+
+impl fmt::Display for Multivector {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        todo!()
     }
 }
 

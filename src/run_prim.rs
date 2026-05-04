@@ -727,7 +727,7 @@ impl ImplPrimitive {
             }
             ImplPrimitive::UnMul => {
                 let x = env.pop(1)?;
-                let (sign, mag) = x.un_mul()?;
+                let (sign, mag) = x.un_mul(env)?;
                 env.push(mag);
                 env.push(sign);
             }

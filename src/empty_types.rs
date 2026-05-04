@@ -15,6 +15,8 @@ enum ScalarType {
     Complex,
     Char,
     Box(Option<Box<Ty>>),
+    #[cfg(feature = "ga")]
+    Multivector,
 }
 
 impl Value {
@@ -31,6 +33,8 @@ impl Value {
             } else {
                 None
             }),
+            #[cfg(feature = "ga")]
+            Value::Mv(_) => ScalarType::Multivector,
         }
     }
     fn ty(&self) -> Ty {
@@ -103,6 +107,10 @@ fn make_val(mut ty: Ty) -> Value {
         ScalarType::Complex => Array::<Complex>::new(ty.shape, CowSlice::default()).into(),
         ScalarType::Char => Array::<char>::new(ty.shape, CowSlice::default()).into(),
         ScalarType::Box(_) => Array::<Boxed>::new(ty.shape, CowSlice::default()).into(),
+        #[cfg(feature = "ga")]
+        ScalarType::Multivector => {
+            Array::<crate::Multivector>::new(ty.shape, CowSlice::default()).into()
+        }
     }
 }
 

@@ -4,6 +4,7 @@ mod defs;
 mod error;
 mod inputs;
 mod lex;
+#[cfg(feature = "multivector")]
 mod multivector;
 pub mod parse;
 mod primitive;
@@ -12,9 +13,11 @@ mod split;
 mod subscript;
 
 use bytemuck::must_cast;
+#[cfg(feature = "multivector")]
+pub use multivector::*;
 pub use {
-    complex::*, defs::*, error::*, inputs::*, lex::*, multivector::*, parse::parse, primitive::*,
-    signature::*, split::*, subscript::*,
+    complex::*, defs::*, error::*, inputs::*, lex::*, parse::parse, primitive::*, signature::*,
+    split::*, subscript::*,
 };
 
 /// A Uiua identifier

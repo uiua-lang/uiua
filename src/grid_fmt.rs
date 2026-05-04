@@ -392,6 +392,13 @@ impl GridFmt for Complex {
     }
 }
 
+#[cfg(feature = "ga")]
+impl GridFmt for crate::Multivector {
+    fn fmt_grid(&self, params: GridFmtParams) -> Grid {
+        todo!()
+    }
+}
+
 impl GridFmt for Value {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         if params.depth > 100 {
@@ -402,6 +409,8 @@ impl GridFmt for Value {
             Value::Byte(b) => b.fmt_grid(params),
             Value::Complex(c) => c.fmt_grid(params),
             Value::Char(c) => c.fmt_grid(params),
+            #[cfg(feature = "ga")]
+            Value::Mv(m) => m.fmt_grid(params),
             Value::Box(v) => {
                 let max_boxed_rank = v.data.iter().map(|Boxed(v)| v.rank()).max().unwrap_or(0);
                 v.fmt_grid(GridFmtParams {
@@ -696,6 +705,8 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     Value::Complex(_) => Complex::alignment(),
                     Value::Char(_) => char::alignment(),
                     Value::Box(_) => Boxed::alignment(),
+                    #[cfg(feature = "ga")]
+                    Value::Mv(_) => crate::Multivector::alignment(),
                 });
                 let metagrid = metagrid.get_or_insert_with(Metagrid::new);
                 for (key, value) in self.map_kv() {
@@ -712,6 +723,8 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         Value::Complex(_) => shape_row::<Complex>(&keys_row_shape),
                         Value::Char(_) => shape_row::<char>(&keys_row_shape),
                         Value::Box(_) => shape_row::<Boxed>(&keys_row_shape),
+                        #[cfg(feature = "ga")]
+                        Value::Mv(_) => shape_row::<crate::Multivector>(&keys_row_shape),
                     };
                     row.extend([' ', '→', ' ']);
                     let mut value_row_shape = self.shape.clone();
@@ -1094,6 +1107,8 @@ impl<T: ArrayValue> Array<T> {
                 Value::Complex(_) => shape_row::<Complex>(&keys_shape),
                 Value::Char(_) => shape_row::<char>(&keys_shape),
                 Value::Box(_) => shape_row::<Boxed>(&keys_shape),
+                #[cfg(feature = "ga")]
+                Value::Mv(_) => shape_row::<crate::Multivector>(&keys_shape),
             }
             .into_iter()
             .collect();
@@ -1154,6 +1169,8 @@ fn value_requires_summary(val: &Value) -> bool {
         Value::Complex(a) => requires_summary::<Complex>(&a.shape),
         Value::Char(a) => requires_summary::<char>(&a.shape),
         Value::Box(a) => requires_summary::<Boxed>(&a.shape),
+        #[cfg(feature = "ga")]
+        Value::Mv(a) => requires_summary::<crate::Multivector>(&a.shape),
     }
 }
 

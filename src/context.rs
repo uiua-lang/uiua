@@ -287,6 +287,32 @@ impl<'a> Context<'a> {
             _ => Err(self.fill_error(false)),
         })
     }
+    #[cfg(feature = "ga")]
+    pub(crate) fn multivector_scalar(&self) -> Result<FillValue<crate::Multivector>, &'static str> {
+        self.value_map(|val| match val {
+            Value::Num(n) if n.rank() == 0 => Ok(n.data[0].into()),
+            Value::Num(_) => Err(self.error(true)),
+            Value::Byte(n) if n.rank() == 0 => Ok(n.data[0].into()),
+            Value::Byte(_) => Err(self.error(true)),
+            Value::Complex(c) if c.rank() == 0 => Ok(c.data[0].into()),
+            Value::Complex(_) => Err(self.error(true)),
+            Value::Mv(m) if m.rank() == 0 => Ok(m.data[0].clone()),
+            Value::Mv(_) => Err(self.error(true)),
+            _ => Err(self.error(false)),
+        })
+    }
+    #[cfg(feature = "ga")]
+    pub(crate) fn multivector_array(
+        &self,
+    ) -> Result<FillValue<Array<crate::Multivector>>, &'static str> {
+        self.value_map(|val| match val {
+            Value::Num(n) => Ok(n.convert_ref()),
+            Value::Byte(n) => Ok(n.convert_ref()),
+            Value::Complex(c) => Ok(c.convert_ref()),
+            Value::Mv(m) => Ok(m.clone()),
+            _ => Err(self.error(false)),
+        })
+    }
     pub(crate) fn value_for(&self, val: &Value) -> Option<FillValue<&Value>> {
         let frame = self.frame()?;
         (frame.values.iter())
@@ -301,6 +327,8 @@ impl<'a> Context<'a> {
                 Some(Value::Char(_)) => ". A character fill is set, but it is not a scalar.",
                 Some(Value::Complex(_)) => ". A complex fill is set, but it is not a scalar.",
                 Some(Value::Box(_)) => ". A box fill is set, but it is not a scalar.",
+                #[cfg(feature = "ga")]
+                Some(Value::Mv(_)) => ". A multivector fill is set, but it is not a scalar.",
                 None => {
                     if self.other_value_fill().is_some() {
                         if self.normal_fill {
@@ -324,6 +352,10 @@ impl<'a> Context<'a> {
                     ". A complex fill is set, but the array is not complex numbers."
                 }
                 Some(Value::Box(_)) => ". A box fill is set, but the array is not boxed values.",
+                #[cfg(feature = "ga")]
+                Some(Value::Mv(_)) => {
+                    ". A multivector fill is set, but the array is not multivectors."
+                }
                 None => {
                     if self.other_value_fill().is_some() {
                         if self.normal_fill {

@@ -1211,6 +1211,28 @@ impl ArrayValue for Complex {
     }
 }
 
+#[cfg(feature = "ga")]
+impl ArrayValue for crate::Multivector {
+    const NAME: &'static str = "multivector";
+    const SYMBOL: char = '𝕍';
+    const TYPE_ID: u8 = 5;
+    fn get_scalar_fill(fill: &Fill) -> Result<FillValue<Self>, &'static str> {
+        fill.multivector_scalar()
+    }
+    fn get_array_fill(fill: &Fill) -> Result<FillValue<Array<Self>>, &'static str> {
+        fill.multivector_array()
+    }
+    fn array_hash<H: Hasher>(&self, hasher: &mut H) {
+        self.flavor.hash(hasher);
+        for c in self {
+            c.array_hash(hasher);
+        }
+    }
+    fn default_scalar() -> Self {
+        crate::Multivector::default()
+    }
+}
+
 /// Trait for [`ArrayValue`]s that are real numbers
 pub trait RealArrayValue: ArrayValue + Copy {
     /// Whether the value is an integer
@@ -1284,6 +1306,13 @@ impl ArrayCmp for char {
         } else {
             self.cmp(other)
         }
+    }
+}
+
+#[cfg(feature = "ga")]
+impl ArrayCmp for crate::Multivector {
+    fn array_cmp(&self, other: &Self) -> Ordering {
+        self.cmp(other)
     }
 }
 
@@ -1526,6 +1555,36 @@ impl ArrayValueSer for f64 {
     }
     fn make_data(collection: Self::Collection) -> CowSlice<Self> {
         collection.into_iter().map(f64::from).collect()
+    }
+}
+
+#[cfg(feature = "ga")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum MultivectorCollection {
+    #[serde(rename = "empty_mv")]
+    Empty([crate::Multivector; 0]),
+    #[serde(untagged)]
+    List(CowSlice<crate::Multivector>),
+}
+#[cfg(feature = "ga")]
+impl ArrayValueSer for crate::Multivector {
+    type Scalar = crate::Multivector;
+    type Collection = MultivectorCollection;
+    fn make_collection(data: CowSlice<Self>) -> Self::Collection {
+        if data.is_empty() {
+            MultivectorCollection::Empty([])
+        } else {
+            MultivectorCollection::List(data)
+        }
+    }
+    fn make_data(collection: Self::Collection) -> CowSlice<Self> {
+        match collection {
+            MultivectorCollection::Empty(_) => CowSlice::new(),
+            MultivectorCollection::List(data) => data,
+        }
+    }
+    fn no_scalar() -> bool {
+        true
     }
 }
 

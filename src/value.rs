@@ -29,14 +29,17 @@ use crate::{
 pub enum Value {
     /// Byte array used for some boolean operations and for I/O
     Byte(Array<u8>),
-    /// Common number array
+    /// Number array
     Num(Array<f64>),
     /// Complex number array
     Complex(Array<Complex>),
-    /// Common character array
+    /// Character array
     Char(Array<char>),
-    /// Common box array
+    /// Box array
     Box(Array<Boxed>),
+    /// Multivector array
+    #[cfg(feature = "ga")]
+    Mv(Array<crate::Multivector>),
 }
 
 impl Default for Value {
@@ -66,6 +69,8 @@ macro_rules! val_as_arr {
             Value::Complex($arr) => $body,
             Value::Char($arr) => $body,
             Value::Box($arr) => $body,
+            #[cfg(feature = "ga")]
+            Value::Mv($arr) => $body,
         }
     };
     ($input:expr, $f:path) => {
@@ -75,6 +80,8 @@ macro_rules! val_as_arr {
             Value::Complex(arr) => $f(arr),
             Value::Char(arr) => $f(arr),
             Value::Box(arr) => $f(arr),
+            #[cfg(feature = "ga")]
+            Value::Mv(arr) => $f(arr),
         }
     };
     ($input:expr, $env:expr, $f:path) => {
@@ -84,6 +91,8 @@ macro_rules! val_as_arr {
             Value::Complex(arr) => $f(arr, $env),
             Value::Char(arr) => $f(arr, $env),
             Value::Box(arr) => $f(arr, $env),
+            #[cfg(feature = "ga")]
+            Value::Mv(arr) => $f(arr, $env),
         }
     };
 }
@@ -108,6 +117,8 @@ impl Value {
             Self::Complex(_) => Complex::TYPE_ID,
             Self::Char(_) => char::TYPE_ID,
             Self::Box(_) => Boxed::TYPE_ID,
+            #[cfg(feature = "ga")]
+            Self::Mv(_) => crate::Multivector::TYPE_ID,
         }
     }
     /// Get a reference to a possible number array
@@ -205,6 +216,8 @@ impl Value {
             Self::Complex(_) => "complex",
             Self::Char(_) => "character",
             Self::Box(_) => "box",
+            #[cfg(feature = "ga")]
+            Self::Mv(_) => "multivector",
         }
     }
     /// Get a plural form of the value's type name
@@ -215,6 +228,8 @@ impl Value {
             Self::Complex(_) => "complexes",
             Self::Char(_) => "characters",
             Self::Box(_) => "boxes",
+            #[cfg(feature = "ga")]
+            Self::Mv(_) => "multivectors",
         }
     }
     /// Get the number of rows
@@ -255,6 +270,12 @@ impl Value {
                 .array_fill::<Boxed>()
                 .map(|fv| fv.value)
                 .map(Into::into),
+            #[cfg(feature = "ga")]
+            Value::Mv(_) => env
+                .ctx()
+                .array_fill::<crate::Multivector>()
+                .map(|fv| fv.value)
+                .map(Into::into),
         }
     }
     pub(crate) fn first_dim_zero(&self) -> Self {
@@ -275,6 +296,8 @@ impl Value {
             Self::Complex(_) => size_of::<Complex>(),
             Self::Char(_) => size_of::<char>(),
             Self::Box(_) => size_of::<Boxed>(),
+            #[cfg(feature = "ga")]
+            Self::Mv(_) => size_of::<crate::Multivector>(),
         }
     }
     /// Or with reversed sorted flags
@@ -1370,6 +1393,8 @@ impl Value {
             Value::Complex(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Char(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Box(arr) => arr,
+            #[cfg(feature = "ga")]
+            Value::Mv(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
         }
     }
     /// Convert to a box array by boxing every element
@@ -1386,6 +1411,8 @@ impl Value {
             Value::Complex(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Char(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Box(arr) => Cow::Borrowed(arr),
+            #[cfg(feature = "ga")]
+            Value::Mv(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
         }
     }
     /// Propagate a value's label across an operation
@@ -1538,6 +1565,8 @@ value_from!(u8, Byte);
 value_from!(char, Char);
 value_from!(Boxed, Box);
 value_from!(Complex, Complex);
+#[cfg(feature = "ga")]
+value_from!(crate::Multivector, Mv);
 
 impl FromIterator<usize> for Value {
     fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
@@ -2415,16 +2444,19 @@ impl Ord for Value {
             (Value::Complex(a), Value::Complex(b)) => a.cmp(b),
             (Value::Char(a), Value::Char(b)) => a.cmp(b),
             (Value::Box(a), Value::Box(b)) => a.cmp(b),
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Mv(b)) => a.cmp(b),
             (Value::Num(a), Value::Byte(b)) => a.partial_cmp(b).unwrap(),
             (Value::Byte(a), Value::Num(b)) => a.partial_cmp(b).unwrap(),
-            (Value::Num(_), _) => Ordering::Less,
-            (_, Value::Num(_)) => Ordering::Greater,
-            (Value::Byte(_), _) => Ordering::Less,
-            (_, Value::Byte(_)) => Ordering::Greater,
-            (Value::Complex(_), _) => Ordering::Less,
-            (_, Value::Complex(_)) => Ordering::Greater,
-            (Value::Char(_), _) => Ordering::Less,
-            (_, Value::Char(_)) => Ordering::Greater,
+            _ => unreachable!(),
+            // (Value::Num(_), _) => Ordering::Less,
+            // (_, Value::Num(_)) => Ordering::Greater,
+            // (Value::Byte(_), _) => Ordering::Less,
+            // (_, Value::Byte(_)) => Ordering::Greater,
+            // (Value::Complex(_), _) => Ordering::Less,
+            // (_, Value::Complex(_)) => Ordering::Greater,
+            // (Value::Char(_), _) => Ordering::Less,
+            // (_, Value::Char(_)) => Ordering::Greater,
         }
     }
 }

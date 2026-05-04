@@ -2496,6 +2496,35 @@ impl Compiler {
                     self.add_span(span),
                 )
             }
+            Multivector => {
+                use crate::ga::*;
+                let sub = self.validate_subscript(scr);
+                let flavor = match sub.value.num {
+                    None => Flavor::Vanilla,
+                    Some(0) => Flavor::Projective,
+                    Some(1) => Flavor::Conformal,
+                    Some(-1) => Flavor::Spacetime,
+                    Some(n) => {
+                        self.add_error(
+                            sub.span.clone(),
+                            format!("Invalid geometric algebra flavor specifier {n}"),
+                        );
+                        Flavor::Vanilla
+                    }
+                };
+                let dims = sub.value.side.and_then(|ss| ss.n).map(|d| {
+                    if d > MAX_DIMS as usize {
+                        self.add_error(
+                            sub.span.clone(),
+                            format!("{d} is too many multivector dimensions"),
+                        );
+                    }
+                    d as u8
+                });
+                let side = sub.value.side.map_or(SubSide::Left, |ss| ss.side);
+                let span = self.add_span(span);
+                Node::ImplPrim(ImplPrimitive::MvImpl(flavor, dims, side), span)
+            }
             prim => {
                 let Some(n) = self.subscript_int_only(&scr, &prim.format()) else {
                     return Ok(self.primitive(prim, span));

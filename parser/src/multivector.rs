@@ -74,12 +74,12 @@ impl Multivector {
         self.coefs
             .extend(repeat_n(0.0, (1 << dims) - (1 << low_dims)));
         let slice = self.coefs.make_mut();
-        let mut left = 0;
+        let mut b_left = 0;
         for d in 0..=low_dims {
             let ai = grade_size(low_dims, d);
             let bi = grade_size(dims, d);
-            slice[left..].rotate_right(bi - ai);
-            left += bi;
+            slice[b_left + ai..].rotate_right(bi - ai);
+            b_left += bi;
         }
     }
     fn conform(&mut self, other: &mut Self) {
@@ -147,7 +147,7 @@ impl Multivector {
             let mut left = 0;
             for d in 0..=dims {
                 let i = grade_size(dims, d);
-                if d % 2 == odd as u8 {
+                if d % 2 != odd as u8 {
                     slice[left..].rotate_right(i)
                 }
                 left += i;
@@ -278,6 +278,10 @@ impl Multivector {
                     }
                     let c_mask = a_mask ^ b_mask;
                     let ci = rev_mask_table[c_mask];
+                    // println!(
+                    //     "sign: {}, metric: {}, a: {}, b: {}",
+                    //     sign as f64, metric, a[ai], b[bi]
+                    // );
                     slice[ci] += sign as f64 * metric * a[ai] * b[bi];
                 }
             }
@@ -361,8 +365,9 @@ fn eq(a: f64, b: f64) -> bool {
 
 impl PartialEq for Multivector {
     fn eq(&self, other: &Self) -> bool {
-        self.coefs.len() == other.coefs.len()
-            && self.coefs.iter().zip(&other.coefs).all(|(a, b)| eq(*a, *b))
+        self.as_scalar() == other.as_scalar()
+            || self.coefs.len() == other.coefs.len()
+                && self.coefs.iter().zip(&other.coefs).all(|(a, b)| eq(*a, *b))
     }
 }
 
@@ -376,6 +381,11 @@ impl PartialOrd for Multivector {
 
 impl Ord for Multivector {
     fn cmp(&self, other: &Self) -> Ordering {
+        if let Some(a) = self.as_scalar()
+            && let Some(b) = other.as_scalar()
+        {
+            return (a.partial_cmp(&b)).unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()));
+        }
         self.coefs.len().cmp(&other.coefs.len()).then_with(|| {
             self.iter()
                 .zip(other)
@@ -613,7 +623,7 @@ mod test {
     #[test]
     fn conform() {
         let mut a = Mv::all([1.0, 2.0, 3.0, 4.0]);
-        a.set_dims(4);
+        a.set_dims(3);
         assert_eq!(a, [1.0, 2.0, 3.0, 0.0, 4.0, 0.0, 0.0, 0.0]);
 
         let mut a = Mv::all([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
@@ -635,6 +645,10 @@ mod test {
         assert_eq!(
             Mv::vector([1.0, 2.0]) * Mv::vector([3.0, 4.0]),
             [11.0, 0.0, 0.0, -2.0],
+        );
+        assert_eq!(
+            Mv::vector([1.0, 2.0, 3.0]) * Mv::vector([4.0, 5.0, 6.0]),
+            [32.0, 0.0, 0.0, 0.0, -3.0, 6.0, -3.0, 0.0],
         );
     }
 

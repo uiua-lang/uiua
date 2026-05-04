@@ -1708,6 +1708,12 @@ impl<A, B> OutputScalarType for fn(A, B) -> Boxed {
         Scalar::Box(ScalarBox::Any)
     }
 }
+#[cfg(feature = "ga")]
+impl<A, B> OutputScalarType for fn(A, B) -> crate::Multivector {
+    fn scalar(&self) -> Scalar {
+        Scalar::Multivector
+    }
+}
 
 macro_rules! scalar_mon_impl {
     ($name:ident, $(($in:pat,$out:expr),)*) => {
@@ -1995,6 +2001,9 @@ macro_rules! scalar_dy_impl {
             #[allow(clippy::wrong_self_convention)]
             pub fn $name(mut self, mut other: Self, a_fill: bool, b_fill: bool) -> Result<Self, TypeError> {
                 use Scalar::{*, Box, Num as Byte};
+                #[cfg(feature = "ga")]
+                #[allow(unused_imports)]
+                use Scalar::Multivector as Mv;
                 self.unrefine();
                 other.unrefine();
                 Ok(match (self, other) {
@@ -2031,7 +2040,7 @@ macro_rules! value_dy_impl {
     (
         $name:ident,
         $(
-            $(($na:ident, $nb:ident, $f1:ident $(,$ta:ty,$tb:ty)?))*
+            $($(#[$attr:meta])? ($na:ident, $nb:ident, $f1:ident $(,$ta:ty,$tb:ty)?))*
             $([$(|$meta:ident| $pred:expr,)* $ip:ident, $f2:ident $(, $reset_value_flags:literal)?])*
         ),*
         $({
@@ -2075,7 +2084,7 @@ macro_rules! value_dy_impl {
                         }
                         val
                     },)*)*
-                    $($((Value::$na(a), Value::$nb(b)) => {
+                    $($($(#[$attr])? (Value::$na(a), Value::$nb(b)) => {
                         let mut val: Value = bin_pervade(a, b, env, InfalliblePervasiveFn::new($name::$f1))?.into();
                         val.meta.take_value_flags();
                         if let Some(handle_pre) = handle_pre {
@@ -2246,7 +2255,29 @@ macro_rules! value_dy_math_impl {
     };
 }
 
-value_dy_math_impl!(
+macro_rules! value_dy_math_impl_mv {
+    ($name:ident, $(($($tt:tt)*))? $(,$($rest:tt)*)?) => {
+        value_dy_math_impl!(
+            $name,
+            (
+                #[cfg(feature = "ga")]
+                (Mv, Mv, mv_x, crate::Multivector, crate::Multivector),
+                #[cfg(feature = "ga")]
+                (Mv, Num, mv_x, crate::Multivector, f64),
+                #[cfg(feature = "ga")]
+                (Mv, Byte, mv_x, crate::Multivector, u8),
+                #[cfg(feature = "ga")]
+                (Num, Mv, x_mv, f64, crate::Multivector),
+                #[cfg(feature = "ga")]
+                (Byte, Mv, x_mv, u8, crate::Multivector),
+                $($($tt)*)?
+            )
+            $(,$($rest)*)?
+        );
+    };
+}
+
+value_dy_math_impl_mv!(
     add,
     (
         (Num, Char, num_char),
@@ -2257,7 +2288,7 @@ value_dy_math_impl!(
     ),
     maintain_both_sortedness
 );
-value_dy_math_impl!(
+value_dy_math_impl_mv!(
     sub,
     (
         (Num, Char, num_char),
@@ -2266,7 +2297,7 @@ value_dy_math_impl!(
     ),
     maintain_scalar_sortedness(true)
 );
-value_dy_math_impl!(
+value_dy_math_impl_mv!(
     mul,
     (
         (Num, Char, num_char),
@@ -2288,16 +2319,23 @@ value_dy_math_impl!(
 );
 value_dy_math_impl!(
     div,
-    ((Num, Char, num_char), (Byte, Char, byte_char)),
+    (
+        (Num, Char, num_char),
+        (Byte, Char, byte_char),
+        #[cfg(feature = "ga")]
+        (Byte, Mv, byte_mv, u8, crate::Multivector),
+        #[cfg(feature = "ga")]
+        (Num, Mv, num_mv, f64, crate::Multivector),
+    ),
     signed_scalar_sortedness(true)
 );
 value_dy_math_impl!(modulo, ((Complex, Complex, com_com)));
-value_dy_math_impl!(or, ([|meta| meta.flags.is_boolean(), Byte, bool_bool]));
+value_dy_math_impl_mv!(or, ([|meta| meta.flags.is_boolean(), Byte, bool_bool]));
 value_dy_math_impl!(scalar_pow);
 value_dy_math_impl!(root);
 value_dy_math_impl!(log);
-value_dy_math_impl!(atan2);
-value_dy_math_impl!(
+value_dy_math_impl_mv!(atan2,);
+value_dy_math_impl_mv!(
     min,
     (
         [Char, generic],
@@ -2306,7 +2344,7 @@ value_dy_math_impl!(
     ),
     maintain_both_sortedness
 );
-value_dy_math_impl!(
+value_dy_math_impl_mv!(
     max,
     (
         [Char, generic],
@@ -2348,24 +2386,45 @@ macro_rules! eq_impls {
             value_dy_impl!(
                 $name,
                 // Value comparable
-                [Num, same_type],
-                (Complex, Complex, com_x, crate::Complex, crate::Complex),
-                (Box, Box, generic, Boxed, Boxed),
                 [Byte, same_type],
                 (Char, Char, generic, char, char),
+                (Box, Box, generic, Boxed, Boxed),
+                // Numbers and conversions
+                [Num, same_type],
                 (Num, Byte, num_byte),
                 (Byte, Num, byte_num),
+                // Complex and conversions
+                (Complex, Complex, com_x, crate::Complex, crate::Complex),
                 (Complex, Num, com_x, crate::Complex, f64),
                 (Num, Complex, x_com, f64, crate::Complex),
                 (Complex, Byte, com_x, crate::Complex, u8),
                 (Byte, Complex, x_com, u8, crate::Complex),
+                // Multivector and conversions
+                #[cfg(feature = "ga")]
+                (Mv, Mv, mv_x, crate::Multivector, crate::Multivector),
+                #[cfg(feature = "ga")]
+                (Mv, Complex, mv_x, crate::Multivector, crate::Complex),
+                #[cfg(feature = "ga")]
+                (Complex, Mv, x_mv, crate::Complex, crate::Multivector),
+                #[cfg(feature = "ga")]
+                (Mv, Num, mv_x, crate::Multivector, f64),
+                #[cfg(feature = "ga")]
+                (Num, Mv, x_mv, f64, crate::Multivector),
+                #[cfg(feature = "ga")]
+                (Mv, Byte, mv_x, crate::Multivector, u8),
+                #[cfg(feature = "ga")]
+                (Byte, Mv, x_mv, u8, crate::Multivector),
                 // Type comparable
                 (Num, Char, always_less, f64, char),
                 (Byte, Char, always_less, u8, char),
                 (Complex, Char, always_less, crate::Complex, char),
+                #[cfg(feature = "ga")]
+                (Mv, Char, always_less, crate::Multivector, char),
                 (Char, Num, always_greater, char, f64),
                 (Char, Byte, always_greater, char, u8),
                 (Char, Complex, always_greater, char, crate::Complex),
+                #[cfg(feature = "ga")]
+                (Char, Mv, always_greater, char, crate::Multivector),
             );
         )*
     };
@@ -2377,24 +2436,45 @@ macro_rules! cmp_impls {
             value_dy_impl!(
                 $name,
                 // Value comparable
-                [Num, same_type],
-                [Complex, com_x],
                 (Box, Box, generic, Boxed, Boxed),
                 [Byte, same_type],
                 (Char, Char, generic, char, char),
+                // Num and conversions
+                [Num, same_type],
                 (Num, Byte, num_byte),
                 (Byte, Num, byte_num),
+                // Complex and conversions
+                [Complex, com_x],
                 (Complex, Num, com_x, crate::Complex, f64),
                 (Num, Complex, x_com, f64, crate::Complex),
                 (Complex, Byte, com_x, crate::Complex, u8),
                 (Byte, Complex, x_com, u8, crate::Complex),
+                // Multivector and conversions
+                #[cfg(feature = "ga")]
+                (Mv, Mv, mv_x, crate::Multivector, crate::Multivector),
+                #[cfg(feature = "ga")]
+                (Mv, Complex, mv_x, crate::Multivector, crate::Complex),
+                #[cfg(feature = "ga")]
+                (Complex, Mv, x_mv, crate::Complex, crate::Multivector),
+                #[cfg(feature = "ga")]
+                (Mv, Num, mv_x, crate::Multivector, f64),
+                #[cfg(feature = "ga")]
+                (Num, Mv, x_mv, f64, crate::Multivector),
+                #[cfg(feature = "ga")]
+                (Mv, Byte, mv_x, crate::Multivector, u8),
+                #[cfg(feature = "ga")]
+                (Byte, Mv, x_mv, u8, crate::Multivector),
                 // Type comparable
                 (Num, Char, always_less, f64, char),
                 (Byte, Char, always_less, u8, char),
                 (Complex, Char, always_less, crate::Complex, char),
+                #[cfg(feature = "ga")]
+                (Mv, Char, always_less, crate::Multivector, char),
                 (Char, Num, always_greater, char, f64),
                 (Char, Byte, always_greater, char, u8),
                 (Char, Complex, always_greater, char, crate::Complex),
+                #[cfg(feature = "ga")]
+                (Char, Mv, always_greater, char, crate::Multivector),
             );
         )*
     };
@@ -2419,6 +2499,8 @@ impl PartialEq for Value {
             (Value::Box(a), Value::Box(b)) => a == b,
             (Value::Num(a), Value::Byte(b)) => a == b,
             (Value::Byte(a), Value::Num(b)) => a == b,
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Mv(b)) => a == b,
             _ => false,
         }
     }

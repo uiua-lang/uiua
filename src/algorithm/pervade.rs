@@ -1282,6 +1282,14 @@ macro_rules! eq_impl {
             pub fn x_com(a: impl Into<Complex>, b: Complex) -> u8 {
                 (b.array_cmp(&a.into()) $eq $ordering) as u8
             }
+            #[cfg(feature = "ga")]
+            pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> u8 {
+                (b.into().array_cmp(&a) $eq $ordering) as u8
+            }
+            #[cfg(feature = "ga")]
+            pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> u8 {
+                (b.array_cmp(&a.into()) $eq $ordering) as u8
+            }
             pub fn byte_num(a: u8, b: f64) -> u8 {
                 (b.array_cmp(&f64::from(a)) $eq $ordering) as u8
             }
@@ -1327,6 +1335,16 @@ macro_rules! cmp_impl {
                     (b.re.array_cmp(&a.re) $eq $ordering) as u8 as f64,
                     (b.im.array_cmp(&a.im) $eq $ordering) as u8 as f64
                 )
+            }
+            #[cfg(feature = "ga")]
+            pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> u8 {
+                let b = b.into();
+                (b.array_cmp(&a) $eq $ordering) as u8
+            }
+            #[cfg(feature = "ga")]
+            pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> u8 {
+                let a = a.into();
+                (b.array_cmp(&a) $eq $ordering) as u8
             }
             pub fn byte_num(a: u8, b: f64) -> u8 {
                 (b.array_cmp(&f64::from(a)) $eq $ordering) as u8
@@ -1377,6 +1395,14 @@ pub mod add {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b + a.into()
     }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into() + a
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b + a.into()
+    }
     fn on_i64(a: i64, b: i64) -> char {
         char::from_u32(b.saturating_add(a).clamp(0, char::MAX as i64) as u32).unwrap_or('\0')
     }
@@ -1415,6 +1441,14 @@ pub mod sub {
         b.into() - a
     }
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        b - a.into()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into() - a
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
         b - a.into()
     }
     pub fn num_char(a: f64, b: char) -> char {
@@ -1504,6 +1538,14 @@ pub mod mul {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b * a.into()
     }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into() * a
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b * a.into()
+    }
     pub fn error<T: Display>(a: T, b: T) -> String {
         format!("Cannot multiply {a} and {b}")
     }
@@ -1578,6 +1620,14 @@ pub mod div {
     }
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b / a.into()
+    }
+    #[cfg(feature = "ga")]
+    pub fn byte_mv(a: u8, b: crate::Multivector) -> crate::Multivector {
+        b / a as f64
+    }
+    #[cfg(feature = "ga")]
+    pub fn num_mv(a: f64, b: crate::Multivector) -> crate::Multivector {
+        b / a
     }
     pub fn error<T: Display>(a: T, b: T) -> String {
         format!("Cannot divide {b} by {a}")
@@ -1701,20 +1751,57 @@ pub mod or {
         let a = a.into();
         Complex::new(num_num(a.re, b.re), num_num(a.im, b.im))
     }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into().regressive_product(a)
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b.regressive_product(a.into())
+    }
     pub fn error<T: Display>(a: T, b: T) -> String {
         format!("Cannot or {a} and {b}")
     }
 }
 
-bin_op_mod!(
-    atan2,
-    a,
-    b,
-    f64::from,
-    f64,
-    a.atan2(b),
-    "Cannot get the atan2 of {a} and {b}"
-);
+pub mod atan2 {
+    use super::*;
+    pub fn num_num(a: f64, b: f64) -> f64 {
+        a.atan2(b)
+    }
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
+        let a = f64::from(a);
+        let b = f64::from(b);
+        a.atan2(b)
+    }
+    pub fn byte_num(a: u8, b: f64) -> f64 {
+        let a = f64::from(a);
+        a.atan2(b)
+    }
+    pub fn num_byte(a: f64, b: u8) -> f64 {
+        let b = f64::from(b);
+        a.atan2(b)
+    }
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        let b = b.into();
+        a.atan2(b)
+    }
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        let a = a.into();
+        a.atan2(b)
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into().rotor(a)
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b.rotor(a.into())
+    }
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot get the atan2 of {a} and {b}")
+    }
+}
 pub mod scalar_pow {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
@@ -1838,6 +1925,14 @@ pub mod max {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         a.into().max(b)
     }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into().inner_product(a)
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b.inner_product(a.into())
+    }
     pub fn generic<T: Ord>(a: T, b: T) -> T {
         a.max(b)
     }
@@ -1868,6 +1963,14 @@ pub mod min {
     }
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         a.into().min(b)
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into().wedge_product(a)
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b.wedge_product(a.into())
     }
     pub fn generic<T: Ord>(a: T, b: T) -> T {
         a.min(b)

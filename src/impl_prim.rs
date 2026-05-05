@@ -293,6 +293,6 @@ impl_primitive!(
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum MvMode {
-    Flavor(crate::GaFlavor, Option<u8>, Option<SubSide>),
+    Flavor(crate::GaFlavor, Option<u8>, Option<(SubSide, Option<u8>)>),
     Even,
 }

@@ -15,8 +15,8 @@ use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
-    Ident, Inputs, NumericSubscript, PrimComponent, Primitive, SidedSubscript, SubSide, Subscript,
-    SubscriptNumber, SubscriptToken, WILDCARD_CHAR, split_name,
+    GaFlavor, Ident, Inputs, NumericSubscript, PrimComponent, Primitive, SidedSubscript, SubSide,
+    Subscript, SubscriptNumber, SubscriptToken, WILDCARD_CHAR, split_name,
 };
 
 /// Subscript digit characters
@@ -868,6 +868,10 @@ pub enum SemanticComment {
     TypeCheck,
     /// Mark a function as deprecated
     Deprecated(EcoString),
+    /// Set the geometric algebra flavor
+    GaFlavor(GaFlavor),
+    /// An invalid geometric algebra flavor
+    InvalidGaFlavor(EcoString),
     #[doc(hidden)]
     Boo,
 }
@@ -884,6 +888,8 @@ impl fmt::Display for SemanticComment {
             SemanticComment::TypeCheck => write!(f, "# Type check!"),
             SemanticComment::Deprecated(s) if s.is_empty() => write!(f, "# Deprecated!"),
             SemanticComment::Deprecated(s) => write!(f, "# Deprecated! {s}"),
+            SemanticComment::GaFlavor(fl) => write!(f, "# {fl}!"),
+            SemanticComment::InvalidGaFlavor(fl) => write!(f, "# {fl}!"),
             SemanticComment::Boo => write!(f, "# Boo!"),
         }
     }
@@ -1270,6 +1276,14 @@ impl<'a> Lexer<'a> {
                             s => {
                                 if let Some(suf) = s.strip_prefix("Deprecated!") {
                                     self.end(Deprecated(suf.trim().into()), start);
+                                } else if let Some(s) = s.trim().strip_suffix('!')
+                                    && let Some(fl) = GaFlavor::try_from_str(s)
+                                {
+                                    let token = match fl {
+                                        Ok(fl) => GaFlavor(fl),
+                                        Err(_) => InvalidGaFlavor(s.into()),
+                                    };
+                                    self.end(token, start)
                                 } else {
                                     self.end(Comment, start);
                                 }

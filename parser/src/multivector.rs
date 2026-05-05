@@ -120,13 +120,13 @@ impl Multivector {
             Self::all(blades)
         } else {
             let (start, end) = if odd {
-                ((dims as f32 / 2.0).floor() as u8, dims)
+                (((dims + 1) as f32 / 2.0).floor() as u8, dims + 1)
             } else {
-                (0, (dims as f32 / 2.0).ceil() as u8)
+                (0, ((dims + 1) as f32 / 2.0).ceil() as u8)
             };
             let mut left: usize = (0..start).map(|d| grade_size(dims, d)).sum();
-            for d in start..end {
-                let grade_size = grade_size(dims, d);
+            for g in start..end {
+                let grade_size = grade_size(dims, g);
                 if grade_size == blades.len() {
                     blades.extend(repeat_n(0.0, blade_count - grade_size));
                     blades.make_mut().rotate_right(left);
@@ -255,7 +255,7 @@ impl Multivector {
     }
     pub fn wedge_product(mut self, mut other: Self) -> Self {
         self.conform(&mut other);
-        let flavor = replace(&mut self.flavor, Flavor::Null);
+        let flavor = replace(&mut self.flavor, Flavor::NULL);
         self.product_impl(other, false);
         self.flavor = flavor;
         self
@@ -663,11 +663,9 @@ impl fmt::Display for Multivector {
                         write!(f, " - ")?;
                     }
                     wrote = true;
-                } else {
-                    if n < 0.0 {
-                        write!(f, "-")?;
-                        wrote = true;
-                    }
+                } else if n < 0.0 {
+                    write!(f, "-")?;
+                    wrote = true;
                 }
                 let mask = mask_table[i];
                 if n.abs() != 1.0 || mask == 0 {

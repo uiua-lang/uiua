@@ -1402,12 +1402,12 @@ impl ImplPrimitive {
                     (
                         1,
                         MvMode::Even
-                        | MvMode::Flavor(Flavor::Vanilla, None | Some(2), Some(SubSide::Left)),
+                        | MvMode::Flavor(Flavor::Vanilla, None | Some(2), Some((SubSide::Left, _))),
                     ) => arr.convert::<Complex>().into(),
                     (
                         2,
                         MvMode::Even
-                        | MvMode::Flavor(Flavor::Vanilla, None | Some(2), Some(SubSide::Left)),
+                        | MvMode::Flavor(Flavor::Vanilla, None | Some(2), Some((SubSide::Left, _))),
                     ) => Array::new(
                         new_shape,
                         arr.data.chunks_exact(n).map(|n| Complex::new(n[0], n[1])),
@@ -1420,38 +1420,29 @@ impl ImplPrimitive {
                     )
                     .into(),
                     #[cfg(feature = "ga")]
-                    (1, MvMode::Flavor(flavor, _, None | Some(SubSide::Left)))
-                    | (1, MvMode::Flavor(flavor, None, Some(SubSide::Right))) => Array::new(
+                    (1, MvMode::Flavor(flavor, _, None | Some((SubSide::Left, _))))
+                    | (1, MvMode::Flavor(flavor, None, Some((SubSide::Right, _)))) => Array::new(
                         new_shape,
                         arr.data.into_iter().map(|n| Mv::from(n).flavor(flavor)),
                     )
                     .into(),
                     #[cfg(feature = "ga")]
-                    (1, MvMode::Flavor(flavor, Some(d), Some(SubSide::Right))) => Array::new(
-                        new_shape,
-                        arr.data
-                            .into_iter()
-                            .map(|n| Mv::pseudoscalar(d, n).flavor(flavor)),
-                    )
-                    .into(),
-                    #[cfg(feature = "ga")]
-                    (n, MvMode::Flavor(flavor, None, None)) => {
-                        if n > MAX_DIMS as usize {
-                            return Err(env.error(format!(
-                                "{n} multivector dimensions \
-                                (from a {_old_shape} array) would be too many"
-                            )));
-                        }
+                    (
+                        1,
+                        MvMode::Flavor(flavor, Some(d), Some((SubSide::Right, None | Some(1)))),
+                    ) => {
+                        // Pseudoscalar
                         Array::new(
                             new_shape,
                             arr.data
-                                .chunks_exact(n)
-                                .map(|n| Mv::vector(n).flavor(flavor)),
+                                .into_iter()
+                                .map(|n| Mv::pseudoscalar(d, n).flavor(flavor)),
                         )
                         .into()
                     }
                     #[cfg(feature = "ga")]
-                    (n, MvMode::Even) => {
+                    (2.., MvMode::Even) => {
+                        // Even blades
                         let d = (n as f32 * 2.0).log2();
                         if d.fract() != 0.0 {
                             return Err(env.error(format!(
@@ -1473,31 +1464,78 @@ impl ImplPrimitive {
                         .into()
                     }
                     #[cfg(feature = "ga")]
-                    (n, MvMode::Flavor(flavor, None, Some(side))) => {
+                    (1.., MvMode::Flavor(flavor, None, None | Some((SubSide::Left, None)))) => {
+                        // Vector
                         if n > MAX_DIMS as usize {
                             return Err(env.error(format!(
                                 "{n} multivector dimensions \
                                 (from a {_old_shape} array) would be too many"
                             )));
                         }
-                        let f = match side {
-                            SubSide::Left => Mv::vector,
-                            SubSide::Right => Mv::n_1_blades,
-                        };
                         Array::new(
                             new_shape,
-                            (arr.data.chunks_exact(n)).map(|n| f(n).flavor(flavor)),
+                            arr.data
+                                .chunks_exact(n)
+                                .map(|n| Mv::vector(n).flavor(flavor)),
                         )
                         .into()
                     }
                     #[cfg(feature = "ga")]
-                    (n, MvMode::Flavor(flavor, Some(d), side)) => {
+                    (1.., MvMode::Flavor(flavor, None, Some((SubSide::Right, None)))) => {
+                        // n-1 blades
+                        if n > MAX_DIMS as usize {
+                            return Err(env.error(format!(
+                                "{n} multivector dimensions \
+                                (from a {_old_shape} array) would be too many"
+                            )));
+                        }
+                        Array::new(
+                            new_shape,
+                            (arr.data.chunks_exact(n)).map(|n| Mv::n_1_blades(n).flavor(flavor)),
+                        )
+                        .into()
+                    }
+                    #[cfg(feature = "ga")]
+                    (1.., MvMode::Flavor(flavor, None, Some((side, Some(grade))))) => {
+                        // Dimensions specified, but a grade is
+                        let d = (grade..=MAX_DIMS)
+                            .find(|&d| grade_size(d, grade) == n)
+                            .ok_or_else(|| {
+                                env.error(format!(
+                                    "Unable to find a number of dimensions where grade {grade} has {n} blades"
+                                ))
+                            })?;
+                        let f = match side {
+                            SubSide::Left => Mv::blades_left,
+                            SubSide::Right => Mv::blades_right,
+                        };
+                        Array::new(
+                            new_shape,
+                            (arr.data.chunks_exact(n)).map(|n| f(d, n).unwrap().flavor(flavor)),
+                        )
+                        .into()
+                    }
+                    #[cfg(feature = "ga")]
+                    (1.., MvMode::Flavor(flavor, Some(d), side)) => {
+                        // Dimensions specified
                         if d > MAX_DIMS {
                             return Err(
                                 env.error(format!("{d} multivector dimensions would be too many"))
                             );
                         }
-                        let f = match side.unwrap_or(SubSide::Left) {
+                        let (side, grade) = side.unwrap_or((SubSide::Left, None));
+                        if let Some(grade) = grade {
+                            let grade_size = grade_size(d, grade);
+                            if n != grade_size {
+                                return Err(env.error(format!(
+                                    "Grade {grade} of a {d}D multivector \
+                                    has {grade_size} blade{}, not {n}",
+                                    if grade_size == 1 { "" } else { "s" }
+                                )));
+                            }
+                        }
+
+                        let f = match side {
                             SubSide::Left => Mv::blades_left,
                             SubSide::Right => Mv::blades_right,
                         };

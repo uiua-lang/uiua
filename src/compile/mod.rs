@@ -304,6 +304,8 @@ pub(crate) struct Scope {
     pub type_check: bool,
     /// Whether an error has been emitted for experimental features
     experimental_error: bool,
+    /// The geometric algebra flavor
+    ga_flavor: Option<GaFlavor>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -350,6 +352,7 @@ impl Default for Scope {
             experimental: false,
             type_check: false,
             experimental_error: false,
+            ga_flavor: None,
         }
     }
 }
@@ -1660,6 +1663,18 @@ impl Compiler {
                 inner
             }
             SemanticComment::Deprecated(_) => inner,
+            SemanticComment::GaFlavor(fl) => {
+                self.scope.ga_flavor = Some(fl);
+                inner
+            }
+            SemanticComment::InvalidGaFlavor(_) => {
+                self.emit_diagnostic(
+                    "Invalid GA flavor specification",
+                    DiagnosticKind::Advice,
+                    span,
+                );
+                inner
+            }
             SemanticComment::Boo => {
                 self.add_error(span, "The compiler is scared!");
                 inner
@@ -2365,7 +2380,7 @@ impl Compiler {
         match prim {
             Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
             Primitive::Multivector => Node::ImplPrim(
-                ImplPrimitive::MvImpl(MvMode::Flavor(GaFlavor::Vanilla, None, None)),
+                ImplPrimitive::MvImpl(MvMode::Flavor(self.ga_flavor(), None, None)),
                 spandex,
             ),
             prim => Node::Prim(prim, spandex),
@@ -2499,19 +2514,45 @@ impl Compiler {
             Multivector => {
                 use crate::ga::*;
                 let sub = self.validate_subscript_n(scr);
-                let side = sub.value.side.map(|ss| ss.side);
-                let flavor = match sub.value.num {
-                    None => Flavor::Vanilla,
-                    Some(SubscriptNumber::Int(0)) => Flavor::Projective,
-                    Some(SubscriptNumber::Int(1)) => Flavor::Conformal,
-                    Some(SubscriptNumber::Int(-1)) => Flavor::Spacetime,
+                let flavor = self.ga_flavor();
+                let side = sub.value.side.map(|ss| {
+                    (
+                        ss.side,
+                        ss.n.map(|n| {
+                            if n > MAX_BLADES as usize {
+                                self.add_error(
+                                    sub.span.clone(),
+                                    format!("{n} is too high a multivector blade"),
+                                )
+                            }
+                            n as u8
+                        }),
+                    )
+                });
+                let dims = match sub.value.num {
+                    None => None,
+                    Some(SubscriptNumber::Int(n)) => {
+                        if n < 0 {
+                            self.add_error(
+                                sub.span.clone(),
+                                "Cannot have negative multivector dimensions",
+                            );
+                        }
+                        if n > MAX_DIMS as i32 {
+                            self.add_error(
+                                sub.span.clone(),
+                                format!("{n} is too many multivector dimensions"),
+                            );
+                        }
+                        Some(n as u8)
+                    }
                     Some(SubscriptNumber::I) => {
                         if side.is_some() {
                             self.add_error(
                                 sub.span.clone(),
                                 format!(
                                     "Mixed subscripts are not allow for {} \
-                                    when creating even-bladed multivectors",
+                                        when creating even-bladed multivectors",
                                     Multivector.format()
                                 ),
                             );
@@ -2524,20 +2565,11 @@ impl Compiler {
                     Some(n) => {
                         self.add_error(
                             sub.span.clone(),
-                            format!("Invalid geometric algebra flavor specifier {n}"),
+                            format!("Invalid geometric algebra dimension specifier {n}"),
                         );
-                        Flavor::Vanilla
+                        None
                     }
                 };
-                let dims = sub.value.side.and_then(|ss| ss.n).map(|d| {
-                    if d > MAX_DIMS as usize {
-                        self.add_error(
-                            sub.span.clone(),
-                            format!("{d} is too many multivector dimensions"),
-                        );
-                    }
-                    d as u8
-                });
                 Node::ImplPrim(
                     ImplPrimitive::MvImpl(MvMode::Flavor(flavor, dims, side)),
                     self.add_span(span),
@@ -3063,6 +3095,17 @@ impl Compiler {
         self.scopes()
             .take(take)
             .any(|sc| sc.experimental || sc.experimental_error)
+    }
+    fn ga_flavor(&self) -> GaFlavor {
+        let take = self
+            .scopes()
+            .position(|sc| matches!(sc.kind, ScopeKind::File(_)))
+            .map(|i| i + 1)
+            .unwrap_or(usize::MAX);
+        self.scopes()
+            .take(take)
+            .find_map(|sc| sc.ga_flavor)
+            .unwrap_or_default()
     }
     fn error(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
         UiuaErrorKind::Run {

@@ -250,7 +250,7 @@ impl Multivector {
         self
     }
     pub fn regressive_product(self, other: Self) -> Self {
-        self.dualed().wedge_product(other.dualed()).dualed()
+        self.dualed().wedge_product(other.dualed()).antidualed()
     }
     fn product_impl(&mut self, rhs: Self, dot: bool) {
         let (a, mut b) = (self, rhs);

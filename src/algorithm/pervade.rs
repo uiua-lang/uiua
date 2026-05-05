@@ -1323,7 +1323,7 @@ pub mod square_abs {
     }
     #[cfg(feature = "ga")]
     pub fn mv(a: crate::Multivector) -> f64 {
-        a.magnitude().powi(2)
+        a.squared_magnitude()
     }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot square {a}")

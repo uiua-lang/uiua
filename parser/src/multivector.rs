@@ -222,9 +222,18 @@ impl Multivector {
         self.inv_reverse();
         self
     }
+    /// Get the squared magnitude of the multivector
+    pub fn squared_magnitude(&self) -> f64 {
+        let dims = self.dims();
+        mask_tables(dims, |mask_table, _| {
+            (self.iter().enumerate())
+                .map(|(i, c)| blade_metric_scalar_only(mask_table[i], dims, self.flavor) * c * c)
+                .sum::<f64>()
+        })
+    }
     /// Get the magnitude of the multivector
-    pub fn magnitude(self) -> f64 {
-        (self.clone() * self.reversed())[0]
+    pub fn magnitude(&self) -> f64 {
+        self.squared_magnitude().sqrt()
     }
     /// Normalize the multivector
     pub fn normalize(&mut self) {
@@ -276,6 +285,12 @@ impl Multivector {
                 }
             })
         });
+        for c in slice {
+            let fract = c.abs().fract();
+            if fract < 1e-14 || 1.0 - fract < 1e-14 {
+                *c = c.round();
+            }
+        }
         a.coefs = new_coefs;
     }
 }
@@ -323,6 +338,29 @@ where
     })
 }
 
+fn blade_metric_scalar_only(a_mask: usize, dims: u8, flavor: Flavor) -> f64 {
+    let mut metric = 1.0;
+    // Calc sign based on swaps
+    let grade = a_mask.count_ones();
+    if grade >= 2 {
+        let swaps = grade * (grade - 1) / 2;
+        if swaps % 2 == 1 {
+            metric = -metric;
+        }
+    }
+    // Reverse if necessary
+    if grade / 2 % 2 == 1 {
+        metric = -metric;
+    }
+    // Apply flavor metrics
+    for i in 0..dims {
+        if a_mask & (1 << i) != 0 {
+            metric *= flavor.metric(i) as f64;
+        }
+    }
+    metric
+}
+
 /// Calculate, cache, and access the blade metrics for a given number of dimensions and GA flavor
 fn blade_metrics<F, T>(dims: u8, flavor: Flavor, dot: bool, f: F) -> T
 where
@@ -346,6 +384,10 @@ where
                     }
                     let mut metric = 1.0;
                     if dims >= 3 {
+                        // Account for reording of high-graded blades
+                        // Don't do it for 2 dims because 2 dims has
+                        // a nice circular order of e12,e23,e31.
+                        // Such an order does not exist for 3+ dims.
                         let ab = a ^ b;
                         for i in [a, b, ab] {
                             if (i ^ (i >> 1)).count_ones() == dims as u32 {
@@ -355,12 +397,14 @@ where
                     }
                     for i in 0..dims {
                         let bit_i = 1 << i;
+                        // Calc sign based on swaps
                         if a & bit_i != 0 {
                             let lower_bits = b & (bit_i - 1);
                             if lower_bits.count_ones() % 2 == 1 {
                                 metric = -metric;
                             }
                         }
+                        // Apply flavor metrics
                         if (a & bit_i != 0) && (b & bit_i != 0) {
                             metric *= flavor.metric(i) as f64;
                         }

@@ -1231,7 +1231,7 @@ pub mod undual {
     }
     #[cfg(feature = "ga")]
     pub fn mv(a: crate::Multivector) -> crate::Multivector {
-        a.dualed().dualed().dualed()
+        a.antidualed()
     }
     pub fn byte(a: u8) -> Complex {
         com(a)

@@ -181,6 +181,19 @@ impl Multivector {
         self.dual();
         self
     }
+    /// Geometrically antidual the multivector
+    pub fn antidual(&mut self) {
+        let flavor = take(&mut self.flavor);
+        let dims = self.dims();
+        let v = replace(self, Self::pseudo_unit(dims));
+        *self *= v;
+        self.flavor = flavor;
+    }
+    /// Get the geometric antidual of the multivector
+    pub fn antidualed(mut self) -> Self {
+        self.antidual();
+        self
+    }
     /// Geometrically reverse the multivector
     pub fn reverse(&mut self) {
         for (g, c) in blade_grades(self.dims()).zip(self) {

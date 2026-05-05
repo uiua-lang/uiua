@@ -195,6 +195,7 @@ apng = ["dep:png"]
 audio = ["hodaun", "audio_encode", "ogg"]
 audio_encode = ["hound"]
 batteries = [
+  "ga", # Comment in for dev
   "gif",
   "apng",
   "image",
@@ -227,7 +228,6 @@ debug = []
 default = [
   # "window", # Comment in for dev
   # "webcam", # Comment in for dev
-  "ga", # Comment in for dev
   "binary",
   "batteries",
   "binary_batteries",

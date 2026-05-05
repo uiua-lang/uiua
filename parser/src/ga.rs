@@ -27,7 +27,7 @@ pub enum Flavor {
 }
 impl Flavor {
     #[doc(hidden)]
-    pub fn metric(&self, index: usize) -> i32 {
+    pub fn metric(&self, index: u8) -> i32 {
         match self {
             Flavor::Vanilla => 1,
             Flavor::Null => 0,

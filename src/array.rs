@@ -1311,13 +1311,6 @@ impl ArrayCmp for char {
     }
 }
 
-#[cfg(feature = "ga")]
-impl ArrayCmp for crate::Multivector {
-    fn array_cmp(&self, other: &Self) -> Ordering {
-        self.cmp(other)
-    }
-}
-
 impl ArrayCmp for Boxed {
     fn array_cmp(&self, other: &Self) -> Ordering {
         self.cmp(other)
@@ -1333,6 +1326,33 @@ impl ArrayCmp<f64> for u8 {
 impl ArrayCmp<u8> for f64 {
     fn array_cmp(&self, other: &u8) -> Ordering {
         self.array_cmp(&(*other as f64))
+    }
+}
+
+#[cfg(feature = "ga")]
+impl ArrayCmp for crate::Multivector {
+    fn array_cmp(&self, other: &Self) -> Ordering {
+        self.cmp(other)
+    }
+}
+
+#[cfg(feature = "ga")]
+impl ArrayCmp<Complex> for crate::Multivector {
+    fn array_eq(&self, other: &Complex) -> bool {
+        self == other
+    }
+    fn array_cmp(&self, other: &Complex) -> Ordering {
+        self.array_cmp(&crate::Multivector::from(*other))
+    }
+}
+
+#[cfg(feature = "ga")]
+impl ArrayCmp<crate::Multivector> for Complex {
+    fn array_eq(&self, other: &crate::Multivector) -> bool {
+        self == other
+    }
+    fn array_cmp(&self, other: &crate::Multivector) -> Ordering {
+        crate::Multivector::from(*self).array_cmp(other)
     }
 }
 

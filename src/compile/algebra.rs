@@ -804,7 +804,9 @@ impl Expr {
         if term == Term::ONE { Some(coef) } else { None }
     }
     fn pow(self, power: Self) -> Option<Self> {
-        if self.as_constant().is_some_and(|c| c == E.into())
+        if self
+            .as_constant()
+            .is_some_and(|c| c == Complex::new(E, 0.0))
             && let Some((Term::X(1.0), _)) = power.single()
         {
             return Some(Term::Exp(power).into());

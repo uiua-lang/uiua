@@ -259,23 +259,22 @@ impl Multivector {
         a.conform(&mut b);
         let dims = a.dims();
         let mut new_coefs = eco_vec![0.0; a.coefs.len()];
-        mask_tables(dims, |mask_table, rev_mask_table| {
-            let slice = new_coefs.make_mut();
-            for (bi, &b_mask) in mask_table.iter().enumerate() {
-                for (ai, &a_mask) in mask_table.iter().enumerate() {
-                    let (sign, metric) = blade_sign_and_metric(dims, a.flavor, dot, a_mask, b_mask);
-                    if metric == 0.0 {
-                        continue;
+        let slice = new_coefs.make_mut();
+        mask_tables(dims, |mask_table, inv_mask_table| {
+            blade_metrics(dims, a.flavor, dot, |metrics, stride| {
+                for (bi, &b_mask) in mask_table.iter().enumerate() {
+                    for (ai, &a_mask) in mask_table.iter().enumerate() {
+                        let metric = metrics[a_mask * stride + b_mask];
+                        if metric == 0.0 {
+                            continue;
+                        }
+                        let c_mask = a_mask ^ b_mask;
+                        let ci = inv_mask_table[c_mask];
+                        // println!("metric: {metric}, a: {}, b: {}", a[ai], b[bi]);
+                        slice[ci] += metric * a[ai] * b[bi];
                     }
-                    let c_mask = a_mask ^ b_mask;
-                    let ci = rev_mask_table[c_mask];
-                    // println!(
-                    //     "sign: {}, metric: {}, a: {}, b: {}",
-                    //     sign as f64, metric, a[ai], b[bi]
-                    // );
-                    slice[ci] += sign as f64 * metric * a[ai] * b[bi];
                 }
-            }
+            })
         });
         a.coefs = new_coefs;
     }
@@ -299,55 +298,81 @@ fn blade_grades(dims: u8) -> impl Iterator<Item = u8> {
     (0..=dims).flat_map(move |i| repeat_n(i, grade_size(dims, i)))
 }
 
-#[allow(clippy::type_complexity)]
 #[doc(hidden)]
 pub fn mask_tables<F, T>(dims: u8, f: F) -> T
 where
     F: FnOnce(&[usize], &[usize]) -> T,
 {
+    type Cache = HashMap<u8, (&'static [usize], &'static [usize])>;
     thread_local! {
-        static CACHE: RefCell<HashMap<u8, (Vec<usize>, Vec<usize>)>> = Default::default();
+        static CACHE: RefCell<Cache> = Default::default();
     }
     CACHE.with(move |r| {
         let mut cache = r.borrow_mut();
-        let (mask_table, rev_mask_table) = cache.entry(dims).or_insert_with(|| {
+        let (mask_table, rev_mask_table) = *cache.entry(dims).or_insert_with(|| {
             let mut mask_table: Vec<usize> = (0..1usize << dims).collect();
             mask_table.sort_by_key(|&a| a.count_ones());
-            let mut rev_mask_table = vec![0; 1usize << dims];
+            let mut inv_mask_table = vec![0; 1usize << dims];
             for (i, &v) in mask_table.iter().enumerate() {
-                rev_mask_table[v] = i;
+                inv_mask_table[v] = i;
             }
-            (mask_table, rev_mask_table)
+            (mask_table.leak(), inv_mask_table.leak())
         });
+        drop(cache);
         f(mask_table, rev_mask_table)
     })
 }
 
-fn blade_sign_and_metric(dims: u8, flavor: Flavor, dot: bool, a: usize, b: usize) -> (i32, f64) {
-    let mut sign = 1;
-    if dims >= 3 {
-        let ab = a ^ b;
-        for i in [a, b, ab] {
-            if (i ^ (i >> 1)).count_ones() == dims as u32 {
-                sign = -sign;
-            }
-        }
+/// Calculate, cache, and access the blade metrics for a given number of dimensions and GA flavor
+fn blade_metrics<F, T>(dims: u8, flavor: Flavor, dot: bool, f: F) -> T
+where
+    F: FnOnce(&'static [f64], usize) -> T,
+{
+    type Cache = HashMap<(u8, Flavor, bool), &'static [f64]>;
+    thread_local! {
+        static CACHE: RefCell<Cache> = Default::default();
     }
-    let mut metric = (!dot || a == 0 || b == 0 || a & b == a || a & b == b) as u8 as f64;
-    for i in 0..dims {
-        let bit_i = 1 << i;
-        if a & bit_i != 0 {
-            // Count how many set bits in b are below bit_i
-            let lower_bits = b & (bit_i - 1);
-            if lower_bits.count_ones() % 2 == 1 {
-                sign = -sign;
+    CACHE.with(move |r| {
+        let mut cache = r.borrow_mut();
+        let blade_count = 1 << dims;
+        let metrics = *cache.entry((dims, flavor, dot)).or_insert_with(|| {
+            let mut metrics = Vec::with_capacity(blade_count * blade_count);
+            for a in 0..blade_count {
+                for b in 0..blade_count {
+                    let has_metric = !dot || a == 0 || b == 0 || a & b == a || a & b == b;
+                    if !has_metric {
+                        metrics.push(0.0);
+                        continue;
+                    }
+                    let mut metric = 1.0;
+                    if dims >= 3 {
+                        let ab = a ^ b;
+                        for i in [a, b, ab] {
+                            if (i ^ (i >> 1)).count_ones() == dims as u32 {
+                                metric = -metric;
+                            }
+                        }
+                    }
+                    for i in 0..dims {
+                        let bit_i = 1 << i;
+                        if a & bit_i != 0 {
+                            let lower_bits = b & (bit_i - 1);
+                            if lower_bits.count_ones() % 2 == 1 {
+                                metric = -metric;
+                            }
+                        }
+                        if (a & bit_i != 0) && (b & bit_i != 0) {
+                            metric *= flavor.metric(i) as f64;
+                        }
+                    }
+                    metrics.push(metric);
+                }
             }
-        }
-        if (a & bit_i != 0) && (b & bit_i != 0) {
-            metric *= flavor.metric(i as usize) as f64;
-        }
-    }
-    (sign, metric)
+            metrics.leak()
+        });
+        drop(cache);
+        f(metrics, blade_count)
+    })
 }
 
 fn eq(a: f64, b: f64) -> bool {
@@ -359,6 +384,18 @@ impl PartialEq for Multivector {
         self.as_scalar() == other.as_scalar()
             || self.coefs.len() == other.coefs.len()
                 && self.coefs.iter().zip(&other.coefs).all(|(a, b)| eq(*a, *b))
+    }
+}
+
+impl PartialEq<Complex> for Multivector {
+    fn eq(&self, other: &Complex) -> bool {
+        self.as_complex().is_some_and(|a| a == *other)
+    }
+}
+
+impl PartialEq<Multivector> for Complex {
+    fn eq(&self, other: &Multivector) -> bool {
+        other.as_complex().is_some_and(|b| *self == b)
     }
 }
 

@@ -2323,9 +2323,13 @@ macro_rules! value_dy_math_impl_mv {
                 #[cfg(feature = "ga")]
                 (Mv, Mv, mv_x, crate::Multivector, crate::Multivector),
                 #[cfg(feature = "ga")]
+                (Mv, Complex, mv_x, crate::Multivector, crate::Complex),
+                #[cfg(feature = "ga")]
                 (Mv, Num, mv_x, crate::Multivector, f64),
                 #[cfg(feature = "ga")]
                 (Mv, Byte, mv_x, crate::Multivector, u8),
+                #[cfg(feature = "ga")]
+                (Complex, Mv, x_mv, crate::Complex, crate::Multivector),
                 #[cfg(feature = "ga")]
                 (Num, Mv, x_mv, f64, crate::Multivector),
                 #[cfg(feature = "ga")]
@@ -2561,6 +2565,10 @@ impl PartialEq for Value {
             (Value::Byte(a), Value::Num(b)) => a == b,
             #[cfg(feature = "ga")]
             (Value::Mv(a), Value::Mv(b)) => a == b,
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Complex(b)) => a == b,
+            #[cfg(feature = "ga")]
+            (Value::Complex(a), Value::Mv(b)) => a == b,
             _ => false,
         }
     }
@@ -2590,15 +2598,11 @@ impl Ord for Value {
             (Value::Mv(a), Value::Mv(b)) => a.cmp(b),
             (Value::Num(a), Value::Byte(b)) => a.partial_cmp(b).unwrap(),
             (Value::Byte(a), Value::Num(b)) => a.partial_cmp(b).unwrap(),
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Complex(b)) => a.partial_cmp(b).unwrap(),
+            #[cfg(feature = "ga")]
+            (Value::Complex(a), Value::Mv(b)) => a.partial_cmp(b).unwrap(),
             _ => unreachable!(),
-            // (Value::Num(_), _) => Ordering::Less,
-            // (_, Value::Num(_)) => Ordering::Greater,
-            // (Value::Byte(_), _) => Ordering::Less,
-            // (_, Value::Byte(_)) => Ordering::Greater,
-            // (Value::Complex(_), _) => Ordering::Less,
-            // (_, Value::Complex(_)) => Ordering::Greater,
-            // (Value::Char(_), _) => Ordering::Less,
-            // (_, Value::Char(_)) => Ordering::Greater,
         }
     }
 }

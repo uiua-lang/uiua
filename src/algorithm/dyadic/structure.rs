@@ -135,7 +135,8 @@ impl Value {
     /// Use this array as an index to pick from another
     pub fn pick(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
         from.match_fill(env.ctx());
-        let (index_shape, index_data) = self.as_shaped_indices(env.is_scalar_filled(&from), env)?;
+        let (index_shape, index_data) =
+            self.as_shaped_indices(env.ctx().is_scalar_filled(&from), env)?;
         Ok(val_as_arr!(from, |a| a
             .pick(index_shape, &index_data, env)?
             .into()))

@@ -115,16 +115,16 @@ impl<'a> Context<'a> {
         }
     }
     pub fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
-        T::get_scalar_fill(self)
+        T::get_scalar_fill(*self)
     }
     pub fn array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
-        T::get_array_fill(self)
+        T::get_array_fill(*self)
     }
     pub fn scalar_unfill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
-        T::get_scalar_fill(&self.un())
+        T::get_scalar_fill(self.un())
     }
     pub fn array_unfill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
-        T::get_array_fill(&self.un())
+        T::get_array_fill(self.un())
     }
     pub fn either_array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
         self.array_fill::<T>().or_else(|_| self.array_unfill::<T>())
@@ -139,6 +139,8 @@ impl<'a> Context<'a> {
             Value::Complex(_) => self.scalar_fill::<Complex>().is_ok(),
             Value::Char(_) => self.scalar_fill::<char>().is_ok(),
             Value::Box(_) => self.scalar_fill::<Boxed>().is_ok(),
+            #[cfg(feature = "ga")]
+            Value::Mv(_) => self.scalar_fill::<crate::Multivector>().is_ok(),
         }
     }
     pub fn error(&self, msg: impl ToString) -> UiuaError {
@@ -291,14 +293,14 @@ impl<'a> Context<'a> {
     pub(crate) fn multivector_scalar(&self) -> Result<FillValue<crate::Multivector>, &'static str> {
         self.value_map(|val| match val {
             Value::Num(n) if n.rank() == 0 => Ok(n.data[0].into()),
-            Value::Num(_) => Err(self.error(true)),
+            Value::Num(_) => Err(self.fill_error(true)),
             Value::Byte(n) if n.rank() == 0 => Ok(n.data[0].into()),
-            Value::Byte(_) => Err(self.error(true)),
+            Value::Byte(_) => Err(self.fill_error(true)),
             Value::Complex(c) if c.rank() == 0 => Ok(c.data[0].into()),
-            Value::Complex(_) => Err(self.error(true)),
+            Value::Complex(_) => Err(self.fill_error(true)),
             Value::Mv(m) if m.rank() == 0 => Ok(m.data[0].clone()),
-            Value::Mv(_) => Err(self.error(true)),
-            _ => Err(self.error(false)),
+            Value::Mv(_) => Err(self.fill_error(true)),
+            _ => Err(self.fill_error(false)),
         })
     }
     #[cfg(feature = "ga")]
@@ -310,7 +312,7 @@ impl<'a> Context<'a> {
             Value::Byte(n) => Ok(n.convert_ref()),
             Value::Complex(c) => Ok(c.convert_ref()),
             Value::Mv(m) => Ok(m.clone()),
-            _ => Err(self.error(false)),
+            _ => Err(self.fill_error(false)),
         })
     }
     pub(crate) fn value_for(&self, val: &Value) -> Option<FillValue<&Value>> {

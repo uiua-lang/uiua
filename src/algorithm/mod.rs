@@ -12,10 +12,9 @@ use ecow::{EcoString, EcoVec};
 use smallvec::SmallVec;
 
 use crate::{
-    Array, ArrayValue, Boxed, CodeSpan, Complex, Context, ExactDoubleIterator, Inputs, Ops,
-    PersistentMeta, Shape, SigNode, Signature, Span, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
-    Value, cowslice::ecovec_extend_cowslice, empty_types::push_empty_rows_value, fill::FillValue,
-    grid_fmt::GridFmt, val_as_arr,
+    Array, ArrayValue, Context, ExactDoubleIterator, Ops, PersistentMeta, Shape, SigNode,
+    Signature, Uiua, UiuaResult, Value, cowslice::ecovec_extend_cowslice,
+    empty_types::push_empty_rows_value, grid_fmt::GridFmt, val_as_arr,
 };
 
 mod dyadic;

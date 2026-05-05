@@ -1419,8 +1419,6 @@ impl ImplPrimitive {
                         eco_vec![Mv::default().flavor(flavor); elem_count],
                     )
                     .into(),
-                    #[cfg(not(feature = "ga"))]
-                    (0, _) => Array::new(new_shape, eco_vec![Mv::default(); elem_count]).into(),
                     #[cfg(feature = "ga")]
                     (1, MvMode::Flavor(flavor, _, None | Some(SubSide::Left)))
                     | (1, MvMode::Flavor(flavor, None, Some(SubSide::Right))) => Array::new(

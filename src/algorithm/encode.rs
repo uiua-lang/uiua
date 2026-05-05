@@ -7,10 +7,8 @@ use enum_iterator::{Sequence, all};
 
 use crate::{
     Array, ArrayFlags, ArrayMeta, Boxed, Complex, Shape, SubSide, Uiua, UiuaResult, Value,
-    algorithm::validate_size, cowslice::CowSlice, fill::FillValue,
+    algorithm::validate_size, context::FillValue, cowslice::CowSlice,
 };
-
-use super::FillContext;
 
 impl Value {
     pub(crate) fn to_json_string(&self, env: &Uiua) -> UiuaResult<String> {
@@ -146,9 +144,13 @@ impl Value {
         return Err(env.error("CSV support is not enabled in this environment"));
         #[cfg(feature = "csv")]
         {
-            let delimiter =
-                u8::try_from(env.scalar_fill::<char>().map(|fv| fv.value).unwrap_or(','))
-                    .map_err(|_| env.error("CSV delimiter must be ASCII"))?;
+            let delimiter = u8::try_from(
+                env.ctx()
+                    .scalar_fill::<char>()
+                    .map(|fv| fv.value)
+                    .unwrap_or(','),
+            )
+            .map_err(|_| env.error("CSV delimiter must be ASCII"))?;
 
             let mut buf = Vec::new();
             let mut writer = csv::WriterBuilder::new()
@@ -256,7 +258,8 @@ impl Value {
         #[cfg(feature = "csv")]
         {
             let delimiter = u8::try_from(
-                env.scalar_unfill::<char>()
+                env.ctx()
+                    .scalar_unfill::<char>()
                     .map(|fv| fv.value)
                     .unwrap_or(','),
             )

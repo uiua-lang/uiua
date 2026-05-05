@@ -27,7 +27,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan,
+    Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan, Context,
     CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
     ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GitTarget, Ident, ImplPrimitive,
     IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript,
@@ -1368,7 +1368,10 @@ impl Compiler {
                             _ => unreachable!(),
                         })
                         .collect();
-                    match Value::from_row_values(values, &(&word.span, &self.asm.inputs)) {
+                    match Value::from_row_values(
+                        values,
+                        Context::from_span(&word.span, &self.asm.inputs),
+                    ) {
                         Ok(val) => return Ok(Node::new_push(val)),
                         Err(e) if e.meta.is_fill => {}
                         Err(e) => return Err(e),
@@ -1477,13 +1480,13 @@ impl Compiler {
                                 values
                                     .map(|v| Value::Box(Boxed(v).into()))
                                     .collect::<Vec<_>>(),
-                                &(&word.span, &self.asm.inputs),
+                                Context::from_span(&word.span, &self.asm.inputs),
                             )
                         }
                     } else {
                         Value::from_row_values(
                             values.collect::<Vec<_>>(),
-                            &(&word.span, &self.asm.inputs),
+                            Context::from_span(&word.span, &self.asm.inputs),
                         )
                     };
                     match res {

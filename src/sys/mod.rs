@@ -1536,7 +1536,7 @@ pub(crate) fn run_sys_op_mod(op: &SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult
                 )
             })?;
             for rows in outputs.into_iter().rev() {
-                let val = Value::from_row_values(rows, env)?;
+                let val = env.rows_to_value(rows)?;
                 env.push(val);
             }
         }

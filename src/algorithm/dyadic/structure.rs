@@ -11,7 +11,7 @@ use ecow::EcoVec;
 
 use crate::{
     Array, ArrayValue, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
-    algorithm::{FillContext, validate_size},
+    algorithm::validate_size,
     cowslice::{CowSlice, cowslice, extend_repeat_slice},
     grid_fmt::GridFmt,
     val_as_arr,
@@ -134,8 +134,9 @@ impl Value {
     }
     /// Use this array as an index to pick from another
     pub fn pick(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        from.match_fill(env);
-        let (index_shape, index_data) = self.as_shaped_indices(env.is_scalar_filled(&from), env)?;
+        from.match_fill(env.ctx());
+        let (index_shape, index_data) =
+            self.as_shaped_indices(env.ctx().is_scalar_filled(&from), env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.pick(index_shape, &index_data, env)?),
             Value::Byte(a) => Value::Byte(a.pick(index_shape, &index_data, env)?),
@@ -145,7 +146,8 @@ impl Value {
         })
     }
     pub(crate) fn undo_pick(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let (idx_shape, index_data) = index.as_shaped_indices(env.is_scalar_filled(&self), env)?;
+        let (idx_shape, index_data) =
+            index.as_shaped_indices(env.ctx().is_scalar_filled(&self), env)?;
         if idx_shape.len() > 1 {
             let last_axis_len = *idx_shape.last().unwrap();
             if last_axis_len == 0 {
@@ -262,7 +264,7 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         let mut picked = self.data.clone();
-        let fill = env.scalar_fill::<T>().map(|fv| fv.value);
+        let fill = env.ctx().scalar_fill::<T>().map(|fv| fv.value);
         for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
             let row_len: usize = self.shape[d + 1..].iter().product();
             let s = s as isize;
@@ -360,7 +362,8 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         let mut start = 0;
-        let has_fill = env.scalar_fill::<T>().is_ok() || env.scalar_unfill::<T>().is_ok();
+        let has_fill =
+            env.ctx().scalar_fill::<T>().is_ok() || env.ctx().scalar_unfill::<T>().is_ok();
         for (i, (&ind, &s)) in index.iter().zip(&into.shape).enumerate() {
             let ind = if ind >= 0 {
                 ind as usize
@@ -400,7 +403,7 @@ impl Value {
         index: &[Result<isize, bool>],
         env: &Uiua,
     ) -> UiuaResult<Self> {
-        self.match_fill(env);
+        self.match_fill(env.ctx());
         val_as_arr!(self, |a| a.take(index, env).map(Into::into))
     }
     /// Use this value to `drop` from another
@@ -471,7 +474,7 @@ impl Value {
     }
     pub(crate) fn anti_drop(&self, mut target: Self, env: &Uiua) -> UiuaResult<Self> {
         let index = self.as_ints(env, "Index must be an integer or list of integers")?;
-        target.match_fill(env);
+        target.match_fill(env.ctx());
         val_as_arr!(target, |a| a.anti_drop(&index, env).map(Into::into))
     }
     #[track_caller]
@@ -479,7 +482,7 @@ impl Value {
         val_as_arr!(self, |a| a.drop_front_n(n))
     }
     pub(crate) fn un_take(&mut self, env: &Uiua) -> UiuaResult<Value> {
-        self.match_fill(env);
+        self.match_fill(env.ctx());
         val_as_arr!(self, |a| a.un_take(env))
     }
 }
@@ -499,7 +502,7 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
 
-        let mut fill = env.array_fill::<T>().map_err(Cow::Borrowed);
+        let mut fill = env.ctx().array_fill::<T>().map_err(Cow::Borrowed);
         if let Ok(fill_val) = &fill
             && !self.shape[index.len()..].ends_with(&fill_val.value.shape)
         {
@@ -928,8 +931,7 @@ impl<T: ArrayValue> Array<T> {
         self.undo_take_impl("drop", "dropped", &undex, &end, into, env)
     }
     fn anti_drop(mut self, mut index: &[isize], env: &Uiua) -> UiuaResult<Self> {
-        let fill = env
-            .array_fill::<T>()
+        let fill = (env.ctx().array_fill::<T>())
             .map(|fv| fv.value)
             .unwrap_or_else(|_| T::default_scalar().into());
         if self.shape.len() < index.len() {
@@ -1089,6 +1091,7 @@ impl<T: ArrayValue> Array<T> {
     }
     fn un_take(&mut self, env: &Uiua) -> UiuaResult<Value> {
         let fill = env
+            .ctx()
             .scalar_unfill::<T>()
             .map_err(|e| env.error(format!("Cannot untake without a fill value{e}")))?
             .value;
@@ -1144,9 +1147,9 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Use this value to `select` from another
     pub fn select(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        from.match_fill(env);
+        from.match_fill(env.ctx());
         let (indices_shape, indices_data) =
-            self.as_shaped_indices(env.is_scalar_filled(&from), env)?;
+            self.as_shaped_indices(env.ctx().is_scalar_filled(&from), env)?;
         val_as_arr!(from, |a| {
             let mut a = a;
             a.select(indices_shape, &indices_data, env).map(Into::into)
@@ -1154,7 +1157,8 @@ impl Value {
     }
     pub(crate) fn undo_select(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let mut from = self;
-        let (idx_shape, mut ind) = index.as_shaped_indices(env.is_scalar_filled(&from), env)?;
+        let (idx_shape, mut ind) =
+            index.as_shaped_indices(env.ctx().is_scalar_filled(&from), env)?;
         let into_row_count = into.row_count();
         // Sort indices
         let mut sorted_indices: Vec<_> = ind.iter().copied().enumerate().collect();
@@ -1232,7 +1236,7 @@ impl Value {
         )
     }
     pub(crate) fn anti_select(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        from.match_fill(env);
+        from.match_fill(env.ctx());
         let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.anti_select(indices_shape, &indices_data, env)?),
@@ -1245,7 +1249,7 @@ impl Value {
         })
     }
     pub(crate) fn anti_pick(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        from.match_fill(env);
+        from.match_fill(env.ctx());
         let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
         val_as_arr!(from, |a| a
             .anti_pick(indices_shape, &indices_data, env)
@@ -1322,7 +1326,7 @@ impl<T: ArrayValue> Array<T> {
             let mut selected = CowSlice::with_capacity(self.row_len() * indices.len());
             let row_len = self.row_len();
             let row_count = self.row_count();
-            let fill = env.scalar_fill::<T>().map(|fv| fv.value);
+            let fill = env.ctx().scalar_fill::<T>().map(|fv| fv.value);
             let map_keys = self
                 .is_map()
                 .then(|| {
@@ -1390,7 +1394,7 @@ impl<T: ArrayValue> Array<T> {
             }
             let mut array = Array::new(shape, selected);
             if let Some(map_keys) = map_keys {
-                array.map(map_keys, &()).unwrap();
+                array.map(map_keys, env.ctx()).unwrap();
             }
             array.meta.mark_sorted_up(
                 indices_sorted_up && selected_sorted_up
@@ -1573,12 +1577,16 @@ impl<T: ArrayValue> Array<T> {
         let mut fill = None;
         let mut fill_rep = 0;
         if !indices_are_total {
-            let fill_arr = env.array_fill::<T>().map(|fv| fv.value).map_err(|e| {
-                env.error(format!(
-                    "Cannot invert selection of non-total indices without a fill{e}"
-                ))
-                .fill()
-            })?;
+            let fill_arr = env
+                .ctx()
+                .array_fill::<T>()
+                .map(|fv| fv.value)
+                .map_err(|e| {
+                    env.error(format!(
+                        "Cannot invert selection of non-total indices without a fill{e}"
+                    ))
+                    .fill()
+                })?;
             if !row_shape.ends_with(&fill_arr.shape) {
                 return Err(env.error(format!(
                     "Cannot invert selection of shape {} array with shape {} fill",
@@ -1682,12 +1690,16 @@ impl<T: ArrayValue> Array<T> {
         let mut fill_rep = 0;
         // Get fill if not total
         if !indices_are_total {
-            let fill_arr = env.array_fill::<T>().map(|fv| fv.value).map_err(|e| {
-                env.error(format!(
-                    "Cannot invert pick of non-total indices without a fill{e}"
-                ))
-                .fill()
-            })?;
+            let fill_arr = env
+                .ctx()
+                .array_fill::<T>()
+                .map(|fv| fv.value)
+                .map_err(|e| {
+                    env.error(format!(
+                        "Cannot invert pick of non-total indices without a fill{e}"
+                    ))
+                    .fill()
+                })?;
             if !cell_shape.ends_with(&fill_arr.shape) {
                 return Err(env.error(format!(
                     "Cannot invert pick of shape {} array with shape {} fill",

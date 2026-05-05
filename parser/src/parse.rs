@@ -1706,11 +1706,14 @@ impl Parser<'_> {
                     closed: end.value,
                 });
                 outer_span = outer_span.merge(ident.span.clone());
-                outer_span.sp(Word::InlineMacro(InlineMacro {
-                    func,
-                    caret_span,
-                    ident,
-                }))
+                outer_span.sp(Word::InlineMacro(
+                    InlineMacro {
+                        func,
+                        caret_span,
+                        ident,
+                    }
+                    .into(),
+                ))
             } else {
                 self.index = reset;
                 outer_span.sp(if is_array {

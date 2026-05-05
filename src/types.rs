@@ -14,8 +14,8 @@ use ecow::{EcoVec, eco_vec};
 use serde::*;
 
 use crate::{
-    Array, ArrayCmp, Assembly, Boxed, Complex, Exec, HasStack, ImplPrimitive, Node, PrimClass,
-    Primitive, Shape, SigNode, StackArg, SubSide, SysOp, Value, grid_fmt::GridFmt,
+    Array, ArrayCmp, Assembly, Boxed, Complex, Context, Exec, HasStack, ImplPrimitive, Node,
+    PrimClass, Primitive, Shape, SigNode, StackArg, SubSide, SysOp, Value, grid_fmt::GridFmt,
 };
 
 pub type TypeSig = (Vec<TypeVal>, Vec<TypeVal>);
@@ -355,10 +355,13 @@ impl TypeVal {
                 TypeVal::Num(x) => *self = eco_vec![*x; n].into(),
                 TypeVal::NumList(list) => {
                     let mut val: Value = Value::from(take(list));
-                    val.reshape_scalar(Ok(n as isize), false, &()).unwrap();
+                    val.reshape_scalar(Ok(n as isize), false, Context::NONE)
+                        .unwrap();
                     *self = val.into()
                 }
-                TypeVal::Val(val) => val.reshape_scalar(Ok(n as isize), false, &()).unwrap(),
+                TypeVal::Val(val) => val
+                    .reshape_scalar(Ok(n as isize), false, Context::NONE)
+                    .unwrap(),
                 TypeVal::Type(ty) => ty.shape.dims.insert(0, dim),
             },
             _ => {

@@ -65,7 +65,7 @@ pub fn split_by(f: SigNode, by_scalar: bool, keep_empty: bool, env: &mut Uiua) -
             },
         )?;
         if let Some(Primitive::Identity) = f.node.as_primitive() {
-            let val = Value::from_row_values(parts, env)?;
+            let val = env.rows_to_value(parts)?;
             env.push(val);
         } else {
             let mut outputs = multi_output(f.sig.outputs(), Vec::new());
@@ -80,7 +80,7 @@ pub fn split_by(f: SigNode, by_scalar: bool, keep_empty: bool, env: &mut Uiua) -
                 Ok(())
             })?;
             for outputs in outputs.into_iter().rev() {
-                let val = Value::from_row_values(outputs, env)?;
+                let val = env.rows_to_value(outputs)?;
                 env.push(val);
             }
         }
@@ -495,7 +495,7 @@ pub fn undo_partition_part2(env: &mut Uiua) -> UiuaResult {
             }
             original_offset += part_len;
         }
-        env.push(Value::from_row_values(unpartitioned, env)?);
+        env.push(env.rows_to_value(unpartitioned)?);
     } else {
         let row_shape: Shape = original.shape[markers.rank()..].into();
         let indices = multi_partition_indices(&markers);
@@ -738,7 +738,7 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
     if ungrouped_rows.iter_mut().any(|row| row.next().is_some()) {
         return Err(env.error("A group's length was modified between grouping and ungrouping"));
     }
-    let mut val = Value::from_row_values(ungrouped, env)?;
+    let mut val = env.rows_to_value(ungrouped)?;
     val.shape.remove(0);
     for &dim in indices.shape.iter().rev() {
         val.shape.prepend(dim);
@@ -859,7 +859,7 @@ where
         Ok(())
     })?;
     for rows in rows.into_iter().rev() {
-        let mut val = Value::from_row_values(rows, env)?;
+        let mut val = env.rows_to_value(rows)?;
         if is_scalar {
             val.undo_fix();
         }
@@ -890,7 +890,7 @@ pub fn un_group(f: SigNode, env: &mut Uiua) -> UiuaResult {
         }
         ungrouped.extend(val.into_rows());
     }
-    env.push(Value::from_row_values(ungrouped, env)?);
+    env.push(env.rows_to_value(ungrouped)?);
     env.push(Array::from(indices));
     Ok(())
 }
@@ -941,7 +941,7 @@ pub fn un_partition(f: SigNode, env: &mut Uiua) -> UiuaResult {
             unpartitioned.extend(val.into_rows());
         }
     }
-    env.push(Value::from_row_values(unpartitioned, env)?);
+    env.push(env.rows_to_value(unpartitioned)?);
     env.push(Array::from(indices));
     Ok(())
 }

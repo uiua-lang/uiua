@@ -154,11 +154,12 @@ mod boxed;
 mod check;
 mod compile;
 mod constant;
+#[doc(hidden)]
+mod context;
 mod cowslice;
 mod empty_types;
 mod error;
 mod ffi;
-mod fill;
 pub mod format;
 mod function;
 mod grid_fmt;
@@ -183,7 +184,7 @@ pub mod window;
 
 #[allow(unused_imports)]
 pub use self::{
-    algorithm::{IgnoreError, media},
+    algorithm::media,
     array::*,
     assembly::*,
     boxed::*,
@@ -205,6 +206,7 @@ pub use self::{
 pub use uiua_parser::*;
 
 use self::algorithm::get_ops;
+pub(crate) use crate::context::*;
 use crate::stack::*;
 
 /// The Uiua version

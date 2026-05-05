@@ -1024,7 +1024,7 @@ fn uiua_files(path: Option<&Path>, max_depth: Option<usize>) -> UiuaResult<Vec<P
 }
 
 fn uiua_files_in(root: &Path, max_depth: Option<usize>) -> UiuaResult<Vec<PathBuf>> {
-    fn rec(root: &Path, acc: &mut Vec<PathBuf>, depth: usize, max_depth: usize) -> UiuaResult<()> {
+    fn rec(root: &Path, acc: &mut Vec<PathBuf>, depth: usize, max_depth: usize) -> UiuaResult {
         if depth > max_depth {
             return Ok(());
         }

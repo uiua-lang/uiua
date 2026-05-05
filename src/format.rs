@@ -13,7 +13,6 @@ use std::{
     time::Duration,
 };
 
-use InlineMacro;
 use ecow::EcoString;
 use paste::paste;
 use uiua_parser::SubscriptToken;
@@ -1333,16 +1332,12 @@ impl Formatter<'_> {
                     }
                 }
             }
-            Word::InlineMacro(InlineMacro {
-                func,
-                caret_span,
-                ident,
-            }) => {
-                self.func(&func.value, depth);
-                if let Some(span) = caret_span {
+            Word::InlineMacro(mac) => {
+                self.func(&mac.func.value, depth);
+                if let Some(span) = &mac.caret_span {
                     self.push(span, "^");
                 }
-                self.push(&ident.span, &ident.value);
+                self.push(&mac.ident.span, &mac.ident.value);
             }
         }
     }
@@ -1727,9 +1722,10 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
             func.lines.len() > 1
                 || (func.lines.iter()).any(|item| item.words_or(true, words_are_multiline))
         }
-        Word::InlineMacro(InlineMacro { func, .. }) => {
-            func.value.lines.len() > 1
-                || (func.value.lines.iter()).any(|item| item.words_or(true, words_are_multiline))
+        Word::InlineMacro(mac) => {
+            mac.func.value.lines.len() > 1
+                || (mac.func.value.lines.iter())
+                    .any(|item| item.words_or(true, words_are_multiline))
         }
         Word::Pack(pack) => pack.branches.iter().any(|br| {
             br.value.lines.len() > 1

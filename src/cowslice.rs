@@ -20,7 +20,7 @@ macro_rules! cowslice {
 pub(crate) use cowslice;
 use ecow::EcoVec;
 
-use crate::fill::FillValue;
+use crate::context::FillValue;
 
 /// The backing buffer for Uiua's arrays' data
 ///

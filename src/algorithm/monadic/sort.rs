@@ -4,7 +4,7 @@ use ecow::EcoVec;
 use rand::RngExt;
 use rayon::prelude::*;
 
-use crate::{Array, ArrayValue, Value, algorithm::ArrayCmpSlice, random_with, val_as_arr};
+use crate::{Array, ArrayValue, Context, Value, algorithm::ArrayCmpSlice, random_with, val_as_arr};
 
 impl Value {
     /// Get the `rise` of the value
@@ -153,7 +153,7 @@ impl<T: ArrayValue> Array<T> {
             let new_keys = Value::from_row_values_infallible(
                 rise.into_iter().map(|i| keys.row(i)).collect::<Vec<_>>(),
             );
-            self.map(new_keys, &()).unwrap();
+            self.map(new_keys, Context::NONE).unwrap();
             return;
         }
         let chunk_len: usize = self.shape[depth..].iter().product();
@@ -197,7 +197,7 @@ impl<T: ArrayValue> Array<T> {
             let new_keys = Value::from_row_values_infallible(
                 fall.into_iter().map(|i| keys.row(i)).collect::<Vec<_>>(),
             );
-            self.map(new_keys, &()).unwrap();
+            self.map(new_keys, Context::NONE).unwrap();
             return;
         }
         let chunk_len: usize = self.shape[depth..].iter().product();

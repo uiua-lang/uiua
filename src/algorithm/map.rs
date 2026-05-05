@@ -11,11 +11,9 @@ use enum_iterator::{Sequence, all};
 use serde::*;
 
 use crate::{
-    Array, ArrayValue, Boxed, Complex, FormatShape, OptionalArg, Uiua, UiuaResult, Value,
+    Array, ArrayValue, Boxed, Complex, Context, FormatShape, OptionalArg, Uiua, UiuaResult, Value,
     algorithm::ArrayCmpSlice, media::builtin_params, val_as_arr,
 };
-
-use super::{ErrorContext, FillContext};
 
 builtin_params!(
     MapParam,
@@ -49,7 +47,7 @@ impl<T: ArrayValue> Array<T> {
         kv
     }
     /// Create a map array
-    pub fn map<C: ErrorContext>(&mut self, keys: Value, ctx: &C) -> Result<(), C::Error> {
+    pub fn map(&mut self, keys: Value, ctx: Context) -> UiuaResult {
         let values = self;
         if keys.row_count() != values.row_count() {
             return Err(ctx.error(format!(
@@ -92,7 +90,7 @@ impl<T: ArrayValue> Array<T> {
     }
 
     /// Map with extra args (e.g. reserve count)
-    pub fn map_args(&mut self, keys: Value, args: Option<Value>, env: &Uiua) -> UiuaResult<()> {
+    pub fn map_args(&mut self, keys: Value, args: Option<Value>, env: &Uiua) -> UiuaResult {
         let values = self;
         if keys.row_count() != values.row_count() {
             return Err(env.error(format!(
@@ -141,7 +139,7 @@ impl<T: ArrayValue> Array<T> {
         map_keys.grow_to(get_final_capacity(requested_capacity));
         let mut to_remove = Vec::new();
         for (i, key) in keys.into_rows().enumerate() {
-            let replaced = map_keys.insert(key, i, env)?;
+            let replaced = map_keys.insert(key, i, env.ctx())?;
             to_remove.extend(replaced);
         }
         for i in to_remove.into_iter().rev() {
@@ -171,7 +169,7 @@ impl Value {
     }
     /// Create a map array
     pub fn map(&mut self, keys: Self, env: &Uiua) -> UiuaResult {
-        val_as_arr!(self, |arr| arr.map(keys, env))
+        val_as_arr!(self, |arr| arr.map(keys, env.ctx()))
     }
     /// Create a map array, with additional arguments
     pub fn map_args(&mut self, keys: Self, args: Option<Value>, env: &Uiua) -> UiuaResult {
@@ -197,7 +195,7 @@ impl Value {
             for key in key.rows() {
                 values.push(self.get(&key, env)?);
             }
-            return Value::from_row_values(values, env);
+            return env.rows_to_value(values);
         }
         // An empty array cannot have the key
         if self.row_count() == 0 {
@@ -286,7 +284,7 @@ impl Value {
         }
         let curr_index = keys.get(&key);
         let index = curr_index.unwrap_or(row_count);
-        keys.insert(key, index, env)?;
+        keys.insert(key, index, env.ctx())?;
         let value = coerce_values(self, value, "insert", "value into map with", "values")
             .map_err(|e| env.error(e))?;
         if curr_index.is_some() {
@@ -306,7 +304,7 @@ impl Value {
                 },
             )?;
         } else {
-            self.append(value, false, env)?;
+            self.append(value, false, env.ctx())?;
         }
         self.meta.map_keys = Some(keys);
         self.meta.take_sorted_flags();
@@ -338,7 +336,7 @@ impl Value {
                 *i += 1;
             }
         }
-        if keys.insert(key, index, env)?.is_some() {
+        if keys.insert(key, index, env.ctx())?.is_some() {
             self.generic_bin_mut(
                 value,
                 |arr, value| Ok(arr.set_row(index, value)),
@@ -503,10 +501,7 @@ impl MapKeys {
             }
         }
     }
-    fn insert<C>(&mut self, key: Value, index: usize, ctx: &C) -> Result<Option<usize>, C::Error>
-    where
-        C: ErrorContext,
-    {
+    fn insert(&mut self, key: Value, index: usize, ctx: Context) -> UiuaResult<Option<usize>> {
         fn insert_impl<K>(
             keys: &mut Array<K>,
             indices: &mut [usize],
@@ -794,10 +789,7 @@ impl MapKeys {
         }
         self.len = n;
     }
-    pub(crate) fn join<C>(&mut self, mut other: Self, ctx: &C) -> Result<Vec<usize>, C::Error>
-    where
-        C: FillContext,
-    {
+    pub(crate) fn join(&mut self, mut other: Self, ctx: Context) -> UiuaResult<Vec<usize>> {
         for index in &mut other.indices {
             *index += self.len;
         }
@@ -827,10 +819,7 @@ impl MapKeys {
         }
         Ok(to_remove)
     }
-    pub(crate) fn couple<C>(&mut self, other: Self, ctx: &C) -> Result<bool, C::Error>
-    where
-        C: FillContext,
-    {
+    pub(crate) fn couple(&mut self, other: Self, ctx: Context) -> UiuaResult<bool> {
         let mut map_keys = MapKeys::default();
         map_keys.insert(take(self).normalized(), 0, ctx)?;
         let b = other.normalized();

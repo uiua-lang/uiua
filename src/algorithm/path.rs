@@ -343,7 +343,7 @@ fn path_impl(
             )));
         }
         let path: Vec<_> = path.into_iter().map(|i| backing[i].clone()).collect();
-        Value::from_row_values(path, env)
+        env.rows_to_value(path)
     };
 
     match mode {
@@ -395,7 +395,7 @@ fn path_impl(
                 }
             }
             let path_count = paths.len();
-            let mut paths_val = Value::from_row_values(paths, env)?;
+            let mut paths_val = env.rows_to_value(paths)?;
             if path_count == 0 {
                 paths_val = if has_costs {
                     Array::<Boxed>::default().into()

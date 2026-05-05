@@ -56,6 +56,8 @@ pub enum UiuaErrorKind {
     CompilerPanic(String),
     /// The program was interrupted
     Interrupted,
+    /// A dummy error
+    Unreachable,
 }
 
 impl UiuaErrorKind {
@@ -113,6 +115,7 @@ impl fmt::Display for UiuaError {
             UiuaErrorKind::Timeout(..) => write!(f, "Maximum execution time exceeded"),
             UiuaErrorKind::CompilerPanic(message) => message.fmt(f),
             UiuaErrorKind::Interrupted => write!(f, "# Program interrupted"),
+            UiuaErrorKind::Unreachable => write!(f, "Unreachable reached"),
         }
     }
 }
@@ -317,6 +320,9 @@ impl UiuaError {
                     fragments: vec![ReportFragment::Plain(self.to_string())],
                     color: true,
                 };
+            }
+            UiuaErrorKind::Unreachable => {
+                panic!("Attemped to get report from unreachable error")
             }
         };
         report = report_trace(report, &self.meta.trace);

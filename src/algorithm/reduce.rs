@@ -13,7 +13,7 @@ use crate::{
     cowslice::cowslice,
 };
 
-use super::{FillContext, FixedRowsData, fixed_rows};
+use super::{FixedRowsData, fixed_rows};
 
 pub fn reduce(ops: Ops, depth: usize, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
@@ -61,7 +61,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
             }
         }
         (Some((prim, _flipped)), Value::Byte(bytes)) => {
-            let fill = env.scalar_fill::<f64>().ok().map(|fv| fv.value);
+            let fill = env.ctx().scalar_fill::<f64>().ok().map(|fv| fv.value);
             if fill.is_none() && env.value_fill().is_some() {
                 return generic_reduce(f, Value::Byte(bytes), depth, env);
             }
@@ -99,7 +99,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                 )?
                 .into(),
                 Primitive::Mul if bytes.meta.flags.is_boolean() => {
-                    let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
+                    let byte_fill = env.ctx().scalar_fill::<u8>().ok().map(|fv| fv.value);
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -126,7 +126,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                 )?
                 .into(),
                 Primitive::Or => {
-                    let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
+                    let byte_fill = env.ctx().scalar_fill::<u8>().ok().map(|fv| fv.value);
                     if fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -163,7 +163,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                             return Ok(());
                         }
                     }
-                    let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
+                    let byte_fill = env.ctx().scalar_fill::<u8>().ok().map(|fv| fv.value);
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -198,7 +198,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                             return Ok(());
                         }
                     }
-                    let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
+                    let byte_fill = env.ctx().scalar_fill::<u8>().ok().map(|fv| fv.value);
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -403,7 +403,7 @@ macro_rules! reduce_math {
         where
             $ty: From<f64>,
         {
-            let fill = env.scalar_fill::<$ty>().ok().map(|fv| fv.value);
+            let fill = env.ctx().scalar_fill::<$ty>().ok().map(|fv| fv.value);
             if fill.is_none() && env.value_fill().is_some() {
                 return Ok(Err(xs));
             }
@@ -737,7 +737,7 @@ fn generic_reduce_inner(
                 }
                 Ok(())
             })?;
-            Value::from_row_values(new_rows, env)
+            env.rows_to_value(new_rows)
         }
     } else if depth == 0 {
         let mut rows = xs.into_rows();
@@ -785,7 +785,7 @@ fn generic_reduce_inner(
             }
             Ok(())
         })?;
-        let mut rowsed = Value::from_row_values(new_values, env)?;
+        let mut rowsed = env.rows_to_value(new_values)?;
         if all_scalar {
             rowsed.undo_fix();
         } else if is_empty {
@@ -987,7 +987,7 @@ fn generic_scan(f: SigNode, xs: Value, env: &mut Uiua) -> UiuaResult {
                 }
                 Ok(())
             })?;
-            let val = Value::from_row_values(scanned, env)?;
+            let val = env.rows_to_value(scanned)?;
             env.push(val);
             Ok(())
         }
@@ -1022,7 +1022,7 @@ fn generic_scan(f: SigNode, xs: Value, env: &mut Uiua) -> UiuaResult {
                 }
                 Ok(())
             })?;
-            let val = Value::from_row_values(scanned, env)?;
+            let val = env.rows_to_value(scanned)?;
             env.push(val);
             Ok(())
         }
@@ -1092,7 +1092,7 @@ pub fn unscan(ops: Ops, env: &mut Uiua) -> UiuaResult {
         }
         Ok(())
     })?;
-    env.push(Value::from_row_values(unscanned, env)?);
+    env.push(env.rows_to_value(unscanned)?);
     Ok(())
 }
 
@@ -1233,7 +1233,7 @@ pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
     }
     // Collect excess values
     for rows in excess_rows.into_iter().rev() {
-        let new_val = Value::from_row_values(rows, env)?;
+        let new_val = env.rows_to_value(rows)?;
         env.push(new_val);
     }
     Ok(())
@@ -1322,7 +1322,7 @@ pub fn fold_while(ops: Ops, env: &mut Uiua) -> UiuaResult {
     }
     // Collect excess values
     for rows in excess_rows.into_iter().rev() {
-        let new_val = Value::from_row_values(rows, env)?;
+        let new_val = env.rows_to_value(rows)?;
         env.push(new_val);
     }
     // println!("stack: {:?}", env.stack());

@@ -3,7 +3,6 @@
 use std::{
     cell::RefCell,
     cmp::Ordering,
-    convert::Infallible,
     env, fmt,
     hash::{Hash, Hasher},
     mem::size_of,
@@ -13,10 +12,9 @@ use ecow::{EcoString, EcoVec};
 use smallvec::SmallVec;
 
 use crate::{
-    Array, ArrayValue, Boxed, CodeSpan, Complex, ExactDoubleIterator, Inputs, Ops, PersistentMeta,
-    Shape, SigNode, Signature, Span, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
-    cowslice::ecovec_extend_cowslice, empty_types::push_empty_rows_value, fill::FillValue,
-    grid_fmt::GridFmt,
+    Array, ArrayValue, Context, ExactDoubleIterator, Ops, PersistentMeta, Shape, SigNode,
+    Signature, Uiua, UiuaResult, Value, cowslice::ecovec_extend_cowslice,
+    empty_types::push_empty_rows_value, grid_fmt::GridFmt,
 };
 
 mod dyadic;
@@ -191,177 +189,16 @@ pub(crate) fn validate_size_impl(
     Ok(elements as usize)
 }
 
-pub trait ErrorContext {
-    type Error: FillError;
-    fn error(&self, msg: impl ToString) -> Self::Error;
-}
-
-impl ErrorContext for Uiua {
-    type Error = UiuaError;
-    fn error(&self, msg: impl ToString) -> Self::Error {
-        self.error(msg)
-    }
-}
-
-impl ErrorContext for (&CodeSpan, &Inputs) {
-    type Error = UiuaError;
-    fn error(&self, msg: impl ToString) -> Self::Error {
-        UiuaErrorKind::Run {
-            message: Span::Code(self.0.clone()).sp(msg.to_string()),
-            info: Vec::new(),
-            inputs: self.1.clone().into(),
-        }
-        .into()
-    }
-}
-
-impl ErrorContext for () {
-    type Error = Infallible;
-    fn error(&self, msg: impl ToString) -> Self::Error {
-        panic!("{}", msg.to_string())
-    }
-}
-
-/// Ignore an error when converting a value
-pub struct IgnoreError;
-impl ErrorContext for IgnoreError {
-    type Error = ();
-    fn error(&self, _: impl ToString) -> Self::Error {}
-}
-
-pub trait FillError: fmt::Debug {
-    fn is_fill(&self) -> bool;
-}
-
-impl FillError for () {
-    fn is_fill(&self) -> bool {
-        false
-    }
-}
-
-impl FillError for UiuaError {
-    fn is_fill(&self) -> bool {
-        self.meta.is_fill
-    }
-}
-
-impl FillError for Infallible {
-    fn is_fill(&self) -> bool {
-        match *self {}
-    }
-}
-
-pub trait FillContext: ErrorContext {
-    fn value_fill(&self) -> Option<FillValue<&Value>>;
-    fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str>;
-    fn array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str>;
-    fn scalar_unfill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str>;
-    fn array_unfill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str>;
-    fn either_array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
-        self.array_fill::<T>().or_else(|_| self.array_unfill::<T>())
-    }
-    fn fill_error(error: Self::Error) -> Self::Error;
-    fn is_fill_error(error: &Self::Error) -> bool;
-    /// There is a number fill but not a byte fill
-    fn number_only_fill(&self) -> bool {
-        self.array_fill::<f64>().is_ok() && self.array_fill::<u8>().is_err()
-    }
-    fn is_scalar_filled(&self, val: &Value) -> bool {
-        match val {
-            Value::Num(_) => self.scalar_fill::<f64>().is_ok(),
-            Value::Byte(_) => self.scalar_fill::<u8>().is_ok(),
-            Value::Complex(_) => self.scalar_fill::<Complex>().is_ok(),
-            Value::Char(_) => self.scalar_fill::<char>().is_ok(),
-            Value::Box(_) => self.scalar_fill::<Boxed>().is_ok(),
-        }
-    }
-}
-
-impl FillContext for Uiua {
-    fn value_fill(&self) -> Option<FillValue<&Value>> {
-        self.value_fill()
-    }
-    fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
-        T::get_scalar_fill(&self.fill())
-    }
-    fn array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
-        T::get_array_fill(&self.fill())
-    }
-    fn scalar_unfill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
-        T::get_scalar_fill(&self.unfill())
-    }
-    fn array_unfill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
-        T::get_array_fill(&self.unfill())
-    }
-    fn fill_error(error: Self::Error) -> Self::Error {
-        error.fill()
-    }
-    fn is_fill_error(error: &Self::Error) -> bool {
-        error.is_fill()
-    }
-}
-
-impl FillContext for () {
-    fn value_fill(&self) -> Option<FillValue<&Value>> {
-        None
-    }
-    fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
-        Err(". No fill is set.")
-    }
-    fn array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
-        Err(". No fill is set.")
-    }
-    fn scalar_unfill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
-        Err(". No unfill is set.")
-    }
-    fn array_unfill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
-        Err(". No unfill is set.")
-    }
-    fn fill_error(error: Self::Error) -> Self::Error {
-        error
-    }
-    fn is_fill_error(error: &Self::Error) -> bool {
-        match *error {}
-    }
-}
-
-impl FillContext for (&CodeSpan, &Inputs) {
-    fn value_fill(&self) -> Option<FillValue<&Value>> {
-        None
-    }
-    fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
-        Err(". No fill is set.")
-    }
-    fn array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
-        Err(". No fill is set.")
-    }
-    fn scalar_unfill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
-        Err(". No unfill is set.")
-    }
-    fn array_unfill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
-        Err(". No unfill is set.")
-    }
-    fn fill_error(error: Self::Error) -> Self::Error {
-        error.fill()
-    }
-    fn is_fill_error(error: &Self::Error) -> bool {
-        error.meta.is_fill
-    }
-}
-
 pub(crate) fn shape_prefixes_match(a: &[usize], b: &[usize]) -> bool {
     a.iter().zip(b).all(|(a, b)| a == b)
 }
 
-fn fill_value_shape<C>(
+fn fill_value_shape(
     val: &mut Value,
     target: &Shape,
     expand_fixed: bool,
-    ctx: &C,
-) -> Result<(), FillShapeError>
-where
-    C: FillContext,
-{
+    ctx: Context,
+) -> Result<(), FillShapeError> {
     val.match_fill(ctx);
     match val {
         Value::Num(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
@@ -373,15 +210,14 @@ where
 }
 
 /// The error is a tuple of the size of an array that would be too large and the error message
-fn fill_array_shape<T, C>(
+fn fill_array_shape<T>(
     arr: &mut Array<T>,
     target: &Shape,
     expand_fixed: bool,
-    ctx: &C,
+    ctx: Context,
 ) -> Result<(), FillShapeError>
 where
     T: ArrayValue,
-    C: FillContext,
 {
     if shape_prefixes_match(&arr.shape, target) {
         return Ok(());
@@ -459,15 +295,12 @@ where
     res
 }
 
-pub(crate) fn fill_value_shapes<C>(
+pub(crate) fn fill_value_shapes(
     a: &mut Value,
     b: &mut Value,
     expand_fixed: bool,
-    ctx: &C,
-) -> Result<(), C::Error>
-where
-    C: FillContext,
-{
+    ctx: Context,
+) -> UiuaResult {
     let a_err = fill_value_shape(a, &b.shape, expand_fixed, ctx).err();
     let b_err = fill_value_shape(b, &a.shape, expand_fixed, ctx).err();
 
@@ -476,17 +309,19 @@ where
     {
         Ok(())
     } else {
-        Err(C::fill_error(ctx.error(match (a_err, b_err) {
-            (Some(FillShapeError::Size(e)), _) | (_, Some(FillShapeError::Size(e))) => {
-                e.to_string()
-            }
-            (Some(e), _) | (_, Some(e)) => {
-                format!("Shapes {} and {} do not match{e}", a.shape, b.shape)
-            }
-            (None, None) => {
-                format!("Shapes {} and {} do not match", a.shape, b.shape)
-            }
-        })))
+        Err(ctx
+            .error(match (a_err, b_err) {
+                (Some(FillShapeError::Size(e)), _) | (_, Some(FillShapeError::Size(e))) => {
+                    e.to_string()
+                }
+                (Some(e), _) | (_, Some(e)) => {
+                    format!("Shapes {} and {} do not match{e}", a.shape, b.shape)
+                }
+                (None, None) => {
+                    format!("Shapes {} and {} do not match", a.shape, b.shape)
+                }
+            })
+            .fill())
     }
 }
 
@@ -661,7 +496,7 @@ pub fn switch(
         }
         for output in outputs.into_iter().rev() {
             let mut new_shape = new_shape.clone();
-            let mut new_value = Value::from_row_values(output, env)?;
+            let mut new_value = env.rows_to_value(output)?;
             if all_scalar {
                 new_value.undo_fix();
             } else if is_empty {

@@ -6,7 +6,7 @@ use uiua_parser::SubSide;
 use crate::{
     Array, ArrayValue, Boxed, Node, Primitive, Shape, SigNode, Uiua, UiuaResult, Value,
     algorithm::{
-        FillContext, MultiOutput,
+        MultiOutput,
         pervade::*,
         validate_size, validate_size_of,
         zip::{ValueMonFn, f_mon_fast_fn},
@@ -30,7 +30,7 @@ pub fn stencil(ops: Ops, side: Option<SubSide>, env: &mut Uiua) -> UiuaResult {
     // Adjacent stencil
     if f.sig.args() > 1 && side.is_none() {
         let mut xs = env.pop(1)?;
-        xs.match_fill(env);
+        xs.match_fill(env.ctx());
         let n = f.sig.args();
         return if xs.row_count() < n
             && xs.fill(env).is_err()
@@ -59,7 +59,7 @@ pub fn stencil(ops: Ops, side: Option<SubSide>, env: &mut Uiua) -> UiuaResult {
                 }
             }
             for new_rows in new_rows.into_iter().rev() {
-                env.push(Value::from_row_values(new_rows, env)?);
+                env.push(env.rows_to_value(new_rows)?);
             }
             Ok(())
         };
@@ -67,8 +67,8 @@ pub fn stencil(ops: Ops, side: Option<SubSide>, env: &mut Uiua) -> UiuaResult {
     // Default stencil
     let size = env.pop(1)?;
     let mut xs = env.pop(2)?;
-    xs.match_fill(env);
-    let has_fill = env.fill().value_for(&xs).is_some();
+    xs.match_fill(env.ctx());
+    let has_fill = env.ctx().value_for(&xs).is_some();
     let dims = derive_dims(&size, &xs.shape, has_fill, side, env)?;
     val_as_arr!(xs, |arr| stencil_array(arr, &dims, f, env))
 }
@@ -89,7 +89,7 @@ where
     }
 
     // Determine shape stuff
-    let fill = env.scalar_fill::<T>().ok();
+    let fill = env.ctx().scalar_fill::<T>().ok();
     let mut shape_prefix = Shape::SCALAR;
     let fill_side_count = if fill.as_ref().is_some_and(|fv| fv.side.is_some()) {
         1
@@ -307,7 +307,7 @@ where
             }
             WindowAction::Default(outputs, _) => {
                 for rows in outputs.into_iter().rev() {
-                    let mut val = Value::from_row_values(rows, env)?;
+                    let mut val = env.rows_to_value(rows)?;
                     let mut new_shape = shape_prefix.clone();
                     new_shape.extend_from_slice(&val.shape[1..]);
                     val.shape = new_shape;
@@ -577,7 +577,7 @@ where
 }
 
 fn pad_adjacent_fill<T: ArrayValue>(arr: &mut Array<T>, n: usize, env: &Uiua) {
-    if let Ok(fv) = env.scalar_fill::<T>() {
+    if let Ok(fv) = env.ctx().scalar_fill::<T>() {
         let row_len = arr.row_len();
         match fv.side {
             None => {
@@ -626,6 +626,6 @@ fn generic_adjacent(f: SigNode, mut xs: Value, n: usize, env: &mut Uiua) -> Uiua
         new_rows.push(acc);
         window.extend(rows.next());
     }
-    env.push(Value::from_row_values(new_rows, env)?);
+    env.push(env.rows_to_value(new_rows)?);
     Ok(())
 }

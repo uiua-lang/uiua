@@ -24,9 +24,10 @@ use crate::{
     Signature, Span, StackArg, SysBackend, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult,
     VERSION, Value,
     algorithm::{self, validate_size_impl},
-    fill::{Fill, FillFrame, FillValue},
+    context::{Context, FillFrame, FillValue},
     invert::match_format_pattern,
     run_prim_func, run_prim_mod,
+    stack::Indexable,
 };
 
 /// The Uiua interpreter
@@ -982,7 +983,7 @@ impl Uiua {
             let elems: usize = values.iter().map(|v| v.shape.elements()).sum();
             let elem_size = values.first().map_or(size_of::<f64>(), Value::elem_size);
             validate_size_impl(elem_size, [elems]).map_err(|e| self.error(e))?;
-            Value::from_row_values_impl(values, self, allow_ext)?
+            Value::from_row_values_impl(values, self.ctx(), allow_ext)?
         };
         self.push(val);
         Ok(())
@@ -1330,11 +1331,12 @@ impl Uiua {
     pub(crate) fn last_unfill(&self) -> Option<&FillFrame> {
         self.rt.unfill_stack.last()
     }
-    pub(crate) fn fill(&self) -> Fill {
-        Fill::new(self)
+    pub(crate) fn ctx(&self) -> Context {
+        Context::new(self)
     }
-    pub(crate) fn unfill(&self) -> Fill {
-        Fill::new_un(self)
+    /// Create a value from a list of rows
+    pub fn rows_to_value(&self, rows: impl Indexable<Item = Value>) -> UiuaResult<Value> {
+        Value::from_row_values(rows, self.ctx())
     }
     /// Do something with the fill context set
     pub(crate) fn with_fill<T>(
@@ -1574,7 +1576,7 @@ impl Uiua {
                 1 => self.push(thread_stack.into_iter().next().unwrap()),
                 _ => {
                     thread_stack.reverse();
-                    self.push(Value::from_row_values(thread_stack, self)?)
+                    self.push(self.rows_to_value(thread_stack)?)
                 }
             }
         } else {
@@ -1602,11 +1604,11 @@ impl Uiua {
                     thread_stack.into_iter().next().unwrap()
                 } else {
                     thread_stack.reverse();
-                    Value::from_row_values(thread_stack, self)?
+                    self.rows_to_value(thread_stack)?
                 };
                 rows.push(row);
             }
-            let mut val = Value::from_row_values(rows, self)?;
+            let mut val = self.rows_to_value(rows)?;
             let mut shape = ids.shape;
             shape.extend_from_slice(&val.shape[1..]);
             val.shape = shape;
@@ -1642,7 +1644,7 @@ impl Uiua {
                 }
             })?);
         }
-        let mut val = Value::from_row_values(values, self)?;
+        let mut val = self.rows_to_value(values)?;
         let mut shape = ids.shape;
         shape.extend_from_slice(&val.shape[1..]);
         val.shape = shape;

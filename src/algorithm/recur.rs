@@ -103,7 +103,7 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
                 }
                 val
             } else {
-                Value::from_row_values(child_nodes, env)?
+                env.rows_to_value(child_nodes)?
             };
             if call_combine {
                 env.push_all(

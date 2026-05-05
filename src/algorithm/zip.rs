@@ -100,7 +100,7 @@ fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMonFn>
             Ok(v)
         }),
         DeshapeSub(i) => spanned_mon_fn(span, move |mut v, d, env| {
-            Value::deshape_sub(&mut v, i, d, true, env)?;
+            Value::deshape_sub(&mut v, i, d, true, env.ctx())?;
             Ok(v)
         }),
         ReplaceRand => spanned_mon_fn(span, |v, d, _| Ok(replace_rand(&v, d))),
@@ -494,7 +494,7 @@ pub(crate) fn each1(f: SigNode, mut xs: Value, env: &mut Uiua) -> UiuaResult {
     })?;
     for new_values in new_values.into_iter().rev() {
         let mut new_shape = new_shape.clone();
-        let mut eached = Value::from_row_values(new_values, env)?;
+        let mut eached = env.rows_to_value(new_values)?;
         if is_empty {
             eached.pop_row();
         }
@@ -510,8 +510,8 @@ pub(crate) fn each1(f: SigNode, mut xs: Value, env: &mut Uiua) -> UiuaResult {
 fn each2(f: SigNode, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, ..)) = f_dy_fast_fn(
         f.node.as_slice(),
-        env.fill().value_for(&xs).is_some(),
-        env.fill().value_for(&ys).is_some(),
+        env.ctx().value_for(&xs).is_some(),
+        env.ctx().value_for(&ys).is_some(),
     ) {
         let xrank = xs.rank();
         let yrank = ys.rank();
@@ -545,7 +545,7 @@ fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         let (a, b) = args.split_at_mut(a + 1);
         let a = a.last_mut().unwrap();
         for b in b {
-            fill_value_shapes(a, b, true, env)?;
+            fill_value_shapes(a, b, true, env.ctx())?;
         }
     }
     let outputs = f.sig.outputs();
@@ -581,7 +581,7 @@ fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     })?;
     for new_values in new_values.into_iter().rev() {
         let mut new_shape = new_shape.clone();
-        let mut eached = Value::from_row_values(new_values, env)?;
+        let mut eached = env.rows_to_value(new_values)?;
         if is_empty {
             eached.pop_row();
         }
@@ -617,7 +617,7 @@ fn collect_outputs(
     env: &mut Uiua,
 ) -> UiuaResult {
     for new_rows in outputs.into_iter().rev() {
-        let mut val = Value::from_row_values(new_rows, env)?;
+        let mut val = env.rows_to_value(new_rows)?;
         if is_scalar {
             val.undo_fix();
         } else if is_empty {
@@ -704,8 +704,8 @@ fn rows2(
     if !inv
         && let Some((f, f_depth)) = f_dy_fast_fn(
             f.node.as_slice(),
-            env.fill().value_for(&xs).is_some(),
-            env.fill().value_for(&ys).is_some(),
+            env.ctx().value_for(&xs).is_some(),
+            env.ctx().value_for(&ys).is_some(),
         )
     {
         let val = f(xs, ys, f_depth + depth + 1, env)?;
@@ -893,7 +893,7 @@ fn rowsn(f: SigNode, args: Vec<Value>, depth: usize, inv: bool, env: &mut Uiua) 
         }
     };
     for new_values in new_values.into_iter().rev() {
-        let mut rowsed = Value::from_row_values(new_values, env)?;
+        let mut rowsed = env.rows_to_value(new_values)?;
         if all_scalar {
             rowsed.undo_fix();
         } else if is_empty {

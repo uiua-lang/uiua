@@ -3,9 +3,9 @@
 use ecow::eco_vec;
 
 use crate::{
-    Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Uiua,
+    Array, ArrayValue, Complex, Context, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Uiua,
     UiuaResult,
-    algorithm::{FillContext, get_ops, pervade::*, zip::rows1},
+    algorithm::{get_ops, pervade::*, zip::rows1},
     random,
     value::Value,
 };
@@ -23,7 +23,7 @@ pub fn table_sub(f: SigNode, sub: i32, env: &mut Uiua) -> UiuaResult {
     let shapes: Vec<Shape> = inputs.iter().map(|v| v.shape.clone()).rev().collect();
     for val in inputs {
         if sub != -1 {
-            val.deshape_sub(sub + 1, 0, false, &())?;
+            val.deshape_sub(sub + 1, 0, false, Context::NONE)?;
         }
     }
     table_impl(f, env)?;
@@ -119,7 +119,7 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
                 Ok(())
             })?;
             for items in items.into_iter().rev() {
-                let mut tabled = Value::from_row_values(items, env)?;
+                let mut tabled = env.rows_to_value(items)?;
                 let mut new_shape = new_shape.clone();
                 if y_scalar {
                     new_shape.remove(1);
@@ -187,7 +187,7 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
                 Ok(())
             })?;
             for items in items.into_iter().rev() {
-                let mut tabled = Value::from_row_values(items, env)?;
+                let mut tabled = env.rows_to_value(items)?;
                 let mut new_shape = new_shape.clone();
                 new_shape.extend_from_slice(&tabled.shape[1..]);
                 tabled.shape = new_shape;
@@ -683,14 +683,14 @@ fn reduce_table_bytes(
                     $ff_complex,
                     complex::$arith,
                     Complex::new($iden, $ciden),
-                    env.scalar_fill::<Complex>().ok().map(|fv| fv.value),
+                    env.ctx().scalar_fill::<Complex>().ok().map(|fv| fv.value),
                 )),
                 Primitive::Couple | Primitive::Join => env.push(frtljc($xs, $ys, $ff, $iden, fill)),
                 _ => return Err((xs, ys)),
             }
         }};
     }
-    let fill = env.scalar_fill::<f64>().ok().map(|fv| fv.value);
+    let fill = env.ctx().scalar_fill::<f64>().ok().map(|fv| fv.value);
     match fp {
         Primitive::Add => {
             all_gs!(
@@ -719,7 +719,7 @@ fn reduce_table_bytes(
             )
         }
         Primitive::Min => {
-            let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
+            let byte_fill = env.ctx().scalar_fill::<u8>().ok().map(|fv| fv.value);
             if xs.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                 all_gs!(
                     xs.convert(),
@@ -747,7 +747,7 @@ fn reduce_table_bytes(
             }
         }
         Primitive::Max => {
-            let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
+            let byte_fill = env.ctx().scalar_fill::<u8>().ok().map(|fv| fv.value);
             if xs.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                 all_gs!(
                     xs.convert(),
@@ -817,7 +817,7 @@ fn generic_reduce_table(
         env.exec(g.clone())?;
         g_rows.push(env.pop("reduced function result")?);
     }
-    acc = Value::from_row_values(g_rows, env)?;
+    acc = env.rows_to_value(g_rows)?;
     for x in xs {
         g_rows = Vec::new();
         for y in ys.rows() {
@@ -826,7 +826,7 @@ fn generic_reduce_table(
             env.exec(g.clone())?;
             g_rows.push(env.pop("reduced function result")?);
         }
-        env.push(Value::from_row_values(g_rows, env)?);
+        env.push(env.rows_to_value(g_rows)?);
         env.push(acc);
         env.exec(f.clone())?;
         acc = env.pop("reduced function result")?;
@@ -864,7 +864,7 @@ macro_rules! reduce_table_math {
             if f_flipped || g_flipped {
                 return Ok(Err((xs, ys)));
             }
-            let fill = env.scalar_fill::<$ty>().ok().map(|fv| fv.value);
+            let fill = env.ctx().scalar_fill::<$ty>().ok().map(|fv| fv.value);
             macro_rules! all_gs {
                 ($ff:expr, $ff_complex:expr, $iden:expr, $ciden:expr) => {
                     match g_prim {
@@ -905,7 +905,7 @@ macro_rules! reduce_table_math {
                             $ff_complex,
                             complex::$f,
                             Complex::new($iden, $ciden),
-                            env.scalar_fill::<Complex>().ok().map(|fv| fv.value),
+                            env.ctx().scalar_fill::<Complex>().ok().map(|fv| fv.value),
                         )),
                         Primitive::Couple | Primitive::Join => {
                             env.push(frtljc(xs, ys, $ff, $iden.into(), fill))

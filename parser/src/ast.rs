@@ -362,7 +362,7 @@ pub enum Word {
     TypeSigComment { i: usize },
     OutputComment { i: usize, n: usize },
     Subscripted(Box<Subscripted>),
-    InlineMacro(InlineMacro),
+    InlineMacro(Box<InlineMacro>),
 }
 
 impl PartialEq for Word {
@@ -487,8 +487,8 @@ impl fmt::Debug for Word {
             Word::OutputComment { i, n } => write!(f, "output_comment({i}/{n})"),
             Word::TypeSigComment { i } => write!(f, "type_sig_comment({i}"),
             Word::Subscripted(sub) => sub.fmt(f),
-            Word::InlineMacro(InlineMacro { ident, func, .. }) => {
-                write!(f, "inline_macro({:?}{}))", func.value, ident.value)
+            Word::InlineMacro(mac) => {
+                write!(f, "inline_macro({:?}{}))", mac.func.value, mac.ident.value)
             }
         }
     }
@@ -789,7 +789,7 @@ pub enum Modifier {
     /// A user-defined modifier
     Ref(Ref),
     /// An inline macro
-    Macro(InlineMacro),
+    Macro(Box<InlineMacro>),
 }
 
 impl fmt::Debug for Modifier {

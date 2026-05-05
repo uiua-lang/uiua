@@ -11,12 +11,12 @@ use crate::{
     Shape, Uiua, UiuaResult,
     algorithm::{max_shape, validate_size},
     array::*,
+    context::FillValue,
     cowslice::cowslice,
-    fill::FillValue,
     value::Value,
 };
 
-use super::{ArrayCmpSlice, FillContext};
+use super::ArrayCmpSlice;
 
 impl Value {
     /// Check which rows of another value are `member`s of this one
@@ -152,6 +152,7 @@ impl<T: ArrayValue> Array<T> {
     pub fn index_of(&self, haystack: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
         let needle = self;
         let default = env
+            .ctx()
             .scalar_fill::<f64>()
             .map(|fv| fv.value)
             .unwrap_or(haystack.row_count() as f64);
@@ -303,7 +304,7 @@ impl<T: ArrayValue> Array<T> {
             .any(|(a, b)| a > b);
         if needle.rank() > haystack.rank() || any_dim_greater {
             // Fill
-            match env.scalar_fill() {
+            match env.ctx().scalar_fill() {
                 Ok(fill) => {
                     let target_shape = max_shape(&haystack.shape, &needle.shape);
                     local_searched = haystack.clone();

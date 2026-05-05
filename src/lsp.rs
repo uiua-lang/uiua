@@ -804,17 +804,14 @@ impl Spanner {
                         }
                     }
                 }
-                Word::InlineMacro(InlineMacro {
-                    ident,
-                    caret_span,
-                    func,
-                }) => {
-                    spans.extend(self.func_spans(&func.value, &func.span));
-                    let mac_delim_kind = SpanKind::MacroDelim(ident_modifier_args(&ident.value));
-                    if let Some(span) = caret_span {
+                Word::InlineMacro(mac) => {
+                    spans.extend(self.func_spans(&mac.func.value, &mac.func.span));
+                    let mac_delim_kind =
+                        SpanKind::MacroDelim(ident_modifier_args(&mac.ident.value));
+                    if let Some(span) = &mac.caret_span {
                         spans.push(span.clone().sp(mac_delim_kind.clone()));
                     }
-                    spans.push(ident.span.clone().sp(mac_delim_kind));
+                    spans.push(mac.ident.span.clone().sp(mac_delim_kind));
                 }
             }
         }

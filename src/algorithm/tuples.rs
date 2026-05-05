@@ -68,7 +68,7 @@ fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
         Ok(())
     })?;
     if has_output {
-        let mut val = Value::from_row_values(results, env)?;
+        let mut val = env.rows_to_value(results)?;
         if xs.row_count() == 0 {
             val.pop_row();
         }
@@ -197,7 +197,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                         }
                     }
                 }
-                xs = Value::from_row_values(rows, env)?;
+                xs = env.rows_to_value(rows)?;
                 xs.shape[0] /= 2;
                 xs.shape.insert(1, 2);
                 xs.validate();

@@ -118,7 +118,7 @@ fn rep_recur(f: SigNode, inv: Option<SigNode>, mut args: Vec<Value>, env: &mut U
         }
     }
     for new_values in new_values.into_iter().rev() {
-        let mut rowsed = Value::from_row_values(new_values, env)?;
+        let mut rowsed = env.rows_to_value(new_values)?;
         if is_empty {
             rowsed.pop_row();
         }
@@ -233,7 +233,7 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
     // Collect excess values
     for rows in excess_rows.into_iter().rev() {
         env.respect_execution_limit()?;
-        let new_val = Value::from_row_values(rows, env)?;
+        let new_val = env.rows_to_value(rows)?;
         env.push(new_val);
     }
     Ok(convergence_count)
@@ -301,7 +301,7 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
     }
     // Collect excess values
     for rows in excess_rows.into_iter().rev() {
-        let new_val = Value::from_row_values(rows, env)?;
+        let new_val = env.rows_to_value(rows)?;
         env.push(new_val);
     }
     Ok(())

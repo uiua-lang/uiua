@@ -11,10 +11,10 @@ use crate::{
     Complex, Shape, Uiua, UiuaError, UiuaResult, Value,
     algorithm::{loops::flip, validate_size},
     array::*,
-    fill::FillValue,
+    context::FillValue,
 };
 
-use super::{FillContext, MultiOutput, multi_output};
+use super::{MultiOutput, multi_output};
 
 pub trait PervasiveFn<A, B> {
     type Output;
@@ -128,8 +128,8 @@ where
     F: PervasiveFn<A, B, Output = C> + Clone,
     F::Error: Into<UiuaError>,
 {
-    let a_fill = env.scalar_fill::<A>();
-    let b_fill = env.scalar_fill::<B>();
+    let a_fill = env.ctx().scalar_fill::<A>();
+    let b_fill = env.ctx().scalar_fill::<B>();
     let empty = Shape::SCALAR;
     let new_shape = derive_new_shape(
         &a.shape,
@@ -366,7 +366,7 @@ where
     }
 
     let fill = if use_fill {
-        env.scalar_fill::<T>()
+        env.ctx().scalar_fill::<T>()
     } else {
         Err("")
     };
@@ -774,7 +774,7 @@ where {
                     let mut a_fill_val = a_fill.clone();
                     if a_fill_val.rank() + 1 < a.rank() {
                         for &d in ash[..a.rank() - a_fill_val.rank() - 1].iter().rev() {
-                            a_fill_val.reshape_scalar(Ok(d as isize), true, env)?;
+                            a_fill_val.reshape_scalar(Ok(d as isize), true, env.ctx())?;
                         }
                     }
                     let a_iter = a.into_rows().chain(repeat(a_fill_val));
@@ -793,7 +793,7 @@ where {
                     let mut b_fill_val = b_fill.clone();
                     if b_fill_val.rank() + 1 < b.rank() {
                         for &d in bsh[..b.rank() - b_fill_val.rank() - 1].iter().rev() {
-                            b_fill_val.reshape_scalar(Ok(d as isize), true, env)?;
+                            b_fill_val.reshape_scalar(Ok(d as isize), true, env.ctx())?;
                         }
                     }
                     let b_iter = b.into_rows().chain(repeat(b_fill_val));
@@ -826,7 +826,7 @@ where {
 
     let mut new_values = MultiOutput::new();
     for output in outputs {
-        let mut new_val = Value::from_row_values(output, env)?;
+        let mut new_val = env.rows_to_value(output)?;
         let mut this_shape = new_shape.clone();
         this_shape.extend_from_slice(&new_val.shape[1..]);
         new_val.shape = this_shape;

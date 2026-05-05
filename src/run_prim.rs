@@ -25,7 +25,7 @@ use crate::{
     algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
-    fill::FillFrame,
+    context::FillFrame,
     grid_fmt::GridFmt,
     media, run_sys_op, run_sys_op_mod,
     types::{Type, validate},
@@ -571,7 +571,7 @@ impl ImplPrimitive {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             &ImplPrimitive::DeshapeSub(i) => {
-                env.monadic_mut_env(|val, env| val.deshape_sub(i, 0, true, env))?
+                env.monadic_mut_env(|val, env| val.deshape_sub(i, 0, true, env.ctx()))?
             }
             &ImplPrimitive::ClassifySub(i) => {
                 let val = env.pop(1)?;
@@ -1561,7 +1561,7 @@ impl ImplPrimitive {
                     .cloned();
                 let max_rank = max_shape.as_ref().map(|sh| sh.len()).unwrap_or(0);
                 for mut val in vals {
-                    val.deshape_sub(n + 1, 0, val.rank() == max_rank, env)?;
+                    val.deshape_sub(n + 1, 0, val.rank() == max_rank, env.ctx())?;
                     env.push(val);
                 }
                 zip::rows(f, 0, false, env)?;
@@ -1865,7 +1865,7 @@ fn regex(env: &mut Uiua) -> UiuaResult {
                     })
                 })
                 .collect();
-            matches.append(row.into(), false, env)?;
+            matches.append(row.into(), false, env.ctx())?;
             locations.append(
                 (caps
                     .get(0)
@@ -1873,7 +1873,7 @@ fn regex(env: &mut Uiua) -> UiuaResult {
                     .start() as f64)
                     .into(),
                 false,
-                env,
+                env.ctx(),
             )?;
         }
 

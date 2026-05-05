@@ -12,8 +12,8 @@ use ecow::EcoVec;
 use serde::*;
 
 use crate::{
-    Boxed, Complex, Shape, SubscriptNumber, Uiua, UiuaResult,
-    algorithm::{ErrorContext, FillContext, pervade::*},
+    Boxed, Complex, Context, Shape, SubscriptNumber, Uiua, UiuaResult,
+    algorithm::pervade::*,
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
@@ -228,16 +228,33 @@ impl Value {
         self.shape.row_len()
     }
     pub(crate) fn fill(&mut self, env: &Uiua) -> Result<Value, &'static str> {
-        self.match_fill(env);
+        self.match_fill(env.ctx());
         match self {
-            Value::Num(_) => env.array_fill::<f64>().map(|fv| fv.value).map(Into::into),
-            Value::Byte(_) => env.array_fill::<u8>().map(|fv| fv.value).map(Into::into),
+            Value::Num(_) => env
+                .ctx()
+                .array_fill::<f64>()
+                .map(|fv| fv.value)
+                .map(Into::into),
+            Value::Byte(_) => env
+                .ctx()
+                .array_fill::<u8>()
+                .map(|fv| fv.value)
+                .map(Into::into),
             Value::Complex(_) => env
+                .ctx()
                 .array_fill::<Complex>()
                 .map(|fv| fv.value)
                 .map(Into::into),
-            Value::Char(_) => env.array_fill::<char>().map(|fv| fv.value).map(Into::into),
-            Value::Box(_) => env.array_fill::<Boxed>().map(|fv| fv.value).map(Into::into),
+            Value::Char(_) => env
+                .ctx()
+                .array_fill::<char>()
+                .map(|fv| fv.value)
+                .map(Into::into),
+            Value::Box(_) => env
+                .ctx()
+                .array_fill::<Boxed>()
+                .map(|fv| fv.value)
+                .map(Into::into),
         }
     }
     pub(crate) fn first_dim_zero(&self) -> Self {
@@ -771,22 +788,22 @@ impl Value {
     /// Attempt to convert the array to a list of integers
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_ints<C: ErrorContext>(
+    pub fn as_ints(
         &self,
-        ctx: &C,
+        env: &Uiua,
         requirement: impl Into<Option<&'static str>>,
-    ) -> Result<Vec<isize>, C::Error> {
+    ) -> UiuaResult<Vec<isize>> {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be array of integers");
-        self.as_number_list(ctx, requirement)
+        self.as_number_list(env.ctx(), requirement)
     }
     pub(crate) fn as_ints_or_infs(
         &self,
         env: &Uiua,
         requirement: &'static str,
     ) -> UiuaResult<Vec<Result<isize, bool>>> {
-        self.as_number_list(env, requirement)
+        self.as_number_list(env.ctx(), requirement)
     }
     /// Attempt to convert the array to a single boolean
     ///
@@ -797,7 +814,7 @@ impl Value {
         requirement: impl Into<Option<&'static str>>,
     ) -> UiuaResult<bool> {
         let requirement = requirement.into().unwrap_or("Expected value to be boolean");
-        self.as_number(env, requirement)
+        self.as_number(env.ctx(), requirement)
     }
     /// Attempt to convert the array to a single natural number
     ///
@@ -810,7 +827,7 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be a natural number");
-        self.as_number(env, requirement)
+        self.as_number(env.ctx(), requirement)
     }
     pub(crate) fn as_nat_or_inf(
         &self,
@@ -820,20 +837,20 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be a natural number or infinity");
-        self.as_number(env, requirement)
+        self.as_number(env.ctx(), requirement)
     }
     /// Attempt to convert the array to a single integer
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_int<C: ErrorContext>(
+    pub fn as_int(
         &self,
-        ctx: &C,
+        env: &Uiua,
         requirement: impl Into<Option<&'static str>>,
-    ) -> Result<isize, C::Error> {
+    ) -> UiuaResult<isize> {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be an integer");
-        self.as_number(ctx, requirement)
+        self.as_number(env.ctx(), requirement)
     }
     pub(crate) fn as_int_or_inf(
         &self,
@@ -843,7 +860,7 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be an integer or infinity");
-        self.as_number(env, requirement)
+        self.as_number(env.ctx(), requirement)
     }
     /// Attempt to convert the array to a single number
     ///
@@ -856,16 +873,16 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be a number");
-        self.as_number(env, requirement)
+        self.as_number(env.ctx(), requirement)
     }
     /// Attempt to convert the array to a list of numbers
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_nums<'a, C: ErrorContext>(
+    pub fn as_nums<'a>(
         &'a self,
-        ctx: &C,
+        env: &Uiua,
         requirement: impl Into<Option<&'static str>>,
-    ) -> Result<Cow<'a, [f64]>, C::Error> {
+    ) -> UiuaResult<Cow<'a, [f64]>> {
         if self.rank() <= 1
             && let Value::Num(arr) = self
         {
@@ -874,16 +891,16 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be array of numbers");
-        self.as_number_list(ctx, requirement).map(Cow::Owned)
+        self.as_number_list(env.ctx(), requirement).map(Cow::Owned)
     }
     /// Attempt to convert the array to a list of natural numbers
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_nats<C: ErrorContext>(
+    pub fn as_nats(
         &self,
-        ctx: &C,
+        env: &Uiua,
         requirement: impl Into<Option<&'static str>>,
-    ) -> Result<Vec<usize>, C::Error> {
+    ) -> UiuaResult<Vec<usize>> {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be array of natural numbers");
@@ -893,9 +910,9 @@ impl Value {
         {
             let power = n.log10().floor() as i32;
             n /= 10f64.powi(power);
-            return Err(ctx.error(format!("{requirement}, but {n}e{power} is too large")));
+            return Err(env.error(format!("{requirement}, but {n}e{power} is too large")));
         }
-        self.as_number_list(ctx, requirement)
+        self.as_number_list(env.ctx(), requirement)
     }
     /// Attempt to convert the array to a list of bytes
     ///
@@ -913,7 +930,7 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be array of bytes");
-        self.as_number_list(env, requirement).map(Cow::Owned)
+        self.as_number_list(env.ctx(), requirement).map(Cow::Owned)
     }
     /// Attempt to convert the array to a list of u16s
     ///
@@ -926,7 +943,7 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be array of unsigned 16-bit integers");
-        self.as_number_list(env, requirement)
+        self.as_number_list(env.ctx(), requirement)
     }
     /// Attempt to convert the array to a list of booleans
     ///
@@ -939,7 +956,7 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be array of booleans");
-        self.as_number_list(env, requirement)
+        self.as_number_list(env.ctx(), requirement)
     }
     /// Attempt to convert the array to a list of integers or infinity
     ///
@@ -954,12 +971,11 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Elements of rank list must be integers or infinity");
-        self.as_number_list(env, requirement)
+        self.as_number_list(env.ctx(), requirement)
     }
-    fn as_number<T, C>(&self, ctx: &C, requirement: &'static str) -> Result<T, C::Error>
+    fn as_number<T>(&self, ctx: Context, requirement: &'static str) -> UiuaResult<T>
     where
         T: ScalarNum,
-        C: ErrorContext,
     {
         if self.rank() != 0 {
             return Err(ctx.error(format!("{requirement}, but its rank is {}", self.rank())));
@@ -988,14 +1004,9 @@ impl Value {
             }
         })
     }
-    pub(crate) fn as_number_list<T, C>(
-        &self,
-        ctx: &C,
-        requirement: &'static str,
-    ) -> Result<Vec<T>, C::Error>
+    fn as_number_list<T>(&self, ctx: Context, requirement: &'static str) -> UiuaResult<Vec<T>>
     where
         T: ScalarNum,
-        C: ErrorContext,
     {
         Ok(match self {
             Value::Num(nums) => {
@@ -1441,7 +1452,7 @@ impl Value {
     ) -> UiuaResult<Self> {
         self.keep_labels(other, |a, b| a.keep_map_keys(b, f))
     }
-    pub(crate) fn match_fill<C: FillContext>(&mut self, ctx: &C) {
+    pub(crate) fn match_fill(&mut self, ctx: Context) {
         if let Value::Byte(arr) = self {
             if arr.meta.flags.is_boolean() && ctx.scalar_fill::<f64>().is_ok() {
                 arr.meta.flags.remove(ArrayFlags::BOOLEAN);
@@ -1838,14 +1849,18 @@ impl Value {
     /// Get the `absolute value` of a value
     pub fn abs(self, env: &Uiua) -> UiuaResult<Self> {
         match self {
-            Value::Char(mut chars) if chars.rank() == 1 && env.scalar_fill::<char>().is_ok() => {
+            Value::Char(mut chars)
+                if chars.rank() == 1 && env.ctx().scalar_fill::<char>().is_ok() =>
+            {
                 chars.data = (chars.data.into_iter())
                     .flat_map(|c| c.to_uppercase())
                     .collect();
                 chars.shape = chars.data.len().into();
                 Ok(chars.into())
             }
-            Value::Char(mut chars) if chars.rank() > 1 && env.scalar_fill::<char>().is_ok() => {
+            Value::Char(mut chars)
+                if chars.rank() > 1 && env.ctx().scalar_fill::<char>().is_ok() =>
+            {
                 let meta = chars.meta.get_mut().map(take);
                 let mut rows = Vec::new();
                 for row in chars.row_shaped_slices(Shape::from(*chars.shape.last().unwrap())) {
@@ -1867,7 +1882,9 @@ impl Value {
     pub fn neg(mut self, env: &Uiua) -> UiuaResult<Self> {
         let sorted_flags = self.meta.take_sorted_flags();
         let mut val = match self {
-            Value::Char(mut chars) if chars.rank() == 1 && env.scalar_fill::<char>().is_ok() => {
+            Value::Char(mut chars)
+                if chars.rank() == 1 && env.ctx().scalar_fill::<char>().is_ok() =>
+            {
                 let mut new_data = EcoVec::with_capacity(chars.data.len());
                 for c in chars.data {
                     if c.is_uppercase() {
@@ -1880,7 +1897,7 @@ impl Value {
                 chars.shape = chars.data.len().into();
                 chars.into()
             }
-            Value::Char(chars) if chars.rank() > 1 && env.scalar_fill::<char>().is_ok() => {
+            Value::Char(chars) if chars.rank() > 1 && env.ctx().scalar_fill::<char>().is_ok() => {
                 let mut rows = Vec::new();
                 for row in chars.row_shaped_slices(Shape::from(*chars.shape.last().unwrap())) {
                     let mut new_data = EcoVec::with_capacity(row.data.len());
@@ -1999,8 +2016,8 @@ macro_rules! value_dy_impl {
             pub fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 let (mut a, mut b) = optimize_types(self, other);
                 let mut handle_pre: Option<&dyn Fn(&mut Value)> = None;
-                a.match_fill(env);
-                b.match_fill(env);
+                a.match_fill(env.ctx());
+                b.match_fill(env.ctx());
                 $(
                     let get_pre = |$get_pre_a: &mut Value, $get_pre_b: &Value, $get_pre_left: bool| $get_pre_body;
                     let pre_a = get_pre(&mut a, &b, false);
@@ -2008,7 +2025,7 @@ macro_rules! value_dy_impl {
                     let f = move |val: &mut Value| {
                         (|$pre_a: $pre_ty, $pre_b: $pre_ty, $handle_val: &mut Value| $handle_body)(pre_a, pre_b, val)
                     };
-                    if env.fill().value_for(&a).is_none() && env.fill().value_for(&b).is_none() {
+                    if env.ctx().value_for(&a).is_none() && env.ctx().value_for(&b).is_none() {
                         handle_pre = Some(&f);
                     }
                 )?

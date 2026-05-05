@@ -20,8 +20,8 @@ use crate::{
         ArrayCmpSlice,
         map::{EMPTY_NAN, MapKeys, TOMBSTONE_NAN},
     },
+    context::{Context, FillValue},
     cowslice::{CowSlice, cowslice},
-    fill::{Fill, FillValue},
     grid_fmt::GridFmt,
 };
 
@@ -464,6 +464,10 @@ impl<T> Array<T> {
     pub fn row_slice(&self, row: usize) -> &[T] {
         let row_len = self.row_len();
         &self.data[row * row_len..(row + 1) * row_len]
+    }
+    /// Get a slice of all array elements
+    pub fn data(&self) -> &[T] {
+        &self.data
     }
 }
 
@@ -1013,9 +1017,9 @@ pub trait ArrayValue:
     /// An ID for the type
     const TYPE_ID: u8;
     /// Get the scalar fill value from the environment
-    fn get_scalar_fill(fill: &Fill) -> Result<FillValue<Self>, &'static str>;
+    fn get_scalar_fill(fill: &Context) -> Result<FillValue<Self>, &'static str>;
     /// Get the array fill value from the environment
-    fn get_array_fill(fill: &Fill) -> Result<FillValue<Array<Self>>, &'static str>;
+    fn get_array_fill(fill: &Context) -> Result<FillValue<Array<Self>>, &'static str>;
     /// Hash the value
     fn array_hash<H: Hasher>(&self, hasher: &mut H);
     /// Get the proxy value
@@ -1052,10 +1056,10 @@ impl ArrayValue for f64 {
     const NAME: &'static str = "number";
     const SYMBOL: char = 'ℝ';
     const TYPE_ID: u8 = 0;
-    fn get_scalar_fill(fill: &Fill) -> Result<FillValue<Self>, &'static str> {
+    fn get_scalar_fill(fill: &Context) -> Result<FillValue<Self>, &'static str> {
         fill.num_scalar()
     }
-    fn get_array_fill(fill: &Fill) -> Result<FillValue<Array<Self>>, &'static str> {
+    fn get_array_fill(fill: &Context) -> Result<FillValue<Array<Self>>, &'static str> {
         fill.num_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
@@ -1095,10 +1099,10 @@ impl ArrayValue for u8 {
     const NAME: &'static str = "number";
     const SYMBOL: char = 'ℝ';
     const TYPE_ID: u8 = 0;
-    fn get_scalar_fill(fill: &Fill) -> Result<FillValue<Self>, &'static str> {
+    fn get_scalar_fill(fill: &Context) -> Result<FillValue<Self>, &'static str> {
         fill.byte_scalar()
     }
-    fn get_array_fill(fill: &Fill) -> Result<FillValue<Array<Self>>, &'static str> {
+    fn get_array_fill(fill: &Context) -> Result<FillValue<Array<Self>>, &'static str> {
         fill.byte_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
@@ -1146,10 +1150,10 @@ impl ArrayValue for char {
     const NAME: &'static str = "character";
     const SYMBOL: char = '@';
     const TYPE_ID: u8 = 1;
-    fn get_scalar_fill(fill: &Fill) -> Result<FillValue<Self>, &'static str> {
+    fn get_scalar_fill(fill: &Context) -> Result<FillValue<Self>, &'static str> {
         fill.char_scalar()
     }
-    fn get_array_fill(fill: &Fill) -> Result<FillValue<Array<Self>>, &'static str> {
+    fn get_array_fill(fill: &Context) -> Result<FillValue<Array<Self>>, &'static str> {
         fill.char_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
@@ -1167,10 +1171,10 @@ impl ArrayValue for Boxed {
     const NAME: &'static str = "box";
     const SYMBOL: char = '□';
     const TYPE_ID: u8 = 2;
-    fn get_scalar_fill(fill: &Fill) -> Result<FillValue<Self>, &'static str> {
+    fn get_scalar_fill(fill: &Context) -> Result<FillValue<Self>, &'static str> {
         fill.box_scalar()
     }
-    fn get_array_fill(fill: &Fill) -> Result<FillValue<Array<Self>>, &'static str> {
+    fn get_array_fill(fill: &Context) -> Result<FillValue<Array<Self>>, &'static str> {
         fill.box_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
@@ -1191,10 +1195,10 @@ impl ArrayValue for Complex {
     const NAME: &'static str = "complex";
     const SYMBOL: char = 'ℂ';
     const TYPE_ID: u8 = 3;
-    fn get_scalar_fill(fill: &Fill) -> Result<FillValue<Self>, &'static str> {
+    fn get_scalar_fill(fill: &Context) -> Result<FillValue<Self>, &'static str> {
         fill.complex_scalar()
     }
-    fn get_array_fill(fill: &Fill) -> Result<FillValue<Array<Self>>, &'static str> {
+    fn get_array_fill(fill: &Context) -> Result<FillValue<Array<Self>>, &'static str> {
         fill.complex_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
@@ -1369,7 +1373,7 @@ impl<T: ArrayValueSer> From<ArrayRep<T>> for Array<T> {
             ArrayRep::Map(shape, keys, data) => {
                 let data = T::make_data(data);
                 let mut arr = Self::new(shape, data);
-                _ = arr.map(keys, &());
+                _ = arr.map(keys, Context::NONE);
                 arr
             }
             ArrayRep::Metaless(shape, data) => {

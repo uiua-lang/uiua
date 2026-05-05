@@ -487,7 +487,7 @@ impl Compiler {
                 return self.modifier_ref(r, modified.modifier.span, modified.operands);
             }
             Modifier::Macro(mac) => {
-                return self.inline_macro(mac, modified.modifier.span, modified.operands);
+                return self.inline_macro(*mac, modified.modifier.span, modified.operands);
             }
         };
 

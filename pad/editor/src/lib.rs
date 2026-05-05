@@ -16,7 +16,7 @@ use leptos::{
 
 use leptos_router::{BrowserIntegration, History, LocationChange, NavigateOptions, use_navigate};
 use uiua::{
-    IgnoreError, PrimClass, PrimDoc, Primitive, Signature, Subscript, SubscriptToken, SysOp, Token,
+    PrimClass, PrimDoc, Primitive, Signature, Subscript, SubscriptToken, SysOp, Token, Value,
     format::{FormatConfig, format_str},
     is_ident_char, lex,
     lsp::{BindingDocs, BindingDocsKind},
@@ -2674,8 +2674,8 @@ fn binding_style(docs: &BindingDocs) -> String {
         return String::new();
     }
     if let BindingDocsKind::Constant(Some(val)) = &docs.kind
-        && let Ok(nums) = val.as_nums(&IgnoreError, "")
-        && let [r, g, b] = *nums
+        && let Value::Num(nums) = val
+        && let [r, g, b] = *nums.data()
         && [r, g, b].iter().all(|c| (0.0..=1.0).contains(c))
     {
         return format!(

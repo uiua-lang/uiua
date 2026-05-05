@@ -23,20 +23,18 @@ use rayon::prelude::*;
 use smallvec::SmallVec;
 
 use crate::{
-    Complex, Primitive, RNG, Shape, Uiua, UiuaResult,
+    Complex, Context, Primitive, RNG, Shape, Uiua, UiuaResult,
     algorithm::pervade::{self, InfalliblePervasiveFn, bin_pervade_recursive},
     array::*,
     boxed::Boxed,
+    context::FillValue,
     cowslice::{CowSlice, cowslice, extend_repeat},
-    fill::FillValue,
     grid_fmt::GridFmt,
     val_as_arr,
     value::Value,
 };
 
-use super::{
-    ArrayCmpSlice, FillContext, SizeError, shape_prefixes_match, validate_size, validate_size_of,
-};
+use super::{ArrayCmpSlice, SizeError, shape_prefixes_match, validate_size, validate_size_of};
 
 macro_rules! par_if {
     ($cond:expr, $if_true:expr, $if_false:expr) => {{
@@ -50,13 +48,13 @@ macro_rules! par_if {
 }
 
 impl Value {
-    pub(crate) fn bin_coerce_to_boxes<T, C: FillContext, E: ToString>(
+    pub(crate) fn bin_coerce_to_boxes<T, E: ToString>(
         self,
         other: Self,
-        ctx: &C,
-        on_success: impl FnOnce(Array<Boxed>, Array<Boxed>, &C) -> Result<T, C::Error>,
+        ctx: Context,
+        on_success: impl FnOnce(Array<Boxed>, Array<Boxed>, Context) -> UiuaResult<T>,
         on_error: impl FnOnce(&str, &str) -> E,
-    ) -> Result<T, C::Error> {
+    ) -> UiuaResult<T> {
         match (self, other) {
             (Value::Box(a), Value::Box(b)) => on_success(a, b, ctx),
             (Value::Box(a), b) => on_success(a, b.coerce_to_boxes(), ctx),
@@ -64,13 +62,13 @@ impl Value {
             (a, b) => Err(ctx.error(on_error(a.type_name(), b.type_name()))),
         }
     }
-    pub(crate) fn bin_coerce_to_boxes_mut<T, C: FillContext, E: ToString>(
+    pub(crate) fn bin_coerce_to_boxes_mut<T>(
         &mut self,
         other: Self,
-        ctx: &C,
-        on_success: impl FnOnce(&mut Array<Boxed>, Array<Boxed>, &C) -> Result<T, C::Error>,
-        on_error: impl FnOnce(&str, &str) -> E,
-    ) -> Result<T, C::Error> {
+        ctx: Context,
+        on_success: impl FnOnce(&mut Array<Boxed>, Array<Boxed>, Context) -> UiuaResult<T>,
+        on_error: impl FnOnce(&str, &str) -> String,
+    ) -> UiuaResult<T> {
         match (self, other) {
             (Value::Box(a), Value::Box(b)) => on_success(a, b, ctx),
             (Value::Box(a), b) => on_success(a, b.coerce_to_boxes(), ctx),
@@ -95,13 +93,13 @@ impl Value {
         )?;
         if shape.rank() == 0 {
             let n = target_shape[0];
-            val_as_arr!(self, |a| a.reshape_scalar(n, true, env))
+            val_as_arr!(self, |a| a.reshape_scalar(n, true, env.ctx()))
         } else {
             self.reshape_impl(&target_shape, env)
         }
     }
     pub(crate) fn reshape_impl(&mut self, dims: &[Result<isize, bool>], env: &Uiua) -> UiuaResult {
-        self.match_fill(env);
+        self.match_fill(env.ctx());
         val_as_arr!(self, |a| a.reshape(dims, env))
     }
     pub(crate) fn undo_reshape(&mut self, old_shape: &Self, env: &Uiua) -> UiuaResult {
@@ -109,7 +107,7 @@ impl Value {
             return Err(env.error("Cannot undo scalar reshape"));
         }
         let orig_shape = old_shape.as_nats(env, "Shape should be a list of integers")?;
-        if env.fill().value_for(self).is_some()
+        if env.ctx().value_for(self).is_some()
             || orig_shape.iter().product::<usize>() == self.shape.iter().product::<usize>()
         {
             let orig_shape_spec: Vec<_> = orig_shape.iter().map(|&d| Ok(d as isize)).collect();
@@ -123,12 +121,12 @@ impl Value {
             )))
         }
     }
-    pub(crate) fn reshape_scalar<C: FillContext>(
+    pub(crate) fn reshape_scalar(
         &mut self,
         count: Result<isize, bool>,
         use_fill: bool,
-        ctx: &C,
-    ) -> Result<(), C::Error> {
+        ctx: Context,
+    ) -> UiuaResult {
         val_as_arr!(self, |a| a.reshape_scalar(count, use_fill, ctx))
     }
 }
@@ -166,12 +164,12 @@ impl<T: ArrayValue> Array<T> {
         Ok(())
     }
     /// `reshape` this array by replicating it as the rows of a new array
-    pub fn reshape_scalar<C: FillContext>(
+    pub fn reshape_scalar(
         &mut self,
         count: Result<isize, bool>,
         use_fill: bool,
-        ctx: &C,
-    ) -> Result<(), C::Error> {
+        ctx: Context,
+    ) -> UiuaResult {
         self.meta.take_map_keys();
         match count {
             Ok(count) => {
@@ -196,7 +194,7 @@ impl<T: ArrayValue> Array<T> {
     }
     /// `reshape` the array
     pub fn reshape(&mut self, dims: &[Result<isize, bool>], env: &Uiua) -> UiuaResult {
-        let fill = env.scalar_fill::<T>();
+        let fill = env.ctx().scalar_fill::<T>();
         let has_fill = fill.is_ok();
         let was_scalar = self.rank() == 0;
         let axes = derive_shape(&self.shape, dims, has_fill, env)?;
@@ -330,7 +328,7 @@ fn derive_shape(
 impl Value {
     /// Apply the given shape to the array by either tiling or filling
     pub fn undo_shape(&mut self, shape: &Value, env: &Uiua) -> UiuaResult {
-        self.match_fill(env);
+        self.match_fill(env.ctx());
 
         let axes_input = shape.as_ints_or_infs(env, "Shape should be integers or infinity")?;
         if axes_input.len() == self.rank()
@@ -412,7 +410,7 @@ impl<T: ArrayValue> Array<T> {
             self.reverse_depth(ax);
         }
 
-        if let Err(e) = env.array_fill::<T>() {
+        if let Err(e) = env.ctx().array_fill::<T>() {
             // The case where the target shape is empty is handled at the start of the function
             if self.shape.elements() == 0 {
                 return Err(env.error(format!(
@@ -557,7 +555,7 @@ impl Value {
         val_as_arr!(self, |a| a.unkeep(env).map(|(a, b)| (a, b.into())))
     }
     pub(crate) fn anti_keep(self, mut kept: Self, env: &Uiua) -> UiuaResult<Self> {
-        kept.match_fill(env);
+        kept.match_fill(env.ctx());
         let counts = self.as_nums(env, "Keep amount must be a list of natural numbers")?;
         Ok(if self.rank() == 0 {
             if counts[0] == 0.0 {
@@ -848,9 +846,13 @@ impl<T: ArrayValue> Array<T> {
                 let fill = if let Some(fill) = &fill {
                     fill
                 } else {
-                    let f = env.scalar_fill::<T>().map(|fv| fv.value).map_err(|e| {
-                        env.error(format!("Anti keep with 0s requires a fill value{e}"))
-                    })?;
+                    let f = env
+                        .ctx()
+                        .scalar_fill::<T>()
+                        .map(|fv| fv.value)
+                        .map_err(|e| {
+                            env.error(format!("Anti keep with 0s requires a fill value{e}"))
+                        })?;
                     fill = Some(f);
                     fill.as_ref().unwrap()
                 };
@@ -866,12 +868,16 @@ impl<T: ArrayValue> Array<T> {
                 let fill = if let Some(fill) = &fill {
                     fill
                 } else {
-                    let f = env.scalar_fill::<T>().map(|fv| fv.value).map_err(|e| {
-                        env.error(format!(
-                            "Anti keep ran out of rows so it \
+                    let f = env
+                        .ctx()
+                        .scalar_fill::<T>()
+                        .map(|fv| fv.value)
+                        .map_err(|e| {
+                            env.error(format!(
+                                "Anti keep ran out of rows so it \
                             requires a fill value{e}"
-                        ))
-                    })?;
+                            ))
+                        })?;
                     fill = Some(f);
                     fill.as_ref().unwrap()
                 };
@@ -1013,9 +1019,9 @@ pub(super) fn pad_keep_counts<'a>(
     match amount.len().cmp(&len) {
         Ordering::Equal => {}
         Ordering::Less => match if unfill {
-            env.unfill().num_array()
+            env.ctx().un().num_array()
         } else {
-            env.either_array_fill()
+            env.ctx().either_array_fill()
         } {
             Ok(fill) => {
                 if let Some(n) = fill.value.data.iter().find(|&&n| n.fract() != 0.0) {
@@ -1101,7 +1107,7 @@ impl Value {
             }
             Ok(ints)
         };
-        rotated.match_fill(env);
+        rotated.match_fill(env.ctx());
         match rotated {
             Value::Num(b) => b.rotate_depth(by_ints()?, depth, forward, env)?,
             Value::Byte(b) => b.rotate_depth(by_ints()?, depth, forward, env)?,
@@ -1126,10 +1132,10 @@ impl<T: ArrayValue> Array<T> {
         forward: bool,
         env: &Uiua,
     ) -> UiuaResult {
-        if !forward && env.scalar_unfill::<T>().is_ok() {
+        if !forward && env.ctx().scalar_unfill::<T>().is_ok() {
             return Err(env.error("Cannot invert filled rotation"));
         }
-        let fill = env.array_fill::<T>().ok().map(|fv| fv.value);
+        let fill = env.ctx().array_fill::<T>().ok().map(|fv| fv.value);
         if let Some(fill) = &fill {
             let by_dims = by.shape.last().copied().unwrap_or(1);
             let end_dims = &self.shape[self.rank().min(depth + by_dims)..];
@@ -1154,17 +1160,17 @@ impl<T: ArrayValue> Array<T> {
                 .chain(&self.shape[fixed_dims..])
                 .copied()
                 .collect();
-            self.reshape_scalar(Ok(expansion as isize), false, env)?;
+            self.reshape_scalar(Ok(expansion as isize), false, env.ctx())?;
             self.shape = new_shape;
         }
         if by.rank().saturating_sub(depth) > 1 {
             for &bd in by.shape.iter().rev().skip(1) {
-                self.reshape_scalar(Ok(bd as isize), false, env)?;
+                self.reshape_scalar(Ok(bd as isize), false, env.ctx())?;
             }
         }
         if self.rank() < depth {
             for &bd in by.shape.iter().skip(depth.saturating_sub(1)) {
-                self.reshape_scalar(Ok(bd as isize), false, env)?;
+                self.reshape_scalar(Ok(bd as isize), false, env.ctx())?;
             }
             self.transpose();
         }
@@ -1513,7 +1519,7 @@ impl Value {
     pub fn orient(&self, target: &mut Self, env: &Uiua) -> UiuaResult {
         let indices = self.as_ints(env, "Orient indices must be integers")?;
         let undices = derive_undices(indices, target.rank(), env)?;
-        target.match_fill(env);
+        target.match_fill(env.ctx());
         val_as_arr!(target, |a| a.orient(undices, env))
     }
     pub(crate) fn anti_orient(&self, target: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -1600,7 +1606,7 @@ fn derive_orient_data(undices: &mut Vec<usize>, shape: &[usize], env: &Uiua) -> 
 impl<T: ArrayValue> Array<T> {
     fn orient(&mut self, undices: Vec<usize>, env: &Uiua) -> UiuaResult {
         if undices.len() > self.rank() {
-            return match env.scalar_fill() {
+            return match env.ctx().scalar_fill() {
                 Ok(fill) => self.filled_orient(undices, fill.value, env),
                 Err(e) => Err(env
                     .error(format!(
@@ -1616,7 +1622,7 @@ impl<T: ArrayValue> Array<T> {
             .enumerate()
             .any(|(i, a)| undices[..i].contains(a))
         {
-            return match env.scalar_fill() {
+            return match env.ctx().scalar_fill() {
                 Ok(fill) => self.filled_orient(undices, fill.value, env),
                 Err(e) => Err(env
                     .error(format!("Orient indices must be unique{e}"))
@@ -1918,7 +1924,7 @@ impl<T: RealArrayValue + GridFmt> Array<T> {
         })
     }
     fn base_list(&self, bases: &[f64], env: &Uiua) -> UiuaResult<Array<f64>> {
-        let fill = env.scalar_fill::<f64>().ok().map(|fv| fv.value);
+        let fill = env.ctx().scalar_fill::<f64>().ok().map(|fv| fv.value);
         // Validation
         for base in bases.iter().copied().chain(fill) {
             if base.is_infinite() && base.is_sign_negative() {
@@ -1985,7 +1991,7 @@ impl<T: RealArrayValue + GridFmt> Array<T> {
         Ok(Array::new(shape, data))
     }
     fn antibase_list(&self, bases: &[f64], env: &Uiua) -> UiuaResult<Array<f64>> {
-        let fill = env.scalar_unfill::<f64>().ok();
+        let fill = env.ctx().scalar_unfill::<f64>().ok();
         let mut shape = self.shape.clone();
         let row_len = shape.pop().unwrap_or(1);
         let elem_count = validate_size::<f64>(shape.iter().copied(), env)?;

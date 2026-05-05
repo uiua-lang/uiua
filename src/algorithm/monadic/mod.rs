@@ -22,7 +22,7 @@ use time::{Date, Month, OffsetDateTime, Time};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
-    Boxed, Complex, Primitive, Shape, Uiua, UiuaResult, WILDCARD_NAN,
+    Boxed, Complex, Context, Primitive, Shape, Uiua, UiuaResult, WILDCARD_NAN,
     algorithm::dyadic::derive_orient_rotations,
     array::*,
     cowslice::{CowSlice, cowslice},
@@ -31,7 +31,7 @@ use crate::{
     value::Value,
 };
 
-use super::{ArrayCmpSlice, FillContext, validate_size};
+use super::{ArrayCmpSlice, validate_size};
 
 impl Value {
     /// Make the value 1-dimensional
@@ -48,13 +48,13 @@ impl Value {
         self.meta.take_sorted_flags();
         self.validate();
     }
-    pub(crate) fn deshape_sub<C: FillContext>(
+    pub(crate) fn deshape_sub(
         &mut self,
         mut irank: i32,
         mut depth: usize,
         extend: bool,
-        ctx: &C,
-    ) -> Result<(), C::Error> {
+        ctx: Context,
+    ) -> UiuaResult {
         depth = depth.min(self.rank());
         let deep_rank = self.rank() - depth;
         if !extend && irank < 0 {
@@ -256,7 +256,7 @@ impl Value {
                 for row in val.into_rows() {
                     rows.push(row.parse_num(env)?);
                 }
-                Value::from_row_values(rows, env)?
+                Value::from_row_values(rows, env.ctx())?
             }
             (_, val) => return Err(env.error(format!("Cannot parse {} array", val.type_name()))),
         };
@@ -334,7 +334,7 @@ impl Value {
         } else {
             match self {
                 Value::Num(arr) => {
-                    if let Ok(c) = env.scalar_fill::<char>() {
+                    if let Ok(c) = env.ctx().scalar_fill::<char>() {
                         Self::padded(c.value, c.is_right(), arr, 10, |n| Ok(n.to_string()), env)?
                             .into()
                     } else {
@@ -346,7 +346,7 @@ impl Value {
                     }
                 }
                 Value::Byte(arr) => {
-                    if let Ok(c) = env.scalar_fill::<char>() {
+                    if let Ok(c) = env.ctx().scalar_fill::<char>() {
                         Self::padded(c.value, c.is_right(), arr, 10, |n| Ok(n.to_string()), env)?
                             .into()
                     } else {
@@ -477,7 +477,7 @@ impl Value {
                 for row in val.into_rows() {
                     rows.push(row.parse_base(base, env)?);
                 }
-                Value::from_row_values(rows, env)?
+                env.rows_to_value(rows)?
             }
             (_, val) => return Err(env.error(format!("Cannot parse {} array", val.type_name()))),
         };
@@ -595,7 +595,7 @@ impl Value {
         } else {
             match self {
                 Value::Num(arr) => {
-                    if let Ok(c) = env.scalar_fill::<char>() {
+                    if let Ok(c) = env.ctx().scalar_fill::<char>() {
                         Self::padded(c.value, c.is_right(), arr, base, unparse_base_num, env)?
                             .into()
                     } else {
@@ -608,7 +608,7 @@ impl Value {
                     }
                 }
                 Value::Byte(arr) => {
-                    if let Ok(c) = env.scalar_fill::<char>() {
+                    if let Ok(c) = env.ctx().scalar_fill::<char>() {
                         Self::padded(c.value, c.is_right(), arr, base, unparse_base_num, env)?
                             .into()
                     } else {
@@ -908,7 +908,7 @@ impl Value {
         self.first_depth(0, env)
     }
     pub(crate) fn first_depth(mut self, depth: usize, env: &Uiua) -> UiuaResult<Self> {
-        self.match_fill(env);
+        self.match_fill(env.ctx());
         val_as_arr!(self, |a| a.first_depth(depth, env).map(Into::into))
     }
     /// Get the last row of the value
@@ -916,7 +916,7 @@ impl Value {
         self.last_depth(0, env)
     }
     pub(crate) fn last_depth(mut self, depth: usize, env: &Uiua) -> UiuaResult<Self> {
-        self.match_fill(env);
+        self.match_fill(env.ctx());
         val_as_arr!(self, |a| a.last_depth(depth, env).map(Into::into))
     }
     pub(crate) fn undo_first(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -964,7 +964,7 @@ impl<T: ArrayValue> Array<T> {
     pub fn first(mut self, env: &Uiua) -> UiuaResult<Self> {
         match &*self.shape {
             [] => Ok(self),
-            [0, rest @ ..] => match env.scalar_fill() {
+            [0, rest @ ..] => match env.ctx().scalar_fill() {
                 Ok(fill) => {
                     self.data.extend_repeat(&fill.value, self.row_len());
                     self.shape = rest.into();
@@ -997,7 +997,7 @@ impl<T: ArrayValue> Array<T> {
         }
         match &self.shape[depth..] {
             [] => Ok(self),
-            [0, rest @ ..] => match env.scalar_fill() {
+            [0, rest @ ..] => match env.ctx().scalar_fill() {
                 Ok(fill) => {
                     self.shape = self.shape[..depth].iter().chain(rest).copied().collect();
                     self.data.extend_repeat(&fill.value, self.shape.elements());
@@ -1042,7 +1042,7 @@ impl<T: ArrayValue> Array<T> {
     pub fn last(mut self, env: &Uiua) -> UiuaResult<Self> {
         match &*self.shape {
             [] => Ok(self),
-            [0, rest @ ..] => match env.scalar_fill() {
+            [0, rest @ ..] => match env.ctx().scalar_fill() {
                 Ok(fill) => {
                     self.data.extend_repeat(&fill.value, self.row_len());
                     self.shape = rest.into();
@@ -1073,7 +1073,7 @@ impl<T: ArrayValue> Array<T> {
         }
         match &self.shape[depth..] {
             [] => Ok(self),
-            [0, rest @ ..] => match env.scalar_fill() {
+            [0, rest @ ..] => match env.ctx().scalar_fill() {
                 Ok(fill) => {
                     self.shape = self.shape[..depth].iter().chain(rest).copied().collect();
                     self.data.extend_repeat(&fill.value, self.shape.elements());
@@ -1568,7 +1568,7 @@ impl<T: ArrayValue> Array<T> {
         self.shape[0] = new_len;
         if let Some((keys, unique)) = map_keys_unique {
             let keys = Value::from(unique).keep(keys, env)?;
-            self.map(keys, env)?;
+            self.map(keys, env.ctx())?;
         }
         self.validate();
         Ok(())
@@ -1901,7 +1901,8 @@ impl Value {
                             return Ok(Array::scalar(i as f64));
                         }
                     }
-                    env.scalar_fill::<f64>()
+                    env.ctx()
+                        .scalar_fill::<f64>()
                         .map(|fv| fv.value.into())
                         .map_err(|e| env.error(format!("Cannot take {name} of an empty array{e}")))
                 }
@@ -1911,7 +1912,8 @@ impl Value {
                             return Ok(Array::scalar(i as f64));
                         }
                     }
-                    env.scalar_fill::<f64>()
+                    env.ctx()
+                        .scalar_fill::<f64>()
                         .map(|fv| fv.value.into())
                         .map_err(|e| env.error(format!("Cannot take {name} of an empty array{e}")))
                 }
@@ -1937,7 +1939,8 @@ impl Value {
                             return Ok(Array::from_iter(res));
                         }
                     }
-                    env.scalar_fill::<f64>()
+                    env.ctx()
+                        .scalar_fill::<f64>()
                         .map(|fv| fv.value.into())
                         .map_err(|e| env.error(format!("Cannot take {name} of an empty array{e}")))
                 }
@@ -1953,7 +1956,8 @@ impl Value {
                             return Ok(Array::from_iter(res));
                         }
                     }
-                    env.scalar_fill::<f64>()
+                    env.ctx()
+                        .scalar_fill::<f64>()
                         .map(|fv| fv.value.into())
                         .map_err(|e| env.error(format!("Cannot take {name} of an empty array{e}")))
                 }
@@ -2176,7 +2180,7 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub(crate) fn first_min_index(&self, env: &Uiua) -> UiuaResult<f64> {
-        let fill = env.scalar_fill::<f64>();
+        let fill = env.ctx().scalar_fill::<f64>();
         if self.rank() == 0 || self.meta.is_sorted_up() && fill.is_err() {
             return Ok(0.0);
         }
@@ -2199,8 +2203,7 @@ impl<T: ArrayValue> Array<T> {
             return Ok(0.0);
         }
         if self.row_count() == 0 {
-            return env
-                .scalar_fill::<f64>()
+            return (env.ctx().scalar_fill::<f64>())
                 .map(|fv| fv.value)
                 .map_err(|e| env.error(format!("Cannot get max index of an empty array{e}")));
         }
@@ -2218,8 +2221,7 @@ impl<T: ArrayValue> Array<T> {
             return Ok(0.0);
         }
         if self.row_count() == 0 {
-            return env
-                .scalar_fill::<f64>()
+            return (env.ctx().scalar_fill::<f64>())
                 .map(|fv| fv.value)
                 .map_err(|e| env.error(format!("Cannot get min index of an empty array{e}")));
         }
@@ -2233,7 +2235,7 @@ impl<T: ArrayValue> Array<T> {
         Ok(index as f64)
     }
     pub(crate) fn last_max_index(&self, env: &Uiua) -> UiuaResult<f64> {
-        let fill = env.scalar_fill::<f64>();
+        let fill = env.ctx().scalar_fill::<f64>();
         if self.rank() == 0 || self.meta.is_sorted_up() && fill.is_err() {
             return Ok(0.0);
         }
@@ -2287,7 +2289,7 @@ impl Value {
 
 impl Array<f64> {
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        fn check_number(x: f64, env: &Uiua, upper_bound: f64) -> UiuaResult<()> {
+        fn check_number(x: f64, env: &Uiua, upper_bound: f64) -> UiuaResult {
             if x <= 0.0 {
                 return Err(env.error(format!(
                     "Cannot get primes of non-positive number {}",

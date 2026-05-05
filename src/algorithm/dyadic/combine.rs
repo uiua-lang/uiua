@@ -6,11 +6,11 @@ use ecow::EcoVec;
 use uiua_parser::SubSide;
 
 use crate::{
-    Array, ArrayValue, Boxed, Complex, FormatShape, Indexable, Primitive, Shape, Uiua, UiuaResult,
-    Value,
-    algorithm::{ArrayCmpSlice, FillContext, max_shape, validate_size_impl, validate_size_of},
+    Array, ArrayValue, Boxed, Complex, Context, FormatShape, Indexable, Primitive, Shape, Uiua,
+    UiuaResult, Value,
+    algorithm::{ArrayCmpSlice, max_shape, validate_size_impl, validate_size_of},
+    context::FillValue,
     cowslice::cowslice,
-    fill::FillValue,
     val_as_arr,
 };
 
@@ -107,7 +107,7 @@ impl Value {
     ///
     /// `allow_ext` allows extending one of the arrays if they have different shapes
     pub fn join(self, other: Self, allow_ext: bool, env: &Uiua) -> UiuaResult<Self> {
-        self.join_impl(other, allow_ext, env)
+        self.join_impl(other, allow_ext, env.ctx())
     }
     pub(crate) fn sided_join(
         mut self,
@@ -119,7 +119,7 @@ impl Value {
             SubSide::Right => {
                 if self.rank() < other.rank() {
                     for &d in other.shape.iter().rev().skip(self.rank()) {
-                        self.reshape_scalar(Ok(d as isize), true, env)?;
+                        self.reshape_scalar(Ok(d as isize), true, env.ctx())?;
                     }
                 }
                 if self.rank() == other.rank() {
@@ -129,7 +129,7 @@ impl Value {
             SubSide::Left => {
                 if self.rank() > other.rank() {
                     for &d in self.shape.iter().rev().skip(other.rank()) {
-                        other.reshape_scalar(Ok(d as isize), true, env)?;
+                        other.reshape_scalar(Ok(d as isize), true, env.ctx())?;
                     }
                 }
                 if self.rank() == other.rank() {
@@ -144,14 +144,9 @@ impl Value {
     /// # Panics
     /// Panics if the arrays have incompatible shapes
     pub fn join_infallible(self, other: Self, allow_ext: bool) -> Self {
-        self.join_impl(other, allow_ext, &()).unwrap()
+        self.join_impl(other, allow_ext, Context::NONE).unwrap()
     }
-    fn join_impl<C: FillContext>(
-        mut self,
-        mut other: Self,
-        ext: bool,
-        ctx: &C,
-    ) -> Result<Self, C::Error> {
+    fn join_impl(mut self, mut other: Self, ext: bool, ctx: Context) -> UiuaResult<Self> {
         self.match_fill(ctx);
         other.match_fill(ctx);
         Ok(match (self, other) {
@@ -173,12 +168,7 @@ impl Value {
             )?,
         })
     }
-    pub(crate) fn append<C: FillContext>(
-        &mut self,
-        mut other: Self,
-        ext: bool,
-        ctx: &C,
-    ) -> Result<(), C::Error> {
+    pub(crate) fn append(&mut self, mut other: Self, ext: bool, ctx: Context) -> UiuaResult {
         self.match_fill(ctx);
         other.match_fill(ctx);
         match (&mut *self, other) {
@@ -257,21 +247,16 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// `join` the array with another
     pub fn join(self, other: Self, allow_ext: bool, env: &Uiua) -> UiuaResult<Self> {
-        self.join_impl(other, allow_ext, env)
+        self.join_impl(other, allow_ext, env.ctx())
     }
     /// `join` the array with another
     ///
     /// # Panics
     /// Panics if the arrays have incompatible shapes
     pub fn join_infallible(self, other: Self, allow_ext: bool) -> Self {
-        self.join_impl(other, allow_ext, &()).unwrap()
+        self.join_impl(other, allow_ext, Context::NONE).unwrap()
     }
-    fn join_impl<C: FillContext>(
-        mut self,
-        mut other: Self,
-        allow_ext: bool,
-        ctx: &C,
-    ) -> Result<Self, C::Error> {
+    fn join_impl(mut self, mut other: Self, allow_ext: bool, ctx: Context) -> UiuaResult<Self> {
         crate::profile_function!();
         let mut sorted_up = false;
         let mut sorted_down = false;
@@ -304,17 +289,21 @@ impl<T: ArrayValue> Array<T> {
                             }
                         } else {
                             if other.rank() - self.rank() > 1 {
-                                return Err(C::fill_error(ctx.error(format!(
-                                    "Cannot join rank {} array with rank {} array{e}",
-                                    self.rank(),
-                                    other.rank()
-                                ))));
+                                return Err(ctx
+                                    .error(format!(
+                                        "Cannot join rank {} array with rank {} array{e}",
+                                        self.rank(),
+                                        other.rank()
+                                    ))
+                                    .fill());
                             }
                             if self.shape != other.shape[1..] {
-                                return Err(C::fill_error(ctx.error(format!(
-                                    "Cannot join arrays of shapes {} and {}{e}",
-                                    self.shape, other.shape
-                                ))));
+                                return Err(ctx
+                                    .error(format!(
+                                        "Cannot join arrays of shapes {} and {}{e}",
+                                        self.shape, other.shape
+                                    ))
+                                    .fill());
                             }
                             match other.row_count() {
                                 0 => {
@@ -406,10 +395,12 @@ impl<T: ArrayValue> Array<T> {
                                 }
                             }
                             Err(e) => {
-                                return Err(C::fill_error(ctx.error(format!(
-                                    "Cannot join arrays of shapes {} and {}. {e}",
-                                    self.shape, other.shape
-                                ))));
+                                return Err(ctx
+                                    .error(format!(
+                                        "Cannot join arrays of shapes {} and {}. {e}",
+                                        self.shape, other.shape
+                                    ))
+                                    .fill());
                             }
                         }
                     } else {
@@ -489,12 +480,7 @@ impl<T: ArrayValue> Array<T> {
         res.validate();
         Ok(res)
     }
-    fn append<C: FillContext>(
-        &mut self,
-        mut other: Self,
-        allow_ext: bool,
-        ctx: &C,
-    ) -> Result<(), C::Error> {
+    fn append(&mut self, mut other: Self, allow_ext: bool, ctx: Context) -> UiuaResult {
         let mut sorted_up = false;
         let mut sorted_down = false;
         if self.shape.row_count() == 0 {
@@ -542,17 +528,21 @@ impl<T: ArrayValue> Array<T> {
                 }
                 Err(e) => {
                     if self.rank() <= other.rank() || self.rank() - other.rank() > 1 {
-                        return Err(C::fill_error(ctx.error(format!(
-                            "Cannot join rank {} array with rank {} array{e}",
-                            self.rank(),
-                            other.rank()
-                        ))));
+                        return Err(ctx
+                            .error(format!(
+                                "Cannot join rank {} array with rank {} array{e}",
+                                self.rank(),
+                                other.rank()
+                            ))
+                            .fill());
                     }
                     if self.shape[1..] != other.shape {
-                        return Err(C::fill_error(ctx.error(format!(
-                            "Cannot join arrays of shapes {} and {}{e}",
-                            self.shape, other.shape
-                        ))));
+                        return Err(ctx
+                            .error(format!(
+                                "Cannot join arrays of shapes {} and {}{e}",
+                                self.shape, other.shape
+                            ))
+                            .fill());
                     }
                 }
             }
@@ -796,7 +786,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// `couple` the value with another
     pub fn couple(mut self, other: Self, allow_ext: bool, env: &Uiua) -> UiuaResult<Self> {
-        self.couple_impl(other, allow_ext, env)?;
+        self.couple_impl(other, allow_ext, env.ctx())?;
         Ok(self)
     }
     /// `couple` the value with another
@@ -804,15 +794,15 @@ impl Value {
     /// # Panics
     /// Panics if the values have incompatible shapes
     pub fn couple_infallible(mut self, other: Self, allow_ext: bool) -> Self {
-        self.couple_impl(other, allow_ext, &()).unwrap();
+        self.couple_impl(other, allow_ext, Context::NONE).unwrap();
         self
     }
-    pub(crate) fn couple_impl<C: FillContext>(
+    pub(crate) fn couple_impl(
         &mut self,
         mut other: Self,
         allow_ext: bool,
-        ctx: &C,
-    ) -> Result<(), C::Error> {
+        ctx: Context,
+    ) -> UiuaResult {
         self.match_fill(ctx);
         other.match_fill(ctx);
         match (&mut *self, other) {
@@ -862,7 +852,7 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// `couple` the array with another
     pub fn couple(mut self, other: Self, allow_ext: bool, env: &Uiua) -> UiuaResult<Self> {
-        self.couple_impl(other, allow_ext, env)?;
+        self.couple_impl(other, allow_ext, env.ctx())?;
         Ok(self)
     }
     /// `couple` the array with another
@@ -870,15 +860,10 @@ impl<T: ArrayValue> Array<T> {
     /// # Panics
     /// Panics if the arrays have incompatible shapes
     pub fn couple_infallible(mut self, other: Self, allow_ext: bool) -> Self {
-        self.couple_impl(other, allow_ext, &()).unwrap();
+        self.couple_impl(other, allow_ext, Context::NONE).unwrap();
         self
     }
-    fn couple_impl<C: FillContext>(
-        &mut self,
-        mut other: Self,
-        allow_ext: bool,
-        ctx: &C,
-    ) -> Result<(), C::Error> {
+    fn couple_impl(&mut self, mut other: Self, allow_ext: bool, ctx: Context) -> UiuaResult {
         crate::profile_function!();
         let map_keys = self.meta.take_map_keys().zip(other.meta.take_map_keys());
         self.meta.combine(&other.meta);
@@ -899,10 +884,12 @@ impl<T: ArrayValue> Array<T> {
                 }
                 Err(e) => {
                     let err = || {
-                        Err(C::fill_error(ctx.error(format!(
-                            "Cannot couple arrays with shapes {} and {}{e}",
-                            self.shape, other.shape
-                        ))))
+                        Err(ctx
+                            .error(format!(
+                                "Cannot couple arrays with shapes {} and {}{e}",
+                                self.shape, other.shape
+                            ))
+                            .fill())
                     };
                     if allow_ext {
                         if self.shape.ends_with(&other.shape) {
@@ -1013,32 +1000,29 @@ impl Value {
     where
         V: Indexable<Item = Value>,
     {
-        Self::from_row_values(values, &()).unwrap()
+        Self::from_row_values(values, Context::NONE).unwrap()
     }
     /// Create a value from row values
-    pub fn from_row_values<V, C>(values: V, ctx: &C) -> Result<Self, C::Error>
+    pub fn from_row_values<V>(values: V, ctx: Context) -> UiuaResult<Self>
     where
         V: Indexable<Item = Value>,
-        C: FillContext,
     {
         Self::from_row_values_impl(values, ctx, false)
     }
     /// Create a value from row values, allowing shape extension
-    pub fn from_row_values_ext<V, C>(values: V, ctx: &C) -> Result<Self, C::Error>
+    pub fn from_row_values_ext<V>(values: V, ctx: Context) -> UiuaResult<Self>
     where
         V: Indexable<Item = Value>,
-        C: FillContext,
     {
         Self::from_row_values_impl(values, ctx, true)
     }
-    pub(crate) fn from_row_values_impl<V, C>(
+    pub(crate) fn from_row_values_impl<V>(
         values: V,
-        ctx: &C,
+        ctx: Context,
         allow_ext: bool,
-    ) -> Result<Self, C::Error>
+    ) -> UiuaResult<Self>
     where
         V: Indexable<Item = Value>,
-        C: FillContext,
     {
         fn max_shape(a: Shape, b: &Shape) -> Shape {
             if a.starts_with(b) {
@@ -1190,52 +1174,29 @@ impl Value {
         if !allow_ext && value.shape != max_shape || allow_ext && !max_shape.ends_with(&value.shape)
         {
             match &mut value {
-                Value::Num(arr) => match ctx.scalar_fill::<f64>() {
-                    Ok(fill) => arr.fill_to_shape(&max_shape, fill),
-                    Err(e) => {
-                        return Err(C::fill_error(ctx.error(format!(
-                            "Cannot combine arrays with shapes {} and {max_shape}{e}",
-                            arr.shape
-                        ))));
-                    }
-                },
-                Value::Byte(arr) => match ctx.scalar_fill::<u8>() {
-                    Ok(fill) => arr.fill_to_shape(&max_shape, fill),
-                    Err(e) => {
-                        return Err(C::fill_error(ctx.error(format!(
-                            "Cannot combine arrays with shapes {} and {max_shape}{e}",
-                            arr.shape
-                        ))));
-                    }
-                },
-                Value::Complex(arr) => match ctx.scalar_fill::<Complex>() {
-                    Ok(fill) => arr.fill_to_shape(&max_shape, fill),
-                    Err(e) => {
-                        return Err(C::fill_error(ctx.error(format!(
-                            "Cannot combine arrays with shapes {} and {max_shape}{e}",
-                            arr.shape
-                        ))));
-                    }
-                },
-                Value::Char(arr) => match ctx.scalar_fill::<char>() {
-                    Ok(fill) => arr.fill_to_shape(&max_shape, fill),
-                    Err(e) => {
-                        return Err(C::fill_error(ctx.error(format!(
-                            "Cannot combine arrays with shapes {} and {max_shape}{e}",
-                            arr.shape
-                        ))));
-                    }
-                },
-                Value::Box(arr) => match ctx.scalar_fill::<Boxed>() {
-                    Ok(fill) => arr.fill_to_shape(&max_shape, fill),
-                    Err(e) => {
-                        return Err(C::fill_error(ctx.error(format!(
-                            "Cannot combine arrays with shapes {} and {max_shape}{e}",
-                            arr.shape
-                        ))));
-                    }
-                },
+                Value::Num(arr) => ctx
+                    .scalar_fill::<f64>()
+                    .map(|fill| arr.fill_to_shape(&max_shape, fill)),
+                Value::Byte(arr) => ctx
+                    .scalar_fill::<u8>()
+                    .map(|fill| arr.fill_to_shape(&max_shape, fill)),
+                Value::Complex(arr) => ctx
+                    .scalar_fill::<Complex>()
+                    .map(|fill| arr.fill_to_shape(&max_shape, fill)),
+                Value::Char(arr) => ctx
+                    .scalar_fill::<char>()
+                    .map(|fill| arr.fill_to_shape(&max_shape, fill)),
+                Value::Box(arr) => ctx
+                    .scalar_fill::<Boxed>()
+                    .map(|fill| arr.fill_to_shape(&max_shape, fill)),
             }
+            .map_err(|e| {
+                ctx.error(format!(
+                    "Cannot combine arrays with shapes {} and {max_shape}{e}",
+                    value.shape
+                ))
+                .fill()
+            })?;
         }
 
         // Validate size and reserve space
@@ -1317,7 +1278,7 @@ impl<T: ArrayValue> Array<T> {
         V: IntoIterator<Item = Self>,
         V::IntoIter: ExactSizeIterator,
     {
-        Self::from_row_arrays_impl(values, env)
+        Self::from_row_arrays_impl(values, env.ctx())
     }
     #[track_caller]
     /// Create an array from row arrays
@@ -1329,14 +1290,13 @@ impl<T: ArrayValue> Array<T> {
         V: IntoIterator<Item = Self>,
         V::IntoIter: ExactSizeIterator,
     {
-        Self::from_row_arrays_impl(values, &()).unwrap()
+        Self::from_row_arrays_impl(values, Context::NONE).unwrap()
     }
     #[track_caller]
-    fn from_row_arrays_impl<V, C>(values: V, ctx: &C) -> Result<Self, C::Error>
+    fn from_row_arrays_impl<V>(values: V, ctx: Context) -> UiuaResult<Self>
     where
         V: IntoIterator<Item = Self>,
         V::IntoIter: ExactSizeIterator,
-        C: FillContext,
     {
         let mut row_values = values.into_iter();
         let total_rows = row_values.len();

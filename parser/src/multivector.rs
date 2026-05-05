@@ -28,12 +28,14 @@ fn is_vanilla(flavor: &Flavor) -> bool {
 }
 
 impl Multivector {
-    /// The the maximum number of dimensions
+    /// Set the maximum number of dimensions
     ///
-    /// # Panics
-    /// Panics if `d < self.dims()`
+    /// Does nothing if `self.dims() >= dims`.
     pub fn set_dims(&mut self, dims: u8) {
         let low_dims = self.dims();
+        if low_dims >= dims {
+            return;
+        }
         self.coefs
             .extend(repeat_n(0.0, (1 << dims) - (1 << low_dims)));
         let slice = self.coefs.make_mut();

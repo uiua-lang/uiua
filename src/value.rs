@@ -101,9 +101,6 @@ impl Value {
         arr.meta.pointer = Some(ptr.clone());
         Value::from(arr)
     }
-    pub(crate) fn builder(capacity: usize) -> ValueBuilder {
-        ValueBuilder::with_capacity(capacity)
-    }
     pub(crate) fn type_id(&self) -> u8 {
         match self {
             Self::Num(_) => f64::TYPE_ID,
@@ -2510,33 +2507,14 @@ impl PartialEq<i32> for Value {
     }
 }
 
-#[derive(Clone, Default)]
-pub(crate) struct ValueBuilder {
-    value: Option<Value>,
-    rows: usize,
-    capacity: usize,
-}
-
-impl ValueBuilder {
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            value: None,
-            rows: 0,
-            capacity,
+impl PartialEq<Complex> for Value {
+    fn eq(&self, other: &Complex) -> bool {
+        if self.rank() > 0 {
+            return false;
         }
-    }
-    pub fn add_row<C: FillContext>(&mut self, mut row: Value, ctx: &C) -> Result<(), C::Error> {
-        if let Some(value) = &mut self.value {
-            value.append(row, false, ctx)?;
-        } else {
-            row.reserve_min(self.capacity);
-            row.shape.prepend(1);
-            self.value = Some(row);
+        match self {
+            Value::Complex(arr) => arr.data[0] == *other,
+            _ => false,
         }
-        self.rows += 1;
-        Ok(())
-    }
-    pub fn finish(self) -> Value {
-        self.value.unwrap_or_default()
     }
 }

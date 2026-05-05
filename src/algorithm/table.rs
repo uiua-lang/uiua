@@ -102,7 +102,8 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
             validate_size::<f64>([sig.outputs(), xs.row_count(), ys.row_count()], env)?;
             let new_shape = Shape::from([xs.row_count(), ys.row_count()]);
             let outputs = sig.outputs();
-            let mut items = multi_output(outputs, Value::builder(xs.row_count() * ys.row_count()));
+            let mut items =
+                multi_output(outputs, Vec::with_capacity(xs.row_count() * ys.row_count()));
             let y_rows = ys.into_rows().collect::<Vec<_>>();
             env.without_fill(|env| -> UiuaResult {
                 for x_row in xs.into_rows() {
@@ -111,14 +112,14 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
                         env.push(x_row.clone());
                         env.exec(f.clone())?;
                         for i in 0..outputs {
-                            items[i].add_row(env.pop("tabled function result")?, env)?;
+                            items[i].push(env.pop("tabled function result")?);
                         }
                     }
                 }
                 Ok(())
             })?;
             for items in items.into_iter().rev() {
-                let mut tabled = items.finish();
+                let mut tabled = Value::from_row_values(items, env)?;
                 let mut new_shape = new_shape.clone();
                 if y_scalar {
                     new_shape.remove(1);
@@ -158,7 +159,7 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
             let other_rows_product = others.iter().map(|a| a.row_count()).product::<usize>();
             let mut items = multi_output(
                 outputs,
-                Value::builder(
+                Vec::with_capacity(
                     xs.row_count() * ys.row_count() * zs.row_count() * other_rows_product,
                 ),
             );
@@ -177,7 +178,7 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
                                 env.push(x_row.clone());
                                 env.exec(f.clone())?;
                                 for i in 0..outputs {
-                                    items[i].add_row(env.pop("crossed function result")?, env)?;
+                                    items[i].push(env.pop("crossed function result")?);
                                 }
                             }
                         }
@@ -186,7 +187,7 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
                 Ok(())
             })?;
             for items in items.into_iter().rev() {
-                let mut tabled = items.finish();
+                let mut tabled = Value::from_row_values(items, env)?;
                 let mut new_shape = new_shape.clone();
                 new_shape.extend_from_slice(&tabled.shape[1..]);
                 tabled.shape = new_shape;
@@ -809,23 +810,23 @@ fn generic_reduce_table(
     let mut acc = xs
         .next()
         .ok_or_else(|| env.error("Cannot reduce empty array"))?;
-    let mut g_rows = Value::builder(ys.row_count());
+    let mut g_rows = Vec::new();
     for y in ys.rows() {
         env.push(y);
         env.push(acc.clone());
         env.exec(g.clone())?;
-        g_rows.add_row(env.pop("reduced function result")?, env)?;
+        g_rows.push(env.pop("reduced function result")?);
     }
-    acc = g_rows.finish();
+    acc = Value::from_row_values(g_rows, env)?;
     for x in xs {
-        g_rows = Value::builder(ys.row_count());
+        g_rows = Vec::new();
         for y in ys.rows() {
             env.push(y);
             env.push(x.clone());
             env.exec(g.clone())?;
-            g_rows.add_row(env.pop("reduced function result")?, env)?;
+            g_rows.push(env.pop("reduced function result")?);
         }
-        env.push(g_rows.finish());
+        env.push(Value::from_row_values(g_rows, env)?);
         env.push(acc);
         env.exec(f.clone())?;
         acc = env.pop("reduced function result")?;

@@ -21,7 +21,7 @@ use crate::{
 
 /// Subscript digit characters
 pub const SUBSCRIPT_DIGITS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
-pub const OTHER_SUBSCRIPT_NUMBERS: [char; 2] = ['ᵣ', 'ᵢ'];
+pub const OTHER_SUBSCRIPT_NUMBERS: [char; 3] = ['ᵣ', 'ᵢ', 'ₒ'];
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub(crate) struct FormatSubscript(pub i32);
 impl fmt::Display for FormatSubscript {
@@ -1599,6 +1599,7 @@ impl<'a> Lexer<'a> {
                 ("n", "ₙ", None, false),
                 ("i", "ᵢ", Some(SubscriptNumber::I), true),
                 ("r", "ᵣ", Some(SubscriptNumber::R), true),
+                ("o", "ₒ", Some(SubscriptNumber::O), true),
             ] {
                 if (!got_neg || allow_neg)
                     && (*can_parse_ascii && self.next_char_exact(ascii)
@@ -1664,6 +1665,7 @@ impl<'a> Lexer<'a> {
             "ₙ" => num = Some(None),
             "ᵢ" => num = Some(Some(SubscriptNumber::I)),
             "ᵣ" => num = Some(Some(SubscriptNumber::R)),
+            "ₒ" => num = Some(Some(SubscriptNumber::O)),
             "⌞" => side = Some(SubSide::Left),
             "⌟" => side = Some(SubSide::Right),
             "₋" => got_neg = true,

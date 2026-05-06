@@ -3,11 +3,6 @@
 # 0.19
 - Multivector scalar
   - Update tests
-  - Resolve inner/outer/regressive/sandwich products
-    - `or` for outer product with product extraction for inner?
-    - `min` for regressive product?
-    - sub s for sandwich
-    - sub r for rotor
   - More aliases: `quat` `inner` `outer`
   - Output flavor?
   - Output summary

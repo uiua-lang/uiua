@@ -280,6 +280,9 @@ impl_primitive!(
     (2(0), TestAssert, Impure),
     (2, ValidateImpl(Option<usize>, Option<SubSide>)),
     (1, MvImpl(MvMode)),
+    (2, InnerProduct),
+    (2, OuterProduct),
+    (2, RegressiveProduct),
     /// Validate that a non-boxed variant field has a valid type and rank
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),

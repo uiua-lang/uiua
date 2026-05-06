@@ -1367,6 +1367,9 @@ impl ImplPrimitive {
                 let mv = env.pop(1)?.unmultivector(mode, env)?;
                 env.push(mv);
             }
+            ImplPrimitive::InnerProduct => env.dyadic_oo_env(Value::inner_product)?,
+            ImplPrimitive::OuterProduct => env.dyadic_oo_env(Value::outer_product)?,
+            ImplPrimitive::RegressiveProduct => env.dyadic_oo_env(Value::regressive_product)?,
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {
                     format!(

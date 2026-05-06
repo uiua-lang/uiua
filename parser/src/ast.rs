@@ -898,6 +898,8 @@ impl From<SubscriptNumber> for NumWord {
             SubscriptNumber::NegI => NumWord::Complex(-Complex::I),
             SubscriptNumber::R => NumWord::Complex(Complex::ONE),
             SubscriptNumber::NegR => NumWord::Complex(-Complex::ONE),
+            SubscriptNumber::O => NumWord::Real(f64::INFINITY),
+            SubscriptNumber::NegO => NumWord::Real(f64::NEG_INFINITY),
         }
     }
 }

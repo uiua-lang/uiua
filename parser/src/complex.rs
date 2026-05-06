@@ -221,14 +221,11 @@ impl Complex {
     pub fn recip(self) -> Self {
         Self::ONE / self
     }
-    pub fn inner_product(self, other: Self) -> Self {
-        Self::new(self.re * other.re - self.im * other.im, self.re * other.re)
-    }
     pub fn outer_product(self, other: Self) -> Self {
         Self::new(self.re * other.re, self.re * other.im + self.im * other.re)
     }
     pub fn regressive_product(self, other: Self) -> Self {
-        Self::new(-self.im * other.im, self.re * other.im + self.im * other.re)
+        Self::new(self.re * other.im + self.im * other.re, self.im * other.im)
     }
 }
 

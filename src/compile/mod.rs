@@ -2538,7 +2538,7 @@ impl Compiler {
                             )
                         }
                         return Ok(Node::ImplPrim(
-                            ImplPrimitive::RegressiveProduct,
+                            ImplPrimitive::InnerProduct,
                             self.add_span(span),
                         ));
                     }

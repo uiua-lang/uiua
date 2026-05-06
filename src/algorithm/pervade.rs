@@ -1660,13 +1660,7 @@ pub mod mul {
 
 pub mod inner_product {
     use super::*;
-    pub use mul::{byte_byte, byte_num, num_byte, num_num};
-    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
-        b.into().inner_product(a)
-    }
-    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
-        b.inner_product(a.into())
-    }
+    pub use mul::{byte_byte, byte_num, com_x, num_byte, num_num, x_com};
     #[cfg(feature = "ga")]
     pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
         b.into().inner_product(a)

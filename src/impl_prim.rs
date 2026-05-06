@@ -253,6 +253,7 @@ impl_primitive!(
     (1, NegConj),
     (1, Dual),
     (1, UnDual),
+    (1, UnMv(MvMode)),
     // Implementation details
     (2(3), Over),
     ([1], DipN(usize)),
@@ -290,9 +291,12 @@ impl_primitive!(
 );
 
 #[doc(hidden)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum MvMode {
-    Flavor(crate::GaFlavor, Option<u8>, Option<(SubSide, Option<u8>)>),
-    Even,
+pub struct MvMode {
+    pub flavor: crate::GaFlavor,
+    pub dims: Option<u8>,
+    pub side_grade: Option<(SubSide, Option<u8>)>,
 }

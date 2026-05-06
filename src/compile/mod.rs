@@ -2379,10 +2379,9 @@ impl Compiler {
         let spandex = self.add_span(span.clone());
         match prim {
             Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
-            Primitive::Multivector => Node::ImplPrim(
-                ImplPrimitive::MvImpl(MvMode::Flavor(self.ga_flavor(), None, None)),
-                spandex,
-            ),
+            Primitive::Multivector => {
+                Node::ImplPrim(ImplPrimitive::MvImpl(MvMode::default()), spandex)
+            }
             prim => Node::Prim(prim, spandex),
         }
     }
@@ -2513,9 +2512,9 @@ impl Compiler {
             }
             Multivector => {
                 use crate::ga::*;
-                let sub = self.validate_subscript_n(scr);
+                let sub = self.validate_subscript_int(scr, &Multivector.format());
                 let flavor = self.ga_flavor();
-                let side = sub.value.side.map(|ss| {
+                let side_grade = sub.value.side.map(|ss| {
                     (
                         ss.side,
                         ss.n.map(|n| {
@@ -2531,7 +2530,7 @@ impl Compiler {
                 });
                 let dims = match sub.value.num {
                     None => None,
-                    Some(SubscriptNumber::Int(n)) => {
+                    Some(n) => {
                         if n < 0 {
                             self.add_error(
                                 sub.span.clone(),
@@ -2546,32 +2545,13 @@ impl Compiler {
                         }
                         Some(n as u8)
                     }
-                    Some(SubscriptNumber::I) => {
-                        if side.is_some() {
-                            self.add_error(
-                                sub.span.clone(),
-                                format!(
-                                    "Mixed subscripts are not allow for {} \
-                                        when creating even-bladed multivectors",
-                                    Multivector.format()
-                                ),
-                            );
-                        }
-                        return Ok(Node::ImplPrim(
-                            ImplPrimitive::MvImpl(MvMode::Even),
-                            self.add_span(span),
-                        ));
-                    }
-                    Some(n) => {
-                        self.add_error(
-                            sub.span.clone(),
-                            format!("Invalid geometric algebra dimension specifier {n}"),
-                        );
-                        None
-                    }
                 };
                 Node::ImplPrim(
-                    ImplPrimitive::MvImpl(MvMode::Flavor(flavor, dims, side)),
+                    ImplPrimitive::MvImpl(MvMode {
+                        flavor,
+                        dims,
+                        side_grade,
+                    }),
                     self.add_span(span),
                 )
             }

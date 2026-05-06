@@ -1,5 +1,6 @@
 //! Algorithms for monadic array operations
 
+mod multivector;
 mod sort;
 
 use core::str;

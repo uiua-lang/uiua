@@ -1449,6 +1449,8 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         UnRawMode => Prim(Sys(SysOp::RawMode), span),
         UnClip => Prim(Sys(SysOp::Clip), span),
         Retropose => ImplPrim(Retropose, span),
+        MvImpl(mode) => ImplPrim(UnMv(mode), span),
+        UnMv(mode) => ImplPrim(MvImpl(mode), span),
         StackN { n, inverse } => ImplPrim(
             StackN {
                 n,

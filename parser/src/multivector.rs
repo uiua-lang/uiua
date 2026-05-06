@@ -91,7 +91,7 @@ impl Multivector {
         let blades = blades.into();
         let len = blades.len();
         let mut mv = Self::vector(blades);
-        mv.coefs.make_mut().rotate_left(len + 1);
+        mv.coefs.make_mut().rotate_left(len + 2);
         mv
     }
     /// Create a multivector from some low-grade, even, or all blades
@@ -110,9 +110,9 @@ impl Multivector {
             blades.extend(repeat_n(0.0, blade_count / 2));
             let slice = blades.make_mut();
             let mut left = 0;
-            for d in 0..=dims {
-                let i = grade_size(dims, d);
-                if d % 2 != odd as u8 {
+            for g in 0..=dims {
+                let i = grade_size(dims, g);
+                if g % 2 != odd as u8 {
                     slice[left..].rotate_right(i)
                 }
                 left += i;

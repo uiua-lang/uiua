@@ -2,7 +2,6 @@
 
 # 0.19
 - Multivector scalar
-  - Inverses
   - Output flavor?
   - Output summary
   - Update tests

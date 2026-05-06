@@ -225,11 +225,10 @@ impl Multivector {
     /// Get the squared magnitude of the multivector
     pub fn squared_magnitude(&self) -> f64 {
         let dims = self.dims();
-        mask_tables(dims, |mask_table, _| {
-            (self.iter().enumerate())
-                .map(|(i, c)| blade_metric_scalar_only(mask_table[i], dims, self.flavor) * c * c)
-                .sum::<f64>()
-        })
+        let (mask_table, _) = mask_tables(dims);
+        (self.iter().enumerate())
+            .map(|(i, c)| blade_metric_scalar_only(mask_table[i], dims, self.flavor) * c * c)
+            .sum::<f64>()
     }
     /// Get the magnitude of the multivector
     pub fn magnitude(&self) -> f64 {
@@ -269,22 +268,20 @@ impl Multivector {
         let dims = a.dims();
         let mut new_coefs = eco_vec![0.0; a.coefs.len()];
         let slice = new_coefs.make_mut();
-        mask_tables(dims, |mask_table, inv_mask_table| {
-            blade_metrics(dims, a.flavor, dot, |metrics, stride| {
-                for (bi, &b_mask) in mask_table.iter().enumerate() {
-                    for (ai, &a_mask) in mask_table.iter().enumerate() {
-                        let metric = metrics[a_mask * stride + b_mask];
-                        if metric == 0.0 {
-                            continue;
-                        }
-                        let c_mask = a_mask ^ b_mask;
-                        let ci = inv_mask_table[c_mask];
-                        // println!("metric: {metric}, a: {}, b: {}", a[ai], b[bi]);
-                        slice[ci] += metric * a[ai] * b[bi];
-                    }
+        let (mask_table, inv_mask_table) = mask_tables(dims);
+        let metrics = blade_metrics(dims, a.flavor, dot);
+        for (bi, &b_mask) in mask_table.iter().enumerate() {
+            for (ai, &a_mask) in mask_table.iter().enumerate() {
+                let metric = metrics[a_mask * mask_table.len() + b_mask];
+                if metric == 0.0 {
+                    continue;
                 }
-            })
-        });
+                let c_mask = a_mask ^ b_mask;
+                let ci = inv_mask_table[c_mask];
+                // println!("metric: {metric}, a: {}, b: {}", a[ai], b[bi]);
+                slice[ci] += metric * a[ai] * b[bi];
+            }
+        }
         for c in slice {
             let fract = c.abs().fract();
             if fract < 1e-14 || 1.0 - fract < 1e-14 {
@@ -292,6 +289,18 @@ impl Multivector {
             }
         }
         a.coefs = new_coefs;
+    }
+    /// Get an arbitrary blade given a mask of which bases are present in it
+    pub fn get_blade(&self, mut mask: usize) -> f64 {
+        let dims = self.dims();
+        let dim_mask = (1 << dims) - 1;
+        if (mask & !dim_mask).count_ones() > 0 {
+            0.0
+        } else {
+            mask &= dim_mask;
+            let (_, inv_mask_table) = mask_tables(dims);
+            self[inv_mask_table[mask]]
+        }
     }
 }
 
@@ -309,32 +318,31 @@ pub fn grade_size(dims: u8, grade: u8) -> usize {
     combinations(dims as usize, grade as usize) as usize
 }
 
-fn blade_grades(dims: u8) -> impl Iterator<Item = u8> {
+/// Iterate over the grades of each blade
+pub fn blade_grades(dims: u8) -> impl Iterator<Item = u8> {
     (0..=dims).flat_map(move |i| repeat_n(i, grade_size(dims, i)))
 }
 
+type MaskTables = (&'static [usize], &'static [usize]);
 #[doc(hidden)]
-pub fn mask_tables<F, T>(dims: u8, f: F) -> T
-where
-    F: FnOnce(&[usize], &[usize]) -> T,
-{
-    type Cache = HashMap<u8, (&'static [usize], &'static [usize])>;
+pub fn mask_tables(dims: u8) -> MaskTables {
     thread_local! {
-        static CACHE: RefCell<Cache> = Default::default();
+        static CACHE: RefCell<HashMap<u8, MaskTables>> = Default::default();
     }
     CACHE.with(move |r| {
-        let mut cache = r.borrow_mut();
-        let (mask_table, rev_mask_table) = *cache.entry(dims).or_insert_with(|| {
+        *r.borrow_mut().entry(dims).or_insert_with(|| {
             let mut mask_table: Vec<usize> = (0..1usize << dims).collect();
+            for d in (0..dims).rev() {
+                let dim_mask = 1 << d;
+                mask_table.sort_by_key(|&a| u32::MAX - (a & dim_mask).count_ones());
+            }
             mask_table.sort_by_key(|&a| a.count_ones());
             let mut inv_mask_table = vec![0; 1usize << dims];
             for (i, &v) in mask_table.iter().enumerate() {
                 inv_mask_table[v] = i;
             }
             (mask_table.leak(), inv_mask_table.leak())
-        });
-        drop(cache);
-        f(mask_table, rev_mask_table)
+        })
     })
 }
 
@@ -362,18 +370,14 @@ fn blade_metric_scalar_only(a_mask: usize, dims: u8, flavor: Flavor) -> f64 {
 }
 
 /// Calculate, cache, and access the blade metrics for a given number of dimensions and GA flavor
-fn blade_metrics<F, T>(dims: u8, flavor: Flavor, dot: bool, f: F) -> T
-where
-    F: FnOnce(&'static [f64], usize) -> T,
-{
+fn blade_metrics(dims: u8, flavor: Flavor, dot: bool) -> &'static [f64] {
     type Cache = HashMap<(u8, Flavor, bool), &'static [f64]>;
     thread_local! {
         static CACHE: RefCell<Cache> = Default::default();
     }
+    let blade_count = 1 << dims;
     CACHE.with(move |r| {
-        let mut cache = r.borrow_mut();
-        let blade_count = 1 << dims;
-        let metrics = *cache.entry((dims, flavor, dot)).or_insert_with(|| {
+        *(r.borrow_mut().entry((dims, flavor, dot))).or_insert_with(|| {
             let mut metrics = Vec::with_capacity(blade_count * blade_count);
             for a in 0..blade_count {
                 for b in 0..blade_count {
@@ -383,17 +387,8 @@ where
                         continue;
                     }
                     let mut metric = 1.0;
-                    if dims >= 3 {
-                        // Account for reording of high-graded blades
-                        // Don't do it for 2 dims because 2 dims has
-                        // a nice circular order of e12,e23,e31.
-                        // Such an order does not exist for 3+ dims.
-                        let ab = a ^ b;
-                        for i in [a, b, ab] {
-                            if (i ^ (i >> 1)).count_ones() == dims as u32 {
-                                metric = -metric;
-                            }
-                        }
+                    if dims == 3 && a ^ b == 0b101 {
+                        metric = -metric;
                     }
                     for i in 0..dims {
                         let bit_i = 1 << i;
@@ -413,9 +408,7 @@ where
                 }
             }
             metrics.leak()
-        });
-        drop(cache);
-        f(metrics, blade_count)
+        })
     })
 }
 
@@ -650,49 +643,48 @@ impl fmt::Display for Multivector {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let dims = self.dims();
         let dim_offset = (self.flavor.metric(0) != 0) as usize;
-        mask_tables(dims, |mask_table, _| -> fmt::Result {
-            let mut wrote = false;
-            for (i, n) in self.iter().enumerate() {
-                if n == 0.0 {
-                    continue;
-                }
-                if wrote {
-                    if n > 0.0 {
-                        write!(f, " + ")?;
-                    } else {
-                        write!(f, " - ")?;
-                    }
-                    wrote = true;
-                } else if n < 0.0 {
-                    write!(f, "-")?;
-                    wrote = true;
-                }
-                let mask = mask_table[i];
-                if n.abs() != 1.0 || mask == 0 {
-                    write!(f, "{}", n.abs())?;
-                    wrote = true;
-                }
-                if mask == 0 {
-                    continue;
-                }
-                write!(f, "e")?;
-                wrote = true;
-                if dims > 2 && (mask ^ (mask >> 1)).count_ones() == dims as u32 {
-                    for j in (0..dims).rev() {
-                        if mask & (1 << j) != 0 {
-                            write!(f, "{}", crate::SUBSCRIPT_DIGITS[j as usize + dim_offset])?;
-                        }
-                    }
+        let (mask_table, _) = mask_tables(dims);
+        let mut wrote = false;
+        for (i, n) in self.iter().enumerate() {
+            if n == 0.0 {
+                continue;
+            }
+            if wrote {
+                if n > 0.0 {
+                    write!(f, " + ")?;
                 } else {
-                    for j in 0..dims {
-                        if mask & (1 << j) != 0 {
-                            write!(f, "{}", crate::SUBSCRIPT_DIGITS[j as usize + dim_offset])?;
-                        }
+                    write!(f, " - ")?;
+                }
+                wrote = true;
+            } else if n < 0.0 {
+                write!(f, "-")?;
+                wrote = true;
+            }
+            let mask = mask_table[i];
+            if n.abs() != 1.0 || mask == 0 {
+                write!(f, "{}", n.abs())?;
+                wrote = true;
+            }
+            if mask == 0 {
+                continue;
+            }
+            write!(f, "e")?;
+            wrote = true;
+            if dims == 3 && mask == 0b101 {
+                for j in (0..dims).rev() {
+                    if mask & (1 << j) != 0 {
+                        write!(f, "{}", crate::SUBSCRIPT_DIGITS[j as usize + dim_offset])?;
+                    }
+                }
+            } else {
+                for j in 0..dims {
+                    if mask & (1 << j) != 0 {
+                        write!(f, "{}", crate::SUBSCRIPT_DIGITS[j as usize + dim_offset])?;
                     }
                 }
             }
-            Ok(())
-        })
+        }
+        Ok(())
     }
 }
 
@@ -754,5 +746,20 @@ mod test {
             Mv::all([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]).reversed(),
             [1.0, 2.0, 3.0, 4.0, -5.0, -6.0, -7.0, -8.0],
         );
+    }
+
+    #[test]
+    fn get_blade() {
+        let mv = Mv::all([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        assert_eq!(mv.get_blade(0b000), 1.0);
+        assert_eq!(mv.get_blade(0b001), 2.0);
+        assert_eq!(mv.get_blade(0b010), 3.0);
+        assert_eq!(mv.get_blade(0b100), 4.0);
+        assert_eq!(mv.get_blade(0b011), 5.0);
+        assert_eq!(mv.get_blade(0b101), 6.0);
+        assert_eq!(mv.get_blade(0b110), 7.0);
+        assert_eq!(mv.get_blade(0b111), 8.0);
+        assert_eq!(mv.get_blade(0b1000), 0.0);
+        assert_eq!(mv.get_blade(0b1010), 0.0);
     }
 }

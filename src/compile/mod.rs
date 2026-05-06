@@ -2543,6 +2543,14 @@ impl Compiler {
                                 format!("{n} is too many multivector dimensions"),
                             );
                         }
+                        if let Some(grade) = side_grade.and_then(|(_, grade)| grade)
+                            && grade as i32 > n
+                        {
+                            self.add_error(
+                                sub.span.clone(),
+                                format!("{n}D multivector has no grade-{grade} blades"),
+                            );
+                        }
                         Some(n as u8)
                     }
                 };

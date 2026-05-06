@@ -402,40 +402,39 @@ impl GridFmt for crate::Multivector {
     fn fmt_grid(&self, _: GridFmtParams) -> Grid {
         let dims = self.dims();
         let dim_offset = (self.flavor.metric(0) != 0) as usize;
-        crate::ga::mask_tables(dims, |mask_table, _| {
-            let mut s = Vec::new();
-            for (i, n) in self.iter().enumerate() {
-                if n == 0.0 {
-                    continue;
+        let (mask_table, _) = crate::ga::mask_tables(dims);
+        let mut s = Vec::new();
+        for (i, n) in self.iter().enumerate() {
+            if n == 0.0 {
+                continue;
+            }
+            if s.is_empty() {
+                if n < 0.0 {
+                    s.push('-');
                 }
-                if s.is_empty() {
-                    if n < 0.0 {
-                        s.push('-');
-                    }
-                } else {
-                    s.extend(if n > 0.0 { " + " } else { " - " }.chars());
-                }
-                let mask = mask_table[i];
-                if n.abs() != 1.0 || mask == 0 {
-                    let n_grid = n.abs().fmt_grid(Default::default());
-                    s.extend(n_grid.into_iter().next().unwrap());
-                }
-                if mask == 0 {
-                    continue;
-                }
-                s.push('e');
-                for j in 0..dims {
-                    if mask & (1 << j) != 0 {
-                        s.push(crate::SUBSCRIPT_DIGITS[j as usize + dim_offset]);
-                    }
-                }
-                if dims > 2 && (mask ^ (mask >> 1)).count_ones() == dims as u32 {
-                    let (a, b) = (s.len() - 1, s.len() - 2);
-                    s.swap(a, b);
+            } else {
+                s.extend(if n > 0.0 { " + " } else { " - " }.chars());
+            }
+            let mask = mask_table[i];
+            if n.abs() != 1.0 || mask == 0 {
+                let n_grid = n.abs().fmt_grid(Default::default());
+                s.extend(n_grid.into_iter().next().unwrap());
+            }
+            if mask == 0 {
+                continue;
+            }
+            s.push('e');
+            for j in 0..dims {
+                if mask & (1 << j) != 0 {
+                    s.push(crate::SUBSCRIPT_DIGITS[j as usize + dim_offset]);
                 }
             }
-            vec![s]
-        })
+            if dims == 3 && mask == 0b101 {
+                let (a, b) = (s.len() - 1, s.len() - 2);
+                s.swap(a, b);
+            }
+        }
+        vec![s]
     }
     fn list_same_line() -> bool {
         false

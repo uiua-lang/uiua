@@ -67,12 +67,12 @@ impl Value {
                 .into()
             }
             #[cfg(feature = "ga")]
-            (1.., flavor, None, None | Some((SubSide::Left, None))) => {
+            (1.., flavor, None, None) => {
                 // Vector
                 if n > MAX_DIMS as usize {
                     return Err(env.error(format!(
                         "{n} multivector dimensions \
-                                (from a {_old_shape} array) would be too many"
+                        (from a {_old_shape} array) would be too many"
                     )));
                 }
                 Array::new(
@@ -84,31 +84,42 @@ impl Value {
                 .into()
             }
             #[cfg(feature = "ga")]
-            (1.., flavor, None, Some((SubSide::Right, None))) => {
-                // n-1 blades
-                if n > MAX_DIMS as usize {
-                    return Err(env.error(format!(
-                        "{n} multivector dimensions \
-                                (from a {_old_shape} array) would be too many"
-                    )));
-                }
-                Array::new(
-                    new_shape,
-                    (arr.data.chunks_exact(n)).map(|n| Mv::n_1_blades(n).flavor(flavor)),
-                )
-                .into()
-            }
-            #[cfg(feature = "ga")]
-            (1.., flavor, None, Some((side, Some(grade)))) => {
+            (1.., flavor, None, Some((side, grade))) => {
                 // Dimensions not specified, but a grade is
                 use uiua_parser::SubSide;
-                let d = (grade..=MAX_DIMS)
-                    .find(|&d| grade_size(d, grade) == n)
-                    .ok_or_else(|| {
-                        env.error(format!(
+                let d = if let Some(grade) = grade {
+                    (grade..=MAX_DIMS)
+                        .find(|&d| grade_size(d, grade) == n)
+                        .ok_or_else(|| {
+                            env.error(format!(
                         "Unable to find a number of dimensions where grade {grade} has {n} blades"
                     ))
-                    })?;
+                        })?
+                } else if (n * 2).is_power_of_two() {
+                    let d = ((n * 2) as f32).log2() as usize;
+                    if d > MAX_DIMS as usize {
+                        let parity = match side {
+                            SubSide::Left => "even",
+                            SubSide::Right => "odd",
+                        };
+                        return Err(env.error(format!(
+                            "{d} multivector dimensions \
+                            ({n} {parity} blades from a {_old_shape} array) would be too many",
+                        )));
+                    } else {
+                        d as u8
+                    }
+                } else {
+                    let f = match side {
+                        SubSide::Left => Mv::vector,
+                        SubSide::Right => Mv::n_1_blades,
+                    };
+                    return Ok(Array::new(
+                        new_shape,
+                        (arr.data.chunks_exact(n)).map(|n| f(n).flavor(flavor)),
+                    )
+                    .into());
+                };
                 let f = match side {
                     SubSide::Left => Mv::blades_left,
                     SubSide::Right => Mv::blades_right,
@@ -133,7 +144,7 @@ impl Value {
                     if n != grade_size {
                         return Err(env.error(format!(
                             "Grade {grade} of a {d}D multivector \
-                                    has {grade_size} blade{}, not {n}",
+                            has {grade_size} blade{}, not {n}",
                             if grade_size == 1 { "" } else { "s" }
                         )));
                     }
@@ -278,8 +289,76 @@ impl Value {
                 }
             },
             #[cfg(feature = "ga")]
-            Value::Mv(arr) => match (dims, grade) {
-                _ => todo!(),
+            Value::Mv(mut arr) => match (dims, side, grade) {
+                (None, None, None) => {
+                    // Vector
+                    let d = arr.data.iter().map(|mv| mv.dims()).max().unwrap_or(0);
+                    let size = d as usize;
+                    arr.shape.push(size);
+                    let mut data = eco_vec![0.0; arr.shape.elements()];
+                    let (mask_table, _) = mask_tables(d);
+                    for (v, mv) in data.make_mut().chunks_exact_mut(size).zip(arr.data) {
+                        for (i, v) in v.iter_mut().enumerate() {
+                            *v = mv.get_blade(mask_table[i + 1]);
+                        }
+                    }
+                    Array::new(arr.shape, data).into()
+                }
+                (Some(d), None, None) => {
+                    // All blades
+                    let (mask_table, _) = mask_tables(d);
+                    let size = 1 << d;
+                    arr.shape.push(size);
+                    let mut data = eco_vec![0.0; arr.shape.elements()];
+                    for (v, mv) in data.make_mut().chunks_exact_mut(size).zip(arr.data) {
+                        for (i, v) in v.iter_mut().enumerate() {
+                            *v = mv.get_blade(mask_table[i]);
+                        }
+                    }
+                    Array::new(arr.shape, data).into()
+                }
+                (d, _, Some(grade)) => {
+                    // Blades of a certain grade
+                    let d =
+                        d.unwrap_or_else(|| arr.data.iter().map(|mv| mv.dims()).max().unwrap_or(0));
+                    if grade > d {
+                        return Err(
+                            env.error(format!("{d}D multivector has no grade-{grade} blades"))
+                        );
+                    }
+                    let (mask_table, _) = mask_tables(d);
+                    let size = grade_size(d, grade);
+                    arr.shape.push(size);
+                    let mut data = eco_vec![0.0; arr.shape.elements()];
+                    let offset = blade_grades(d).position(|g| g == grade).unwrap();
+                    for (v, mv) in data.make_mut().chunks_exact_mut(size).zip(arr.data) {
+                        for (i, v) in v.iter_mut().enumerate() {
+                            *v = mv.get_blade(mask_table[i + offset]);
+                        }
+                    }
+                    Array::new(arr.shape, data).into()
+                }
+                (d, Some(side), None) => {
+                    // Even or odd blades
+                    let side = match side {
+                        SubSide::Left => 0,
+                        SubSide::Right => 1,
+                    };
+                    let d =
+                        d.unwrap_or_else(|| arr.data.iter().map(|mv| mv.dims()).max().unwrap_or(0));
+                    let (mask_table, _) = mask_tables(d);
+                    let size = (1 << d) / 2;
+                    arr.shape.push(size);
+                    let mut data = eco_vec![0.0; arr.shape.elements()];
+                    for (v, mv) in data.make_mut().chunks_exact_mut(size).zip(arr.data) {
+                        for (v, &mask) in (v.iter_mut())
+                            .zip(mask_table.iter().filter(|m| m.count_ones() % 2 == side))
+                        {
+                            *v = mv.get_blade(mask);
+                        }
+                    }
+                    Array::new(arr.shape, data).into()
+                }
             },
             val => {
                 return Err(env.error(format!(

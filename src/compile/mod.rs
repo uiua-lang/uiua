@@ -2883,7 +2883,12 @@ impl Compiler {
         span: &CodeSpan,
     ) -> Option<SubscriptNumber> {
         match num {
-            NumericSubscript::N(n) => Some(*n),
+            NumericSubscript::N(n) => {
+                if !matches!(n, SubscriptNumber::Int(_)) {
+                    self.experimental_error_them(span, || "Non-integer subscripts")
+                }
+                Some(*n)
+            }
             NumericSubscript::NegOnly => {
                 self.add_error(span.clone(), "Subscript is incomplete");
                 None

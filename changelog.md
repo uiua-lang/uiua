@@ -9,9 +9,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`oklch`](https://uiua.org/docs/oklch) function
 - Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape
 - Add `$_` syntax to remove labels
-- Add `ᵢ` and `ᵣ` subscripts, which format from `,i` and `,r` respectively
-  - Only currently compatible with dyadic pervasives and custom subscripts, but may be used for other things in the future
 - Add sided subscripts for [`negate ¯`](https://uiua.org/docs/negate), which get the conjugate or negative conjugate
+- Add experimental `ᵢ` and `ᵣ` subscripts, which format from `,i` and `,r` respectively
+  - Only currently compatible with dyadic pervasives and custom subscripts, but may be used for other things in the future
 - Add experimental [`multivector ⩜`](https://uiua.org/docs/multivector) function, which creates an array of geometric algebra multivectors
 - Add experimental [custom subscript functions](<https://www.uiua.org/docs/experimental#custom-subscript-functions>)
   - Remove deprecated `log ₙ` function, which syntactically conflicted

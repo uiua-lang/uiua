@@ -6,8 +6,6 @@ use crate::{Array, Complex, MvMode, SubSide, Uiua, UiuaResult, Value, ga::*};
 
 impl Value {
     pub(crate) fn multivector(self, mode: MvMode, env: &Uiua) -> UiuaResult<Self> {
-        #[cfg(feature = "ga")]
-        use crate::Multivector as Mv;
         let arr = match self {
             Value::Num(arr) => arr,
             Value::Byte(arr) => arr.convert(),
@@ -33,15 +31,29 @@ impl Value {
             (0, Flavor::Vanilla, Some(d), _) if d <= 2 => {
                 Array::<Complex>::new(new_shape, eco_vec![Complex::ZERO; elem_count]).into()
             }
+            #[cfg(not(feature = "ga"))]
+            (2, Flavor::Vanilla, None, None) if arr.data.iter().all(|&n| n == 0.0) => {
+                Array::<Complex>::new(new_shape, eco_vec![Complex::ZERO; elem_count]).into()
+            }
             (1, Flavor::Vanilla, None | Some(2), Some((SubSide::Left, _))) => {
                 arr.convert::<Complex>().into()
             }
             (2, Flavor::Vanilla, None | Some(2), Some((SubSide::Left, _)))
             | (2, Flavor::Vanilla, Some(2), None) => Array::new(
                 new_shape,
-                arr.data.chunks_exact(n).map(|n| Complex::new(n[0], n[1])),
+                arr.data.chunks_exact(2).map(|n| Complex::new(n[0], n[1])),
             )
             .into(),
+            #[cfg(not(feature = "ga"))]
+            (4, Flavor::Vanilla, Some(2), None)
+                if arr.data.chunks_exact(4).all(|w| w[1] == 0.0 && w[2] == 0.0) =>
+            {
+                Array::new(
+                    new_shape,
+                    arr.data.chunks_exact(4).map(|n| Complex::new(n[0], n[3])),
+                )
+                .into()
+            }
             #[cfg(feature = "ga")]
             (0, flavor, ..) => Array::new(
                 new_shape,
@@ -235,56 +247,75 @@ impl Value {
             Value::Byte(arr) => extract_scalar(arr, dims, grade, env)?,
             Value::Num(arr) => extract_scalar(arr, dims, grade, env)?,
             Value::Complex(mut arr) => match (dims, side, grade) {
-                (Some(d), _, Some(grade @ 3..)) => {
-                    arr.shape.push(grade_size(d, grade));
-                    let data = eco_vec![0u8; arr.shape.elements()];
+                (None, None, None) => {
+                    // Vector
+                    arr.shape.push(2);
+                    let data = eco_vec![0.0; arr.shape.elements()];
                     Array::new(arr.shape, data).into()
                 }
-                (None, None, None) | (_, Some(SubSide::Right), _) | (_, _, Some(1)) => {
-                    arr.shape.push(2);
-                    let data = eco_vec![0u8; arr.shape.elements()];
-                    Array::new(arr.shape, data).into()
-                }
-                (Some(2), _, None) | (None, Some(SubSide::Left), None) => {
-                    arr.shape.push(2);
+                (Some(d), None, None) => {
+                    // All blades
+                    let (mask_table, _) = mask_tables(d);
+                    let size = 1 << d;
+                    arr.shape.push(size);
                     let mut data = eco_vec![0.0; arr.shape.elements()];
-                    for (w, c) in data.make_mut().chunks_exact_mut(2).zip(arr.data) {
-                        w[1] = c.im;
-                        w[0] = c.re;
+                    for (v, c) in data.make_mut().chunks_exact_mut(size).zip(arr.data) {
+                        for (i, v) in v.iter_mut().enumerate() {
+                            match mask_table[i] {
+                                0b0 => *v = c.re,
+                                0b11 => *v = c.im,
+                                _ => {}
+                            }
+                        }
                     }
                     Array::new(arr.shape, data).into()
-                }
-                (None | Some(2), _, Some(0)) => {
-                    let mut data = eco_vec![0f64; arr.shape.elements()];
-                    for (n, c) in data.make_mut().iter_mut().zip(arr.data) {
-                        *n = c.re;
-                    }
-                    Array::new(arr.shape, data).into()
-                }
-                (None | Some(2), _, Some(2)) => {
-                    let mut data = eco_vec![0f64; arr.shape.elements()];
-                    for (n, c) in data.make_mut().iter_mut().zip(arr.data) {
-                        *n = c.im;
-                    }
-                    Array::new(arr.shape, data).into()
-                }
-                #[cfg(feature = "ga")]
-                (Some(_), _, Some(..=2) | None) => {
-                    // Weird case
-                    Value::from(arr.convert::<Mv>()).unmultivector(mode, env)?
                 }
                 (d, _, Some(grade)) => {
-                    if let Some(d) = d
-                        && grade > d
-                    {
+                    // Blades of a certain grade
+                    let d = d.unwrap_or(2);
+                    if grade > d {
                         return Err(
                             env.error(format!("{d}D multivector has no grade-{grade} blades"))
                         );
                     }
-                    let d = d.unwrap_or(2);
                     let size = grade_size(d, grade);
                     arr.shape.push(size);
-                    let data = eco_vec![0u8; arr.shape.elements()];
+                    let mut data = eco_vec![0.0; arr.shape.elements()];
+                    if let 0 | 2 = grade {
+                        let (mask_table, _) = mask_tables(d);
+                        let offset = blade_grades(d).position(|g| g == grade).unwrap();
+                        for (v, c) in data.make_mut().chunks_exact_mut(size).zip(arr.data) {
+                            for (i, v) in v.iter_mut().enumerate() {
+                                match mask_table[i + offset] {
+                                    0b0 => *v = c.re,
+                                    0b11 => *v = c.im,
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                    Array::new(arr.shape, data).into()
+                }
+                (d, Some(side), None) => {
+                    // Even or odd blades
+                    let d = d.unwrap_or(2);
+                    let size = (1 << d) / 2;
+                    arr.shape.push(size);
+                    let mut data = eco_vec![0.0; arr.shape.elements()];
+                    if side == SubSide::Left {
+                        let (mask_table, _) = mask_tables(d);
+                        for (v, c) in data.make_mut().chunks_exact_mut(size).zip(arr.data) {
+                            for (v, mask) in (v.iter_mut())
+                                .zip(mask_table.iter().filter(|m| m.count_ones() % 2 == 0))
+                            {
+                                match mask {
+                                    0b0 => *v = c.re,
+                                    0b11 => *v = c.im,
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
                     Array::new(arr.shape, data).into()
                 }
             },

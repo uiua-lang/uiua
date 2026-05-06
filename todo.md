@@ -2,9 +2,10 @@
 
 # 0.19
 - Multivector scalar
+  - Update tests
+  - Resolve inner/outer/regressive/sandwich products
   - Output flavor?
   - Output summary
-  - Update tests
   - Update docs
 - Type system
   - Tests

@@ -394,6 +394,25 @@ impl TypeRt<'_> {
                     let scalar = a.scalar.max(b.scalar);
                     self.stack.push(Ty::new(scalar, shape));
                 }
+                ImplPrimitive::MvImpl(_) => {
+                    let mut a = self.pop()?;
+                    a.shape.pop();
+                    #[cfg(feature = "ga")]
+                    {
+                        a.scalar = ScalarType::Multivector;
+                    }
+                    #[cfg(not(feature = "ga"))]
+                    {
+                        a.scalar = ScalarType::Complex;
+                    }
+                    self.stack.push(Ty::new(a.scalar, a.shape));
+                }
+                ImplPrimitive::UnMv(mode) => {
+                    let mut a = self.pop()?;
+                    a.shape.push(mode.dims.unwrap_or(2) as usize);
+                    a.scalar = ScalarType::Real;
+                    self.stack.push(Ty::new(a.scalar, a.shape));
+                }
                 ImplPrimitive::StackN { .. } => {}
                 _ => return Err(TypeError::NotSupported),
             },

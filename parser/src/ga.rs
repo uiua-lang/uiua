@@ -1,9 +1,54 @@
-use std::fmt;
+use std::{cell::RefCell, collections::HashMap, fmt, iter::repeat_n};
 
 use serde::*;
 
 #[cfg(feature = "multivector")]
 pub use crate::multivector::*;
+
+pub const MAX_DIMS: u8 = 15;
+pub const MAX_BLADES: u8 = 225;
+
+/// Get the size of a grade for some number of dimensions
+pub fn grade_size(dims: u8, grade: u8) -> usize {
+    fn combinations(n: usize, k: usize) -> f64 {
+        if k > n {
+            return 0.0;
+        }
+        (1..=k.min(n - k))
+            .map(|i| (n + 1 - i) as f64 / i as f64)
+            .product::<f64>()
+            .round()
+    }
+    combinations(dims as usize, grade as usize) as usize
+}
+
+/// Iterate over the grades of each blade
+pub fn blade_grades(dims: u8) -> impl Iterator<Item = u8> {
+    (0..=dims).flat_map(move |i| repeat_n(i, grade_size(dims, i)))
+}
+
+type MaskTables = (&'static [usize], &'static [usize]);
+#[doc(hidden)]
+pub fn mask_tables(dims: u8) -> MaskTables {
+    thread_local! {
+        static CACHE: RefCell<HashMap<u8, MaskTables>> = Default::default();
+    }
+    CACHE.with(move |r| {
+        *r.borrow_mut().entry(dims).or_insert_with(|| {
+            let mut mask_table: Vec<usize> = (0..1usize << dims).collect();
+            for d in (0..dims).rev() {
+                let dim_mask = 1 << d;
+                mask_table.sort_by_key(|&a| u32::MAX - (a & dim_mask).count_ones());
+            }
+            mask_table.sort_by_key(|&a| a.count_ones());
+            let mut inv_mask_table = vec![0; 1usize << dims];
+            for (i, &v) in mask_table.iter().enumerate() {
+                inv_mask_table[v] = i;
+            }
+            (mask_table.leak(), inv_mask_table.leak())
+        })
+    })
+}
 
 /// A geometric algebra flavor
 #[derive(
@@ -70,9 +115,6 @@ impl Flavor {
         }))
     }
 }
-
-pub const MAX_DIMS: u8 = 15;
-pub const MAX_BLADES: u8 = 225;
 
 impl fmt::Display for Flavor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -1574,6 +1574,9 @@ impl<'a> Lexer<'a> {
         got_neg: bool,
         int_only: bool,
     ) {
+        if !matches!(num, None | Some(Some(SubscriptNumber::Int(_)))) {
+            return;
+        }
         if !int_only && num.is_none() {
             for (ascii, glyph, val, allow_neg) in [
                 ("n", "ₙ", None, false),

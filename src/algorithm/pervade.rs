@@ -1658,6 +1658,72 @@ pub mod mul {
     }
 }
 
+pub mod inner_product {
+    use super::*;
+    pub use mul::{byte_byte, byte_num, num_byte, num_num};
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        b.into().inner_product(a)
+    }
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        b.inner_product(a.into())
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into().inner_product(a)
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b.inner_product(a.into())
+    }
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot get inner product of {a} and {b}")
+    }
+}
+
+pub mod outer_product {
+    use super::*;
+    pub use mul::{byte_byte, byte_num, num_byte, num_num};
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        b.into().outer_product(a)
+    }
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        b.outer_product(a.into())
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into().outer_product(a)
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b.outer_product(a.into())
+    }
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot get inner product of {a} and {b}")
+    }
+}
+
+pub mod regressive_product {
+    use super::*;
+    pub use mul::{byte_byte, byte_num, num_byte, num_num};
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        b.into().regressive_product(a)
+    }
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        b.regressive_product(a.into())
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into().regressive_product(a)
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b.regressive_product(a.into())
+    }
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot get inner product of {a} and {b}")
+    }
+}
+
 pub mod set_sign {
     use super::*;
 
@@ -1857,14 +1923,6 @@ pub mod or {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         let a = a.into();
         Complex::new(num_num(a.re, b.re), num_num(a.im, b.im))
-    }
-    #[cfg(feature = "ga")]
-    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
-        b.into().regressive_product(a)
-    }
-    #[cfg(feature = "ga")]
-    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
-        b.regressive_product(a.into())
     }
     pub fn error<T: Display>(a: T, b: T) -> String {
         format!("Cannot or {a} and {b}")

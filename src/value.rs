@@ -2408,7 +2408,7 @@ value_dy_math_impl!(
     signed_scalar_sortedness(true)
 );
 value_dy_math_impl!(modulo, ((Complex, Complex, com_com)));
-value_dy_math_impl_mv!(or, ([|meta| meta.flags.is_boolean(), Byte, bool_bool]));
+value_dy_math_impl!(or, ([|meta| meta.flags.is_boolean(), Byte, bool_bool]));
 value_dy_math_impl!(scalar_pow);
 value_dy_math_impl!(root);
 value_dy_math_impl!(log);
@@ -2431,6 +2431,9 @@ value_dy_math_impl_mv!(
     ),
     maintain_both_sortedness
 );
+value_dy_math_impl_mv!(inner_product,);
+value_dy_math_impl_mv!(outer_product,);
+value_dy_math_impl_mv!(regressive_product,);
 
 value_dy_impl!(
     complex,

@@ -1883,8 +1883,22 @@ value_mon_impl!(
         val.meta.or_sorted_flags(flags)
     }
 );
-value_mon_impl!(complex_re, [Num, generic], [Byte, generic], (Complex, com));
-value_mon_impl!(complex_im, [Num, num], [Byte, byte], (Complex, com));
+value_mon_impl!(
+    complex_re,
+    [Num, generic],
+    [Byte, generic],
+    (Complex, com),
+    #[cfg(feature = "ga")]
+    (Mv, mv)
+);
+value_mon_impl!(
+    complex_im,
+    [Num, num],
+    [Byte, byte],
+    (Complex, com),
+    #[cfg(feature = "ga")]
+    (Mv, mv)
+);
 value_mon_impl!(
     conj,
     (Num, num),

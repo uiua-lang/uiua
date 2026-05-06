@@ -1140,6 +1140,10 @@ pub mod complex_re {
     pub fn com(a: Complex) -> f64 {
         a.re
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> f64 {
+        a.get_blade(0b0)
+    }
     pub fn generic<T>(a: T) -> T {
         a
     }
@@ -1158,6 +1162,10 @@ pub mod complex_im {
     }
     pub fn byte(_a: u8) -> u8 {
         0
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> f64 {
+        a.get_blade(0b11)
     }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot get the imaginary part of {a}")
@@ -2026,11 +2034,11 @@ pub mod max {
     }
     #[cfg(feature = "ga")]
     pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
-        b.into().inner_product(a)
+        a.max(b.into())
     }
     #[cfg(feature = "ga")]
     pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
-        b.inner_product(a.into())
+        a.into().max(b)
     }
     pub fn generic<T: Ord>(a: T, b: T) -> T {
         a.max(b)
@@ -2065,11 +2073,11 @@ pub mod min {
     }
     #[cfg(feature = "ga")]
     pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
-        b.into().wedge_product(a)
+        a.min(b.into())
     }
     #[cfg(feature = "ga")]
     pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
-        b.wedge_product(a.into())
+        a.into().min(b)
     }
     pub fn generic<T: Ord>(a: T, b: T) -> T {
         a.min(b)

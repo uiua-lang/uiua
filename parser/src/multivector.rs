@@ -252,7 +252,7 @@ impl Multivector {
         self.product_impl(other, true);
         self
     }
-    pub fn wedge_product(mut self, mut other: Self) -> Self {
+    pub fn outer_product(mut self, mut other: Self) -> Self {
         self.conform(&mut other);
         let flavor = replace(&mut self.flavor, Flavor::NULL);
         self.product_impl(other, false);
@@ -260,7 +260,7 @@ impl Multivector {
         self
     }
     pub fn regressive_product(self, other: Self) -> Self {
-        self.dualed().wedge_product(other.dualed()).antidualed()
+        self.dualed().outer_product(other.dualed()).antidualed()
     }
     fn product_impl(&mut self, rhs: Self, dot: bool) {
         let (a, mut b) = (self, rhs);
@@ -301,6 +301,10 @@ impl Multivector {
             let (_, inv_mask_table) = mask_tables(dims);
             self[inv_mask_table[mask]]
         }
+    }
+    /// Get the scalar and set it to 0
+    pub fn take_scalar(&mut self) -> f64 {
+        take(&mut self[0])
     }
 }
 

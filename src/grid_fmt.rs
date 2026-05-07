@@ -434,6 +434,9 @@ impl GridFmt for crate::Multivector {
                 s.swap(a, b);
             }
         }
+        if s.is_empty() {
+            s = vec!['0'];
+        }
         vec![s]
     }
     fn list_same_line() -> bool {

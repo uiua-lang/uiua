@@ -153,6 +153,8 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Byte(a), Value::Byte(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Complex(a), Value::Complex(b)) => a.join_impl(b, ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Mv(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Char(a), Value::Char(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Byte(a), Value::Num(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
             (Value::Num(a), Value::Byte(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
@@ -160,6 +162,18 @@ impl Value {
             (Value::Num(a), Value::Complex(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
             (Value::Complex(a), Value::Byte(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
             (Value::Byte(a), Value::Complex(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Complex(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Complex(a), Value::Mv(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Num(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Num(a), Value::Mv(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Byte(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Byte(a), Value::Mv(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
             (a, b) => a.bin_coerce_to_boxes(
                 b,
                 ctx,
@@ -175,6 +189,7 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => a.append(b, ext, ctx)?,
             (Value::Byte(a), Value::Byte(b)) => a.append(b, ext, ctx)?,
             (Value::Complex(a), Value::Complex(b)) => a.append(b, ext, ctx)?,
+            (Value::Mv(a), Value::Mv(b)) => a.append(b, ext, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.append(b, ext, ctx)?,
             (Value::Byte(a), Value::Num(b)) => {
                 let mut a = a.convert_ref();
@@ -190,6 +205,30 @@ impl Value {
             }
             (Value::Complex(a), Value::Byte(b)) => a.append(b.convert(), ext, ctx)?,
             (Value::Byte(a), Value::Complex(b)) => {
+                let mut a = a.convert_ref();
+                a.append(b, ext, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Complex(b)) => a.append(b.convert(), ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Complex(a), Value::Mv(b)) => {
+                let mut a = a.convert_ref();
+                a.append(b, ext, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Num(b)) => a.append(b.convert(), ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Num(a), Value::Mv(b)) => {
+                let mut a = a.convert_ref();
+                a.append(b, ext, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Byte(b)) => a.append(b.convert(), ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Byte(a), Value::Mv(b)) => {
                 let mut a = a.convert_ref();
                 a.append(b, ext, ctx)?;
                 *self = a.into();
@@ -811,6 +850,8 @@ impl Value {
             (Value::Complex(a), Value::Complex(b)) => a.couple_impl(b, allow_ext, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.couple_impl(b, allow_ext, ctx)?,
             (Value::Box(a), Value::Box(b)) => a.couple_impl(b, allow_ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Mv(b)) => a.couple_impl(b, allow_ext, ctx)?,
             (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
             (Value::Byte(a), Value::Num(b)) => {
                 let mut a = a.convert_ref();
@@ -825,6 +866,30 @@ impl Value {
             }
             (Value::Complex(a), Value::Byte(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
             (Value::Byte(a), Value::Complex(b)) => {
+                let mut a = a.convert_ref();
+                a.couple_impl(b, allow_ext, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Complex(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Complex(a), Value::Mv(b)) => {
+                let mut a = a.convert_ref();
+                a.couple_impl(b, allow_ext, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Num(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Num(a), Value::Mv(b)) => {
+                let mut a = a.convert_ref();
+                a.couple_impl(b, allow_ext, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Byte(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Byte(a), Value::Mv(b)) => {
                 let mut a = a.convert_ref();
                 a.couple_impl(b, allow_ext, ctx)?;
                 *self = a.into();

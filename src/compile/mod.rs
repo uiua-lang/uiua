@@ -2592,6 +2592,16 @@ impl Compiler {
                     SubNOrSide::Side(SubSide::Right) => Node::ImplPrim(Conj, self.add_span(span)),
                 }
             }
+            InnerProduct => {
+                let Some(side) = self.subscript_side_only(&scr, &InnerProduct.format()) else {
+                    return Ok(self.primitive(InnerProduct, span));
+                };
+                let prim = match side {
+                    SubSide::Left => ImplPrimitive::LeftContraction,
+                    SubSide::Right => ImplPrimitive::RightContraction,
+                };
+                Node::ImplPrim(prim, self.add_span(span))
+            }
             prim => {
                 let Some(n) = self.subscript_int_only(&scr, &prim.format()) else {
                     return Ok(self.primitive(prim, span));

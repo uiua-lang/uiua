@@ -2450,6 +2450,8 @@ value_dy_math_impl_mv!(
 );
 value_dy_math_impl_mv!(inner_product,);
 value_dy_math_impl_mv!(outer_product,);
+value_dy_math_impl_mv!(left_contraction,);
+value_dy_math_impl_mv!(right_contraction,);
 value_dy_math_impl_mv!(regressive_product,);
 
 value_dy_impl!(

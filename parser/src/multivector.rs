@@ -252,31 +252,40 @@ impl Multivector {
     pub fn rotor(self, to: Self) -> Self {
         ((self * to.reversed()).normalized() + 1.0).normalized()
     }
-    pub fn inner_product(mut self, other: Self) -> Self {
-        self.product_impl(other, true);
+    pub fn inner_product(mut self, mut other: Self) -> Self {
+        self.conform(&mut other);
+        self.product_impl(other, self.flavor, MetricMode::Inner);
+        self
+    }
+    pub fn left_contraction(mut self, mut other: Self) -> Self {
+        self.conform(&mut other);
+        self.product_impl(other, self.flavor, MetricMode::Left);
+        self
+    }
+    pub fn right_contraction(mut self, mut other: Self) -> Self {
+        self.conform(&mut other);
+        self.product_impl(other, self.flavor, MetricMode::Right);
         self
     }
     pub fn outer_product(mut self, mut other: Self) -> Self {
         self.conform(&mut other);
-        let flavor = replace(&mut self.flavor, Flavor::NULL);
-        self.product(other);
-        self.flavor = flavor;
+        self.product_impl(other, Flavor::NULL, MetricMode::All);
         self
     }
     pub fn regressive_product(self, other: Self) -> Self {
         self.dualed().outer_product(other.dualed()).antidualed()
     }
-    fn product(&mut self, rhs: Self) {
-        self.product_impl(rhs, false)
+    fn product(&mut self, mut rhs: Self) {
+        self.conform(&mut rhs);
+        self.product_impl(rhs, self.flavor, MetricMode::All)
     }
-    fn product_impl(&mut self, rhs: Self, dot: bool) {
-        let (a, mut b) = (self, rhs);
-        a.conform(&mut b);
+    fn product_impl(&mut self, rhs: Self, flavor: Flavor, mode: MetricMode) {
+        let (a, b) = (self, rhs);
         let dims = a.dims();
         let mut new_coefs = eco_vec![0.0; a.coefs.len()];
         let slice = new_coefs.make_mut();
         let (mask_table, inv_mask_table) = mask_tables(dims);
-        let metrics = blade_metrics(dims, a.flavor, dot);
+        let metrics = blade_metrics(dims, flavor, mode);
         for (bi, &b_mask) in mask_table.iter().enumerate() {
             for (ai, &a_mask) in mask_table.iter().enumerate() {
                 let metric = metrics[a_mask * mask_table.len() + b_mask];
@@ -368,19 +377,32 @@ fn blade_metric_scalar_only(a_mask: usize, dims: u8, flavor: Flavor) -> f64 {
     metric
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+enum MetricMode {
+    All,
+    Left,
+    Right,
+    Inner,
+}
+
 /// Calculate, cache, and access the blade metrics for a given number of dimensions and GA flavor
-fn blade_metrics(dims: u8, flavor: Flavor, dot: bool) -> &'static [f64] {
-    type Cache = HashMap<(u8, Flavor, bool), &'static [f64]>;
+fn blade_metrics(dims: u8, flavor: Flavor, mode: MetricMode) -> &'static [f64] {
+    type Cache = HashMap<(u8, Flavor, MetricMode), &'static [f64]>;
     thread_local! {
         static CACHE: RefCell<Cache> = Default::default();
     }
     let blade_count = 1 << dims;
     CACHE.with(move |r| {
-        *(r.borrow_mut().entry((dims, flavor, dot))).or_insert_with(|| {
+        *(r.borrow_mut().entry((dims, flavor, mode))).or_insert_with(|| {
             let mut metrics = Vec::with_capacity(blade_count * blade_count);
             for a in 0..blade_count {
                 for b in 0..blade_count {
-                    let has_metric = !dot || a == 0 || b == 0 || a & b == a || a & b == b;
+                    let has_metric = match mode {
+                        MetricMode::All => true,
+                        MetricMode::Left => a == 0 || a & b == a,
+                        MetricMode::Right => b == 0 || a & b == b,
+                        MetricMode::Inner => a == 0 || b == 0 || a & b == a || a & b == b,
+                    };
                     if !has_metric {
                         metrics.push(0.0);
                         continue;

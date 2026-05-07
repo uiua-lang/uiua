@@ -1370,6 +1370,8 @@ impl ImplPrimitive {
                 env.push(mv);
             }
             ImplPrimitive::RegressiveProduct => env.dyadic_oo_env(Value::regressive_product)?,
+            ImplPrimitive::LeftContraction => env.dyadic_oo_env(Value::left_contraction)?,
+            ImplPrimitive::RightContraction => env.dyadic_oo_env(Value::right_contraction)?,
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {
                     format!(

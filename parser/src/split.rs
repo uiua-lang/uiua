@@ -333,7 +333,7 @@ impl Primitive {
                 (s, Mul),
                 (a, Fork),
                 (n, Neg),
-                (d, PrimComponent::Sub4),
+                (d, PrimComponent::SubRight),
                 (w, Backward),
                 (i, Mul)
             ),

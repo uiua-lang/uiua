@@ -204,10 +204,8 @@ impl Multivector {
     }
     /// Geometrically dual the multivector
     pub fn dual(&mut self) {
-        let flavor = take(&mut self.flavor);
         let dims = self.dims();
-        *self *= Self::pseudo_unit(dims);
-        self.flavor = flavor;
+        self.product_impl(Self::pseudo_unit(dims), Flavor::Vanilla, MetricMode::All);
     }
     /// Get the geometric dual of the multivector
     pub fn dualed(mut self) -> Self {
@@ -321,8 +319,17 @@ impl Multivector {
                 }
                 let c_mask = a_mask ^ b_mask;
                 let ci = inv_mask_table[c_mask];
-                // println!("metric: {metric}, a: {}, b: {}", a[ai], b[bi]);
                 slice[ci] += metric * a[ai] * b[bi];
+                // println!(
+                //     "metric:{}{metric}, a: {}, b: {}",
+                //     if a[ai] != 0.0 && b[bi] != 0.0 {
+                //         "*"
+                //     } else {
+                //         " "
+                //     },
+                //     a[ai],
+                //     b[bi]
+                // );
             }
         }
         for c in slice {
@@ -435,8 +442,16 @@ fn blade_metrics(dims: u8, flavor: Flavor, mode: MetricMode) -> &'static [f64] {
                         continue;
                     }
                     let mut metric = 1.0;
-                    if dims == 3 && a ^ b == 0b101 {
-                        metric = -metric;
+                    if dims == 3 {
+                        // Account for reording of e02->e20 to
+                        // keep a nice cyclical order of e12,e23,e31.
+                        // Such an order does not exist for > 3 dims.
+                        let ab = a ^ b;
+                        for i in [a, b, ab] {
+                            if (i ^ (i >> 1)).count_ones() == dims as u32 {
+                                metric = -metric;
+                            }
+                        }
                     }
                     for i in 0..dims {
                         let bit_i = 1 << i;

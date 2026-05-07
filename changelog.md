@@ -12,7 +12,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add sided subscripts for [`negate ¯`](https://uiua.org/docs/negate), which get the conjugate or negative conjugate
 - Add experimental `ᵢ` and `ᵣ` subscripts, which format from `,i` and `,r` respectively
   - Only currently compatible with dyadic pervasives and custom subscripts, but may be used for other things in the future
-- Add experimental [`multivector ⩜`](https://uiua.org/docs/multivector) function, which creates an array of geometric algebra multivectors
+- Add experimental [`multivector 𝕍`](https://uiua.org/docs/multivector) function, which creates an array of geometric algebra multivectors
 - Add experimental [custom subscript functions](<https://www.uiua.org/docs/experimental#custom-subscript-functions>)
   - Remove deprecated `log ₙ` function, which syntactically conflicted
 - Add experimental [Type Checking](https://uiua.org/docs/experimental#type-checking)

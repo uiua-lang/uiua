@@ -796,7 +796,7 @@
     "description": "Generate an array of random numbers with a seed"
   },
   "geometric": {
-    "glyph": "⩜",
+    "glyph": "𝕍",
     "outputs": 1,
     "modifier_args": 1,
     "class": "Algorithm",

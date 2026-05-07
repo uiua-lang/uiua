@@ -15,7 +15,11 @@ macro_rules! primitive {
                 $(($outputs:expr))?
                 $([$mod_args:expr])?
             ,)?
-            $variant:ident, $class:ident, $names:expr $(,$purity:ident)* $(,{experimental: $experimental:literal})?
+            $variant:ident,
+            $class:ident,
+            $names:expr
+            $(,$purity:ident)*
+            $(,{$(experimental: $experimental:literal $(,)?)? $(simple: $simple:literal)?})?
         )
     ),* $(,)?) => {
         /// A built-in function
@@ -81,12 +85,18 @@ macro_rules! primitive {
                 }
             }
             /// Check if this primitive is experimental
-            #[allow(unused_parens)]
             pub fn is_experimental(&self) -> bool {
                 match self {
-                    $($(Primitive::$variant => $experimental,)*)*
+                    $($($(Primitive::$variant => $experimental,)*)*)*
                     Primitive::Sys(op) => op.is_experimental(),
                     _ => false
+                }
+            }
+            /// Check if this primitive is simple, meaning it should be presented to newcomers to the language
+            pub fn is_simple(&self) -> bool {
+                match self {
+                    $($($(Primitive::$variant => $simple,)*)*)*
+                    _ => true
                 }
             }
             /// Get the primitive's documentation string
@@ -570,6 +580,10 @@ primitive!(
     /// ex: °× [1.5 0 ¯4]
     /// ex: °× [i ℂ3 4 2]
     (2, Mul, DyadicPervasive, ("multiply", AsciiToken::Star, '×')),
+    /// Take the inner product of two multivectors
+    (2, InnerProduct, GeometricAlgebra, ("inner product", '⨰'), { experimental: true, simple: false }),
+    /// Take the outer product of two multivectors
+    (2, OuterProduct, GeometricAlgebra, ("outer product", '⨱'), { experimental: true, simple: false }),
     /// Divide values
     ///
     /// Formats from `%`.
@@ -682,6 +696,8 @@ primitive!(
     /// A complex number [equals] a real one if the imaginary part is 0 and the real parts [match].
     /// ex: = 5 ℂ0 5
     (2, Complex, DyadicPervasive, ("complex", 'ℂ')),
+    /// Create a multivector
+    (1, Multivector, Algorithm, ("multivector", '𝕍'), { experimental: true, simple: false }),
     /// Generate a random number in the range `[0, 1)`
     ///
     /// If you need a seeded random number, use [gen].
@@ -3134,8 +3150,6 @@ primitive!(
     ///   : ▽₂ 0.5
     ///   : ⌵⊸⍜°⍉≡fft
     (1, Fft, Algorithm, "fft"),
-    /// Create a multivector
-    (1, Multivector, Algorithm, ("multivector", '⩜'), { experimental: true }),
     /// Find the shortest path between two things
     ///
     /// Expects 2 functions and at least 1 value.

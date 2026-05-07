@@ -1249,7 +1249,9 @@ pub fn Editor<'a>(
 
     let glyph_buttons_container = move || {
         show_glyphs.get().then(|| {
-            let shown_prims = Primitive::non_deprecated().filter(|prim| !prim.is_experimental());
+            let show_advanced = get_show_advanced();
+            let shown_prims = Primitive::non_deprecated()
+                .filter(|prim| !prim.is_experimental() && (show_advanced || prim.is_simple()));
             let insertion_point = shown_prims
                 .clone()
                 .enumerate()

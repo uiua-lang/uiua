@@ -1599,7 +1599,6 @@ impl<'a> Lexer<'a> {
                 ("n", "ₙ", None, false),
                 ("i", "ᵢ", Some(SubscriptNumber::I), true),
                 ("r", "ᵣ", Some(SubscriptNumber::R), true),
-                ("o", "ₒ", Some(SubscriptNumber::O), true),
             ] {
                 if (!got_neg || allow_neg)
                     && (*can_parse_ascii && self.next_char_exact(ascii)
@@ -1665,7 +1664,6 @@ impl<'a> Lexer<'a> {
             "ₙ" => num = Some(None),
             "ᵢ" => num = Some(Some(SubscriptNumber::I)),
             "ᵣ" => num = Some(Some(SubscriptNumber::R)),
-            "ₒ" => num = Some(Some(SubscriptNumber::O)),
             "⌞" => side = Some(SubSide::Left),
             "⌟" => side = Some(SubSide::Right),
             "₋" => got_neg = true,
@@ -1883,7 +1881,7 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
 
 /// Whether a character can be among the first characters of a Uiua identifier
 pub fn is_ident_char(c: char) -> bool {
-    c.is_alphabetic() && !"ⁿₙₑℂ".contains(c)
+    c.is_alphabetic() && !"ⁿₙₑℂ𝕍".contains(c)
 }
 
 /// Whether a string is a custom glyph

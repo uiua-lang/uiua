@@ -16,6 +16,7 @@ pub enum PrimClass {
     Arguments,
     Constant,
     MonadicPervasive,
+    GeometricAlgebra,
     DyadicPervasive,
     MonadicArray,
     DyadicArray,
@@ -61,6 +62,7 @@ impl fmt::Debug for PrimClass {
             Arguments => write!(f, "Arguments"),
             Constant => write!(f, "Constant"),
             MonadicPervasive => write!(f, "MonadicPervasive"),
+            GeometricAlgebra => write!(f, "GeometricAlgebra"),
             DyadicPervasive => write!(f, "DyadicPervasive"),
             MonadicArray => write!(f, "MonadicArray"),
             DyadicArray => write!(f, "DyadicArray"),
@@ -258,9 +260,7 @@ impl Primitive {
             (Args, Some(SubscriptNumber::Int(n))) if n >= 0 => {
                 Signature::new(n as usize, n as usize)
             }
-            (Multivector, Some(SubscriptNumber::I | SubscriptNumber::O | SubscriptNumber::R)) => {
-                Signature::new(2, 1)
-            }
+            (Multivector, Some(SubscriptNumber::I | SubscriptNumber::R)) => Signature::new(2, 1),
             (Neg | Validate | Multivector, _) => return self.sig(),
             _ => return None,
         })

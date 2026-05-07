@@ -2520,7 +2520,7 @@ impl Compiler {
             }
             Multivector => {
                 use crate::ga::*;
-                let sub = self.validate_subscript_n(scr);
+                let sub = self.validate_subscript_int(scr, &Multivector.format());
                 let flavor = self.ga_flavor();
                 let side_grade = sub.value.side.map(|ss| {
                     (
@@ -2538,43 +2538,7 @@ impl Compiler {
                 });
                 let dims = match sub.value.num {
                     None => None,
-                    Some(SubscriptNumber::I) => {
-                        if side_grade.is_some() {
-                            self.add_error(
-                                sub.span.clone(),
-                                "Inner product does not support sided subscripts",
-                            )
-                        }
-                        return Ok(Node::ImplPrim(
-                            ImplPrimitive::InnerProduct,
-                            self.add_span(span),
-                        ));
-                    }
-                    Some(SubscriptNumber::R) => {
-                        if side_grade.is_some() {
-                            self.add_error(
-                                sub.span.clone(),
-                                "Regressive product does not support sided subscripts",
-                            )
-                        }
-                        return Ok(Node::ImplPrim(
-                            ImplPrimitive::RegressiveProduct,
-                            self.add_span(span),
-                        ));
-                    }
-                    Some(SubscriptNumber::O) => {
-                        if side_grade.is_some() {
-                            self.add_error(
-                                sub.span.clone(),
-                                "Outer product does not support sided subscripts",
-                            )
-                        }
-                        return Ok(Node::ImplPrim(
-                            ImplPrimitive::OuterProduct,
-                            self.add_span(span),
-                        ));
-                    }
-                    Some(SubscriptNumber::Int(n)) => {
+                    Some(n) => {
                         if n < 0 {
                             self.add_error(
                                 sub.span.clone(),
@@ -2596,13 +2560,6 @@ impl Compiler {
                             );
                         }
                         Some(n as u8)
-                    }
-                    Some(n) => {
-                        self.add_error(
-                            sub.span.clone(),
-                            format!("Invalid {} subscript {n}", Multivector.format()),
-                        );
-                        None
                     }
                 };
                 Node::ImplPrim(
@@ -2921,14 +2878,7 @@ impl Compiler {
             | SubscriptNumber::NegR => {
                 self.add_error(
                     span.clone(),
-                    format!("Imaginary subscripts are not allowed for {for_what}"),
-                );
-                None
-            }
-            SubscriptNumber::O | SubscriptNumber::NegO => {
-                self.add_error(
-                    span.clone(),
-                    format!("O subscripts are not allowed for {for_what}"),
+                    format!("Complex subscripts are not allowed for {for_what}"),
                 );
                 None
             }
@@ -2978,14 +2928,7 @@ impl Compiler {
             ) => {
                 self.add_error(
                     sub.span.clone(),
-                    format!("Imaginary subscripts are not allowed for {for_what}"),
-                );
-                return None;
-            }
-            SubNOrSide::N(SubscriptNumber::O | SubscriptNumber::NegO) => {
-                self.add_error(
-                    sub.span.clone(),
-                    format!("O subscripts are not allowed for {for_what}"),
+                    format!("Complex subscripts are not allowed for {for_what}"),
                 );
                 return None;
             }

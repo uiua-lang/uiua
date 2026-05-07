@@ -2646,7 +2646,7 @@ impl Value {
                 Value::Box(arr) => format!("□{}", arr.data[0].0.representation()),
                 #[cfg(feature = "ga")]
                 Value::Mv(arr) => {
-                    let mut s = "⩜[".to_string();
+                    let mut s = "𝕍[".to_string();
                     for (i, c) in arr.data[0].iter().enumerate() {
                         if i > 0 {
                             s.push(' ');
@@ -2672,12 +2672,12 @@ impl Value {
                 }
                 #[cfg(feature = "ga")]
                 value @ Value::Mv(_) => {
-                    let mut s = "⩜[".to_string();
+                    let mut s = "𝕍[".to_string();
                     for (i, v) in value.rows().enumerate() {
                         if i > 0 {
                             s.push(' ');
                         }
-                        s.extend(v.representation().chars().filter(|&c| c != '⩜'));
+                        s.extend(v.representation().chars().filter(|&c| c != '𝕍'));
                     }
                     s.push(']');
                     s
@@ -2708,7 +2708,7 @@ impl Value {
                     Value::Complex(_) => format!("ℂ0{s}"),
                     Value::Box(_) => format!("≡₀□{s}"),
                     #[cfg(feature = "ga")]
-                    Value::Mv(_) => format!("≡₀⩜{s}"),
+                    Value::Mv(_) => format!("≡₀𝕍{s}"),
                 }
             }
             _ => {

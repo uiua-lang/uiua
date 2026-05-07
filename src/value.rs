@@ -1632,8 +1632,6 @@ impl From<SubscriptNumber> for Value {
             SubscriptNumber::NegI => (-Complex::I).into(),
             SubscriptNumber::R => Complex::ONE.into(),
             SubscriptNumber::NegR => (-Complex::ONE).into(),
-            SubscriptNumber::O => f64::INFINITY.into(),
-            SubscriptNumber::NegO => f64::NEG_INFINITY.into(),
         }
     }
 }

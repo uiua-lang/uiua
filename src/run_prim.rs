@@ -98,6 +98,8 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::Add => env.dyadic_oo_env(Value::add)?,
         Primitive::Sub => env.dyadic_oo_env(Value::sub)?,
         Primitive::Mul => env.dyadic_oo_env(Value::mul)?,
+        Primitive::InnerProduct => env.dyadic_oo_env(Value::inner_product)?,
+        Primitive::OuterProduct => env.dyadic_oo_env(Value::outer_product)?,
         Primitive::Div => env.dyadic_oo_env(Value::div)?,
         Primitive::Modulo => env.dyadic_oo_env(Value::modulo)?,
         Primitive::Or => env.dyadic_oo_env(Value::or)?,
@@ -1367,8 +1369,6 @@ impl ImplPrimitive {
                 let mv = env.pop(1)?.unmultivector(mode, env)?;
                 env.push(mv);
             }
-            ImplPrimitive::InnerProduct => env.dyadic_oo_env(Value::inner_product)?,
-            ImplPrimitive::OuterProduct => env.dyadic_oo_env(Value::outer_product)?,
             ImplPrimitive::RegressiveProduct => env.dyadic_oo_env(Value::regressive_product)?,
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

@@ -62,12 +62,6 @@ pub enum Flavor {
     /// Cl(n, 0, 1)
     #[serde(rename = "p")]
     Projective,
-    /// Cl(n+1, 1, 0)
-    #[serde(rename = "c")]
-    Conformal,
-    /// Cl(1, n, 0)
-    #[serde(rename = "s")]
-    Spacetime,
     /// Cl(a, b, c)
     #[serde(rename = "cl")]
     Cl(u8, u8, u8),
@@ -79,8 +73,6 @@ impl Flavor {
         match self {
             Flavor::Vanilla => 1,
             Flavor::Projective => index.min(1) as i32,
-            Flavor::Conformal => 2 * index.min(1) as i32 - 1,
-            Flavor::Spacetime => 1 - 2 * index.min(1) as i32,
             &Flavor::Cl(_p1, n1, z) => {
                 if index < z {
                     return 0;
@@ -97,14 +89,12 @@ impl Flavor {
         Some(Ok(match s {
             "VGA" => Flavor::Vanilla,
             "PGA" => Flavor::Projective,
-            "CGA" => Flavor::Conformal,
-            "SGA" => Flavor::Spacetime,
             s => {
-                let s = s.strip_prefix("Cl ")?;
-                let mut iter = s.split_whitespace();
+                let s = s.strip_prefix("Cl")?.trim();
+                let mut iter = s.split([' ', '\t', ',']).filter(|s| !s.is_empty());
                 let mut next = || iter.next().and_then(|s| s.parse::<u8>().ok());
                 let fl = next()
-                    .and_then(|p1| next().and_then(|n1| next().map(|z| Flavor::Cl(p1, n1, z))))
+                    .map(|p1| Flavor::Cl(p1, next().unwrap_or(0), next().unwrap_or(0)))
                     .filter(|_| iter.next().is_none())
                     .ok_or("Invalid GA spec");
                 match fl {
@@ -121,8 +111,8 @@ impl fmt::Display for Flavor {
         match self {
             Flavor::Vanilla => write!(f, "VGA"),
             Flavor::Projective => write!(f, "PGA"),
-            Flavor::Conformal => write!(f, "CGA"),
-            Flavor::Spacetime => write!(f, "SGA"),
+            Flavor::Cl(p1, 0, 0) => write!(f, "Cl{p1}"),
+            Flavor::Cl(p1, n1, 0) => write!(f, "Cl {p1} {n1}"),
             Flavor::Cl(p1, n1, z) => write!(f, "Cl {p1} {n1} {z}"),
         }
     }

@@ -94,8 +94,6 @@ pub enum SubscriptNumber {
     NegI,
     R,
     NegR,
-    O,
-    NegO,
 }
 impl SubscriptNumber {
     /// Get the integer
@@ -123,8 +121,6 @@ impl Neg for SubscriptNumber {
             SubscriptNumber::NegI => SubscriptNumber::I,
             SubscriptNumber::R => SubscriptNumber::NegR,
             SubscriptNumber::NegR => SubscriptNumber::R,
-            SubscriptNumber::O => SubscriptNumber::NegO,
-            SubscriptNumber::NegO => SubscriptNumber::O,
         }
     }
 }
@@ -258,8 +254,6 @@ impl fmt::Display for SubscriptNumber {
             SubscriptNumber::NegI => write!(f, "₋ᵢ"),
             SubscriptNumber::R => write!(f, "ᵣ"),
             SubscriptNumber::NegR => write!(f, "₋ᵣ"),
-            SubscriptNumber::O => write!(f, "ₒ"),
-            SubscriptNumber::NegO => write!(f, "₋ₒ"),
         }
     }
 }

@@ -1052,6 +1052,14 @@ impl Compiler {
             let com = com.clone();
             sem = Some(words.pop().unwrap().span.sp(com));
         }
+        if let Some(sem) = &sem
+            && let SemanticComment::GaFlavor(fl) = &sem.value
+        {
+            let flavor = self.scope.ga_flavor.replace(*fl);
+            let res = self.words(words);
+            self.scope.ga_flavor = flavor;
+            return res;
+        }
 
         // Diagnostics
         for (i, word) in words.iter().enumerate() {

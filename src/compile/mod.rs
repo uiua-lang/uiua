@@ -1052,7 +1052,8 @@ impl Compiler {
             let com = com.clone();
             sem = Some(words.pop().unwrap().span.sp(com));
         }
-        if let Some(sem) = &sem
+        if !words.is_empty()
+            && let Some(sem) = &sem
             && let SemanticComment::GaFlavor(fl) = &sem.value
         {
             let flavor = self.scope.ga_flavor.replace(*fl);
@@ -2387,9 +2388,13 @@ impl Compiler {
         let spandex = self.add_span(span.clone());
         match prim {
             Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
-            Primitive::Multivector => {
-                Node::ImplPrim(ImplPrimitive::MvImpl(MvMode::default()), spandex)
-            }
+            Primitive::Multivector => Node::ImplPrim(
+                ImplPrimitive::MvImpl(MvMode {
+                    flavor: self.ga_flavor(),
+                    ..MvMode::default()
+                }),
+                spandex,
+            ),
             prim => Node::Prim(prim, spandex),
         }
     }

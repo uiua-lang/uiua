@@ -47,11 +47,38 @@ impl Multivector {
             b_left += bi;
         }
     }
+    fn set_dims_right(&mut self, dims: u8) {
+        let low_dims = self.dims();
+        if low_dims >= dims {
+            return;
+        }
+        self.coefs
+            .extend(repeat_n(0.0, (1 << dims) - (1 << low_dims)));
+        let slice = self.coefs.make_mut();
+        let mut b_left = 0;
+        for d in 0..=low_dims {
+            let ai = grade_size(low_dims, d);
+            let bi = grade_size(dims, d);
+            slice[b_left..].rotate_right(bi - ai);
+            b_left += bi;
+        }
+    }
     fn conform(&mut self, other: &mut Self) {
-        match self.dims().cmp(&other.dims()) {
+        let (a_dims, b_dims) = (self.dims(), other.dims());
+        match (self.flavor, other.flavor) {
+            (Flavor::Vanilla, Flavor::Projective) => {
+                self.set_dims_right(a_dims + 1);
+                self.set_blade(0b1, 1.0);
+                self.set_blade(1 << (a_dims - 1), 1.0);
+                self.flavor = other.flavor;
+            }
+            (Flavor::Projective, Flavor::Vanilla) => return other.conform(self),
+            _ => {}
+        }
+        match a_dims.cmp(&other.dims()) {
             Ordering::Equal => {}
-            Ordering::Greater => other.set_dims(self.dims()),
-            Ordering::Less => self.set_dims(other.dims()),
+            Ordering::Greater => other.set_dims(a_dims),
+            Ordering::Less => self.set_dims(b_dims),
         }
     }
     /// Get the maximum number of dimensions
@@ -740,6 +767,19 @@ mod test {
             a,
             [
                 1.0, 2.0, 3.0, 4.0, 0.0, 5.0, 6.0, 7.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 0.0
+            ]
+        );
+
+        let mut a = Mv::all([1.0, 2.0, 3.0, 4.0]);
+        a.set_dims_right(3);
+        assert_eq!(a, [1.0, 0.0, 2.0, 3.0, 0.0, 0.0, 4.0, 0.0]);
+
+        let mut a = Mv::all([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        a.set_dims_right(4);
+        assert_eq!(
+            a,
+            [
+                1.0, 0.0, 2.0, 3.0, 4.0, 0.0, 0.0, 0.0, 5.0, 6.0, 7.0, 0.0, 0.0, 0.0, 8.0, 0.0
             ]
         );
     }

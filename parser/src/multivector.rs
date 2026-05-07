@@ -156,9 +156,13 @@ impl Multivector {
     pub fn pga(self) -> Self {
         self.flavor(Flavor::Projective)
     }
+    /// Check if the multivector is a scalar
+    pub fn is_scalar(&self) -> bool {
+        !self.coefs.is_empty() && self.coefs.iter().skip(1).all(|&c| c == 0.0)
+    }
     /// Try to get the multivector as a scalar
     pub fn as_scalar(&self) -> Option<f64> {
-        (!self.coefs.is_empty() && self.coefs.iter().skip(1).all(|&c| c == 0.0)).then(|| self[0])
+        self.is_scalar().then(|| self[0])
     }
     /// Try to get the multivector as a complex number
     pub fn as_complex(&self) -> Option<Complex> {
@@ -255,12 +259,15 @@ impl Multivector {
     pub fn outer_product(mut self, mut other: Self) -> Self {
         self.conform(&mut other);
         let flavor = replace(&mut self.flavor, Flavor::NULL);
-        self.product_impl(other, false);
+        self.product(other);
         self.flavor = flavor;
         self
     }
     pub fn regressive_product(self, other: Self) -> Self {
         self.dualed().outer_product(other.dualed()).antidualed()
+    }
+    fn product(&mut self, rhs: Self) {
+        self.product_impl(rhs, false)
     }
     fn product_impl(&mut self, rhs: Self, dot: bool) {
         let (a, mut b) = (self, rhs);
@@ -291,20 +298,50 @@ impl Multivector {
         a.coefs = new_coefs;
     }
     /// Get an arbitrary blade given a mask of which bases are present in it
-    pub fn get_blade(&self, mut mask: usize) -> f64 {
+    pub fn get_blade(&self, mask: usize) -> f64 {
         let dims = self.dims();
         let dim_mask = (1 << dims) - 1;
         if (mask & !dim_mask).count_ones() > 0 {
             0.0
         } else {
-            mask &= dim_mask;
             let (_, inv_mask_table) = mask_tables(dims);
             self[inv_mask_table[mask]]
+        }
+    }
+    pub fn set_blade(&mut self, mask: usize, coef: f64) {
+        let dims = self.dims();
+        let dim_mask = (1 << dims) - 1;
+        if (mask & !dim_mask).count_ones() > 0 {
+            self.set_dims(dims + 1);
+            self.set_blade(mask, coef);
+        } else {
+            let (_, inv_mask_table) = mask_tables(dims);
+            self[inv_mask_table[mask]] = coef;
         }
     }
     /// Get the scalar and set it to 0
     pub fn take_scalar(&mut self) -> f64 {
         take(&mut self[0])
+    }
+    pub fn invert(&mut self) {
+        if let Some(f) = self.as_scalar() {
+            self.set_blade(0, 1.0 / f)
+        } else if let Some(mut c) = self.as_complex() {
+            c = c.recip();
+            self.set_blade(0b0, c.re);
+            self.set_blade(0b11, c.im);
+        } else {
+            if let Some(k) = (self.clone() * self.clone().reversed()).as_scalar() {
+                *self /= k
+            } else {
+                self.coefs.make_mut().fill(0.0);
+                self.set_blade(0b0, f64::NAN)
+            }
+        }
+    }
+    pub fn inverted(mut self) -> Self {
+        self.invert();
+        self
     }
 }
 
@@ -513,7 +550,7 @@ impl MulAssign for Multivector {
                 *a *= b;
             }
         } else {
-            self.product_impl(rhs, false)
+            self.product(rhs)
         }
     }
 }
@@ -525,27 +562,35 @@ impl Mul for Multivector {
     }
 }
 
-impl Div for Multivector {
-    type Output = Result<Self, InvalidDivisor>;
-    fn div(mut self, rhs: Self) -> Self::Output {
-        if let Some(b) = rhs.as_scalar() {
-            for a in &mut self {
-                *a /= b;
-            }
-            Ok(self)
-        } else if let Some((a, b)) = self.as_complex().zip(rhs.as_complex()) {
-            Ok((a / b).into())
+impl DivAssign for Multivector {
+    fn div_assign(&mut self, rhs: Self) {
+        if let Some(f) = rhs.as_scalar() {
+            *self /= f;
+        } else if let Some(c) = rhs.as_complex() {
+            *self /= c;
         } else {
-            Err(InvalidDivisor(rhs))
+            *self *= rhs.inverted()
         }
     }
 }
-
+impl DivAssign<Complex> for Multivector {
+    #[allow(clippy::suspicious_op_assign_impl)]
+    fn div_assign(&mut self, rhs: Complex) {
+        *self *= rhs.recip().into();
+    }
+}
 impl DivAssign<f64> for Multivector {
     fn div_assign(&mut self, rhs: f64) {
         for a in self {
             *a /= rhs;
         }
+    }
+}
+impl Div<Complex> for Multivector {
+    type Output = Self;
+    fn div(mut self, rhs: Complex) -> Self::Output {
+        self /= rhs;
+        self
     }
 }
 impl Div<f64> for Multivector {
@@ -555,9 +600,16 @@ impl Div<f64> for Multivector {
         self
     }
 }
+impl Div for Multivector {
+    type Output = Self;
+    fn div(mut self, rhs: Self) -> Self::Output {
+        self /= rhs;
+        self
+    }
+}
 
 #[derive(Debug, Clone)]
-pub struct InvalidDivisor(pub Multivector);
+pub struct UnableToInvert<M = Multivector>(pub M);
 
 impl Index<usize> for Multivector {
     type Output = f64;

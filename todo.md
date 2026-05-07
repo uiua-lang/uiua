@@ -4,7 +4,6 @@
 - Multivector scalar
   - Update tests
   - More aliases: `quat` `inner` `outer`
-  - Basic inversion/division
   - Output flavor?
   - Output summary
   - Update docs

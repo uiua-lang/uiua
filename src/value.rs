@@ -1844,7 +1844,14 @@ value_mon_impl!(
         val.meta.or_sorted_flags(flags)
     }
 );
-value_mon_impl!(recip, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(
+    recip,
+    [Num, num],
+    (Byte, byte),
+    [Complex, com],
+    #[cfg(feature = "ga")]
+    (Mv, mv),
+);
 value_mon_impl!(
     sqrt,
     [Num, num],
@@ -2406,6 +2413,16 @@ value_dy_math_impl!(
         (Byte, Mv, byte_mv, u8, crate::Multivector),
         #[cfg(feature = "ga")]
         (Num, Mv, num_mv, f64, crate::Multivector),
+        #[cfg(feature = "ga")]
+        (Complex, Mv, comp_mv, crate::Complex, crate::Multivector),
+        #[cfg(feature = "ga")]
+        (Mv, Mv, mv_mv, crate::Multivector, crate::Multivector),
+        #[cfg(feature = "ga")]
+        (Mv, Byte, mv_x, crate::Multivector, u8),
+        #[cfg(feature = "ga")]
+        (Mv, Num, mv_x, crate::Multivector, f64),
+        #[cfg(feature = "ga")]
+        (Mv, Complex, mv_x, crate::Multivector, crate::Complex),
     ),
     signed_scalar_sortedness(true)
 );

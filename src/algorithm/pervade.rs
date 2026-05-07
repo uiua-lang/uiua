@@ -976,6 +976,10 @@ pub mod recip {
     pub fn com(a: Complex) -> Complex {
         a.recip()
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.inverted()
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot get the reciprocal of {a}")
     }
@@ -1795,6 +1799,18 @@ pub mod div {
     #[cfg(feature = "ga")]
     pub fn num_mv(a: f64, b: crate::Multivector) -> crate::Multivector {
         b / a
+    }
+    #[cfg(feature = "ga")]
+    pub fn comp_mv(a: Complex, b: crate::Multivector) -> crate::Multivector {
+        b / a
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_mv(a: crate::Multivector, b: crate::Multivector) -> crate::Multivector {
+        b / a
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into() / a
     }
     pub fn error<T: Display>(a: T, b: T) -> String {
         format!("Cannot divide {b} by {a}")

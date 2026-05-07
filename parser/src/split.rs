@@ -314,6 +314,29 @@ impl Primitive {
             alias!((co, Neg), (nj, PrimComponent::SubRight)),
             alias!((conju, Neg), (gate, PrimComponent::SubRight)),
             alias!((du, Neg), (al, PrimComponent::Sub4)),
+            alias!((r, Under), (e, Both), (g, Neg), (, PrimComponent::Sub4), (r, OuterProduct)),
+            alias!(
+                (re, Under),
+                (g, Both),
+                (r, Neg),
+                (e, PrimComponent::Sub4),
+                (s, OuterProduct)
+            ),
+            alias!(
+                (re, Under),
+                (gr, Both),
+                (es, Neg),
+                (si, PrimComponent::Sub4),
+                (ve, OuterProduct)
+            ),
+            alias!(
+                (s, Mul),
+                (a, Fork),
+                (n, Neg),
+                (d, PrimComponent::Sub4),
+                (w, Backward),
+                (i, Mul)
+            ),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

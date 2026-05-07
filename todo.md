@@ -3,7 +3,6 @@
 # 0.19
 - Multivector scalar
   - Update tests
-  - More aliases: `quat` `inner` `outer`
   - Output flavor?
   - Output summary
   - Update docs

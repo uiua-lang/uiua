@@ -67,8 +67,6 @@ impl Multivector {
         match (self.flavor, other.flavor) {
             (Flavor::Vanilla, Flavor::Projective) => {
                 self.set_dims_right(self.dims() + 1);
-                self.set_blade(0b1, 1.0);
-                self.set_blade(1 << (self.dims() - 1), 1.0);
                 self.flavor = other.flavor;
             }
             (Flavor::Projective, Flavor::Vanilla) => return other.conform(self),
@@ -103,33 +101,64 @@ impl Multivector {
         }
     }
     /// Create a multivector from its vector coefficients
-    pub fn vector(vector: impl Into<EcoVec<f64>>) -> Self {
+    pub fn vector(vector: impl Into<EcoVec<f64>>, flavor: Flavor) -> Self {
         let mut coefs = vector.into();
+        match flavor {
+            Flavor::Projective => coefs.insert(0, 1.0),
+            _ => {}
+        }
         let dims = coefs.len();
         coefs.insert(0, 0.0);
         coefs.extend(repeat_n(0.0, (1 << dims) - 1 - dims));
-        Multivector {
-            coefs,
-            flavor: Flavor::Vanilla,
-        }
+        Multivector { coefs, flavor }
+    }
+    pub fn vga_vector(vector: impl Into<EcoVec<f64>>) -> Self {
+        Self::vector(vector.into(), Flavor::Vanilla)
+    }
+    pub fn pga_vector(vector: impl Into<EcoVec<f64>>) -> Self {
+        Self::vector(vector.into(), Flavor::Projective)
     }
     /// Create a multivector from its n-1 blade coefficients
-    pub fn n_1_blades(blades: impl Into<EcoVec<f64>>) -> Self {
-        let blades = blades.into();
-        let len = blades.len();
-        let mut mv = Self::vector(blades);
-        mv.coefs.make_mut().rotate_left(len + 2);
-        mv
+    pub fn n_1_blades(blades: impl Into<EcoVec<f64>>, flavor: Flavor) -> Self {
+        let mut coefs = blades.into();
+        match flavor {
+            Flavor::Projective => coefs.push(1.0),
+            _ => {}
+        }
+        let dims = coefs.len();
+        coefs.insert(0, 0.0);
+        coefs.extend(repeat_n(0.0, (1 << dims) - 1 - dims));
+        coefs.make_mut().rotate_left(dims + 2);
+        Multivector { coefs, flavor }
+    }
+    pub fn vga_n_1_blades(blades: impl Into<EcoVec<f64>>) -> Self {
+        Self::n_1_blades(blades.into(), Flavor::Vanilla)
+    }
+    pub fn pga_n_1_blades(blades: impl Into<EcoVec<f64>>) -> Self {
+        Self::n_1_blades(blades.into(), Flavor::Projective)
     }
     /// Create a multivector from some low-grade, even, or all blades
-    pub fn blades_left(dims: u8, blades: impl Into<EcoVec<f64>>) -> Result<Self, EcoVec<f64>> {
-        Self::blades_impl(dims, blades.into(), false)
+    pub fn blades_left(
+        dims: u8,
+        blades: impl Into<EcoVec<f64>>,
+        flavor: Flavor,
+    ) -> Result<Self, EcoVec<f64>> {
+        Self::blades_impl(dims, blades.into(), false, flavor)
     }
     /// Create a multivector from some high-grade, even, or all blades
-    pub fn blades_right(dims: u8, blades: impl Into<EcoVec<f64>>) -> Result<Self, EcoVec<f64>> {
-        Self::blades_impl(dims, blades.into(), true)
+    pub fn blades_right(
+        dims: u8,
+        blades: impl Into<EcoVec<f64>>,
+        flavor: Flavor,
+    ) -> Result<Self, EcoVec<f64>> {
+        Self::blades_impl(dims, blades.into(), true, flavor)
     }
-    fn blades_impl(dims: u8, mut blades: EcoVec<f64>, odd: bool) -> Result<Self, EcoVec<f64>> {
+    fn blades_impl(
+        dims: u8,
+        mut blades: EcoVec<f64>,
+        odd: bool,
+        flavor: Flavor,
+    ) -> Result<Self, EcoVec<f64>> {
         let blade_count = 1 << dims;
         Ok(if blades.len() == blade_count {
             Self::all(blades)
@@ -144,7 +173,7 @@ impl Multivector {
                 }
                 left += i;
             }
-            Self::all(blades)
+            Self::all(blades).flavor(flavor)
         } else {
             let (start, end) = if odd {
                 (((dims + 1) as f32 / 2.0).floor() as u8, dims + 1)
@@ -157,7 +186,7 @@ impl Multivector {
                 if grade_size == blades.len() {
                     blades.extend(repeat_n(0.0, blade_count - grade_size));
                     blades.make_mut().rotate_right(left);
-                    return Ok(Self::all(blades));
+                    return Ok(Self::all(blades).flavor(flavor));
                 }
                 left += grade_size;
             }
@@ -165,14 +194,24 @@ impl Multivector {
         })
     }
     /// Create a unit pseudoscalar
-    pub fn pseudo_unit(dims: u8) -> Self {
-        Self::pseudoscalar(dims, 1.0)
+    pub fn pseudo_unit(dims: u8, flavor: Flavor) -> Self {
+        Self::pseudoscalar(dims, 1.0, flavor)
+    }
+    pub fn vga_pseudo_unit(dims: u8) -> Self {
+        Self::pseudo_unit(dims, Flavor::Vanilla)
+    }
+    pub fn pga_pseudo_unit(dims: u8) -> Self {
+        Self::pseudo_unit(dims, Flavor::Projective)
     }
     /// Create a pseudoscalar
-    pub fn pseudoscalar(dims: u8, n: f64) -> Self {
+    pub fn pseudoscalar(mut dims: u8, n: f64, flavor: Flavor) -> Self {
+        match flavor {
+            Flavor::Projective => dims += 1,
+            _ => {}
+        }
         let mut coefs = eco_vec![0.0; 1 << dims];
         *coefs.make_mut().last_mut().unwrap() = n;
-        Self::all(coefs)
+        Multivector { coefs, flavor }
     }
     /// Set the flavor
     pub fn flavor(mut self, flavor: Flavor) -> Self {
@@ -205,7 +244,11 @@ impl Multivector {
     /// Geometrically dual the multivector
     pub fn dual(&mut self) {
         let dims = self.dims();
-        self.product_impl(Self::pseudo_unit(dims), Flavor::Vanilla, MetricMode::All);
+        self.product_impl(
+            Self::vga_pseudo_unit(dims),
+            Flavor::Vanilla,
+            MetricMode::All,
+        );
     }
     /// Get the geometric dual of the multivector
     pub fn dualed(mut self) -> Self {
@@ -216,7 +259,7 @@ impl Multivector {
     pub fn antidual(&mut self) {
         let flavor = take(&mut self.flavor);
         let dims = self.dims();
-        let v = replace(self, Self::pseudo_unit(dims));
+        let v = replace(self, Self::vga_pseudo_unit(dims));
         *self *= v;
         self.flavor = flavor;
     }
@@ -804,11 +847,11 @@ mod test {
             [-5.0, 0.0, 0.0, 10.0],
         );
         assert_eq!(
-            Mv::vector([1.0, 2.0]) * Mv::vector([3.0, 4.0]),
+            Mv::vga_vector([1.0, 2.0]) * Mv::vga_vector([3.0, 4.0]),
             [11.0, 0.0, 0.0, -2.0],
         );
         assert_eq!(
-            Mv::vector([1.0, 2.0, 3.0]) * Mv::vector([4.0, 5.0, 6.0]),
+            Mv::vga_vector([1.0, 2.0, 3.0]) * Mv::vga_vector([4.0, 5.0, 6.0]),
             [32.0, 0.0, 0.0, 0.0, -3.0, 6.0, -3.0, 0.0],
         );
     }

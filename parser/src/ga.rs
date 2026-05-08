@@ -5,8 +5,8 @@ use serde::*;
 #[cfg(feature = "multivector")]
 pub use crate::multivector::*;
 
-pub const MAX_DIMS: u8 = 15;
-pub const MAX_BLADES: u8 = 225;
+pub const MAX_DIMS: u8 = 9;
+pub const MAX_BLADES: u16 = 1 << MAX_DIMS;
 
 /// Get the size of a grade for some number of dimensions
 pub fn grade_size(dims: u8, grade: u8) -> usize {
@@ -83,6 +83,12 @@ impl Flavor {
                 }
                 1
             }
+        }
+    }
+    pub fn dim_adjustment(&self) -> u8 {
+        match self {
+            Flavor::Projective => 1,
+            _ => 0,
         }
     }
     pub fn try_from_str(s: &str) -> Option<Result<Self, &'static str>> {

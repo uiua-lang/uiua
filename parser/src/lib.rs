@@ -1,3 +1,5 @@
+#![allow(clippy::single_match)]
+
 pub mod ast;
 mod complex;
 mod defs;

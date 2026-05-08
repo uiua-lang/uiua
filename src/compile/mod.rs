@@ -2534,10 +2534,10 @@ impl Compiler {
                     (
                         ss.side,
                         ss.n.map(|n| {
-                            if n > MAX_BLADES as usize {
+                            if n > MAX_DIMS as usize {
                                 self.add_error(
                                     sub.span.clone(),
-                                    format!("{n} is too high a multivector blade"),
+                                    format!("{n} is too high a multivector grade"),
                                 )
                             }
                             n as u8

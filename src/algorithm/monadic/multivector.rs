@@ -72,9 +72,7 @@ impl Value {
                 // Pseudoscalar
                 Array::new(
                     new_shape,
-                    arr.data
-                        .into_iter()
-                        .map(|n| Mv::pseudoscalar(d, n).flavor(flavor)),
+                    (arr.data.into_iter()).map(|n| Mv::pseudoscalar(d, n, flavor)),
                 )
                 .into()
             }
@@ -89,9 +87,7 @@ impl Value {
                 }
                 Array::new(
                     new_shape,
-                    arr.data
-                        .chunks_exact(n)
-                        .map(|n| Mv::vector(n).flavor(flavor)),
+                    arr.data.chunks_exact(n).map(|n| Mv::vector(n, flavor)),
                 )
                 .into()
             }
@@ -104,10 +100,11 @@ impl Value {
                         .find(|&d| grade_size(d, grade) == n)
                         .ok_or_else(|| {
                             env.error(format!(
-                        "Unable to find a number of dimensions where grade {grade} has {n} blades"
-                    ))
+                                "Unable to find a number of dimensions where \
+                                grade {grade} has {n} blades"
+                            ))
                         })?
-                } else if (n * 2).is_power_of_two() {
+                } else if flavor.dim_adjustment() == 0 && (n * 2).is_power_of_two() {
                     let d = ((n * 2) as f32).log2() as usize;
                     if d > MAX_DIMS as usize {
                         let parity = match side {
@@ -128,7 +125,7 @@ impl Value {
                     };
                     return Ok(Array::new(
                         new_shape,
-                        (arr.data.chunks_exact(n)).map(|n| f(n).flavor(flavor)),
+                        (arr.data.chunks_exact(n)).map(|n| f(n, flavor)),
                     )
                     .into());
                 };
@@ -138,14 +135,13 @@ impl Value {
                 };
                 Array::new(
                     new_shape,
-                    (arr.data.chunks_exact(n)).map(|n| f(d, n).unwrap().flavor(flavor)),
+                    (arr.data.chunks_exact(n)).map(|n| f(d, n, flavor).unwrap().flavor(flavor)),
                 )
                 .into()
             }
             #[cfg(feature = "ga")]
             (1.., flavor, Some(d), side) => {
                 // Dimensions specified
-
                 use ecow::EcoVec;
                 if d > MAX_DIMS {
                     return Err(env.error(format!("{d} multivector dimensions would be too many")));
@@ -168,7 +164,7 @@ impl Value {
                 };
                 let mut data = EcoVec::with_capacity(elem_count);
                 for slice in arr.data.chunks_exact(n) {
-                    match f(d, slice) {
+                    match f(d, slice, flavor) {
                         Ok(mv) => data.push(mv.flavor(flavor)),
                         Err(_) => {
                             return Err(env

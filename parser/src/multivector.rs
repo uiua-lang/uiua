@@ -193,6 +193,12 @@ impl Multivector {
             return Err(blades);
         })
     }
+    pub fn scalar(mut dims: u8, f: f64, flavor: Flavor) -> Self {
+        dims += flavor.dim_adjustment();
+        let mut coefs = eco_vec![0.0; 1 << dims];
+        coefs.make_mut()[0] = f;
+        Multivector { coefs, flavor }
+    }
     /// Create a unit pseudoscalar
     pub fn pseudo_unit(dims: u8, flavor: Flavor) -> Self {
         Self::pseudoscalar(dims, 1.0, flavor)
@@ -205,10 +211,7 @@ impl Multivector {
     }
     /// Create a pseudoscalar
     pub fn pseudoscalar(mut dims: u8, n: f64, flavor: Flavor) -> Self {
-        match flavor {
-            Flavor::Projective => dims += 1,
-            _ => {}
-        }
+        dims += flavor.dim_adjustment();
         let mut coefs = eco_vec![0.0; 1 << dims];
         *coefs.make_mut().last_mut().unwrap() = n;
         Multivector { coefs, flavor }

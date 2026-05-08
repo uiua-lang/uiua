@@ -61,18 +61,17 @@ impl Value {
             )
             .into(),
             #[cfg(feature = "ga")]
-            (1, flavor, _, None | Some((SubSide::Left, _)))
-            | (1, flavor, None, Some((SubSide::Right, _))) => Array::new(
+            (1, flavor, dims, None | Some((SubSide::Left, _))) => Array::new(
                 new_shape,
-                arr.data.into_iter().map(|n| Mv::from(n).flavor(flavor)),
+                (arr.data.into_iter()).map(|n| Mv::scalar(dims.unwrap_or(0), n, flavor)),
             )
             .into(),
             #[cfg(feature = "ga")]
-            (1, flavor, Some(d), Some((SubSide::Right, None | Some(1)))) => {
+            (1, flavor, dims, Some((SubSide::Right, None | Some(1)))) => {
                 // Pseudoscalar
                 Array::new(
                     new_shape,
-                    (arr.data.into_iter()).map(|n| Mv::pseudoscalar(d, n, flavor)),
+                    (arr.data.into_iter()).map(|n| Mv::pseudoscalar(dims.unwrap_or(0), n, flavor)),
                 )
                 .into()
             }

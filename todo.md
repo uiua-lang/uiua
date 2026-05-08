@@ -6,6 +6,7 @@
   - Output flavor?
   - Output summary
   - Update docs
+  - Manual dimension shifting
 - Type system
   - Tests
   - Data def types

@@ -309,9 +309,9 @@ constant!(
     /// Geometric algebra bivector basis 1
     (#[cfg(feature = "ga")] "e₁₂", GeometricAlgebra, crate::Multivector::vga_pseudo_unit(2)),
     /// Geometric algebra bivector basis 2
-    (#[cfg(feature = "ga")] "e₃₁", GeometricAlgebra, crate::Multivector::vga_vector([0.0, 1.0])),
+    (#[cfg(feature = "ga")] "e₃₁", GeometricAlgebra, crate::Multivector::vga_n_1_blades([0.0, 1.0, 0.0])),
     /// Geometric algebra bivector basis 3
-    (#[cfg(feature = "ga")] "e₂₃", GeometricAlgebra, crate::Multivector::vga_vector([0.0, 0.0, 1.0])),
+    (#[cfg(feature = "ga")] "e₂₃", GeometricAlgebra, crate::Multivector::vga_n_1_blades([0.0, 0.0, 1.0])),
     /// Projective geometric algebra bivector vector basis 1
     (#[cfg(feature = "ga")] "e₀₁", GeometricAlgebra, crate::Multivector::pga_n_1_blades([1.0])),
     /// Projective geometric algebra bivector vector basis 2

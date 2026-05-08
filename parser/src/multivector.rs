@@ -64,17 +64,17 @@ impl Multivector {
         }
     }
     fn conform(&mut self, other: &mut Self) {
-        let (a_dims, b_dims) = (self.dims(), other.dims());
         match (self.flavor, other.flavor) {
             (Flavor::Vanilla, Flavor::Projective) => {
-                self.set_dims_right(a_dims + 1);
+                self.set_dims_right(self.dims() + 1);
                 self.set_blade(0b1, 1.0);
-                self.set_blade(1 << (a_dims - 1), 1.0);
+                self.set_blade(1 << (self.dims() - 1), 1.0);
                 self.flavor = other.flavor;
             }
             (Flavor::Projective, Flavor::Vanilla) => return other.conform(self),
             _ => {}
         }
+        let (a_dims, b_dims) = (self.dims(), other.dims());
         match a_dims.cmp(&other.dims()) {
             Ordering::Equal => {}
             Ordering::Greater => other.set_dims(a_dims),
@@ -373,13 +373,11 @@ impl Multivector {
             c = c.recip();
             self.set_blade(0b0, c.re);
             self.set_blade(0b11, c.im);
+        } else if let Some(k) = (self.clone() * self.clone().reversed()).as_scalar() {
+            *self /= k
         } else {
-            if let Some(k) = (self.clone() * self.clone().reversed()).as_scalar() {
-                *self /= k
-            } else {
-                self.coefs.make_mut().fill(0.0);
-                self.set_blade(0b0, f64::NAN)
-            }
+            self.coefs.make_mut().fill(0.0);
+            self.set_blade(0b0, f64::NAN)
         }
     }
     pub fn inverted(mut self) -> Self {

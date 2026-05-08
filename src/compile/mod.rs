@@ -27,8 +27,8 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan, Context,
-    CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
+    Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan, ConstClass,
+    Context, CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
     ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GaFlavor, GitTarget, Ident,
     ImplPrimitive, IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, MvMode, Node,
     NumericSubscript, OTHER_SUBSCRIPT_NUMBERS, PrimClass, Primitive, Purity, RunMode,
@@ -2030,6 +2030,9 @@ impl Compiler {
                     constant.name, suggestion
                 );
                 self.emit_diagnostic(message, DiagnosticKind::Warning, span.clone());
+            }
+            if constant.class == ConstClass::GeometricAlgebra {
+                self.experimental_error_it(&span, || &ident);
             }
             self.code_meta
                 .constant_references

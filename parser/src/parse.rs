@@ -13,7 +13,7 @@ use ecow::EcoString;
 
 use crate::{
     BindingCounts, Complex, Diagnostic, DiagnosticKind, Ident, Inputs, NumComponent,
-    NumericSubscript, Primitive, Signature,
+    NumericSubscript, Primitive, Signature, SubscriptNumber,
     ast::*,
     lex::{AsciiToken::*, Token::*, *},
 };
@@ -898,8 +898,14 @@ impl Parser<'_> {
         let mut ident = self.next_token_map(Token::as_ident)?;
         // Add subscript
         while let Some(sub) = self.next_token_map(Token::as_subscript) {
-            ident.span.merge_with(sub.span);
+            let sub_s = &self.input[sub.span.byte_range()];
+            if (sub.value.n().flatten()).is_none_or(|n| !matches!(n, SubscriptNumber::Int(0)))
+                && (sub_s.starts_with(",0") || sub_s.starts_with('₀'))
+            {
+                ident.value.push('₀')
+            }
             ident.value.push_str(&sub.value.to_string());
+            ident.span.merge_with(sub.span);
         }
         // Add exclams
         while let Some(exclams) = self.next_token_map(|tok| {

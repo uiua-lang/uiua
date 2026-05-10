@@ -301,5 +301,5 @@ impl_primitive!(
 pub struct MvMode {
     pub flavor: crate::GaFlavor,
     pub dims: Option<u8>,
-    pub side_grade: Option<(SubSide, Option<u8>)>,
+    pub side: Option<SubSide>,
 }

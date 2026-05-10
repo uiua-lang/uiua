@@ -2530,19 +2530,14 @@ impl Compiler {
                 use crate::ga::*;
                 let sub = self.validate_subscript_int(scr, &Multivector.format());
                 let flavor = self.ga_flavor();
-                let side_grade = sub.value.side.map(|ss| {
-                    (
-                        ss.side,
-                        ss.n.map(|n| {
-                            if n > MAX_DIMS as usize {
-                                self.add_error(
-                                    sub.span.clone(),
-                                    format!("{n} is too high a multivector grade"),
-                                )
-                            }
-                            n as u8
-                        }),
-                    )
+                let side = sub.value.side.map(|ss| {
+                    if ss.n.is_some() {
+                        self.add_error(
+                            sub.span.clone(),
+                            format!("{} cannot use a side quantifier", Multivector.format()),
+                        )
+                    }
+                    ss.side
                 });
                 let dims = match sub.value.num {
                     None => None,
@@ -2559,23 +2554,11 @@ impl Compiler {
                                 format!("{n} is too many multivector dimensions"),
                             );
                         }
-                        if let Some(grade) = side_grade.and_then(|(_, grade)| grade)
-                            && grade as i32 > n
-                        {
-                            self.add_error(
-                                sub.span.clone(),
-                                format!("{n}D multivector has no grade-{grade} blades"),
-                            );
-                        }
                         Some(n as u8)
                     }
                 };
                 Node::ImplPrim(
-                    ImplPrimitive::MvImpl(MvMode {
-                        flavor,
-                        dims,
-                        side_grade,
-                    }),
+                    ImplPrimitive::MvImpl(MvMode { flavor, dims, side }),
                     self.add_span(span),
                 )
             }

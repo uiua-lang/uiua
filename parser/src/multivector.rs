@@ -423,6 +423,16 @@ impl Multivector {
             self[inv_mask_table[mask]] = coef;
         }
     }
+    pub fn grades(&self) -> impl Iterator<Item = &[f64]> {
+        let dims = self.dims();
+        let mut start = 0;
+        (0..=dims).map(move |g| {
+            let size = grade_size(dims, g);
+            let slice = &self.coefs[start..][..size];
+            start += size;
+            slice
+        })
+    }
     /// Get the scalar and set it to 0
     pub fn take_scalar(&mut self) -> f64 {
         take(&mut self[0])

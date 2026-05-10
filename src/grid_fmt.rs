@@ -12,7 +12,7 @@ use std::{
 use ecow::EcoString;
 
 use crate::{
-    Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
+    ArrayMeta, Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
     algorithm::map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
     boxed::Boxed,
@@ -447,6 +447,89 @@ impl GridFmt for crate::Multivector {
     }
     fn alignment() -> ElemAlign {
         ElemAlign::DelimOrLeft("+")
+    }
+    fn summary_min_elems() -> usize {
+        100
+    }
+    fn summarize(mvs: &[Self]) -> String {
+        let mut dims = Vec::new();
+        let mut flavors = Vec::new();
+        let mut min_mag = 0f64;
+        let mut max_mag = 0f64;
+        let mut grades = Vec::new();
+        for mv in mvs {
+            dims.push(mv.dims().saturating_sub(mv.flavor.dim_adjustment()));
+            dims.sort();
+            dims.dedup();
+            flavors.push(mv.flavor);
+            flavors.sort();
+            flavors.dedup();
+            for (g, b) in mv.grades().enumerate() {
+                if b.iter().any(|&b| b != 0.0) {
+                    grades.push(g);
+                }
+            }
+            grades.sort();
+            grades.dedup();
+            let mag = mv.magnitude();
+            min_mag = min_mag.min(mag);
+            max_mag = max_mag.max(mag);
+        }
+        let dims = match dims.len() {
+            1 => {
+                format!("{}D", dims[0])
+            }
+            2.. if dims.windows(2).all(|w| w[1] - w[0] == 1) => {
+                format!("{}-{}D", dims[0], dims.last().unwrap())
+            }
+            _ => {
+                let mut s = String::new();
+                for (i, d) in dims.iter().enumerate() {
+                    if i > 0 {
+                        s.push(' ');
+                    }
+                    s.push_str(&d.to_string());
+                    s.push('D');
+                }
+                s
+            }
+        };
+        let grades = match grades.len() {
+            0 => "no grades".into(),
+            1 => {
+                format!("grade {}", grades[0])
+            }
+            2.. if grades.windows(2).all(|w| w[1] - w[0] == 1) => {
+                format!("grades {}-{}", grades[0], grades.last().unwrap())
+            }
+            _ => {
+                let mut s = "grades".to_string();
+                for g in grades {
+                    s.push(' ');
+                    s.push_str(&g.to_string());
+                }
+                s
+            }
+        };
+        let flavors = match &*flavors {
+            [] => "".into(),
+            [fl] => fl.to_string(),
+            flavors => {
+                let mut s = String::new();
+                for (i, fl) in flavors.iter().enumerate() {
+                    if i > 0 {
+                        s.push('/');
+                    }
+                    s.push_str(&fl.to_string());
+                }
+                s
+            }
+        };
+        format!(
+            "{dims} {flavors} ({grades}) ⌵{}-{}",
+            min_mag.grid_string(false),
+            max_mag.grid_string(false)
+        )
     }
 }
 
@@ -1051,116 +1134,135 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             grid
         };
 
-        // Add handle kind
-        if let Some(kind) = &self.meta.handle_kind
-            && grid.len() == 1
-        {
-            grid[0] = (kind.to_string().chars().chain(['(']))
-                .chain(take(&mut grid[0]))
-                .chain([')'])
-                .collect();
-        }
-
-        // Add complex marker
-        if type_name::<T>() == type_name::<Complex>()
-            && !grid.iter().flatten().any(|&c| c == 'ℂ' || c == 'i')
-        {
-            if self.shape.is_empty() {
-                grid[0].push('ℂ');
-            } else if grid.len() == 1 {
-                let offset = outlined as usize;
-                grid[0].insert(offset, 'ℂ');
-                grid[0].insert(offset + 1, ' ');
-            } else if outlined {
-                grid[0][2] = 'ℂ';
-            } else {
-                for row in &mut grid {
-                    row.push(' ');
-                    row.push(' ');
-                    row.rotate_right(2);
-                }
-                grid[0][0] = 'ℂ';
-            }
-        }
-        // Add multivector marker
-        #[cfg(feature = "ga")]
-        if type_name::<T>() == type_name::<crate::Multivector>()
-            && !(grid.iter().flatten()).any(|c| crate::SUBSCRIPT_DIGITS.contains(c))
-        {
-            if self.shape.is_empty() {
-                grid[0].push('𝕍');
-            } else if grid.len() == 1 {
-                let offset = outlined as usize;
-                grid[0].insert(offset, '𝕍');
-                grid[0].insert(offset + 1, ' ');
-            } else if outlined {
-                grid[0][2] = '𝕍';
-            } else {
-                for row in &mut grid {
-                    row.push(' ');
-                    row.push(' ');
-                    row.rotate_right(2);
-                }
-                grid[0][0] = '𝕍';
-            }
-        }
-
-        // Add label
-        if params.label
-            && let Some(label) = &self.meta.label
-        {
-            if grid.len() == 1 && params.parent_rank == 0 {
-                grid[0] = (label.chars().chain([':', ' ']))
+        // Non-generic function to reduce size of monomophized function
+        fn extras(
+            grid: &mut Grid,
+            shape: &[usize],
+            meta: &ArrayMeta,
+            params: GridFmtParams,
+            outlined: bool,
+            tname: &'static str,
+        ) {
+            // Add handle kind
+            if let Some(kind) = &meta.handle_kind
+                && grid.len() == 1
+            {
+                grid[0] = (kind.to_string().chars().chain(['(']))
                     .chain(take(&mut grid[0]))
+                    .chain([')'])
                     .collect();
-            } else {
-                if grid[0].len() >= 2 && "┌╭".contains(grid[0][1]) {
-                    grid[0] = label
-                        .chars()
-                        .chain(take(&mut grid[0]).into_iter().skip(1))
-                        .collect();
-                    for row in grid.iter_mut().skip(1) {
-                        let ext = label.chars().count() - 1;
-                        row.extend(repeat_n(' ', ext));
-                        row.rotate_right(ext);
-                    }
-                } else {
-                    if "┌╭".contains(grid[0][0]) {
-                        let trunc = if grid[0][2] == 'ℂ' { 3 } else { 2 };
-                        grid[0].truncate(trunc);
-                        grid[0].push(' ');
-                    } else {
-                        grid.insert(0, Vec::new());
-                    }
-                    grid[0].extend(label.chars());
-                }
-                // Normalize lengths
-                while grid[0].len() < grid[1].len() {
-                    grid[0].push(' ');
-                }
-                for i in 1..grid.len() {
-                    while grid[i].len() < grid[0].len() {
-                        grid[i].push(' ');
-                    }
-                }
             }
-        }
 
-        // Handle really big grid
-        if self.rank() > 1 {
-            let max_width = terminal_size().map_or(1000, |(w, _)| w.saturating_sub(4).max(4));
-            for row in grid.iter_mut() {
-                if row.len() > max_width {
-                    let diff = row.len() - max_width;
-                    row.truncate(max_width);
-                    if !(row[max_width - 1].is_whitespace() && diff == 1)
-                        && (2..4).any(|i| !row[max_width - i].is_whitespace())
-                    {
-                        row[max_width - 1] = '…';
+            // Add complex marker
+            if tname == type_name::<Complex>()
+                && !grid.iter().flatten().any(|&c| c == 'ℂ' || c == 'i')
+            {
+                if shape.is_empty() {
+                    grid[0].push('ℂ');
+                } else if grid.len() == 1 {
+                    let offset = outlined as usize;
+                    grid[0].insert(offset, 'ℂ');
+                    grid[0].insert(offset + 1, ' ');
+                } else if outlined {
+                    grid[0][2] = 'ℂ';
+                } else {
+                    for row in &mut *grid {
+                        row.push(' ');
+                        row.push(' ');
+                        row.rotate_right(2);
+                    }
+                    grid[0][0] = 'ℂ';
+                }
+            }
+            // Add multivector marker
+            #[cfg(feature = "ga")]
+            if tname == type_name::<crate::Multivector>()
+                && !(grid.iter().flatten())
+                    .any(|c| *c == '𝕍' || crate::SUBSCRIPT_DIGITS.contains(c))
+            {
+                if shape.is_empty() {
+                    grid[0].push('𝕍');
+                } else if grid.len() == 1 {
+                    let offset = outlined as usize;
+                    grid[0].insert(offset, '𝕍');
+                    grid[0].insert(offset + 1, ' ');
+                } else if outlined {
+                    grid[0][2] = '𝕍';
+                } else {
+                    for row in &mut *grid {
+                        row.push(' ');
+                        row.push(' ');
+                        row.rotate_right(2);
+                    }
+                    grid[0][0] = '𝕍';
+                }
+            }
+
+            // Add label
+            if params.label
+                && let Some(label) = &meta.label
+            {
+                if grid.len() == 1 && params.parent_rank == 0 {
+                    grid[0] = (label.chars().chain([':', ' ']))
+                        .chain(take(&mut grid[0]))
+                        .collect();
+                } else {
+                    if grid[0].len() >= 2 && "┌╭".contains(grid[0][1]) {
+                        grid[0] = label
+                            .chars()
+                            .chain(take(&mut grid[0]).into_iter().skip(1))
+                            .collect();
+                        for row in grid.iter_mut().skip(1) {
+                            let ext = label.chars().count() - 1;
+                            row.extend(repeat_n(' ', ext));
+                            row.rotate_right(ext);
+                        }
+                    } else {
+                        if "┌╭".contains(grid[0][0]) {
+                            let trunc = if grid[0][2] == 'ℂ' { 3 } else { 2 };
+                            grid[0].truncate(trunc);
+                            grid[0].push(' ');
+                        } else {
+                            grid.insert(0, Vec::new());
+                        }
+                        grid[0].extend(label.chars());
+                    }
+                    // Normalize lengths
+                    while grid[0].len() < grid[1].len() {
+                        grid[0].push(' ');
+                    }
+                    for i in 1..grid.len() {
+                        while grid[i].len() < grid[0].len() {
+                            grid[i].push(' ');
+                        }
+                    }
+                }
+            }
+
+            // Handle really big grid
+            if shape.len() > 1 {
+                let max_width = terminal_size().map_or(1000, |(w, _)| w.saturating_sub(4).max(4));
+                for row in grid.iter_mut() {
+                    if row.len() > max_width {
+                        let diff = row.len() - max_width;
+                        row.truncate(max_width);
+                        if !(row[max_width - 1].is_whitespace() && diff == 1)
+                            && (2..4).any(|i| !row[max_width - i].is_whitespace())
+                        {
+                            row[max_width - 1] = '…';
+                        }
                     }
                 }
             }
         }
+        extras(
+            &mut grid,
+            &self.shape,
+            &self.meta,
+            params,
+            outlined,
+            type_name::<T>(),
+        );
 
         grid
     }

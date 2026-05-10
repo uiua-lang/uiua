@@ -2,9 +2,6 @@
 
 # 0.19
 - Multivector scalar
-  - Update tests
-  - Output flavor?
-  - Output summary
   - Update docs
   - Manual dimension shifting
 - Type system

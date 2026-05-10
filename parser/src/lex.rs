@@ -1327,6 +1327,8 @@ impl<'a> Lexer<'a> {
                     };
                     self.end(Char(char), start)
                 }
+                // Blade literals
+                "e" if self.blade_subscript() => self.end(Number, start),
                 // Strings
                 "\"" | "$" => {
                     let first_dollar = c == "$";
@@ -1566,17 +1568,20 @@ impl<'a> Lexer<'a> {
         // Exponent
         if !got_comma {
             let loc_before_e = self.loc;
-            if self.next_char_if(|c| c == "e" || c == "E").is_some() {
-                self.next_char_if(|c| c == "-" || c == "`" || c == "¯");
-                let mut got_digit = false;
-                while self
-                    .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
-                    .is_some()
-                {
-                    got_digit = true;
-                }
-                if !got_digit {
-                    self.loc = loc_before_e;
+            if let Some(c) = self.next_char_if(|c| c == "e" || c == "E") {
+                if c == "e" && self.blade_subscript() {
+                } else {
+                    self.next_char_if(|c| c == "-" || c == "`" || c == "¯");
+                    let mut got_digit = false;
+                    while self
+                        .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
+                        .is_some()
+                    {
+                        got_digit = true;
+                    }
+                    if !got_digit {
+                        self.loc = loc_before_e;
+                    }
                 }
             }
         }
@@ -1737,6 +1742,27 @@ impl<'a> Lexer<'a> {
                 n: side_num.flatten().map(|n| n.as_int().unwrap_or(0) as usize),
             }),
         }
+    }
+    fn blade_subscript(&mut self) -> bool {
+        let mut can_parse_ascii = false;
+        let mut reset = self.loc;
+        let mut got = false;
+        while let Some(c) = self.next_char() {
+            match c {
+                "," => can_parse_ascii = true,
+                c if can_parse_ascii && c.chars().all(|c| c.is_ascii_digit()) => got = true,
+                c if SUBSCRIPT_DIGITS.iter().any(|d| c.contains(*d)) => {
+                    got = true;
+                    can_parse_ascii = false;
+                }
+                _ => {
+                    self.loc = reset;
+                    break;
+                }
+            }
+            reset = self.loc;
+        }
+        got
     }
     fn character(
         &mut self,

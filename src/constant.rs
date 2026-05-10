@@ -234,7 +234,6 @@ macro_rules! constant {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ConstClass {
     Math,
-    GeometricAlgebra,
     Types,
     External,
     Time,
@@ -298,28 +297,6 @@ constant!(
         [0, 1, 1], [1, 0, 1], [0, -1, 1], [-1, 0, 1],
         [0, 1, -1], [1, 0, -1], [0, -1, -1], [-1, 0, -1]
     ]),
-    /// Geometric algebra vector basis 1
-    (#[cfg(feature = "ga")] "e₁", GeometricAlgebra, crate::Multivector::vga_vector([1.0])),
-    /// Geometric algebra vector basis 2
-    (#[cfg(feature = "ga")] "e₂", GeometricAlgebra, crate::Multivector::vga_vector([0.0, 1.0])),
-    /// Geometric algebra vector basis 3
-    (#[cfg(feature = "ga")] "e₃", GeometricAlgebra, crate::Multivector::vga_vector([0.0, 0.0, 1.0])),
-    /// Projective geometric algebra vector basis 0
-    (#[cfg(feature = "ga")] "e₀", GeometricAlgebra, crate::Multivector::pga_vector([1.0])),
-    /// Geometric algebra bivector basis 1
-    (#[cfg(feature = "ga")] "e₁₂", GeometricAlgebra, crate::Multivector::vga_pseudo_unit(2)),
-    /// Geometric algebra bivector basis 2
-    (#[cfg(feature = "ga")] "e₃₁", GeometricAlgebra, crate::Multivector::vga_n_1_blades([0.0, 1.0, 0.0])),
-    /// Geometric algebra bivector basis 3
-    (#[cfg(feature = "ga")] "e₂₃", GeometricAlgebra, crate::Multivector::vga_n_1_blades([0.0, 0.0, 1.0])),
-    /// Projective geometric algebra bivector vector basis 1
-    (#[cfg(feature = "ga")] "e₀₁", GeometricAlgebra, crate::Multivector::pga_pseudo_unit(1)),
-    /// Projective geometric algebra bivector vector basis 2
-    (#[cfg(feature = "ga")] "e₂₀", GeometricAlgebra, crate::Multivector::pga_n_1_blades([0.0, 1.0, 0.0])),
-    /// Geometric algebra trivector basis 1
-    (#[cfg(feature = "ga")] "e₁₂₃", GeometricAlgebra, crate::Multivector::vga_pseudo_unit(3)),
-    /// Geometric algebra trivector basis 1
-    (#[cfg(feature = "ga")] "e₀₁₂", GeometricAlgebra, crate::Multivector::pga_pseudo_unit(2)),
     /// A string identifying the operating system
     ("Os", System, std::env::consts::OS, deprecated("Use the os function instead")),
     /// A string identifying family of the operating system

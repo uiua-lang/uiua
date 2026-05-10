@@ -27,8 +27,8 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan, ConstClass,
-    Context, CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
+    Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan, Context,
+    CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
     ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GaFlavor, GitTarget, Ident,
     ImplPrimitive, IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, MvMode, Node,
     NumericSubscript, OTHER_SUBSCRIPT_NUMBERS, PrimClass, Primitive, Purity, RunMode,
@@ -1257,6 +1257,11 @@ impl Compiler {
             Word::Number(NumWord::Infinity(false), _) => Node::new_push(f64::INFINITY),
             Word::Number(NumWord::Infinity(true), _) => Node::new_push(f64::NEG_INFINITY),
             Word::Number(NumWord::Complex(c), _) => Node::new_push(c),
+            #[cfg(feature = "ga")]
+            Word::Number(NumWord::Mv(mv), _) => {
+                self.experimental_error_them(&word.span, || "Multivector blade constants");
+                Node::new_push(mv)
+            }
             Word::Number(NumWord::Err(s), _) => {
                 self.add_error(word.span.clone(), format!("Invalid number `{s}`"));
                 Node::new_push(0.0)
@@ -2030,9 +2035,6 @@ impl Compiler {
                     constant.name, suggestion
                 );
                 self.emit_diagnostic(message, DiagnosticKind::Warning, span.clone());
-            }
-            if constant.class == ConstClass::GeometricAlgebra {
-                self.experimental_error_it(&span, || &ident);
             }
             self.code_meta
                 .constant_references

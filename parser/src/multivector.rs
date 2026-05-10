@@ -226,6 +226,12 @@ impl Multivector {
     pub fn pga_pseudo_unit(dims: u8) -> Self {
         Self::pseudo_unit(dims, Flavor::Projective)
     }
+    pub fn vga_pseudoscalar(dims: u8, n: f64) -> Self {
+        Self::pseudoscalar(dims, n, Flavor::Vanilla)
+    }
+    pub fn pga_pseudoscalar(dims: u8, n: f64) -> Self {
+        Self::pseudoscalar(dims, n, Flavor::Projective)
+    }
     /// Create a pseudoscalar
     pub fn pseudoscalar(mut dims: u8, n: f64, flavor: Flavor) -> Self {
         dims += flavor.dim_adjustment();
@@ -655,7 +661,7 @@ fn blade_metrics(dims: u8, flavor: Flavor, mode: MetricMode) -> &'static [f64] {
                         continue;
                     }
                     let mut metric = 1.0;
-                    if dims == 3 {
+                    if dims >= 3 {
                         // Account for reording of e02->e20 to
                         // keep a nice cyclical order of e12,e23,e31.
                         // Such an order does not exist for > 3 dims.

@@ -96,7 +96,9 @@ impl Value {
                 }
                 Array::new(
                     new_shape,
-                    arr.data.chunks_exact(n).map(|n| Mv::vector(n, flavor)),
+                    arr.data
+                        .chunks_exact(n)
+                        .map(|n| Mv::vector(n, flavor, true)),
                 )
                 .into()
             }
@@ -126,7 +128,7 @@ impl Value {
                     };
                     return Ok(Array::new(
                         new_shape,
-                        (arr.data.chunks_exact(n)).map(|n| f(n, flavor)),
+                        (arr.data.chunks_exact(n)).map(|n| f(n, flavor, true)),
                     )
                     .into());
                 };
@@ -271,10 +273,12 @@ impl Value {
                     let size = d as usize;
                     arr.shape.push(size);
                     let mut data = eco_vec![0.0; arr.shape.elements()];
-                    let (mask_table, _) = mask_tables(d);
-                    for (v, mv) in data.make_mut().chunks_exact_mut(size).zip(arr.data) {
-                        for (i, v) in v.iter_mut().enumerate() {
-                            *v = mv.get_blade(mask_table[i + 1]);
+                    if size > 0 {
+                        let (mask_table, _) = mask_tables(d);
+                        for (v, mv) in data.make_mut().chunks_exact_mut(size).zip(arr.data) {
+                            for (i, v) in v.iter_mut().enumerate() {
+                                *v = mv.get_blade(mask_table[i + 1]);
+                            }
                         }
                     }
                     Array::new(arr.shape, data).into()
@@ -294,19 +298,19 @@ impl Value {
                 }
                 (d, Some(side)) => {
                     // Even or odd blades
-                    let side = match side {
+                    let side_i = match side {
                         SubSide::Left => 0,
                         SubSide::Right => 1,
                     };
                     let d =
                         d.unwrap_or_else(|| arr.data.iter().map(|mv| mv.dims()).max().unwrap_or(0));
                     let (mask_table, _) = mask_tables(d);
-                    let size = (1 << d) / 2;
+                    let size = 1 << d.saturating_sub(1);
                     arr.shape.push(size);
                     let mut data = eco_vec![0.0; arr.shape.elements()];
                     for (v, mv) in data.make_mut().chunks_exact_mut(size).zip(arr.data) {
                         for (v, &mask) in (v.iter_mut())
-                            .zip(mask_table.iter().filter(|m| m.count_ones() % 2 == side))
+                            .zip(mask_table.iter().filter(|m| m.count_ones() % 2 == side_i))
                         {
                             *v = mv.get_blade(mask);
                         }

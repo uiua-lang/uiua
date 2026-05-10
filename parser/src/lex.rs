@@ -939,7 +939,12 @@ impl<'a> Lexer<'a> {
         }
     }
     fn peek_char(&self) -> Option<&'a str> {
-        self.input_segments.get(self.loc.char_pos as usize).copied()
+        self.peek_char_n(0)
+    }
+    fn peek_char_n(&self, n: usize) -> Option<&'a str> {
+        self.input_segments
+            .get(self.loc.char_pos as usize + n)
+            .copied()
     }
     fn update_loc(&mut self, c: &'a str) {
         for c in c.chars() {
@@ -1121,18 +1126,19 @@ impl<'a> Lexer<'a> {
                 "≈" => self.end(AlmostEqual, start),
                 "'" => self.end(Quote, start),
                 "`" => {
-                    if self.number("-") {
+                    if self.number("`") {
                         self.end(Number, start)
                     } else {
                         self.end(Backtick, start)
                     }
                 }
-                "¯" if self
-                    .peek_char()
-                    .filter(|c| c.chars().all(|c| c.is_ascii_digit()))
-                    .is_some() =>
+                "¯" if (self.peek_char())
+                    .is_some_and(|c| c.chars().all(|c| c.is_ascii_digit()))
+                    || self.peek_char() == Some("e")
+                        && (self.peek_char_n(1))
+                            .is_some_and(|c| c == "," || c.contains(SUBSCRIPT_DIGITS)) =>
                 {
-                    self.number("-");
+                    self.number("¯");
                     self.end(Number, start)
                 }
                 "*" => self.end(Star, start),
@@ -1538,7 +1544,16 @@ impl<'a> Lexer<'a> {
             }
         }
         if !init_is_digit && !got_digit {
-            return false;
+            return if "¯`".contains(init) {
+                let reset = self.loc;
+                if !self.next_char_exact("e") && self.blade_subscript() {
+                    self.loc = reset;
+                    return false;
+                }
+                true
+            } else {
+                false
+            };
         }
         if last_is_comma {
             return true;

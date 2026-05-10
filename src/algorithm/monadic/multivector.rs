@@ -13,10 +13,11 @@ impl Value {
             Value::Complex(arr) => return Ok(arr.convert::<Mv>().into()),
             #[cfg(feature = "ga")]
             Value::Mv(mut mv) => {
-                if let Some(dims) = mode.dims {
-                    for mv in mv.data.as_mut_slice() {
+                for mv in mv.data.as_mut_slice() {
+                    if let Some(dims) = mode.dims {
                         mv.set_dims(dims);
                     }
+                    mv.set_flavor(mode.flavor);
                 }
                 return Ok(mv.into());
             }
@@ -68,18 +69,19 @@ impl Value {
             )
             .into(),
             #[cfg(feature = "ga")]
-            (Some(1), flavor, dims, Some((SubSide::Left, _)))
-            | (None, flavor, dims, None | Some((SubSide::Left, _))) => Array::new(
+            (Some(1), flavor, dims, Some((SubSide::Left, None | Some(0))))
+            | (None, flavor, dims, None | Some((SubSide::Left, None | Some(0)))) => Array::new(
                 new_shape,
                 (arr.data.into_iter()).map(|n| Mv::scalar(dims.unwrap_or(0), n, flavor)),
             )
             .into(),
             #[cfg(feature = "ga")]
-            (None | Some(1), flavor, dims, Some((SubSide::Right, None | Some(1)))) => {
+            (None | Some(1), flavor, dims, Some((SubSide::Right, grade @ (None | Some(1))))) => {
                 // Pseudoscalar
+                let dims = dims.or(grade).unwrap_or(0);
                 Array::new(
                     new_shape,
-                    (arr.data.into_iter()).map(|n| Mv::pseudoscalar(dims.unwrap_or(0), n, flavor)),
+                    (arr.data.into_iter()).map(|n| Mv::pseudoscalar(dims, n, flavor)),
                 )
                 .into()
             }
@@ -100,7 +102,7 @@ impl Value {
             }
             #[cfg(feature = "ga")]
             (n, flavor, None, Some((side, grade))) => {
-                let n = n.unwrap_or(0);
+                let n = n.unwrap_or(1);
                 // Dimensions not specified, but a grade is
                 use uiua_parser::SubSide;
                 let d = if let Some(grade) = grade {

@@ -78,13 +78,17 @@ impl Multivector {
             b_left += bi;
         }
     }
+    pub fn set_flavor(&mut self, flavor: Flavor) {
+        match (self.flavor, flavor) {
+            (Flavor::Vanilla, Flavor::Projective) => self.set_dims_right(self.dims() + 1),
+            _ => {}
+        }
+        self.flavor = flavor;
+    }
     fn conform(&mut self, other: &mut Self) {
         match (self.flavor, other.flavor) {
-            (Flavor::Vanilla, Flavor::Projective) => {
-                self.set_dims_right(self.dims() + 1);
-                self.flavor = other.flavor;
-            }
-            (Flavor::Projective, Flavor::Vanilla) => return other.conform(self),
+            (Flavor::Vanilla, Flavor::Projective) => self.set_flavor(Flavor::Projective),
+            (Flavor::Projective, Flavor::Vanilla) => other.set_flavor(Flavor::Projective),
             _ => {}
         }
         let (a_dims, b_dims) = (self.dims(), other.dims());

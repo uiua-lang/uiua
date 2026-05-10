@@ -10,16 +10,23 @@ pub const MAX_BLADES: u16 = 1 << MAX_DIMS;
 
 /// Get the size of a grade for some number of dimensions
 pub fn grade_size(dims: u8, grade: u8) -> usize {
-    fn combinations(n: usize, k: usize) -> f64 {
+    fn combinations(n: usize, k: usize) -> usize {
         if k > n {
-            return 0.0;
+            return 0;
         }
-        (1..=k.min(n - k))
-            .map(|i| (n + 1 - i) as f64 / i as f64)
-            .product::<f64>()
-            .round()
+        (0..k).fold(1, |acc, k| acc * (n - k) / (k + 1))
     }
-    combinations(dims as usize, grade as usize) as usize
+    combinations(dims as usize, grade as usize)
+}
+
+#[test]
+#[cfg(test)]
+fn grade_size_test() {
+    assert_eq!(1, grade_size(4, 0));
+    assert_eq!(4, grade_size(4, 1));
+    assert_eq!(6, grade_size(4, 2));
+    assert_eq!(4, grade_size(4, 3));
+    assert_eq!(1, grade_size(4, 4));
 }
 
 /// Iterate over the grades of each blade

@@ -29,22 +29,37 @@ fn is_vanilla(flavor: &Flavor) -> bool {
 
 impl Multivector {
     /// Set the maximum number of dimensions
-    ///
-    /// Does nothing if `self.dims() >= dims`.
-    pub fn set_dims(&mut self, dims: u8) {
-        let low_dims = self.dims();
-        if low_dims >= dims {
-            return;
-        }
-        self.coefs
-            .extend(repeat_n(0.0, (1 << dims) - (1 << low_dims)));
-        let slice = self.coefs.make_mut();
-        let mut b_left = 0;
-        for d in 0..=low_dims {
-            let ai = grade_size(low_dims, d);
-            let bi = grade_size(dims, d);
-            slice[b_left + ai..].rotate_right(bi - ai);
-            b_left += bi;
+    pub fn set_dims(&mut self, new_dims: u8) {
+        let dims = self.dims();
+        match dims.cmp(&new_dims) {
+            Ordering::Equal => {}
+            Ordering::Less => {
+                // Expansion
+                self.coefs
+                    .extend(repeat_n(0.0, (1 << new_dims) - (1 << dims)));
+                let slice = self.coefs.make_mut();
+                let mut left = 0;
+                for d in 0..=dims {
+                    let ai = grade_size(dims, d);
+                    let bi = grade_size(new_dims, d);
+                    slice[left + ai..].rotate_right(bi - ai);
+                    left += bi;
+                }
+            }
+            Ordering::Greater => {
+                // Contraction
+                let slice = self.coefs.make_mut();
+                let dim_mask = (1 << new_dims) - 1;
+                let mut left = 0;
+                let (mask_table, _) = mask_tables(dims);
+                for i in 0..(1 << new_dims) {
+                    if mask_table[i] ^ dim_mask == 0 {
+                        slice[left] = slice[i];
+                        left += 1;
+                    }
+                }
+                self.coefs.truncate(1 << new_dims);
+            }
         }
     }
     fn set_dims_right(&mut self, dims: u8) {
@@ -816,18 +831,24 @@ mod test {
 
     #[test]
     fn conform() {
-        let mut a = Mv::all([1.0, 2.0, 3.0, 4.0]);
-        a.set_dims(3);
-        assert_eq!(a, [1.0, 2.0, 3.0, 0.0, 4.0, 0.0, 0.0, 0.0]);
+        let a = Mv::all([1.0, 2.0, 3.0, 4.0]);
+        let mut b = a.clone();
+        b.set_dims(3);
+        assert_eq!(b, [1.0, 2.0, 3.0, 0.0, 4.0, 0.0, 0.0, 0.0]);
+        b.set_dims(2);
+        assert_eq!(a, b);
 
-        let mut a = Mv::all([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-        a.set_dims(4);
+        let a = Mv::all([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        let mut b = a.clone();
+        b.set_dims(4);
         assert_eq!(
-            a,
+            b,
             [
                 1.0, 2.0, 3.0, 4.0, 0.0, 5.0, 6.0, 7.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 0.0
             ]
         );
+        b.set_dims(3);
+        assert_eq!(a, b);
 
         let mut a = Mv::all([1.0, 2.0, 3.0, 4.0]);
         a.set_dims_right(3);

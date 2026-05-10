@@ -189,6 +189,7 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => a.append(b, ext, ctx)?,
             (Value::Byte(a), Value::Byte(b)) => a.append(b, ext, ctx)?,
             (Value::Complex(a), Value::Complex(b)) => a.append(b, ext, ctx)?,
+            #[cfg(feature = "ga")]
             (Value::Mv(a), Value::Mv(b)) => a.append(b, ext, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.append(b, ext, ctx)?,
             (Value::Byte(a), Value::Num(b)) => {

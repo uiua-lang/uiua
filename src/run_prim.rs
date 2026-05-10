@@ -2678,7 +2678,6 @@ mod tests {
 
         let text = format!(
             r##"{{
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 	"name": "Uiua",
 	"firstLineMatch": "^#!/.*\\buiua\\b",
 	"fileTypes": [

@@ -795,14 +795,6 @@
     "class": "RNG",
     "description": "Generate an array of random numbers with a seed"
   },
-  "geometric": {
-    "glyph": "𝕍",
-    "outputs": 1,
-    "modifier_args": 1,
-    "class": "Algorithm",
-    "description": "Convert an operation to be in geometric algebra",
-    "experimental": true
-  },
   "get": {
     "args": 2,
     "outputs": 1,
@@ -888,6 +880,14 @@
     "outputs": 1,
     "class": "Constant",
     "description": "The biggest number"
+  },
+  "inner product": {
+    "glyph": "⨰",
+    "args": 2,
+    "outputs": 1,
+    "class": "GeometricAlgebra",
+    "description": "Take the inner product of two multivectors",
+    "experimental": true
   },
   "insert": {
     "args": 3,
@@ -1027,6 +1027,14 @@
     "class": "DyadicPervasive",
     "description": "Multiply values"
   },
+  "multivector": {
+    "glyph": "𝕍",
+    "args": 1,
+    "outputs": 1,
+    "class": "Algorithm",
+    "description": "Create a multivector",
+    "experimental": true
+  },
   "negate": {
     "ascii": "`",
     "glyph": "¯",
@@ -1137,6 +1145,14 @@
     "outputs": 1,
     "class": "Environment",
     "description": "Get the current operating system family"
+  },
+  "outer product": {
+    "glyph": "⨱",
+    "args": 2,
+    "outputs": 1,
+    "class": "GeometricAlgebra",
+    "description": "Take the outer product of two multivectors",
+    "experimental": true
   },
   "parse": {
     "glyph": "⋕",

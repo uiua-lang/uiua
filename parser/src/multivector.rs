@@ -120,30 +120,22 @@ impl Multivector {
         }
     }
     /// Create a multivector from its vector coefficients
-    pub fn vector(vector: impl Into<EcoVec<f64>>, flavor: Flavor, add_one: bool) -> Self {
+    pub fn vector(vector: impl Into<EcoVec<f64>>, flavor: Flavor) -> Self {
         let mut coefs = vector.into();
-        match flavor {
-            Flavor::Projective => coefs.insert(0, add_one as u8 as f64),
-            _ => {}
-        }
         let dims = coefs.len();
         coefs.insert(0, 0.0);
         coefs.extend(repeat_n(0.0, (1 << dims) - 1 - dims));
         Multivector { coefs, flavor }
     }
     pub fn vga_vector(vector: impl Into<EcoVec<f64>>) -> Self {
-        Self::vector(vector.into(), Flavor::Vanilla, false)
+        Self::vector(vector.into(), Flavor::Vanilla)
     }
-    pub fn pga_vector(vector: impl Into<EcoVec<f64>>, add_one: bool) -> Self {
-        Self::vector(vector.into(), Flavor::Projective, add_one)
+    pub fn pga_vector(vector: impl Into<EcoVec<f64>>) -> Self {
+        Self::vector(vector.into(), Flavor::Projective)
     }
     /// Create a multivector from its n-1 blade coefficients
-    pub fn n_1_blades(blades: impl Into<EcoVec<f64>>, flavor: Flavor, add_one: bool) -> Self {
+    pub fn n_1_blades(blades: impl Into<EcoVec<f64>>, flavor: Flavor) -> Self {
         let mut coefs = blades.into();
-        match flavor {
-            Flavor::Projective => coefs.push(add_one as u8 as f64),
-            _ => {}
-        }
         let dims = coefs.len();
         coefs.insert(0, 0.0);
         coefs.extend(repeat_n(0.0, (1 << dims) - 1 - dims));
@@ -151,10 +143,10 @@ impl Multivector {
         Multivector { coefs, flavor }
     }
     pub fn vga_n_1_blades(blades: impl Into<EcoVec<f64>>) -> Self {
-        Self::n_1_blades(blades.into(), Flavor::Vanilla, false)
+        Self::n_1_blades(blades.into(), Flavor::Vanilla)
     }
-    pub fn pga_n_1_blades(blades: impl Into<EcoVec<f64>>, add_one: bool) -> Self {
-        Self::n_1_blades(blades.into(), Flavor::Projective, add_one)
+    pub fn pga_n_1_blades(blades: impl Into<EcoVec<f64>>) -> Self {
+        Self::n_1_blades(blades.into(), Flavor::Projective)
     }
     /// Create a multivector from some low-grade, even, or all blades
     pub fn blades_left(
@@ -332,6 +324,13 @@ impl Multivector {
     pub fn normalize(&mut self) {
         let mag = self.clone().magnitude();
         *self /= mag;
+        if let Flavor::Projective = self.flavor
+            && (self.get_blade(0b1) < 0.0 || self.get_blade(0b110) < 0.0)
+        {
+            for c in self.coefs.make_mut() {
+                *c = -*c;
+            }
+        }
     }
     /// Get the normalized multivector
     pub fn normalized(mut self) -> Self {

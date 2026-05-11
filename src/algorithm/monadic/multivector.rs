@@ -96,9 +96,7 @@ impl Value {
                 }
                 Array::new(
                     new_shape,
-                    arr.data
-                        .chunks_exact(n)
-                        .map(|n| Mv::vector(n, flavor, true)),
+                    arr.data.chunks_exact(n).map(|n| Mv::vector(n, flavor)),
                 )
                 .into()
             }
@@ -107,7 +105,7 @@ impl Value {
                 let n = n.unwrap_or(1);
                 // Dimensions not specified, but a grade is
                 use uiua_parser::SubSide;
-                let d = if flavor.dim_adjustment() == 0 && (n * 2).is_power_of_two() {
+                let d = if n.is_power_of_two() {
                     let d = ((n * 2) as f32).log2() as usize;
                     if d > MAX_DIMS as usize {
                         let parity = match side {
@@ -128,7 +126,7 @@ impl Value {
                     };
                     return Ok(Array::new(
                         new_shape,
-                        (arr.data.chunks_exact(n)).map(|n| f(n, flavor, true)),
+                        (arr.data.chunks_exact(n)).map(|n| f(n, flavor)),
                     )
                     .into());
                 };

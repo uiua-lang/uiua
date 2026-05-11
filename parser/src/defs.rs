@@ -702,42 +702,61 @@ primitive!(
     ///
     /// The last axis of the array will be used as coefficients for the multivector.
     /// By default, the numbers of the array are interpreted as coeficients for the vector blades.
-    /// ex: 𝕍 [1 2 3]
-    /// ex: 𝕍 [1_2 3_4]
-    /// ex: 𝕍 [1_2_3 4_5_6]
-    /// ex: 𝕍 °△3_4_2
+    /// ex: # Experimental!
+    ///   : 𝕍 [1 2 3]
+    /// ex: # Experimental!
+    ///   : 𝕍 [1_2 3_4]
+    /// ex: # Experimental!
+    ///   : 𝕍 [1_2_3 4_5_6]
+    /// ex: # Experimental!
+    ///   : 𝕍 °△3_4_2
     /// A numeric subscript specifies number of dimensions and allows all coeficients for all blades to be specified.
     /// Keep in mind that an `n`-dimensional multivector has `2ⁿ` blades
-    /// ex: 𝕍₂ [1 2 3 4]
-    /// ex: 𝕍₃ [1 2 3 4 5 6 7 8]
-    /// ex: 𝕍₂ [1_2_3_4 5_6_7_8]
+    /// ex: # Experimental!
+    ///   : 𝕍₂ [1 2 3 4]
+    /// ex: # Experimental!
+    ///   : 𝕍₃ [1 2 3 4 5 6 7 8]
+    /// ex: # Experimental!
+    ///   : 𝕍₂ [1_2_3_4 5_6_7_8]
     /// If too few blades are provided for the given number of dimensions, the grade with the number of coefficients will be filled, or the even-graded blades will be filled.
-    /// ex: 𝕍₃ [1 2 3 4] # Even graded-blades
-    /// ex: 𝕍₄ [1 2 3 4 5 6] # First grade with 6 blades
+    /// ex: # Experimental!
+    ///   : 𝕍₃ [1 2 3 4] # Even graded-blades
+    /// ex: # Experimental!
+    ///   : 𝕍₄ [1 2 3 4 5 6] # First grade with 6 blades
     /// ex! 𝕍₃ [1 2]
     /// When appropriate, [multivector] may product a [complex] number array instead of multivector array. This works because complex numbers are a subset of multivectors, and will autopromote to multivectors when combined with them.
-    /// ex: 𝕍₂ [1 2]
-    /// ex: [i 𝕍[1 2]]
+    /// ex: # Experimental!
+    ///   : 𝕍₂ [1 2]
+    /// ex: # Experimental!
+    ///   : [i 𝕍[1 2]]
     /// A sided subscript does something similar. A `⌞` prefers lower/even-grades blades. A `⌟` prefers higher/odd-grades blades.
-    /// ex: 𝕍⌞ [1 2 3] # 3D grade 1
+    /// ex: # Experimental!
+    ///   : 𝕍⌞ [1 2 3] # 3D grade 1
     ///   : 𝕍⌟ [1 2 3] # 3D grade 2
-    /// ex: 𝕍⌞ [1 2 3 4] # 3D even grades
+    /// ex: # Experimental!
+    ///   : 𝕍⌞ [1 2 3 4] # 3D even grades
     ///   : 𝕍⌟ [1 2 3 4] # 3D odd grades
     /// By default, a sided subscript uses the lowest number of dimensions that works, but this can be overriden with a mixed subscript.
-    /// ex: 𝕍⌟  [1 2 3 4] # 3D odd grades
+    /// ex: # Experimental!
+    ///   : 𝕍⌟  [1 2 3 4] # 3D odd grades
     ///   : 𝕍₄⌟ [1 2 3 4] # 4D grade 3
     /// [un][multivector] will decompose a multivector back into a number array.
     /// By default, this will extract vector coefficients only.
-    /// ex: °𝕍 𝕍₃ [1 2 3 4 5 6 7 8]
+    /// ex: # Experimental!
+    ///   : °𝕍 𝕍₃ [1 2 3 4 5 6 7 8]
     /// Use a numeric subscript to extract all coefficients.
-    /// ex: °𝕍₂ 𝕍₂ [1 2 3 4]
-    /// ex: °𝕍₂ 𝕍₃ [1 2 3 4 5 6 7 8]
-    /// ex: °𝕍₂ 3r5i
+    /// ex: # Experimental!
+    ///   : °𝕍₂ 𝕍₂ [1 2 3 4]
+    ///   : °𝕍₂ 𝕍₃ [1 2 3 4 5 6 7 8]
+    /// ex: # Experimental!
+    ///   : °𝕍₂ 3r5i
     /// Use a sided subscript to extract even or odd-graded coefficients.
-    /// ex: °𝕍⌞ 𝕍₃ [1 2 3 4 5 6 7 8]
+    /// ex: # Experimental!
+    ///   : °𝕍⌞ 𝕍₃ [1 2 3 4 5 6 7 8]
     ///   : °𝕍⌟ 𝕍₃ [1 2 3 4 5 6 7 8]
     /// Using [multivector] on a multivector array can change its number of dimensions.
-    /// ex: 𝕍₂ 𝕍₃ [1 2 3 4 5 6 7 8]
+    /// ex: # Experimental!
+    ///   : 𝕍₂ 𝕍₃ [1 2 3 4 5 6 7 8]
     (1, Multivector, Algorithm, ("multivector", '𝕍'), { experimental: true, simple: false }),
     /// Generate a random number in the range `[0, 1)`
     ///

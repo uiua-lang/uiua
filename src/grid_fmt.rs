@@ -445,9 +445,6 @@ impl GridFmt for crate::Multivector {
     fn separation() -> usize {
         2
     }
-    fn alignment() -> ElemAlign {
-        ElemAlign::DelimOrLeft("+")
-    }
     fn summary_min_elems() -> usize {
         100
     }

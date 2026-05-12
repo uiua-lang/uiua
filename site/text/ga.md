@@ -27,3 +27,16 @@ Here is a quick reference table how various Uiua operators work on multivectors:
 | [inner product]()`⌟` | Right contraction       |
 
 In general, all product operators on multivectors are not commutative, meaning the order of the operands matters. Uiua uses a convention where an operation like `AB` or `A∧B` in normal mathematical notation becomes `×B A` or `⨱B A`, with the "right" argument as the first. This is in line with many other Uiua operators.
+
+## GA Cheat Sheet
+
+### PGA
+
+For first argument A and second argument B
+| Operation                    | Code              |
+| ---------------------------- | ----------------- |
+| Project A onto B             | `×⤙⨰`             |
+| Project B onto A             | `×⟜˜⨰`            |
+| Reflect B across A           | `×⟜˜×`            |
+| Intersection of A and B      | [outer product]() |
+| Smallest superset of A and B | `⍜∩¯₄⨱` (`regr`)  |

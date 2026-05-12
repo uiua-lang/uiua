@@ -324,11 +324,15 @@ impl Multivector {
     pub fn normalize(&mut self) {
         let mag = self.clone().magnitude();
         *self /= mag;
-        if let Flavor::Projective = self.flavor
-            && (self.get_blade(0b1) < 0.0 || self.get_blade(0b110) < 0.0)
-        {
-            for c in self.coefs.make_mut() {
-                *c = -*c;
+        if let Flavor::Projective = self.flavor {
+            for mask in [0b1, 0b110] {
+                let blade = self.get_blade(mask);
+                if blade != 0.0 && blade != 1.0 {
+                    for c in self.coefs.make_mut() {
+                        *c /= blade;
+                    }
+                    break;
+                }
             }
         }
     }

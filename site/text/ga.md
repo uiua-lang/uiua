@@ -28,11 +28,52 @@ Here is a quick reference table how various Uiua operators work on multivectors:
 
 In general, all product operators on multivectors are not commutative, meaning the order of the operands matters. Uiua uses a convention where an operation like `AB` or `A∧B` in normal mathematical notation becomes `×B A` or `⨱B A`, with the "right" argument as the first. This is in line with many other Uiua operators.
 
-## GA Cheat Sheet
+### Using Multivectors
 
-### PGA
+While Geometric Algebra has many applications, the most obvious and common use in in representing and manipulation geometric objects. As a motivating we will start by simply rotating a square.
 
-For first argument A and second argument B
+Vectors are a core objects in most geometric algebra spaces, so we will represent the square as a list of coordinates of points that lie on its boundary. We'll start with a simple list of points from `¯1` to `1`. The `wrench` idiom `-⊸¬` maps a range from [0, 1] to [¯1, 1].
+
+```uiua
+-⊸¬ ÷⟜⇡₀ 4
+```
+
+These are points along a 1-dimensional square, but we need 2. To increase the number of dimenions, we start by combining every number with `¯1` and `1`.
+
+```uiua
+-⊸¬ ÷⟜⇡₀ 4
+♭₂⊞⊂¯1_1
+```
+
+This gives us coordinates along the the top and bottom of the square. Then, we simply append the same list with the rows [reverse]()d to get points for the sides. We [deduplicate]() to remove duplicate corder points.
+
+```uiua
+-⊸¬ ÷⟜⇡₀ 4
+◴⊂⟜≡⇌♭₂⊞⊂¯1_1
+```
+
+To render these points, we can normalize them to positive integer positions and then use [un]() [where]() to draw the points.
+
+```uiua
+-⊸¬ ÷⟜⇡₀ 4
+◴⊂⟜≡⇌♭₂⊞⊂¯1_1
+°⊚⁅×20⧋-⊸/↧
+```
+
+Now that we have our list of points, we can convert it into a list of multivectors using [multivector](). Because the last axis of the coordinate list is [length]() 2, the multivectors will be 2D vectors.
+
+```uiua
+-⊸¬ ÷⟜⇡₀ 4
+𝕍 ◴⊂⟜≡⇌♭₂⊞⊂¯1_1
+```
+
+`e₁` and `e₂` are multivector basis equivalent to our 2D X and Y axes.
+
+### GA Cheat Sheet
+
+#### PGA
+
+For first argument A and second argument B:
 | Operation                    | Code              |
 | ---------------------------- | ----------------- |
 | Project A onto B             | `×⤙⨰`             |

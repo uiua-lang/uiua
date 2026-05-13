@@ -2,8 +2,8 @@
 
 # 0.19
 - Multivector scalar
-  - Update docs
-  - Manual dimension shifting
+  - Good orders for grade-4 blades
+  - Autodifferentiation example
 - Type system
   - Tests
   - Data def types

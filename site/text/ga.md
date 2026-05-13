@@ -63,11 +63,245 @@ To render these points, we can normalize them to positive integer positions and 
 Now that we have our list of points, we can convert it into a list of multivectors using [multivector](). Because the last axis of the coordinate list is [length]() 2, the multivectors will be 2D vectors.
 
 ```uiua
+# Experimental!
 -⊸¬ ÷⟜⇡₀ 4
 𝕍 ◴⊂⟜≡⇌♭₂⊞⊂¯1_1
 ```
 
-`e₁` and `e₂` are multivector basis equivalent to our 2D X and Y axes.
+`e₁` and `e₂` are length-1 multivector equivalent to our 2D X and Y axes.
+
+The rotation will look cool as an animation, so we'll generate a list of angles to rotate by. A square rotated 90° looks the same as an unrotated square, so we only need to generate angles up to a quarter-turn instead of a full one, and the animation will still look smooth. In Uiua, `π/2` is [eta]().
+
+```uiua
+×η÷⟜⇡8
+```
+
+In geometric algebra, rotations are also represented by multivectors. The formula for a multivector that represents a rotation by angle `θ` is `e^(θ/2 * axis)`. In 2D, we only have 1 axis of rotation, and it is also represented by a multivector, in this case, the *bivector* `e₁₂`, which Uiua has a constant for.
+
+```uiua
+# Experimental!
+ₑ ×e₁₂÷2 ×η÷⟜⇡8
+```
+
+A multivector used to rotate things is called a *rotor*. To apply a rotor to a vector, we use a formumla often called the *sandwich product*, which Uiua has an alias for: `sandwi`.
+
+We want to apply every rotation to every point, so we'll use [table]().
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 4
+𝕍 ◴⊂⟜≡⇌♭₂⊞⊂¯1_1
+ₑ×e₁₂÷2×η÷⟜⇡8
+⊞(×⊃¯⌟˜×)
+```
+
+There are our rotated points! All that's left to do it render them.
+
+To convert from multivectors back to numbers, we use [un]() [multivector](). This specifically extracts only the *grade-1 coefficients*, aka the vector parts.
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 4
+𝕍 ◴⊂⟜≡⇌♭₂⊞⊂¯1_1
+ₑ×e₁₂÷2×η÷⟜⇡8
+⊞(×⊃¯⌟˜×)
+°𝕍
+```
+
+We will then normalize the numbers to be all positive, scale them to nice integer sizes, and then render each row with [un]() [where]().
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 4
+𝕍 ◴⊂⟜≡⇌♭₂⊞⊂¯1_1
+ₑ×e₁₂÷2×η÷⟜⇡30
+⊞(×⊃¯⌟˜×)
+⬚0≡°⊚ ⁅×30 ⧋-/↧⊸♭₂ °𝕍
+```
+
+### Projective Geometric Algebra
+
+Rotating a square is cool, but we actually could have done this animation even more easily using just [complex]() numbers! However, geometric algebra's strength comes in its ability to work with more than 2 dimenions. In Uiua, multivectors may have up to 10 dimensions!
+
+To make this example more interesting, lets rotate a cube instead of a square! First, we'll modify the generation of our square points to add an extra dimensions using [repeat](). The number of points has been reduced here so that the output doesn't look too long, but we'll increase it again later.
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 2
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2
+```
+
+Notice that there are now `e₃` multivector components.
+
+We still want to rotate the points around an axis. In 3D, there are now 3 axes of rotation, but we'll still stick with `e₁₂` for now, which is rotation in the XY plane/about the Z axis. We'll use the exact same rotation code from our 2D example.
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 2
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2
+ₑ×e₁₂÷2×η÷⟜⇡8
+⊞(×⊃¯⌟˜×)
+```
+
+And that's our rotated points. But now we have a problem. While in 2D, we could trivially convert those points to an array to be rendered on the screen, but because our points are 3D now, we have to somehow convert them to 2D so they can be rendered.
+
+This is where *Projective Geometric Algebra* comes in. It is a geometric algebra "flavor" with slightly different rules and representations. [This video](https://youtu.be/0i3ocLhbxJ4) is a great introduction to the topic, but we'll cover that concepts that apply to our problem here.
+
+To convert our "vanilla" geometric algebra (VGA) multivector into projective geometric algebra (PGA) vectors, we can add the vector `e₀`, which is a special PGA unit vector that squares to `0`.
+
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 2
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2
+ₑ×e₁₂÷2×η÷⟜⇡8
+⊞(×⊃¯⌟˜×)
++e₀
+```
+
+In PGA, points are actually represented by bivectors. We can do this conversion easily by getting the *dual*, which in Uiua has alias `dual`.
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 2
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2
+ₑ×e₁₂÷2×η÷⟜⇡8
+⊞(×⊃¯⌟˜×)
+¯₄+e₀
+```
+
+Now that we have our PGA points, we need simulate a camera to be able to render them in 2D. We'll place our camera at the point `(-4, 0, 0)`. The point can be constructed in a similar way as before.
+
+```uiua
+# Experimental!
+¯₄+e₀𝕍[¯4 0 0]
+```
+
+We can then construct multivectors reprenting lines from each cube point to the camera point. This operaiton is sometimes called the *join*. In PGA, it is done with the *regressive product*, with Uiua alias `regr`.
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 2
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2
+ₑ×e₁₂÷2×η÷⟜⇡8
+⊞(×⊃¯⌟˜×)
+¯₄+e₀
+⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]
+```
+
+Now that we have our lines running from cube points to the camera, we can find the intersection of those lines with a [frustum plane](https://en.wikipedia.org/wiki/Viewing_frustum), the plane that our "screen" would be in. In PGA, planes are actually just vectors. We'll use the plane normal to the X axis at `X = ¯2`.
+
+```uiua
+# Experimental!
++×2e₀𝕍[1 0 0]
+```
+
+Intersections in PGA are calculated simply using the [outer product]().
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 2
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2
+ₑ×e₁₂÷2×η÷⟜⇡8
+⊞(×⊃¯⌟˜×)
+¯₄+e₀
+⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]
+⨱ +×2e₀𝕍[1 0 0]
+```
+
+Now, we will re-`dual` the points to convert from bivectors to vectors, [sign]() to normalize accumulated magnitude, and [un]() [multivector]() to get back to numbers.
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 2
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2
+ₑ×e₁₂÷2×η÷⟜⇡8
+⊞(×⊃¯⌟˜×)
+¯₄+e₀
+⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]
+⨱ +×2e₀𝕍[1 0 0]
+°𝕍±¯₄
+```
+
+The first number in each vector is `1` (from normalized `e₀`). The second number in every vector is the same, because it's the dimension that was projected onto our X-axis plane. These are both unnecessary now, so we will [drop]() them.
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 2
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2
+ₑ×e₁₂÷2×η÷⟜⇡8
+⊞(×⊃¯⌟˜×)
+¯₄+e₀
+⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]
+⨱ +×2e₀𝕍[1 0 0]
+↘0_0_2 °𝕍±¯₄
+```
+
+Finally, we'll use our same rendering code as before, while also increasing the number of points and frames. Here is the final code including comments:
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 20          # Edge points
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2  # Cube points
+ₑ×e₁₂÷2×η÷⟜⇡30       # Rotors
+⊞(×⊃¯⌟˜×)            # Rotate points
+¯₄+e₀                # Convert to PGA
+⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0] # Lines from points to camera
+⨱ +×2e₀𝕍[1 0 0]      # Project to frustum plane
+↘0_0_2 °𝕍±¯₄         # Convert back to numbers
+⬚0≡°⊚ ⁅×30 ⧋-/↧⊸♭₂   # Render
+```
+
+What if we swapped out `e₁₂` for other bivectors?
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 20         # Edge points
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2 # Cube points
+[e₁₂ e₃₁ e₂₃]
+/≡₁⊂ ⬚0≡⌟(
+  ₑ× ÷2×η÷⟜⇡30         # Rotors
+  ⊞(×⊃¯⌟˜×)            # Rotate points
+  ¯₄+e₀                # Convert to PGA
+  ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯8 0 0] # Lines from points to camera
+  ⨱ +e₀𝕍[4 0 0]        # Project to frustum plane
+  ↘0_0_2 °𝕍±¯₄         # Convert back to numbers
+  ⬚0≡°⊚ ⁅×30 ⧋-/↧⊸♭₂   # Render
+)
+```
+
+What if we used a sum of different bivectors? Here we use [sign]() to normalize the rotation.
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 20                     # Edge points
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2             # Cube points
+ₑ ×±/+[e₁₂ ×2e₃₁ e₂₃] ÷2×τ÷⟜⇡30 # Rotors
+⊞(×⊃¯⌟˜×)                       # Rotate points
+¯₄+e₀                           # Convert to PGA
+⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]            # Lines from points to camera
+⨱ +×2e₀𝕍[1 0 0]                 # Project to frustum plane
+↘0_0_2 °𝕍±¯₄                    # Convert back to numbers
+⬚0≡°⊚ ⁅×30 ⧋-/↧⊸♭₂              # Render
+```
+
+Without much additional effort, we can even rotate a tesseract, the 4D analog to a cube! All it requires is an additional projection step from 4D to 3D.
+
+```uiua
+# Experimental!
+-⊸¬ ÷⟜⇡₀ 20            # Edge points
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)3    # Cube points
+ₑ×e₁₂÷2×η÷⟜⇡30         # Rotors
+⊞(×⊃¯⌟˜×)              # Rotate points
+¯₄+e₀                  # Convert to PGA
+⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0 0] # Lines from points to camera
+⨱ +×2e₀𝕍[1 0 0 0]      # Project to frustum space
+¯₄+e₀𝕍 ↘0_0_2°𝕍±¯₄     # Shift to 3D
+⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 ¯3 ¯2] # Lines from points to camera
+⨱ +×2e₀𝕍[1 0 0]        # Project to frustum plane
+↘0_0_2 °𝕍±¯₄           # Convert back to numbers
+⬚0≡°⊚ ⁅×100 ⧋-/↧⊸♭₂    # Render
+```
 
 ### GA Cheat Sheet
 

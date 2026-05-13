@@ -246,7 +246,10 @@ impl Multivector {
     }
     /// Try to get the multivector as a complex number
     pub fn as_complex(&self) -> Option<Complex> {
-        (self.coefs.len() == 4 && self[1] == 0.0 && self[2] == 0.0)
+        (self.flavor == Flavor::Vanilla
+            && self.coefs.len() == 4
+            && self[1] == 0.0
+            && self[2] == 0.0)
             .then(|| Complex::new(self[0], self[3]))
     }
     pub fn iter(&self) -> iter::Copied<slice::Iter<'_, f64>> {
@@ -372,6 +375,13 @@ impl Multivector {
         self.conform(&mut rhs);
         self.product_impl(rhs, self.flavor, MetricMode::All)
     }
+    fn square(&mut self) {
+        self.product_impl(self.clone(), self.flavor, MetricMode::All)
+    }
+    fn squared(mut self) -> Self {
+        self.square();
+        self
+    }
     fn product_impl(&mut self, rhs: Self, flavor: Flavor, mode: MetricMode) {
         let (a, b) = (self, rhs);
         let dims = a.dims();
@@ -444,6 +454,10 @@ impl Multivector {
     pub fn take_scalar(&mut self) -> f64 {
         take(&mut self[0])
     }
+    fn nanify(&mut self) {
+        self.coefs.make_mut().fill(0.0);
+        self.set_blade(0b0, f64::NAN);
+    }
     pub fn invert(&mut self) {
         if let Some(f) = self.as_scalar() {
             self.set_blade(0, 1.0 / f)
@@ -454,13 +468,130 @@ impl Multivector {
         } else if let Some(k) = (self.clone() * self.clone().reversed()).as_scalar() {
             *self /= k
         } else {
-            self.coefs.make_mut().fill(0.0);
-            self.set_blade(0b0, f64::NAN)
+            self.nanify();
         }
     }
     pub fn inverted(mut self) -> Self {
         self.invert();
         self
+    }
+    pub fn exp(mut self) -> Self {
+        if let Some(x) = self.as_scalar() {
+            // Scalar
+            self[0] = x.exp();
+            self
+        } else if let Some(c) = self.as_complex() {
+            // Complex
+            let exp_re = c.re.exp();
+            self[0] = exp_re * c.im.cos();
+            self[3] = exp_re * c.im.sin();
+            self
+        } else {
+            let s = self.get_blade(0b0);
+            let x = self - s;
+            if let Some(sqr) = x.clone().squared().as_scalar() {
+                if sqr < 0.0 {
+                    // Scalar + Euclidan bivector
+                    let λ = (-sqr).sqrt();
+                    (x / λ * λ.sin() + λ.cos()) * s.exp()
+                } else if sqr > 0.0 {
+                    // Scalar + non-Euclidean bivector
+                    let λ = sqr.sqrt();
+                    (x / λ * λ.sinh() + λ.cosh()) * s.exp()
+                } else {
+                    // Scalar + nilpotent
+                    (x + 1.0) * s.exp()
+                }
+            } else {
+                // Power series
+                self = x + s;
+                let mut term = Multivector::scalar(self.dims(), 1.0, self.flavor);
+                let mut sum = term.clone();
+                for n in 1..100 {
+                    term *= self.clone() / n as f64;
+                    if term.squared_magnitude() <= f64::EPSILON {
+                        break;
+                    }
+                    sum += term.clone();
+                }
+                sum
+            }
+        }
+    }
+    pub fn ln(mut self) -> Self {
+        if let Some(x) = self.as_scalar() {
+            // Scalar
+            self[0] = x.ln();
+            self
+        } else if let Some(c) = self.as_complex() {
+            // Complex
+            let c_ln = c.ln();
+            self[0] = c_ln.re;
+            self[3] = c_ln.im;
+            self
+        } else {
+            let s = self.get_blade(0b0);
+            let mut x = self - s;
+            if let Some(sqr) = x.clone().squared().as_scalar() {
+                if sqr < 0.0 {
+                    // Circular
+                    let λ = (-sqr).sqrt();
+                    x / λ * λ.atan2(s) + (s * s - sqr).sqrt().ln()
+                } else if sqr > 0.0 {
+                    // Hyperbolic
+                    let λ = sqr.sqrt();
+                    x / λ * (λ / s).atanh() + (s * s - sqr).sqrt().ln()
+                } else {
+                    // Nilpotent
+                    x / s + s.ln()
+                }
+            } else {
+                x.nanify();
+                x
+            }
+        }
+    }
+    pub fn sqrt(self) -> Self {
+        self.powf(0.5)
+    }
+    pub fn powi(mut self, mut power: i32) -> Self {
+        match power {
+            0 => return Self::scalar(self.dims(), 1.0, self.flavor),
+            1 => return self,
+            2 => return self.squared(),
+            -1 => return self.inverted(),
+            -2 => return self.inverted().squared(),
+            _ => {}
+        }
+        if power < 0 {
+            self = self.inverted();
+            power = -power;
+        }
+        let mut res = Self::scalar(self.dims(), 1.0, self.flavor);
+        while power > 0 {
+            if power % 2 == 1 {
+                res *= self.clone();
+            }
+            power /= 2;
+            if power > 0 {
+                self = self.clone().squared();
+            }
+        }
+        res
+    }
+    pub fn powf(self, power: f64) -> Self {
+        if power.fract() == 0.0 {
+            return self.powi(power as i32);
+        }
+        (self.ln() * power).exp()
+    }
+    pub fn powmv(mut self, power: Self) -> Self {
+        if let Some(p) = power.as_scalar() {
+            self.powf(p)
+        } else {
+            self.nanify();
+            self
+        }
     }
 }
 
@@ -675,9 +806,21 @@ impl SubAssign for Multivector {
         }
     }
 }
+impl SubAssign<f64> for Multivector {
+    fn sub_assign(&mut self, rhs: f64) {
+        *self += -rhs;
+    }
+}
 impl Sub for Multivector {
     type Output = Self;
     fn sub(mut self, rhs: Self) -> Self::Output {
+        self -= rhs;
+        self
+    }
+}
+impl Sub<f64> for Multivector {
+    type Output = Self;
+    fn sub(mut self, rhs: f64) -> Self::Output {
         self -= rhs;
         self
     }
@@ -686,17 +829,32 @@ impl Sub for Multivector {
 impl MulAssign for Multivector {
     fn mul_assign(&mut self, rhs: Self) {
         if let Some(b) = rhs.as_scalar() {
-            for a in self {
-                *a *= b;
-            }
+            *self *= b;
         } else {
             self.product(rhs)
+        }
+    }
+}
+impl MulAssign<f64> for Multivector {
+    fn mul_assign(&mut self, rhs: f64) {
+        if rhs == 1.0 {
+            return;
+        }
+        for c in self {
+            *c *= rhs;
         }
     }
 }
 impl Mul for Multivector {
     type Output = Self;
     fn mul(mut self, rhs: Self) -> Self::Output {
+        self *= rhs;
+        self
+    }
+}
+impl Mul<f64> for Multivector {
+    type Output = Self;
+    fn mul(mut self, rhs: f64) -> Self::Output {
         self *= rhs;
         self
     }
@@ -716,14 +874,12 @@ impl DivAssign for Multivector {
 impl DivAssign<Complex> for Multivector {
     #[allow(clippy::suspicious_op_assign_impl)]
     fn div_assign(&mut self, rhs: Complex) {
-        *self *= rhs.recip().into();
+        *self *= Self::from(rhs.recip());
     }
 }
 impl DivAssign<f64> for Multivector {
     fn div_assign(&mut self, rhs: f64) {
-        for a in self {
-            *a /= rhs;
-        }
+        *self *= 1.0 / rhs;
     }
 }
 impl Div<Complex> for Multivector {

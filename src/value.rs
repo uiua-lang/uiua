@@ -1855,10 +1855,26 @@ value_mon_impl!(
     [Num, num],
     [|meta| meta.flags.is_boolean(), Byte, bool],
     (Byte, byte),
-    [Complex, com]
+    [Complex, com],
+    #[cfg(feature = "ga")]
+    (Mv, mv)
 );
-value_mon_impl!(exp, [Num, num], (Byte, byte), [Complex, com]);
-value_mon_impl!(ln, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(
+    exp,
+    [Num, num],
+    (Byte, byte),
+    [Complex, com],
+    #[cfg(feature = "ga")]
+    (Mv, mv)
+);
+value_mon_impl!(
+    ln,
+    [Num, num],
+    (Byte, byte),
+    [Complex, com],
+    #[cfg(feature = "ga")]
+    (Mv, mv)
+);
 value_mon_impl!(sin, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(cos, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(asin, [Num, num], (Byte, byte), [Complex, com]);
@@ -2426,7 +2442,19 @@ value_dy_math_impl!(
 );
 value_dy_math_impl!(modulo, ((Complex, Complex, com_com)));
 value_dy_math_impl!(or, ([|meta| meta.flags.is_boolean(), Byte, bool_bool]));
-value_dy_math_impl!(scalar_pow);
+value_dy_math_impl!(
+    scalar_pow,
+    (
+        #[cfg(feature = "ga")]
+        (Byte, Mv, num_mv, u8, crate::Multivector),
+        #[cfg(feature = "ga")]
+        (Num, Mv, num_mv, f64, crate::Multivector),
+        #[cfg(feature = "ga")]
+        (Complex, Mv, x_mv, crate::Complex, crate::Multivector),
+        #[cfg(feature = "ga")]
+        (Mv, Mv, x_mv, crate::Multivector, crate::Multivector),
+    )
+);
 value_dy_math_impl!(root);
 value_dy_math_impl!(log);
 value_dy_math_impl_mv!(atan2,);

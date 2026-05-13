@@ -998,6 +998,10 @@ pub mod sqrt {
     pub fn com(a: Complex) -> Complex {
         a.sqrt()
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.sqrt()
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot take the square root of {a}")
     }
@@ -1013,6 +1017,10 @@ pub mod exp {
     pub fn com(a: Complex) -> Complex {
         a.exp()
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.exp()
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot take the exponential of {a}")
     }
@@ -1026,6 +1034,10 @@ pub mod ln {
         f64::from(a).ln()
     }
     pub fn com(a: Complex) -> Complex {
+        a.ln()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
         a.ln()
     }
     pub fn error<T: Display>(a: T) -> String {
@@ -1990,8 +2002,16 @@ pub mod scalar_pow {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b.powc(a.into())
     }
+    #[cfg(feature = "ga")]
+    pub fn num_mv(a: impl Into<f64>, b: crate::Multivector) -> crate::Multivector {
+        b.powf(a.into())
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b.powmv(a.into())
+    }
     pub fn error<T: Display>(a: T, b: T) -> String {
-        format!("Cannot get the power of {a} to {b}")
+        format!("Cannot get the power of {b} to {a}")
     }
 }
 pub mod root {

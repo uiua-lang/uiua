@@ -4,7 +4,7 @@ use std::{
     any::type_name,
     borrow::Cow,
     collections::HashMap,
-    f64::consts::{E, PI, TAU},
+    f64::consts::{E, PI, SQRT_2, TAU},
     iter::{once, repeat_n},
     mem::take,
 };
@@ -153,17 +153,20 @@ impl GridFmt for f64 {
             format!("{minus}e")
         } else if positive == f64::INFINITY {
             format!("{minus}∞")
-        } else if let Some((num, denom, approx)) =
-            [1u8, 2, 3, 4, 5, 6, 8, 9, 12].iter().find_map(|&denom| {
-                let num = (positive * denom as f64) / TAU;
-                let rounded = num.round();
-                if rounded <= 100.0 && (num - rounded).abs() <= 8.0 * f64::EPSILON && rounded != 0.0
-                {
-                    Some((rounded, denom, num != rounded))
-                } else {
-                    None
-                }
-            })
+        } else if positive.fract() != 0.0
+            && let Some((num, denom, approx)) =
+                [1u8, 2, 3, 4, 5, 6, 8, 9, 12].iter().find_map(|&denom| {
+                    let num = (positive * denom as f64) / TAU;
+                    let rounded = num.round();
+                    if rounded <= 100.0
+                        && (num - rounded).abs() <= 8.0 * f64::EPSILON
+                        && rounded != 0.0
+                    {
+                        Some((rounded, denom, num != rounded))
+                    } else {
+                        None
+                    }
+                })
         {
             let prefix = if approx { "~" } else { "" };
             if denom == 1 {
@@ -185,6 +188,21 @@ impl GridFmt for f64 {
             } else {
                 format!("{prefix}{minus}{num}τ/{denom}")
             }
+        } else if positive <= 2.5
+            && positive.fract() != 0.0
+            && let Some((.., sqr)) = [
+                (SQRT_2, 2.0, "2"),
+                (SQRT_2 / 2.0, 0.5, "½"),
+                (3f64.sqrt(), 3.0, "3"),
+                (3f64.sqrt() / 2.0, 0.75, "¾"),
+                (3f64.sqrt() / 3.0, 1.0 / 3.0, "⅓"),
+                (5f64.sqrt(), 5.0, "5"),
+                (5f64.sqrt() / 5.0, 0.2, "⅕"),
+            ]
+            .into_iter()
+            .find(|(sqrt, ..)| (sqrt - positive).abs() <= f64::EPSILON)
+        {
+            format!("√{sqr}")
         } else {
             let mut pos_formatted = positive.to_string();
             if pos_formatted.len() >= 17 {

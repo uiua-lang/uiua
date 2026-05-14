@@ -661,7 +661,7 @@ fn blade_metrics(dims: u8, flavor: Flavor, mode: MetricMode) -> &'static [f64] {
                         continue;
                     }
                     let mut metric = 1.0;
-                    if dims >= 3 {
+                    if dims == 3 {
                         // Account for reording of e02->e20 to
                         // keep a nice cyclical order of e12,e23,e31.
                         // Such an order does not exist for > 3 dims.
@@ -979,7 +979,7 @@ impl fmt::Display for Multivector {
                 }
                 wrote = true;
             } else if n < 0.0 {
-                write!(f, "-")?;
+                write!(f, "¯")?;
                 wrote = true;
             }
             let mask = mask_table[i];
@@ -1005,6 +1005,9 @@ impl fmt::Display for Multivector {
                     }
                 }
             }
+        }
+        if !wrote {
+            write!(f, "0")?;
         }
         Ok(())
     }

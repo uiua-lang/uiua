@@ -149,7 +149,6 @@ This is where *Projective Geometric Algebra* comes in. It is a geometric algebra
 
 To convert our "vanilla" geometric algebra (VGA) multivector into projective geometric algebra (PGA) vectors, we can add the vector `e₀`, which is a special PGA unit vector that squares to `0`.
 
-
 ```uiua
 # Experimental!
 -⊸¬ ÷⟜⇡₀ 2
@@ -193,7 +192,7 @@ Now that we have our lines running from cube points to the camera, we can find t
 
 ```uiua
 # Experimental!
-+×2e₀𝕍[1 0 0]
++2e₀𝕍[1 0 0]
 ```
 
 Intersections in PGA are calculated simply using the [outer product]().
@@ -206,7 +205,7 @@ Intersections in PGA are calculated simply using the [outer product]().
 ⊞(×⊃¯⌟˜×)
 ¯₄+e₀
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]
-⨱ +×2e₀𝕍[1 0 0]
+⨱ +2e₀𝕍[1 0 0]
 ```
 
 Now, we will re-`dual` the points to convert from bivectors to vectors, [sign]() to normalize accumulated magnitude, and [un]() [multivector]() to get back to numbers.
@@ -219,7 +218,7 @@ Now, we will re-`dual` the points to convert from bivectors to vectors, [sign]()
 ⊞(×⊃¯⌟˜×)
 ¯₄+e₀
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]
-⨱ +×2e₀𝕍[1 0 0]
+⨱ +2e₀𝕍[1 0 0]
 °𝕍±¯₄
 ```
 
@@ -233,7 +232,7 @@ The first number in each vector is `1` (from normalized `e₀`). The second numb
 ⊞(×⊃¯⌟˜×)
 ¯₄+e₀
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]
-⨱ +×2e₀𝕍[1 0 0]
+⨱ +2e₀𝕍[1 0 0]
 ↘0_0_2 °𝕍±¯₄
 ```
 
@@ -247,7 +246,7 @@ Finally, we'll use our same rendering code as before, while also increasing the 
 ⊞(×⊃¯⌟˜×)            # Rotate points
 ¯₄+e₀                # Convert to PGA
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0] # Lines from points to camera
-⨱ +×2e₀𝕍[1 0 0]      # Project to frustum plane
+⨱ +2e₀𝕍[1 0 0]      # Project to frustum plane
 ↘0_0_2 °𝕍±¯₄         # Convert back to numbers
 ⬚0≡°⊚ ⁅×30 ⧋-/↧⊸♭₂   # Render
 ```
@@ -276,11 +275,11 @@ What if we used a sum of different bivectors? Here we use [sign]() to normalize 
 # Experimental!
 -⊸¬ ÷⟜⇡₀ 20                     # Edge points
 𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2             # Cube points
-ₑ ×±/+[e₁₂ ×2e₃₁ e₂₃] ÷2×τ÷⟜⇡30 # Rotors
+ₑ ×±/+[e₁₂ 2e₃₁ e₂₃] ÷2×τ÷⟜⇡30 # Rotors
 ⊞(×⊃¯⌟˜×)                       # Rotate points
 ¯₄+e₀                           # Convert to PGA
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]            # Lines from points to camera
-⨱ +×2e₀𝕍[1 0 0]                 # Project to frustum plane
+⨱ +2e₀𝕍[1 0 0]                 # Project to frustum plane
 ↘0_0_2 °𝕍±¯₄                    # Convert back to numbers
 ⬚0≡°⊚ ⁅×30 ⧋-/↧⊸♭₂              # Render
 ```
@@ -295,10 +294,10 @@ Without much additional effort, we can even rotate a tesseract, the 4D analog to
 ⊞(×⊃¯⌟˜×)              # Rotate points
 ¯₄+e₀                  # Convert to PGA
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0 0] # Lines from points to camera
-⨱ +×2e₀𝕍[1 0 0 0]      # Project to frustum space
+⨱ +2e₀𝕍[1 0 0 0]      # Project to frustum space
 ¯₄+e₀𝕍 ↘0_0_2°𝕍±¯₄     # Shift to 3D
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 ¯3 ¯2] # Lines from points to camera
-⨱ +×2e₀𝕍[1 0 0]        # Project to frustum plane
+⨱ +2e₀𝕍[1 0 0]        # Project to frustum plane
 ↘0_0_2 °𝕍±¯₄           # Convert back to numbers
 ⬚0≡°⊚ ⁅×100 ⧋-/↧⊸♭₂    # Render
 ```

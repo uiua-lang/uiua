@@ -1656,13 +1656,13 @@ impl Parser<'_> {
             return None;
         };
         let coef = &s[..i];
-        let coef = if coef.is_empty() {
-            1.0
-        } else {
-            match Self::real_impl(coef) {
+        let coef = match coef {
+            "" => 1.0,
+            "¯" | "`" => -1.0,
+            _ => match Self::real_impl(coef) {
                 Ok(f) => f,
                 Err(e) => return Some(span.sp((NumWord::Err(e.to_string()), s.into()))),
-            }
+            },
         };
         #[cfg(not(feature = "multivector"))]
         {
@@ -1685,9 +1685,6 @@ impl Parser<'_> {
                 else {
                     continue;
                 };
-                if blades.contains(&n) {
-                    return Some(span.sp((NumWord::Err(format!("Duplicate blade {b}")), s.into())));
-                }
                 blades.push(n);
             }
             for i in 0..blades.len() - 1 {
@@ -1702,27 +1699,20 @@ impl Parser<'_> {
                 blades.reverse();
                 coef = -coef;
             }
-            let mut s = match coef {
-                1.0 => "e".to_string(),
-                -1.0 => "¯e".to_string(),
-                n => format!("{}{}e", if n < 0.0 { "¯" } else { "" }, n.abs()),
-            };
-            s.extend(blades.iter().map(|&b| SUBSCRIPT_DIGITS[b]));
-            let mv = match *blades.as_slice() {
-                [0] => Mv::pga_vector([coef]),
-                [n] => {
-                    let mut coefs = eco_vec![0.0; n];
-                    *coefs.make_mut().last_mut().unwrap() = coef;
-                    Mv::vga_vector(coefs)
-                }
-                [1, 2] => Mv::vga_pseudoscalar(2, coef),
-                [3, 1] => Mv::vga_n_1_blades([0.0, coef, 0.0]),
-                [2, 3] => Mv::vga_n_1_blades([0.0, 0.0, coef]),
-                [0, 1] => Mv::pga_pseudoscalar(2, coef),
-                [2, 0] => Mv::pga_n_1_blades([0.0, coef, 0.0]),
-                [1, 2, 3] => Mv::vga_pseudoscalar(3, coef),
-                _ => return Some(span.sp((NumWord::Err("Unsupported blade literal".into()), s))),
-            };
+            let mv = blades
+                .into_iter()
+                .map(|blade| match blade {
+                    0 => Mv::pga_vector([1.0]),
+                    n => {
+                        let mut vector = eco_vec![0.0; n];
+                        *vector.make_mut().last_mut().unwrap() = 1.0;
+                        Mv::vga_vector(vector)
+                    }
+                })
+                .reduce(|a, b| a * b)
+                .unwrap_or_else(|| Mv::from(1.0))
+                * coef;
+            let s = mv.to_string();
             Some(span.sp((NumWord::Mv(mv), s)))
         }
     }

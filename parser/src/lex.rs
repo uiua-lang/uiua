@@ -1546,7 +1546,7 @@ impl<'a> Lexer<'a> {
         if !init_is_digit && !got_digit {
             return if "¯`".contains(init) {
                 let reset = self.loc;
-                if !self.next_char_exact("e") && self.blade_subscript() {
+                if !(self.next_char_exact("e") && self.blade_subscript()) {
                     self.loc = reset;
                     return false;
                 }

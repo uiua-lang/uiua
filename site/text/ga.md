@@ -30,7 +30,7 @@ In general, all product operators on multivectors are not commutative, meaning t
 
 ### Using Multivectors
 
-While Geometric Algebra has many applications, the most obvious and common use in in representing and manipulation geometric objects. As a motivating we will start by simply rotating a square.
+While Geometric Algebra has many applications, the most obvious and common use is in representing and manipulation geometric objects. As a motivating example we will start by simply rotating a square.
 
 Vectors are a core objects in most geometric algebra spaces, so we will represent the square as a list of coordinates of points that lie on its boundary. We'll start with a simple list of points from `¯1` to `1`. The `wrench` idiom `-⊸¬` maps a range from [0, 1] to [¯1, 1].
 
@@ -45,7 +45,7 @@ These are points along a 1-dimensional square, but we need 2. To increase the nu
 ♭₂⊞⊂¯1_1
 ```
 
-This gives us coordinates along the the top and bottom of the square. Then, we simply append the same list with the rows [reverse]()d to get points for the sides. We [deduplicate]() to remove duplicate corder points.
+This gives us coordinates along the the top and bottom of the square. Then, we simply append the same list with the rows [reverse]()d to get points for the sides. We [deduplicate]() to remove duplicate corner points.
 
 ```uiua
 -⊸¬ ÷⟜⇡₀ 4
@@ -83,7 +83,7 @@ In geometric algebra, rotations are also represented by multivectors. The formul
 ₑ ×e₁₂÷2 ×η÷⟜⇡8
 ```
 
-A multivector used to rotate things is called a *rotor*. To apply a rotor to a vector, we use a formumla often called the *sandwich product*, which Uiua has an alias for: `sandwi`.
+A multivector used to rotate things is called a *rotor*. To apply a rotor to a vector, we use a formula often called the *sandwich product*, which Uiua has an alias for: `sandwi`.
 
 We want to apply every rotation to every point, so we'll use [table]().
 

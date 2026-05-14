@@ -723,7 +723,8 @@ primitive!(
     ///   : 𝕍₃ [1 2 3 4] # Even graded-blades
     /// ex: # Experimental!
     ///   : 𝕍₄ [1 2 3 4 5 6] # First grade with 6 blades
-    /// ex! 𝕍₃ [1 2]
+    /// ex! # Experimental!
+    ///   : 𝕍₃ [1 2]
     /// When appropriate, [multivector] may product a [complex] number array instead of multivector array. This works because complex numbers are a subset of multivectors, and will autopromote to multivectors when combined with them.
     /// ex: # Experimental!
     ///   : 𝕍₂ [1 2]

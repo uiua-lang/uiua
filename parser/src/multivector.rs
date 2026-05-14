@@ -45,6 +45,9 @@ impl Multivector {
                     slice[left + ai..].rotate_right(bi - ai);
                     left += bi;
                 }
+                if dims == 3 {
+                    self.set_blade(0b101, -self.get_blade(0b101))
+                }
             }
             Ordering::Greater => {
                 // Contraction
@@ -59,6 +62,9 @@ impl Multivector {
                     }
                 }
                 self.coefs.truncate(1 << new_dims);
+                if new_dims == 3 {
+                    self.set_blade(0b101, -self.get_blade(0b101))
+                }
             }
         }
     }
@@ -980,7 +986,7 @@ impl fmt::Display for Multivector {
             }
             write!(f, "e")?;
             wrote = true;
-            if dims == 3 && mask == 0b101 {
+            if dims >= 3 && mask == 0b101 {
                 for j in (0..dims).rev() {
                     if mask & (1 << j) != 0 {
                         write!(f, "{}", crate::SUBSCRIPT_DIGITS[j as usize + dim_offset])?;

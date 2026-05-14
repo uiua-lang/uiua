@@ -280,6 +280,27 @@ Without much additional effort, we can even rotate a tesseract, the 4D analog to
 ⬚0≡°⊚ ⁅×100 ⧋-/↧⊸♭₂    # Render
 ```
 
+### Autodifferentiation
+
+0-dimensional PGA vectors, aka the [dual numbers](https://en.wikipedia.org/wiki/Dual_number) can be used to automatically calculate the derivative of a function. They consist of a scalar plus some multiple of a special constant usually called `ε`. `ε`'s core property is that it squares to `0`, which is exactly what PGA basis vector `e₀` does.
+
+Consider this function `F` which calculates `F(x) = x³ + 2x² + 5x`. Its derivative `F′` calculates `F(x) = 3x² + 4x + 5`.
+
+```uiua
+F  ← /+⊃[ⁿ3|×2ⁿ2|×5]
+F′ ← +5/+⊃[×3ⁿ2|×4]
+```
+
+The key equation that makes autodifferentiation possible is that `F(x+ε) = F(x) + F′(x)ε`. This means that by simply adding `e₀` (our `ε`), to some input values, calling the function, and then extracting the vector coefficients, we can find the values at x of the derivative function `F′` without actually having to figure out the derivative ourself. Notice that the result is the same as our hand-written derivative function!
+
+```uiua
+F  ← /+⊃[ⁿ3|×2ⁿ2|×5]
+F′ ← +5/+⊃[×3ⁿ2|×4]
+
+F′ ⇡10
+♭°𝕍 F +e₀ ⇡10
+```
+
 ### GA Reference
 
 Here is a quick reference table how various Uiua operators work on multivectors:

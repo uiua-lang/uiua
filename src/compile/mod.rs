@@ -1258,8 +1258,8 @@ impl Compiler {
             Word::Number(NumWord::Infinity(true), _) => Node::new_push(f64::NEG_INFINITY),
             Word::Number(NumWord::Complex(c), _) => Node::new_push(c),
             #[cfg(feature = "ga")]
-            Word::Number(NumWord::Mv(mv), _) => {
-                self.experimental_error_them(&word.span, || "Multivector blade constants");
+            Word::Number(NumWord::Blade(mv), _) => {
+                self.experimental_error_them(&word.span, || "Blade literals");
                 Node::new_push(mv)
             }
             Word::Number(NumWord::Err(s), _) => {

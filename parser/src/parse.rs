@@ -1675,7 +1675,6 @@ impl Parser<'_> {
         {
             use {crate::Multivector as Mv, ecow::eco_vec};
             let blade_str = &s[i + 1..];
-            let mut coef = coef;
             let mut blades = Vec::with_capacity(blade_str.len());
             for b in blade_str.chars() {
                 let Some(n) = SUBSCRIPT_DIGITS
@@ -1686,18 +1685,6 @@ impl Parser<'_> {
                     continue;
                 };
                 blades.push(n);
-            }
-            for i in 0..blades.len() - 1 {
-                for j in i + 1..blades.len() {
-                    if blades[i] > blades[j] {
-                        blades.swap(i, j);
-                        coef = -coef;
-                    }
-                }
-            }
-            if let [1, 3] | [0, 2] = *blades {
-                blades.reverse();
-                coef = -coef;
             }
             let mv = blades
                 .into_iter()
@@ -1713,7 +1700,11 @@ impl Parser<'_> {
                 .unwrap_or_else(|| Mv::from(1.0))
                 * coef;
             let s = mv.to_string();
-            Some(span.sp((NumWord::Mv(mv), s)))
+            let num_word = mv
+                .as_scalar()
+                .map(NumWord::Real)
+                .unwrap_or(NumWord::Blade(mv));
+            Some(span.sp((num_word, s)))
         }
     }
     fn prim(&mut self) -> Option<Sp<Primitive>> {

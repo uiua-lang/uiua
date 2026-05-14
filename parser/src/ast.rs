@@ -883,7 +883,7 @@ pub enum NumWord {
     Complex(Complex),
     Err(String),
     #[cfg(feature = "multivector")]
-    Mv(crate::Multivector),
+    Blade(crate::Multivector),
 }
 
 impl From<f64> for NumWord {
@@ -895,7 +895,7 @@ impl From<f64> for NumWord {
 #[cfg(feature = "multivector")]
 impl From<crate::Multivector> for NumWord {
     fn from(mv: crate::Multivector) -> Self {
-        Self::Mv(mv).normalize()
+        Self::Blade(mv).normalize()
     }
 }
 
@@ -939,7 +939,7 @@ impl From<Result<Complex, String>> for NumWord {
 impl From<Result<crate::Multivector, String>> for NumWord {
     fn from(mv: Result<crate::Multivector, String>) -> Self {
         match mv {
-            Ok(v) => Self::Mv(v),
+            Ok(v) => Self::Blade(v),
             Err(e) => Self::Err(e),
         }
     }
@@ -975,7 +975,7 @@ impl NumWord {
             (Self::Complex(a), Self::Real(b)) => complex(a, b.into()).into(),
             (Self::Err(e), _) | (_, Self::Err(e)) => Self::Err(e),
             #[cfg(feature = "multivector")]
-            (Self::Mv(_), _) | (_, Self::Mv(_)) => Self::Err(
+            (Self::Blade(_), _) | (_, Self::Blade(_)) => Self::Err(
                 "Attempted to map multivector token with another. \
                 This is a bug in the interpreter"
                     .into(),
@@ -999,7 +999,7 @@ impl fmt::Display for NumWord {
             NumWord::Infinity(true) => write!(f, "-∞"),
             NumWord::Complex(c) => write!(f, "{c}"),
             #[cfg(feature = "multivector")]
-            NumWord::Mv(mv) => write!(f, "{mv}"),
+            NumWord::Blade(mv) => write!(f, "{mv}"),
             NumWord::Err(e) => write!(f, "error({e})"),
         }
     }

@@ -6,28 +6,6 @@ Geometric Algebra unifies many useful mathematical concepts, including complex n
 
 Because multivectors are a superset of complex numbers, in Uiua, they have the same [type]() and are fully compatible.
 
-Here is a quick reference table how various Uiua operators work on multivectors:
-
-| Primitive            | GA Functionality        |
-| -------------------- | ----------------------- |
-| [multivector]()      | Create multivector      |
-| [multiply]()         | Geometric Product       |
-| [divide]()           | Scalar division         |
-| [add]()              | Multivector addition    |
-| [subtract]()         | Multivector subtraction |
-| [absolute value]()   | Multivector magnitude   |
-| [sign]()             | Normalize multivector   |
-| [negate]()`⌟`        | Reverse                 |
-| [negate]()`⌞`        | Negative reverse        |
-| [negate]()`₄`        | Dual                    |
-| [negate]()`₋₄`       | Antidual                |
-| [outer product]()    | Outer product           |
-| [inner product]()    | Inner product           |
-| [inner product]()`⌞` | Left contraction        |
-| [inner product]()`⌟` | Right contraction       |
-
-In general, all product operators on multivectors are not commutative, meaning the order of the operands matters. Uiua uses a convention where an operation like `AB` or `A∧B` in normal mathematical notation becomes `×B A` or `⨱B A`, with the "right" argument as the first. This is in line with many other Uiua operators.
-
 ### Using Multivectors
 
 While Geometric Algebra has many applications, the most obvious and common use is in representing and manipulation geometric objects. As a motivating example we will start by simply rotating a square.
@@ -246,7 +224,7 @@ Finally, we'll use our same rendering code as before, while also increasing the 
 ⊞(×⊃¯⌟˜×)            # Rotate points
 ¯₄+e₀                # Convert to PGA
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0] # Lines from points to camera
-⨱ +2e₀𝕍[1 0 0]      # Project to frustum plane
+⨱ +2e₀𝕍[1 0 0]       # Project to frustum plane
 ↘0_0_2 °𝕍±¯₄         # Convert back to numbers
 ⬚0≡°⊚ ⁅×30 ⧋-/↧⊸♭₂   # Render
 ```
@@ -273,44 +251,105 @@ What if we used a sum of different bivectors? Here we use [sign]() to normalize 
 
 ```uiua
 # Experimental!
--⊸¬ ÷⟜⇡₀ 20                     # Edge points
-𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2             # Cube points
+-⊸¬ ÷⟜⇡₀ 20                    # Edge points
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2            # Cube points
 ₑ ×±/+[e₁₂ 2e₃₁ e₂₃] ÷2×τ÷⟜⇡30 # Rotors
-⊞(×⊃¯⌟˜×)                       # Rotate points
-¯₄+e₀                           # Convert to PGA
-⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]            # Lines from points to camera
+⊞(×⊃¯⌟˜×)                      # Rotate points
+¯₄+e₀                          # Convert to PGA
+⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]           # Lines from points to camera
 ⨱ +2e₀𝕍[1 0 0]                 # Project to frustum plane
-↘0_0_2 °𝕍±¯₄                    # Convert back to numbers
-⬚0≡°⊚ ⁅×30 ⧋-/↧⊸♭₂              # Render
+↘0_0_2 °𝕍±¯₄                   # Convert back to numbers
+⬚0≡°⊚ ⁅×30 ⧋-/↧⊸♭₂             # Render
 ```
 
 Without much additional effort, we can even rotate a tesseract, the 4D analog to a cube! All it requires is an additional projection step from 4D to 3D.
 
 ```uiua
 # Experimental!
--⊸¬ ÷⟜⇡₀ 20            # Edge points
+-⊸¬ ÷⟜⇡₀ 12            # Edge points
 𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)3    # Cube points
-ₑ×e₁₂÷2×η÷⟜⇡30         # Rotors
+ₑ×e₁₂÷2×η÷⟜⇡24         # Rotors
 ⊞(×⊃¯⌟˜×)              # Rotate points
 ¯₄+e₀                  # Convert to PGA
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0 0] # Lines from points to camera
-⨱ +2e₀𝕍[1 0 0 0]      # Project to frustum space
+⨱ +2e₀𝕍[1 0 0 0]       # Project to frustum space
 ¯₄+e₀𝕍 ↘0_0_2°𝕍±¯₄     # Shift to 3D
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 ¯3 ¯2] # Lines from points to camera
-⨱ +2e₀𝕍[1 0 0]        # Project to frustum plane
+⨱ +2e₀𝕍[1 0 0]         # Project to frustum plane
 ↘0_0_2 °𝕍±¯₄           # Convert back to numbers
 ⬚0≡°⊚ ⁅×100 ⧋-/↧⊸♭₂    # Render
 ```
 
-### GA Cheat Sheet
+### GA Reference
 
-#### PGA
+Here is a quick reference table how various Uiua operators work on multivectors:
+
+| Primitive              | GA Functionality         |
+| ---------------------- | ------------------------ |
+| [multivector]()        | Create multivector       |
+| [multiply]()           | Geometric Product        |
+| [divide]()             | Scalar division          |
+| [add]()                | Multivector addition     |
+| [subtract]()           | Multivector subtraction  |
+| [negate]()             | Negate multivector       |
+| [reciprocal]()         | Invert multivector       |
+| [absolute value]()     | Multivector magnitude    |
+| [sign]()               | Normalize multivector    |
+| [exponential]()        | Exponentiate multivector |
+| [un]() [exponential]() | Multivector natural log  |
+| [power]()              | Multivector power        |
+| [negate]()`⌟`          | Reverse (`conj`)         |
+| [negate]()`⌞`          | Negative reverse         |
+| [negate]()`₄`          | Dual (`dual`)            |
+| [negate]()`₋₄`         | Antidual                 |
+| [outer product]()      | Outer product            |
+| [inner product]()      | Inner product            |
+| [inner product]()`⌞`   | Left contraction         |
+| [inner product]()`⌟`   | Right contraction        |
+
+In general, all product operators on multivectors are not commutative, meaning the order of the operands matters. Uiua uses a convention where an operation like `AB` or `A∧B` in normal mathematical notation becomes `×B A` or `⨱B A`, with the "right" argument as the first. This is in line with many other Uiua operators.
+
+### Blade Literals
+
+Multivector blade literals can be written with an optional sign and magnitude number before the letter `e` followed by subscripts numbers indicating the bases.
+
+```uiua
+# Experimental!
+e₂ 4e₁₂ 3e₃₁ ¯e₀ e₁₂₃₄
+```
+
+If the blades are not in their canonical order, they will be automatically reordered by the formatter, changing the sign or cancelling out if necessary.
+
+```uiua
+# Experimental!
+e,321 4e,13 5e,120 # Try formatting!
+e,00 10e,121 5e,112323
+```
+
+### Basis Order Convention
+
+It is common among users of GA to order the 3D bivector blade that is the product of `e₁` `e₃` as `e₃₁` instead of `e₁₃`. This also applies to the 2D PGA bivector `e₂₀`. This is nice when taking the dual of a 3D vector, because it results in matching signs for the resulting bivectors. It also makes the bivectors form a nice cycle.
+
+```uiua
+# Experimental!
+[⊸¯₄] 𝕍[1 2 3]
+```
+
+In more then 3 dimensions, no such cycle exists, so all bivectors are ordered normally. When a multivector that requires 4 or more dimensions combines with a 3D multivector, the sign of that blade is flipped to account for this.
+
+```uiua
+# Experimental!
++ e₄ 2e₃₁
+```
+
+### PGA Cheatsheet
 
 For first argument A and second argument B:
-| Operation                    | Code              |
-| ---------------------------- | ----------------- |
-| Project A onto B             | `×⤙⨰`             |
-| Project B onto A             | `×⟜˜⨰`            |
-| Reflect B across A           | `×⟜˜×`            |
-| Intersection of A and B      | [outer product]() |
-| Smallest superset of A and B | `⍜∩¯₄⨱` (`regr`)  |
+| Operation                    | Code                |
+| ---------------------------- | ------------------- |
+| Project A onto B             | `×⤙⨰`               |
+| Project B onto A             | `×⟜˜⨰`              |
+| Reflect B across A           | `×⟜˜×`              |
+| Intersection of A and B      | [outer product]()   |
+| Smallest superset of A and B | `⍜∩¯₄⨱` (`regr`)    |
+| Apply rotor A to B           | `×⊃¯⌟˜×` (`sandwi`) |

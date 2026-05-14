@@ -428,7 +428,7 @@ impl GridFmt for crate::Multivector {
             }
             if s.is_empty() {
                 if n < 0.0 {
-                    s.push('-');
+                    s.push('¯');
                 }
             } else {
                 s.extend(if n > 0.0 { " + " } else { " - " }.chars());

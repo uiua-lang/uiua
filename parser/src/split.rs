@@ -338,6 +338,14 @@ impl Primitive {
                 (w, Backward),
                 (i, Mul)
             ),
+            alias!(
+                (sa, Mul),
+                (b, Fork),
+                (d, Neg),
+                (w, PrimComponent::SubRight),
+                (i, Backward),
+                (ch, Mul)
+            ),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

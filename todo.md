@@ -2,10 +2,8 @@
 
 # 0.19
 - Multivector scalar
-  - Good orders for grade-4 blades
+  - Grade decomposition
   - Autodifferentiation example
-  - Document autopromotion
-  - Document inner/outer product
 - Type system
   - Tests
   - Data def types

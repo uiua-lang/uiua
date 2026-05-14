@@ -2523,15 +2523,21 @@ mod tests {
                 }
                 let char_test = match prim.glyph() {
                     None => prim.name().len(),
+                    Some(_) if prim == Primitive::Multivector => 5,
                     Some(c) if c.is_ascii() => continue,
                     Some(_) => 4,
                 };
                 let short: String = prim.name().chars().take(char_test).collect();
-                assert_eq!(test(&short), Some(prim.into()));
+                assert_eq!(
+                    test(&short),
+                    Some(prim.into()),
+                    "{short:?} != {} in {name}",
+                    prim.format()
+                );
             }
             for prim in Primitive::non_deprecated() {
                 use Primitive::*;
-                if matches!(prim, Rand | Parse | Slf | Ne | Le | Ge) {
+                if matches!(prim, Rand | Parse | Slf | Ne | Le | Ge | Multivector) {
                     continue;
                 }
                 let char_test = match prim.glyph() {

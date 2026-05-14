@@ -12,7 +12,7 @@ use std::{
 use ecow::{EcoVec, eco_vec};
 use serde::*;
 
-use crate::{Complex, ga::*};
+use crate::{Complex, SUBSCRIPT_DIGITS, ga::*};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Multivector {
@@ -90,6 +90,16 @@ impl Multivector {
             _ => {}
         }
         self.flavor = flavor;
+    }
+    fn conform_to(&mut self, other: &Self) {
+        match (self.flavor, other.flavor) {
+            (Flavor::Vanilla, Flavor::Projective) => self.set_flavor(Flavor::Projective),
+            _ => {}
+        }
+        let (a_dims, b_dims) = (self.dims(), other.dims());
+        if a_dims < b_dims {
+            self.set_dims(b_dims);
+        }
     }
     fn conform(&mut self, other: &mut Self) {
         match (self.flavor, other.flavor) {
@@ -787,6 +797,7 @@ impl Add<f64> for Multivector {
 impl AddAssign for Multivector {
     fn add_assign(&mut self, mut rhs: Self) {
         if let Some(b) = rhs.as_scalar() {
+            self.conform_to(&rhs);
             *self += b;
         } else {
             self.conform(&mut rhs);
@@ -809,6 +820,7 @@ impl SubAssign for Multivector {
         if !self.coefs.is_empty()
             && let Some(b) = rhs.as_scalar()
         {
+            self.conform_to(&rhs);
             self[0] -= b;
         } else {
             self.conform(&mut rhs);
@@ -841,6 +853,7 @@ impl Sub<f64> for Multivector {
 impl MulAssign for Multivector {
     fn mul_assign(&mut self, rhs: Self) {
         if let Some(b) = rhs.as_scalar() {
+            self.conform_to(&rhs);
             *self *= b;
         } else {
             self.product(rhs)
@@ -995,19 +1008,23 @@ impl fmt::Display for Multivector {
             if dims >= 3 && mask == 0b101 {
                 for j in (0..dims).rev() {
                     if mask & (1 << j) != 0 {
-                        write!(f, "{}", crate::SUBSCRIPT_DIGITS[j as usize + dim_offset])?;
+                        write!(f, "{}", SUBSCRIPT_DIGITS[j as usize + dim_offset])?;
                     }
                 }
             } else {
                 for j in 0..dims {
                     if mask & (1 << j) != 0 {
-                        write!(f, "{}", crate::SUBSCRIPT_DIGITS[j as usize + dim_offset])?;
+                        write!(f, "{}", SUBSCRIPT_DIGITS[j as usize + dim_offset])?;
                     }
                 }
             }
         }
         if !wrote {
-            write!(f, "0")?;
+            match self.flavor {
+                Flavor::Vanilla => write!(f, "0e{}", SUBSCRIPT_DIGITS[dims as usize]),
+                Flavor::Projective => write!(f, "0e₀"),
+                _ => write!(f, "0"),
+            }?
         }
         Ok(())
     }
@@ -1032,7 +1049,7 @@ mod test {
         assert_eq!(
             b,
             [
-                1.0, 2.0, 3.0, 4.0, 0.0, 5.0, 6.0, 7.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 0.0
+                1.0, 2.0, 3.0, 4.0, 0.0, 5.0, -6.0, 7.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 0.0
             ]
         );
         b.set_dims(3);

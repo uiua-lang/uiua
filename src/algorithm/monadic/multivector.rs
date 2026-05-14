@@ -17,7 +17,6 @@ impl Value {
                     if let Some(dims) = mode.dims {
                         mv.set_dims(dims);
                     }
-                    mv.set_flavor(mode.flavor);
                 }
                 return Ok(mv.into());
             }
@@ -32,28 +31,27 @@ impl Value {
         let mut new_shape = arr.shape.clone();
         let n = new_shape.pop();
         let elem_count = new_shape.elements();
-        Ok(match (n, mode.flavor, mode.dims, mode.side) {
-            (Some(0), Flavor::Vanilla, None, _) => {
+        Ok(match (n, mode.dims, mode.side) {
+            (Some(0), None, _) => {
                 Array::<Complex>::new(new_shape, eco_vec![Complex::ZERO; elem_count]).into()
             }
-            (Some(0), Flavor::Vanilla, Some(d), _) if d <= 2 => {
+            (Some(0), Some(d), _) if d <= 2 => {
                 Array::<Complex>::new(new_shape, eco_vec![Complex::ZERO; elem_count]).into()
             }
             #[cfg(not(feature = "ga"))]
-            (Some(2), Flavor::Vanilla, None, None) if arr.data.iter().all(|&n| n == 0.0) => {
+            (Some(2), None, None) if arr.data.iter().all(|&n| n == 0.0) => {
                 Array::<Complex>::new(new_shape, eco_vec![Complex::ZERO; elem_count]).into()
             }
-            (Some(1), Flavor::Vanilla, None | Some(2), Some(SubSide::Left)) => {
-                arr.convert::<Complex>().into()
+            (Some(1), None | Some(2), Some(SubSide::Left)) => arr.convert::<Complex>().into(),
+            (Some(2), None | Some(2), Some(SubSide::Left)) | (Some(2), Some(2), None) => {
+                Array::new(
+                    new_shape,
+                    arr.data.chunks_exact(2).map(|n| Complex::new(n[0], n[1])),
+                )
+                .into()
             }
-            (Some(2), Flavor::Vanilla, None | Some(2), Some(SubSide::Left))
-            | (Some(2), Flavor::Vanilla, Some(2), None) => Array::new(
-                new_shape,
-                arr.data.chunks_exact(2).map(|n| Complex::new(n[0], n[1])),
-            )
-            .into(),
             #[cfg(not(feature = "ga"))]
-            (Some(4), Flavor::Vanilla, Some(2), None)
+            (Some(4), Some(2), None)
                 if arr.data.chunks_exact(4).all(|w| w[1] == 0.0 && w[2] == 0.0) =>
             {
                 Array::new(
@@ -63,30 +61,28 @@ impl Value {
                 .into()
             }
             #[cfg(feature = "ga")]
-            (Some(0), flavor, ..) => Array::new(
-                new_shape,
-                eco_vec![Mv::default().flavor(flavor); elem_count],
-            )
-            .into(),
+            (Some(0), ..) => Array::new(new_shape, eco_vec![Mv::default(); elem_count]).into(),
             #[cfg(feature = "ga")]
-            (Some(1), flavor, dims, Some(SubSide::Left))
-            | (None, flavor, dims, None | Some(SubSide::Left)) => Array::new(
-                new_shape,
-                (arr.data.into_iter()).map(|n| Mv::scalar(dims.unwrap_or(0), n, flavor)),
-            )
-            .into(),
-            #[cfg(feature = "ga")]
-            (None | Some(1), flavor, dims, Some(SubSide::Right)) => {
-                // Pseudoscalar
-                let dims = dims.unwrap_or(1);
+            (Some(1), dims, Some(SubSide::Left)) | (None, dims, None | Some(SubSide::Left)) => {
                 Array::new(
                     new_shape,
-                    (arr.data.into_iter()).map(|n| Mv::pseudoscalar(dims, n, flavor)),
+                    (arr.data.into_iter())
+                        .map(|n| Mv::scalar(dims.unwrap_or(0), n, Flavor::Vanilla)),
                 )
                 .into()
             }
             #[cfg(feature = "ga")]
-            (Some(n @ 1..), flavor, None, None) => {
+            (None | Some(1), dims, Some(SubSide::Right)) => {
+                // Pseudoscalar
+                let dims = dims.unwrap_or(1);
+                Array::new(
+                    new_shape,
+                    (arr.data.into_iter()).map(|n| Mv::vga_pseudoscalar(dims, n)),
+                )
+                .into()
+            }
+            #[cfg(feature = "ga")]
+            (Some(n @ 1..), None, None) => {
                 // Vector
                 if n > MAX_DIMS as usize {
                     return Err(env.error(format!(
@@ -94,14 +90,10 @@ impl Value {
                         (from a {_old_shape} array) would be too many"
                     )));
                 }
-                Array::new(
-                    new_shape,
-                    arr.data.chunks_exact(n).map(|n| Mv::vector(n, flavor)),
-                )
-                .into()
+                Array::new(new_shape, arr.data.chunks_exact(n).map(Mv::vga_vector)).into()
             }
             #[cfg(feature = "ga")]
-            (n, flavor, None, Some(side)) => {
+            (n, None, Some(side)) => {
                 let n = n.unwrap_or(1);
                 // Dimensions not specified, but a grade is
                 use uiua_parser::SubSide;
@@ -121,14 +113,10 @@ impl Value {
                     }
                 } else {
                     let f = match side {
-                        SubSide::Left => Mv::vector,
-                        SubSide::Right => Mv::n_1_blades,
+                        SubSide::Left => Mv::vga_vector,
+                        SubSide::Right => Mv::vga_n_1_blades,
                     };
-                    return Ok(Array::new(
-                        new_shape,
-                        (arr.data.chunks_exact(n)).map(|n| f(n, flavor)),
-                    )
-                    .into());
+                    return Ok(Array::new(new_shape, arr.data.chunks_exact(n).map(f)).into());
                 };
                 let f = match side {
                     SubSide::Left => Mv::blades_left,
@@ -136,12 +124,12 @@ impl Value {
                 };
                 Array::new(
                     new_shape,
-                    (arr.data.chunks_exact(n)).map(|n| f(d, n, flavor).unwrap().flavor(flavor)),
+                    (arr.data.chunks_exact(n)).map(|n| f(d, n, Flavor::Vanilla).unwrap()),
                 )
                 .into()
             }
             #[cfg(feature = "ga")]
-            (n, flavor, Some(d), side) => {
+            (n, Some(d), side) => {
                 let n = n.unwrap_or(0);
                 // Dimensions specified
                 use ecow::EcoVec;
@@ -155,8 +143,8 @@ impl Value {
                 };
                 let mut data = EcoVec::with_capacity(elem_count);
                 for slice in arr.data.chunks_exact(n) {
-                    match f(d, slice, flavor) {
-                        Ok(mv) => data.push(mv.flavor(flavor)),
+                    match f(d, slice, Flavor::Vanilla) {
+                        Ok(mv) => data.push(mv),
                         Err(_) => {
                             return Err(env
                                 .error(format!("Cannot create {d}D multivector from {n} blades")));

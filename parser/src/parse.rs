@@ -1673,7 +1673,10 @@ impl Parser<'_> {
         }
         #[cfg(feature = "multivector")]
         {
-            use {crate::Multivector as Mv, ecow::eco_vec};
+            use {
+                crate::{GaFlavor, Multivector as Mv},
+                ecow::eco_vec,
+            };
             let blade_str = &s[i + 1..];
             let mut blades = Vec::with_capacity(blade_str.len());
             for b in blade_str.chars() {
@@ -1700,8 +1703,8 @@ impl Parser<'_> {
                 .unwrap_or_else(|| Mv::from(1.0))
                 * coef;
             let s = mv.to_string();
-            let num_word = mv
-                .as_scalar()
+            let num_word = (mv.as_scalar())
+                .filter(|_| coef != 0.0 && mv.flavor == GaFlavor::Vanilla)
                 .map(NumWord::Real)
                 .unwrap_or(NumWord::Blade(mv));
             Some(span.sp((num_word, s)))

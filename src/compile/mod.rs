@@ -29,12 +29,12 @@ use serde::{Deserialize, Serialize};
 use crate::{
     Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan, Context,
     CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
-    ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GaFlavor, GitTarget, Ident,
-    ImplPrimitive, IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, MvMode, Node,
-    NumericSubscript, OTHER_SUBSCRIPT_NUMBERS, PrimClass, Primitive, Purity, RunMode,
-    SUBSCRIPT_DIGITS, SemanticComment, SidedSubscript, SigNode, Signature, Sp, Span, SubSide,
-    Subscript, SubscriptNumber, SubscriptToken, SysBackend, Uiua, UiuaError, UiuaErrorKind,
-    UiuaResult, VERSION, Value,
+    ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GitTarget, Ident, ImplPrimitive,
+    IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, MvMode, Node, NumericSubscript,
+    OTHER_SUBSCRIPT_NUMBERS, PrimClass, Primitive, Purity, RunMode, SUBSCRIPT_DIGITS,
+    SemanticComment, SidedSubscript, SigNode, Signature, Sp, Span, SubSide, Subscript,
+    SubscriptNumber, SubscriptToken, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
+    VERSION, Value,
     ast::*,
     check::nodes_sig,
     format::{format_word, format_words},
@@ -304,8 +304,6 @@ pub(crate) struct Scope {
     pub type_check: bool,
     /// Whether an error has been emitted for experimental features
     experimental_error: bool,
-    /// The geometric algebra flavor
-    ga_flavor: Option<GaFlavor>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -352,7 +350,6 @@ impl Default for Scope {
             experimental: false,
             type_check: false,
             experimental_error: false,
-            ga_flavor: None,
         }
     }
 }
@@ -1052,15 +1049,6 @@ impl Compiler {
             let com = com.clone();
             sem = Some(words.pop().unwrap().span.sp(com));
         }
-        if !words.is_empty()
-            && let Some(sem) = &sem
-            && let SemanticComment::GaFlavor(fl) = &sem.value
-        {
-            let flavor = self.scope.ga_flavor.replace(*fl);
-            let res = self.words(words);
-            self.scope.ga_flavor = flavor;
-            return res;
-        }
 
         // Diagnostics
         for (i, word) in words.iter().enumerate() {
@@ -1677,10 +1665,6 @@ impl Compiler {
                 inner
             }
             SemanticComment::Deprecated(_) => inner,
-            SemanticComment::GaFlavor(fl) => {
-                self.scope.ga_flavor = Some(fl);
-                inner
-            }
             SemanticComment::InvalidGaFlavor(_) => {
                 self.emit_diagnostic(
                     "Invalid GA flavor specification",
@@ -2393,13 +2377,9 @@ impl Compiler {
         let spandex = self.add_span(span.clone());
         match prim {
             Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
-            Primitive::Multivector => Node::ImplPrim(
-                ImplPrimitive::MvImpl(MvMode {
-                    flavor: self.ga_flavor(),
-                    ..MvMode::default()
-                }),
-                spandex,
-            ),
+            Primitive::Multivector => {
+                Node::ImplPrim(ImplPrimitive::MvImpl(MvMode::default()), spandex)
+            }
             prim => Node::Prim(prim, spandex),
         }
     }
@@ -2531,7 +2511,6 @@ impl Compiler {
             Multivector => {
                 use crate::ga::*;
                 let sub = self.validate_subscript_int(scr, &Multivector.format());
-                let flavor = self.ga_flavor();
                 let side = sub.value.side.map(|ss| {
                     if ss.n.is_some() {
                         self.add_error(
@@ -2560,7 +2539,7 @@ impl Compiler {
                     }
                 };
                 Node::ImplPrim(
-                    ImplPrimitive::MvImpl(MvMode { flavor, dims, side }),
+                    ImplPrimitive::MvImpl(MvMode { dims, side }),
                     self.add_span(span),
                 )
             }
@@ -3099,17 +3078,6 @@ impl Compiler {
         self.scopes()
             .take(take)
             .any(|sc| sc.experimental || sc.experimental_error)
-    }
-    fn ga_flavor(&self) -> GaFlavor {
-        let take = self
-            .scopes()
-            .position(|sc| matches!(sc.kind, ScopeKind::File(_)))
-            .map(|i| i + 1)
-            .unwrap_or(usize::MAX);
-        self.scopes()
-            .take(take)
-            .find_map(|sc| sc.ga_flavor)
-            .unwrap_or_default()
     }
     fn error(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
         UiuaErrorKind::Run {

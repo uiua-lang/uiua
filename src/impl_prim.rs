@@ -299,7 +299,6 @@ impl_primitive!(
 )]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct MvMode {
-    pub flavor: crate::GaFlavor,
     pub dims: Option<u8>,
     pub side: Option<SubSide>,
 }

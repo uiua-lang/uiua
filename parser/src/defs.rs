@@ -581,8 +581,42 @@ primitive!(
     /// ex: °× [i ℂ3 4 2]
     (2, Mul, DyadicPervasive, ("multiply", AsciiToken::Star, '×')),
     /// Take the inner product of two multivectors
+    ///
+    /// The [inner product] removes parts of the [multivector]s that are the same while multiplying magnitudes.
+    /// ex: # Experimental!
+    ///   : ⨰ 3e₁ 2e₁
+    /// ex: # Experimental!
+    ///   : ⨰ 4e₁₂ 2e₁
+    /// If two multivectors share no basis blades, they become `0`.
+    /// ex: # Experimental!
+    ///   : ⨰ 3e₂ 2e₁
+    /// [inner product] is distributive and anticommutative.
+    /// ex: # Experimental!
+    ///   : ⨰ /+[2 3e₁ 4e₂ 5e₁₂] 2e₁
+    /// Sided subscripts for [inner product] do left and right contraction
+    /// ex: # Experimental!
+    ///   : ⨰⌞ /+[2 3e₁ 4e₂ 5e₁₂] 2e₁
+    ///   : ⨰⌟ /+[2 3e₁ 4e₂ 5e₁₂] 2e₁
+    /// See the [Geometric Algebra tutorial](https://uiua.org/docs/experimental#geometric-algebra) for more information.
+    ///
+    /// See also: [outer product](), [multivector]()
     (2, InnerProduct, GeometricAlgebra, ("inner product", '⨰'), { experimental: true, simple: false }),
     /// Take the outer product of two multivectors
+    ///
+    /// The [outer product] combines the blades of [multivector]s that share no basis blades and multiplies magnitudes.
+    /// ex: # Experimental!
+    ///   : ⨱ 3e₂ 2e₁
+    /// ex: # Experimental!
+    ///   : ⨱ 4e₂₃ 2e₁
+    /// If two multivectors share any basis blades, they become `0`.
+    /// ex: # Experimental!
+    ///   : ⨱ 4e₃₁ 2e₁
+    /// [outer product] is distributive and anticommutative.
+    /// ex: # Experimental!
+    ///   : ⨱ /+[2 3e₁ 4e₂ 5e₁₂ 6e₃₁] 2e₂
+    /// See the [Geometric Algebra tutorial](https://uiua.org/docs/experimental#geometric-algebra) for more information.
+    ///
+    /// See also: [inner product](), [multivector]()
     (2, OuterProduct, GeometricAlgebra, ("outer product", '⨱'), { experimental: true, simple: false }),
     /// Divide values
     ///

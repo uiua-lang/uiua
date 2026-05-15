@@ -10,6 +10,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape
 - Add `$_` syntax to remove labels
 - Add sided subscripts for [`negate ¯`](https://uiua.org/docs/negate), which get the conjugate or negative conjugate
+- Lone numeric subscripts now format to number literals, making it easier to split them off
 - Add experimental `ᵢ` and `ᵣ` subscripts, which format from `,i` and `,r` respectively
   - Only currently compatible with dyadic pervasives and custom subscripts, but may be used for other things in the future
 - Rework experimental [Geometric Algebra](https://uiua.org/docs/experimental#geometric-algebra) system
@@ -26,6 +27,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Allow for subfolder imports from Git repos specified like `~ "git: example.com/user/repo subfolder"`
 ### Interpreter
 - Tweak the formatter to make indentation always a multiple of 2
+- Add number output rules for some square roots
 - Remove proxy values, which where a hacky solution to maintaining correct types and shapes when iterating over arrays with 0 rows.
   - The type analyzer for these cases has been improved to make them mostly unnecessary
 - Add `raze` alias for `/◇⊂`

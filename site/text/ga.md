@@ -10,20 +10,20 @@ Because multivectors are a superset of complex numbers, in Uiua, they have the s
 
 While Geometric Algebra has many applications, the most obvious and common use is in representing and manipulation geometric objects. As a motivating example we will start by simply rotating a square.
 
-Vectors are a core objects in most geometric algebra spaces, so we will represent the square as a list of coordinates of points that lie on its boundary. We'll start with a simple list of points from `¯1` to `1`. The `wrench` idiom `-⊸¬` maps a range from [0, 1] to [¯1, 1].
+Vectors are a core objects in most geometric algebra spaces, so we will represent the square as a list of coordinates of points that lie on its boundary. We'll start with a simple list of points from `¯1` to `1`. The `wrench` idiom `-⊸¬` maps a range from `[0, 1]` to `[¯1, 1]`.
 
 ```uiua
 -⊸¬ ÷⟜⇡₀ 4
 ```
 
-These are points along a 1-dimensional square, but we need 2. To increase the number of dimenions, we start by combining every number with `¯1` and `1`.
+These are points along a 1-dimensional square, but we need 2 dimensions. To increase the number of dimenions, we start by [join]()ing every number with `¯1` and `1`.
 
 ```uiua
 -⊸¬ ÷⟜⇡₀ 4
 ♭₂⊞⊂¯1_1
 ```
 
-This gives us coordinates along the the top and bottom of the square. Then, we simply append the same list with the rows [reverse]()d to get points for the sides. We [deduplicate]() to remove duplicate corner points.
+This gives us coordinates along the the top and bottom of the square. Then, we simply [join]() the same list with the rows [reverse]()d to get points for the sides. We [deduplicate]() to remove duplicate corner points.
 
 ```uiua
 -⊸¬ ÷⟜⇡₀ 4
@@ -35,7 +35,7 @@ To render these points, we can normalize them to positive integer positions and 
 ```uiua
 -⊸¬ ÷⟜⇡₀ 4
 ◴⊂⟜≡⇌♭₂⊞⊂¯1_1
-°⊚⁅×20⧋-⊸/↧
+°⊚⁅×30⧋-⊸/↧
 ```
 
 Now that we have our list of points, we can convert it into a list of multivectors using [multivector](). Because the last axis of the coordinate list is [length]() 2, the multivectors will be 2D vectors.
@@ -46,7 +46,7 @@ Now that we have our list of points, we can convert it into a list of multivecto
 𝕍 ◴⊂⟜≡⇌♭₂⊞⊂¯1_1
 ```
 
-`e₁` and `e₂` are length-1 multivector equivalent to our 2D X and Y axes.
+`e₁` and `e₂` are length-1 multivector equivalent to our 2D X and Y axes In geometric. Multivectors are usually shown as above, as a sum of its *blades*. A blade is a coefficient times a *basis*. `e₁` and `e₂` are vector bases.
 
 The rotation will look cool as an animation, so we'll generate a list of angles to rotate by. A square rotated 90° looks the same as an unrotated square, so we only need to generate angles up to a quarter-turn instead of a full one, and the animation will still look smooth. In Uiua, `π/2` is [eta]().
 
@@ -54,16 +54,16 @@ The rotation will look cool as an animation, so we'll generate a list of angles 
 ×η÷⟜⇡8
 ```
 
-In geometric algebra, rotations are also represented by multivectors. The formula for a multivector that represents a rotation by angle `θ` is `e^(θ/2 * axis)`. In 2D, we only have 1 axis of rotation, and it is also represented by a multivector, in this case, the *bivector* `e₁₂`, which Uiua has a constant for.
+In geometric algebra, rotations are also represented by multivectors. The formula for a multivector that represents a rotation by angle `θ` is `e^(θ/2 * axis)`. In 2D, we only have 1 axis of rotation, and it is also represented by a multivector, in this case, the *bivector* `e₁₂`, which we can write as a [blade literal](#blade-literals).
 
 ```uiua
 # Experimental!
 ₑ ×e₁₂÷2 ×η÷⟜⇡8
 ```
 
-A multivector used to rotate things is called a *rotor*. To apply a rotor to a vector, we use a formula often called the *sandwich product*, which Uiua has an alias for: `sandwi`.
+A multivector used to rotate things is called a *rotor*. To apply a rotor to another multivector, we use a formula often called the *sandwich product*, which Uiua has an alias for: `sandwi`/`sandwich`.
 
-We want to apply every rotation to every point, so we'll use [table]().
+We want to apply every rotation to every point, so we'll use [table]()`(sandwi)`.
 
 ```uiua
 # Experimental!
@@ -75,7 +75,7 @@ We want to apply every rotation to every point, so we'll use [table]().
 
 There are our rotated points! All that's left to do it render them.
 
-To convert from multivectors back to numbers, we use [un]() [multivector](). This specifically extracts only the *grade-1 coefficients*, aka the vector parts.
+To convert from multivectors back to numbers, we use [un]() [multivector](). This specifically extracts only the *grade-1 coefficients* of the multivector. In geometric algebra, a *grade* is all the blades that have the same number of dimenions. The grade-0 blade is a scalar, the grade-1 blades are vectors, the grade-2 blades are bivectors, and so on.
 
 ```uiua
 # Experimental!
@@ -90,7 +90,7 @@ We will then normalize the numbers to be all positive, scale them to nice intege
 
 ```uiua
 # Experimental!
--⊸¬ ÷⟜⇡₀ 4
+-⊸¬ ÷⟜⇡₀ 8
 𝕍 ◴⊂⟜≡⇌♭₂⊞⊂¯1_1
 ₑ×e₁₂÷2×η÷⟜⇡30
 ⊞(×⊃¯⌟˜×)
@@ -109,7 +109,7 @@ To make this example more interesting, lets rotate a cube instead of a square! F
 𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2
 ```
 
-Notice that there are now `e₃` multivector components.
+Notice that there are now `e₃` blades.
 
 We still want to rotate the points around an axis. In 3D, there are now 3 axes of rotation, but we'll still stick with `e₁₂` for now, which is rotation in the XY plane/about the Z axis. We'll use the exact same rotation code from our 2D example.
 
@@ -123,9 +123,9 @@ We still want to rotate the points around an axis. In 3D, there are now 3 axes o
 
 And that's our rotated points. But now we have a problem. While in 2D, we could trivially convert those points to an array to be rendered on the screen, but because our points are 3D now, we have to somehow convert them to 2D so they can be rendered.
 
-This is where *Projective Geometric Algebra* comes in. It is a geometric algebra "flavor" with slightly different rules and representations. [This video](https://youtu.be/0i3ocLhbxJ4) is a great introduction to the topic, but we'll cover that concepts that apply to our problem here.
+This is where *Projective Geometric Algebra* comes in. It is a geometric algebra "flavor" with slightly different rules and representations. [This video](https://youtu.be/0i3ocLhbxJ4) is a great introduction to the topic, but we'll cover the concepts that apply to our problem here.
 
-To convert our "vanilla" geometric algebra (VGA) multivector into projective geometric algebra (PGA) vectors, we can add the vector `e₀`, which is a special PGA unit vector that squares to `0`.
+To convert our "vanilla" geometric algebra (VGA) multivector into projective geometric algebra (PGA) vectors, we can [add]() the vector `e₀`, which is a special PGA unit vector that squares to `0`.
 
 ```uiua
 # Experimental!
@@ -136,7 +136,7 @@ To convert our "vanilla" geometric algebra (VGA) multivector into projective geo
 +e₀
 ```
 
-In PGA, points are actually represented by bivectors. We can do this conversion easily by getting the *dual*, which in Uiua has alias `dual`.
+In 3D PGA, points are actually represented by trivectors, a multivector made only of grade-3 blades. We can do this conversion easily by getting the *dual*, which in Uiua has alias `dual`.
 
 ```uiua
 # Experimental!
@@ -154,7 +154,7 @@ Now that we have our PGA points, we need simulate a camera to be able to render 
 ¯₄+e₀𝕍[¯4 0 0]
 ```
 
-We can then construct multivectors reprenting lines from each cube point to the camera point. This operaiton is sometimes called the *join*. In PGA, it is done with the *regressive product*, with Uiua alias `regr`.
+We can then construct multivectors reprenting lines from each cube point to the camera point. This operaiton is sometimes called the *join*. In PGA, it is done with the *regressive product* `⍜∩¯₄⨱`, with Uiua alias `regr`.
 
 ```uiua
 # Experimental!
@@ -166,7 +166,7 @@ We can then construct multivectors reprenting lines from each cube point to the 
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]
 ```
 
-Now that we have our lines running from cube points to the camera, we can find the intersection of those lines with a [frustum plane](https://en.wikipedia.org/wiki/Viewing_frustum), the plane that our "screen" would be in. In PGA, planes are actually just vectors. We'll use the plane normal to the X axis at `X = ¯2`.
+Now that we have our lines running from cube points to the camera, we can find the intersection of those lines with a [frustum plane](https://en.wikipedia.org/wiki/Viewing_frustum), the plane that our "screen" would be in. In PGA, planes are actually just vectors. We'll use the plane normal to the X axis at `X = ¯2`. Here, `𝕍[1 0 0]` gives us the plane going through the origin, and `+2e₀` moves it into place.
 
 ```uiua
 # Experimental!
@@ -226,7 +226,7 @@ Finally, we'll use our same rendering code as before, while also increasing the 
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0] # Lines from points to camera
 ⨱ +2e₀𝕍[1 0 0]       # Project to frustum plane
 ↘0_0_2 °𝕍±¯₄         # Convert back to numbers
-⬚0≡°⊚ ⁅×30 ⧋-/↧⊸♭₂   # Render
+⬚0≡°⊚ ⁅×50 ⧋-/↧⊸♭₂   # Render
 ```
 
 What if we swapped out `e₁₂` for other bivectors?
@@ -240,10 +240,10 @@ What if we swapped out `e₁₂` for other bivectors?
   ₑ× ÷2×η÷⟜⇡30         # Rotors
   ⊞(×⊃¯⌟˜×)            # Rotate points
   ¯₄+e₀                # Convert to PGA
-  ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯8 0 0] # Lines from points to camera
-  ⨱ +e₀𝕍[4 0 0]        # Project to frustum plane
+  ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0] # Lines from points to camera
+  ⨱ +2e₀𝕍[1 0 0]       # Project to frustum plane
   ↘0_0_2 °𝕍±¯₄         # Convert back to numbers
-  ⬚0≡°⊚ ⁅×30 ⧋-/↧⊸♭₂   # Render
+  ⬚0≡°⊚ ⁅×50 ⧋-/↧⊸♭₂   # Render
 )
 ```
 
@@ -284,7 +284,7 @@ Without much additional effort, we can even rotate a tesseract, the 4D analog to
 
 0-dimensional PGA vectors, aka the [dual numbers](https://en.wikipedia.org/wiki/Dual_number) can be used to automatically calculate the derivative of a function. They consist of a scalar plus some multiple of a special constant usually called `ε`. `ε`'s core property is that it squares to `0`, which is exactly what PGA basis vector `e₀` does.
 
-Consider this function `F` which calculates `F(x) = x³ + 2x² + 5x`. Its derivative `F′` calculates `F(x) = 3x² + 4x + 5`.
+Consider this function `F` which calculates `F(x) = x³ - 2x² + 5x`. Its derivative `F′` calculates `F(x) = 3x² - 4x + 5`.
 
 ```uiua
 # Experimental!

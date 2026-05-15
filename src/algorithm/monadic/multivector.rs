@@ -32,10 +32,8 @@ impl Value {
         let n = new_shape.pop();
         let elem_count = new_shape.elements();
         Ok(match (n, mode.dims, mode.side) {
-            (Some(0), None, _) => {
-                Array::<Complex>::new(new_shape, eco_vec![Complex::ZERO; elem_count]).into()
-            }
-            (Some(0), Some(d), _) if d <= 2 => {
+            (Some(0), None, _) | (_, Some(0), _) => arr.convert::<Mv>().into(),
+            (Some(0), Some(2), _) => {
                 Array::<Complex>::new(new_shape, eco_vec![Complex::ZERO; elem_count]).into()
             }
             #[cfg(not(feature = "ga"))]
@@ -253,6 +251,13 @@ impl Value {
             },
             #[cfg(feature = "ga")]
             Value::Mv(mut arr) => match (dims, side) {
+                (Some(0), _) => {
+                    let mut data = eco_vec![0.0; arr.shape.elements()];
+                    for (s, mv) in data.make_mut().iter_mut().zip(arr.data) {
+                        *s = mv.get_blade(0b0);
+                    }
+                    Array::new(arr.shape, data).into()
+                }
                 (None, None) => {
                     // Vector
                     let d = arr.data.iter().map(|mv| mv.dims()).max().unwrap_or(0);

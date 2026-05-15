@@ -186,7 +186,7 @@ Intersections in PGA are calculated simply using the [outer product]().
 ⨱ +2e₀𝕍[1 0 0]
 ```
 
-Now, we will re-`dual` the points to convert from bivectors to vectors, [sign]() to normalize accumulated magnitude, and [un]() [multivector]() to get back to numbers.
+Now, we will use [sign]() to normalize accumulated magnitude, re-`dual` the points to convert from bivectors to vectors, and [un]() [multivector]() to get back to numbers.
 
 ```uiua
 # Experimental!
@@ -197,7 +197,7 @@ Now, we will re-`dual` the points to convert from bivectors to vectors, [sign]()
 ¯₄+e₀
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]
 ⨱ +2e₀𝕍[1 0 0]
-°𝕍±¯₄
+°𝕍¯₄±
 ```
 
 The first number in each vector is `1` (from normalized `e₀`). The second number in every vector is the same, because it's the dimension that was projected onto our X-axis plane. These are both unnecessary now, so we will [drop]() them.
@@ -211,22 +211,22 @@ The first number in each vector is `1` (from normalized `e₀`). The second numb
 ¯₄+e₀
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]
 ⨱ +2e₀𝕍[1 0 0]
-↘0_0_2 °𝕍±¯₄
+↘0_0_2 °𝕍¯₄±
 ```
 
-Finally, we'll use our same rendering code as before, while also increasing the number of points and frames. Here is the final code including comments:
+Finally, we'll use similar rendering code as before, while also increasing the number of points and frames. We use [transpose]() on the rendered frames so that the rotation look as we would expect. Here is the final code including comments:
 
 ```uiua
 # Experimental!
--⊸¬ ÷⟜⇡₀ 20          # Edge points
-𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2  # Cube points
-ₑ×e₁₂÷2×η÷⟜⇡30       # Rotors
-⊞(×⊃¯⌟˜×)            # Rotate points
-¯₄+e₀                # Convert to PGA
-⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0] # Lines from points to camera
-⨱ +2e₀𝕍[1 0 0]       # Project to frustum plane
-↘0_0_2 °𝕍±¯₄         # Convert back to numbers
-⬚0≡°⊚ ⁅×50 ⧋-/↧⊸♭₂   # Render
+-⊸¬ ÷⟜⇡₀ 20           # Edge points
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2   # Cube points
+ₑ×e₁₂÷2×η÷⟜⇡30        # Rotors
+⊞(×⊃¯⌟˜×)             # Rotate points
+¯₄+e₀                 # Convert to PGA
+⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]  # Lines from points to camera
+⨱ +2e₀𝕍[1 0 0]        # Project to frustum plane
+↘0_0_2 °𝕍¯₄±          # Convert back to numbers
+⬚0≡(⍉°⊚) ⁅×50 ⧋-/↧⊸♭₂ # Render
 ```
 
 What if we swapped out `e₁₂` for other bivectors?
@@ -237,13 +237,13 @@ What if we swapped out `e₁₂` for other bivectors?
 𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2 # Cube points
 [e₁₂ e₃₁ e₂₃]
 /≡₁⊂ ⬚0≡⌟(
-  ₑ× ÷2×η÷⟜⇡30         # Rotors
-  ⊞(×⊃¯⌟˜×)            # Rotate points
-  ¯₄+e₀                # Convert to PGA
-  ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0] # Lines from points to camera
-  ⨱ +2e₀𝕍[1 0 0]       # Project to frustum plane
-  ↘0_0_2 °𝕍±¯₄         # Convert back to numbers
-  ⬚0≡°⊚ ⁅×50 ⧋-/↧⊸♭₂   # Render
+  ₑ× ÷2×η÷⟜⇡30          # Rotors
+  ⊞(×⊃¯⌟˜×)             # Rotate points
+  ¯₄+e₀                 # Convert to PGA
+  ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]  # Lines from points to camera
+  ⨱ +2e₀𝕍[1 0 0]        # Project to frustum plane
+  ↘0_0_2 °𝕍¯₄±          # Convert back to numbers
+  ⬚0≡(⍉°⊚) ⁅×50 ⧋-/↧⊸♭₂ # Render
 )
 ```
 
@@ -258,8 +258,8 @@ What if we used a sum of different bivectors? Here we use [sign]() to normalize 
 ¯₄+e₀                          # Convert to PGA
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0]           # Lines from points to camera
 ⨱ +2e₀𝕍[1 0 0]                 # Project to frustum plane
-↘0_0_2 °𝕍±¯₄                   # Convert back to numbers
-⬚0≡°⊚ ⁅×30 ⧋-/↧⊸♭₂             # Render
+↘0_0_2 °𝕍¯₄±                   # Convert back to numbers
+⬚0≡(⍉°⊚) ⁅×30 ⧋-/↧⊸♭₂          # Render
 ```
 
 Without much additional effort, we can even rotate a tesseract, the 4D analog to a cube! All it requires is an additional projection step from 4D to 3D.
@@ -268,16 +268,16 @@ Without much additional effort, we can even rotate a tesseract, the 4D analog to
 # Experimental!
 -⊸¬ ÷⟜⇡₀ 10            # Edge points
 𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)3    # Cube points
-ₑ×e₁₂÷2×η÷⟜⇡20         # Rotors
+ₑ×¯e₁₂÷2×η÷⟜⇡20        # Rotors
 ⊞(×⊃¯⌟˜×)              # Rotate points
 ¯₄+e₀                  # Convert to PGA
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0 0] # Lines from points to camera
 ⨱ +2e₀𝕍[1 0 0 0]       # Project to frustum space
-¯₄+e₀𝕍 ↘0_0_2°𝕍±¯₄     # Shift to 3D
+¯₄+e₀𝕍 ↘0_0_2°𝕍¯₄±     # Shift to 3D
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 ¯3 ¯2] # Lines from points to camera
 ⨱ +2e₀𝕍[1 0 0]         # Project to frustum plane
-↘0_0_2 °𝕍±¯₄           # Convert back to numbers
-⬚0≡°⊚ ⁅×100 ⧋-/↧⊸♭₂    # Render
+↘0_0_2 °𝕍¯₄±           # Convert back to numbers
+⬚0≡(⍉°⊚) ⁅×100 ⧋-/↧⊸♭₂ # Render
 ```
 
 ### Autodifferentiation

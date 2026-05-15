@@ -480,22 +480,25 @@ impl Multivector {
         self.coefs.make_mut().fill(0.0);
         self.set_blade(0b0, f64::NAN);
     }
-    pub fn invert(&mut self) {
+    pub fn inverted(mut self) -> Self {
         if let Some(f) = self.as_scalar() {
-            self.set_blade(0, 1.0 / f)
+            self.set_blade(0, 1.0 / f);
+            self
         } else if let Some(mut c) = self.as_complex() {
             c = c.recip();
             self.set_blade(0b0, c.re);
             self.set_blade(0b11, c.im);
-        } else if let Some(k) = (self.clone() * self.clone().reversed()).as_scalar() {
-            *self /= k
+            self
         } else {
-            self.nanify();
+            let s = self.get_blade(0b0);
+            let mut x = self - s;
+            if let Some(sqr) = x.clone().squared().as_scalar() {
+                (-x + s) / (s * s - sqr)
+            } else {
+                x.nanify();
+                x
+            }
         }
-    }
-    pub fn inverted(mut self) -> Self {
-        self.invert();
-        self
     }
     pub fn exp(mut self) -> Self {
         if let Some(x) = self.as_scalar() {

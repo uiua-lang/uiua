@@ -3,7 +3,6 @@
 # 0.19
 - Multivector scalar
   - Grade decomposition
-  - Dual number special cases
 - Type system
   - Tests
   - Data def types

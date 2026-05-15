@@ -1339,6 +1339,42 @@ impl Parser<'_> {
             span.sp(Word::BreakLine)
         } else if let Some(sc) = self.next_token_map(Token::as_semantic_comment) {
             sc.map(Word::SemanticComment)
+        } else if let Some(sub) = self.next_token_map(Token::as_subscript) {
+            // Lone subscript
+            sub.span.clone().sp(
+                if sub.value.side.is_none()
+                    && let Some(num) = sub.value.num
+                {
+                    match num {
+                        NumericSubscript::NegOnly => Word::Primitive(Primitive::Neg),
+                        NumericSubscript::TooLarge(s) => {
+                            let n = s.parse::<f64>().unwrap_or(0.0);
+                            let s = n.to_string();
+                            Word::Number(n.into(), s)
+                        }
+                        NumericSubscript::N(Some(SubscriptNumber::Int(i))) => {
+                            Word::Number((i as f64).into(), i.to_string())
+                        }
+                        NumericSubscript::N(Some(SubscriptNumber::I)) => {
+                            Word::Number(Complex::I.into(), "i".into())
+                        }
+                        NumericSubscript::N(Some(SubscriptNumber::NegI)) => {
+                            Word::Number((-Complex::I).into(), "¯i".into())
+                        }
+                        NumericSubscript::N(Some(SubscriptNumber::R)) => {
+                            Word::Number(Complex::ONE.into(), "r".into())
+                        }
+                        NumericSubscript::N(Some(SubscriptNumber::NegR)) => {
+                            Word::Number((-Complex::ONE).into(), "¯r".into())
+                        }
+                        NumericSubscript::N(None) => Word::PlaceholderN,
+                    }
+                } else {
+                    self.errors
+                        .push(sub.map(Token::Subscr).map(ParseError::Unexpected));
+                    Word::Spaces
+                },
+            )
         } else {
             return None;
         };
@@ -1347,7 +1383,6 @@ impl Parser<'_> {
         }
         loop {
             let reset = self.index;
-            self.spaces();
             if let Some(n) = self.next_token_map(Token::as_subscript) {
                 let span = word.span.clone().merge(n.span.clone());
                 word = span.sp(Word::Subscripted(Box::new(crate::ast::Subscripted {

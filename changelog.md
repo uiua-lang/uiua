@@ -16,7 +16,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Add experimental [`multivector 𝕍`](https://uiua.org/docs/multivector) function, which creates an array of geometric algebra multivectors
   - Add experimental [`inner product ⨰`](<https://uiua.org/docs/inner product>) function
   - Add experimental [`outer product ⨱`](<https://uiua.org/docs/outer product>) function
-  - Add experimental [blade literals](https://uiua.org/docs/experimental#blade-literal)
+  - Add experimental [blade literals](https://uiua.org/docs/experimental#blade-literals)
   - Remove experimental `geometric ⩜` modifier
 - Add experimental [custom subscript functions](<https://www.uiua.org/docs/experimental#custom-subscript-functions>)
   - Remove previously deprecated `log ₙ` function, which syntactically conflicted

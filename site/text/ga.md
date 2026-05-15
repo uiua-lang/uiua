@@ -346,8 +346,8 @@ If the blades are not in their canonical order, they will be automatically reord
 
 ```uiua
 # Experimental!
-e,321 4e,13 5e,120 # Try formatting!
-e,00 10e,121 5e,112323
+e,321  4e,13  5e,120 # Try formatting!
+e,00  10e,121  5e,112323
 ```
 
 ### Basis Order Convention

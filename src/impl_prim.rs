@@ -134,6 +134,7 @@ impl_primitive!(
     (0(0)[1], UnDump, Impure),
     (0[2], UnFill),
     (1, Primes),
+    (1, GradeDecompose),
     (1, UnBox),
     (2, AntiDrop),
     (2, AntiSelect),

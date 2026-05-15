@@ -753,6 +753,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
             ImplPrimitive::StackN { n, inverse } => stack_n(env, *n, *inverse)?,
             ImplPrimitive::UnStack => stack(env, true)?,
+            ImplPrimitive::GradeDecompose => env.monadic_env(Value::grade_decompose)?,
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
             ImplPrimitive::UnBox => {
                 let val = env.pop(1)?;

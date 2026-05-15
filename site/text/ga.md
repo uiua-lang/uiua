@@ -287,6 +287,7 @@ Without much additional effort, we can even rotate a tesseract, the 4D analog to
 Consider this function `F` which calculates `F(x) = x³ + 2x² + 5x`. Its derivative `F′` calculates `F(x) = 3x² + 4x + 5`.
 
 ```uiua
+# Experimental!
 F  ← /+⊃[ⁿ3|×2ⁿ2|×5]
 F′ ← +5/+⊃[×3ⁿ2|×4]
 ```
@@ -294,6 +295,7 @@ F′ ← +5/+⊃[×3ⁿ2|×4]
 The key equation that makes autodifferentiation possible is that `F(x+ε) = F(x) + F′(x)ε`. This means that by simply adding `e₀` (our `ε`), to some input values, calling the function, and then extracting the vector coefficients, we can find the values at x of the derivative function `F′` without actually having to figure out the derivative ourself. Notice that the result is the same as our hand-written derivative function!
 
 ```uiua
+# Experimental!
 F  ← /+⊃[ⁿ3|×2ⁿ2|×5]
 F′ ← +5/+⊃[×3ⁿ2|×4]
 
@@ -305,28 +307,29 @@ F′ ⇡10
 
 Here is a quick reference table how various Uiua operators work on multivectors:
 
-| Primitive              | GA Functionality         |
-| ---------------------- | ------------------------ |
-| [multivector]()        | Create multivector       |
-| [multiply]()           | Geometric Product        |
-| [divide]()             | Scalar division          |
-| [add]()                | Multivector addition     |
-| [subtract]()           | Multivector subtraction  |
-| [negate]()             | Negate multivector       |
-| [reciprocal]()         | Invert multivector       |
-| [absolute value]()     | Multivector magnitude    |
-| [sign]()               | Normalize multivector    |
-| [exponential]()        | Exponentiate multivector |
-| [un]() [exponential]() | Multivector natural log  |
-| [power]()              | Multivector power        |
-| [negate]()`⌟`          | Reverse (`conj`)         |
-| [negate]()`⌞`          | Negative reverse         |
-| [negate]()`₄`          | Dual (`dual`)            |
-| [negate]()`₋₄`         | Antidual                 |
-| [outer product]()      | Outer product            |
-| [inner product]()      | Inner product            |
-| [inner product]()`⌞`   | Left contraction         |
-| [inner product]()`⌟`   | Right contraction        |
+| Primitive                 | GA Functionality         |
+| ------------------------- | ------------------------ |
+| [multivector]()           | Create multivector       |
+| [multiply]()              | Geometric Product        |
+| [divide]()                | Scalar division          |
+| [add]()                   | Multivector addition     |
+| [subtract]()              | Multivector subtraction  |
+| [negate]()                | Negate multivector       |
+| [reciprocal]()            | Invert multivector       |
+| [absolute value]()        | Multivector magnitude    |
+| [sign]()                  | Normalize multivector    |
+| [exponential]()           | Exponentiate multivector |
+| [un]() [exponential]()    | Multivector natural log  |
+| [power]()                 | Multivector power        |
+| [negate]()`⌟`             | Reverse (`conj`)         |
+| [negate]()`⌞`             | Negative reverse         |
+| [negate]()`₄`             | Dual (`dual`)            |
+| [negate]()`₋₄`            | Antidual                 |
+| [outer product]()         | Outer product            |
+| [inner product]()         | Inner product            |
+| [inner product]()`⌞`      | Left contraction         |
+| [inner product]()`⌟`      | Right contraction        |
+| [un]() [reduce]() [add]() | Grade decomposition      |
 
 In general, all product operators on multivectors are not commutative, meaning the order of the operands matters. Uiua uses a convention where an operation like `AB` or `A∧B` in normal mathematical notation becomes `×B A` or `⨱B A`, with the "right" argument as the first. This is in line with many other Uiua operators.
 

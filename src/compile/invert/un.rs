@@ -221,10 +221,12 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &RowsSubPat,
     &Trivial,
     &ScanPat,
+    &ReduceAddPat,
     &ReduceMulPat,
     &ReduceFormatPat,
     &GroupPat,
     &PartitionPat,
+    &GradeDecomposePat,
     &PrimesPat,
     &CustomPat,
     &FormatPat,
@@ -705,6 +707,23 @@ inverse!(ScanPat, input, asm, {
     };
     Ok((input, inverse))
 });
+
+inverse!(
+    (ReduceAddPat, input, _, Reduce, span),
+    [SigNode {
+        node: Prim(Add, _),
+        ..
+    }],
+    Ok((input, ImplPrim(GradeDecompose, span)))
+);
+
+inverse!(
+    (GradeDecomposePat, input, _, ImplPrim(GradeDecompose, span)),
+    Ok((
+        input,
+        Mod(Reduce, eco_vec![Prim(Add, span).sig_node()?], span)
+    ))
+);
 
 inverse!(
     (ReduceMulPat, input, _, Reduce, span),

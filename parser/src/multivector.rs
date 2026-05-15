@@ -476,6 +476,12 @@ impl Multivector {
     pub fn take_scalar(&mut self) -> f64 {
         take(&mut self[0])
     }
+    #[doc(hidden)]
+    pub fn make_scalar_only(&mut self) {
+        for c in self.coefs.make_mut().iter_mut().skip(1) {
+            *c = 0.0;
+        }
+    }
     fn nanify(&mut self) {
         self.coefs.make_mut().fill(0.0);
         self.set_blade(0b0, f64::NAN);

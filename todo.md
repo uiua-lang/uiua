@@ -1,8 +1,6 @@
 # Uiua Todo
 
 # 0.19
-- Multivector scalar
-  - Grade decomposition
 - Type system
   - Tests
   - Data def types

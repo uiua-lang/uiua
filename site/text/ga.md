@@ -79,7 +79,7 @@ To convert from multivectors back to numbers, we use [un]() [multivector](). Thi
 
 ```uiua
 # Experimental!
--⊸¬ ÷⟜⇡₀ 4
+-⊸¬ ÷⟜⇡₀ 2
 𝕍 ◴⊂⟜≡⇌♭₂⊞⊂¯1_1
 ₑ×e₁₂÷2×η÷⟜⇡8
 ⊞(×⊃¯⌟˜×)
@@ -115,7 +115,7 @@ We still want to rotate the points around an axis. In 3D, there are now 3 axes o
 
 ```uiua
 # Experimental!
--⊸¬ ÷⟜⇡₀ 2
+-⊸¬ ÷⟜⇡₀ 1
 𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2
 ₑ×e₁₂÷2×η÷⟜⇡8
 ⊞(×⊃¯⌟˜×)
@@ -190,7 +190,7 @@ Now, we will re-`dual` the points to convert from bivectors to vectors, [sign]()
 
 ```uiua
 # Experimental!
--⊸¬ ÷⟜⇡₀ 2
+-⊸¬ ÷⟜⇡₀ 1
 𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2
 ₑ×e₁₂÷2×η÷⟜⇡8
 ⊞(×⊃¯⌟˜×)
@@ -204,7 +204,7 @@ The first number in each vector is `1` (from normalized `e₀`). The second numb
 
 ```uiua
 # Experimental!
--⊸¬ ÷⟜⇡₀ 2
+-⊸¬ ÷⟜⇡₀ 1
 𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)2
 ₑ×e₁₂÷2×η÷⟜⇡8
 ⊞(×⊃¯⌟˜×)
@@ -266,9 +266,9 @@ Without much additional effort, we can even rotate a tesseract, the 4D analog to
 
 ```uiua
 # Experimental!
--⊸¬ ÷⟜⇡₀ 12            # Edge points
+-⊸¬ ÷⟜⇡₀ 10            # Edge points
 𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)3    # Cube points
-ₑ×e₁₂÷2×η÷⟜⇡24         # Rotors
+ₑ×e₁₂÷2×η÷⟜⇡20         # Rotors
 ⊞(×⊃¯⌟˜×)              # Rotate points
 ¯₄+e₀                  # Convert to PGA
 ⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0 0] # Lines from points to camera
@@ -288,16 +288,16 @@ Consider this function `F` which calculates `F(x) = x³ + 2x² + 5x`. Its deriva
 
 ```uiua
 # Experimental!
-F  ← /+⊃[ⁿ3|×2ⁿ2|×5]
-F′ ← +5/+⊃[×3ⁿ2|×4]
+F  ← ++⊃(ⁿ3|×¯2ⁿ2|×5)
+F′ ← ++⊃(×3ⁿ2|×¯4|5)
 ```
 
 The key equation that makes autodifferentiation possible is that `F(x+ε) = F(x) + F′(x)ε`. This means that by simply adding `e₀` (our `ε`), to some input values, calling the function, and then extracting the vector coefficients, we can find the values at x of the derivative function `F′` without actually having to figure out the derivative ourself. Notice that the result is the same as our hand-written derivative function!
 
 ```uiua
 # Experimental!
-F  ← /+⊃[ⁿ3|×2ⁿ2|×5]
-F′ ← +5/+⊃[×3ⁿ2|×4]
+F  ← ++⊃(ⁿ3|×¯2ⁿ2|×5)
+F′ ← ++⊃(×3ⁿ2|×¯4|5)
 
 F′ ⇡10
 ♭°𝕍 F +e₀ ⇡10

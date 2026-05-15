@@ -792,7 +792,7 @@ primitive!(
     /// Using [multivector] on a multivector array can change its number of dimensions.
     /// ex: # Experimental!
     ///   : 𝕍₂ 𝕍₃ [1 2 3 4 5 6 7 8]
-    (1, Multivector, Algorithm, ("multivector", '𝕍'), { experimental: true, simple: false }),
+    (1, Multivector, GeometricAlgebra, ("multivector", '𝕍'), { experimental: true, simple: false }),
     /// Generate a random number in the range `[0, 1)`
     ///
     /// If you need a seeded random number, use [gen].

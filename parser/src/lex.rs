@@ -21,7 +21,7 @@ use crate::{
 
 /// Subscript digit characters
 pub const SUBSCRIPT_DIGITS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
-pub const OTHER_SUBSCRIPT_NUMBERS: [char; 3] = ['ᵣ', 'ᵢ', 'ₒ'];
+pub const OTHER_SUBSCRIPT_NUMBERS: [char; 2] = ['ᵣ', 'ᵢ'];
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub(crate) struct FormatSubscript(pub i32);
 impl fmt::Display for FormatSubscript {

@@ -580,13 +580,14 @@ impl Parser<'_> {
                     chars.extend(Primitive::non_deprecated().filter_map(|p| p.glyph()));
                     chars.extend(' '..='~');
                     chars.extend(SUBSCRIPT_DIGITS);
+                    chars.extend(OTHER_SUBSCRIPT_NUMBERS);
                     chars.extend("←↚‼′″‴₋⌞⌟ₙ↓".chars());
                     chars.sort_unstable();
+                    debug_assert!(chars.len() < 256);
                     chars
                 };
             }
             SBCS_CHARS.with(|chars| {
-                debug_assert!(chars.len() < 256);
                 let mut count = 0;
                 iter_chars(&self.tokens[words_start..words_end], self.inputs, |c| {
                     count += 1 + if chars.binary_search(&c).is_ok() {

@@ -91,6 +91,8 @@ pub enum PrimComponent {
     Nat,
     /// 𝔹
     Bool,
+    /// Basis vector e
+    E,
 }
 
 impl From<Primitive> for PrimComponent {
@@ -125,6 +127,7 @@ impl PrimComponent {
             PrimComponent::Int => "ℤ",
             PrimComponent::Nat => "ℕ",
             PrimComponent::Bool => "𝔹",
+            PrimComponent::E => "e",
         }
     }
     /// Try to parse a component from a name prefix
@@ -347,6 +350,7 @@ impl Primitive {
                 (i, Backward),
                 (ch, Mul)
             ),
+            alias!((p, Add), (g, PrimComponent::E), (a, PrimComponent::Sub0)),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

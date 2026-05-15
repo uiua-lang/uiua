@@ -64,6 +64,7 @@ pub fn Site() -> impl IntoView {
     let subtitles_rare = [
         view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>"!").into_view(),
         view!(<a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
+        view!("Check out the "<a href="https://www.reddit.com/r/uiua/">"Uiua subreddit"</a>"!").into_view(),
         view! {
             <div style="font-style: normal">
                 <a href="/tutorial/More Argument Manipulation#-planet-notation-" style="text-decoration: none">"🌍🪐"</a>" "

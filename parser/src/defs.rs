@@ -590,7 +590,7 @@ primitive!(
     /// If two multivectors share no basis blades, they become `0`.
     /// ex: # Experimental!
     ///   : ⨰ 3e₂ 2e₁
-    /// [inner product] is distributive and anticommutative.
+    /// [inner product] is distributive and anticommutative for vectors.
     /// ex: # Experimental!
     ///   : ⨰ /+[2 3e₁ 4e₂ 5e₁₂] 2e₁
     /// Sided subscripts for [inner product] do left and right contraction
@@ -611,7 +611,7 @@ primitive!(
     /// If two multivectors share any basis blades, they become `0`.
     /// ex: # Experimental!
     ///   : ⨱ 4e₃₁ 2e₁
-    /// [outer product] is distributive and anticommutative.
+    /// [outer product] is distributive and anticommutative for vectors.
     /// ex: # Experimental!
     ///   : ⨱ /+[2 3e₁ 4e₂ 5e₁₂ 6e₃₁] 2e₂
     /// See the [Geometric Algebra tutorial](https://uiua.org/docs/experimental#geometric-algebra) for more information.

@@ -112,6 +112,24 @@ impl Complex {
     pub fn from_polar(r: f64, theta: f64) -> Self {
         r * Self::new(theta.cos(), theta.sin())
     }
+    /// Calculate the conjugate of a complex number
+    pub fn conj(mut self) -> Self {
+        self.im = -self.im;
+        self
+    }
+    /// Calculate the negative conjugate of a complex number
+    pub fn neg_conj(mut self) -> Self {
+        self.re = -self.re;
+        self
+    }
+    /// Calculate the dual of a complex number
+    pub fn dual(self) -> Self {
+        Self::new(-self.im, self.re)
+    }
+    /// Calculate the inverse dual of a complex number
+    pub fn inv_dual(self) -> Self {
+        Self::new(self.im, -self.re)
+    }
     /// Raise a complex number to a complex power
     pub fn powc(self, power: impl Into<Self>) -> Self {
         let power = power.into();
@@ -202,6 +220,21 @@ impl Complex {
     }
     pub fn recip(self) -> Self {
         Self::ONE / self
+    }
+    pub fn inner_product(self, other: Self) -> Self {
+        self * other
+    }
+    pub fn left_contraction(self, other: Self) -> Self {
+        Self::new(self.re * other.re - self.im * other.im, self.re * other.im)
+    }
+    pub fn right_contraction(self, other: Self) -> Self {
+        other.left_contraction(self)
+    }
+    pub fn outer_product(self, other: Self) -> Self {
+        Self::new(self.re * other.re, self.re * other.im + self.im * other.re)
+    }
+    pub fn regressive_product(self, other: Self) -> Self {
+        Self::new(self.re * other.im + self.im * other.re, self.im * other.im)
     }
 }
 

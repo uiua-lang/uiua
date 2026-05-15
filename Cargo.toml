@@ -195,6 +195,7 @@ apng = ["dep:png"]
 audio = ["hodaun", "audio_encode", "ogg"]
 audio_encode = ["hound"]
 batteries = [
+  "ga", # Comment in for dev
   "gif",
   "apng",
   "image",
@@ -245,6 +246,7 @@ ffi = ["libffi", "libloading"]
 fft = ["rustfft", "num-complex"]
 font_shaping = ["cosmic-text", "sys-locale"]
 full = ["audio", "webcam", "window"] # Enables all optional features
+ga = ["uiua_parser/multivector"]
 gif = ["dep:gif", "image"]
 invoke = ["open"]
 lsp = ["tower-lsp", "tokio", "native_sys"]

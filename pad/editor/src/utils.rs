@@ -1589,6 +1589,14 @@ pub fn set_show_experimental(show_experimental: bool) {
     update_style();
 }
 
+pub fn get_show_advanced() -> bool {
+    get_local_var("show-advanced", || false)
+}
+pub fn set_show_advanced(show_advanced: bool) {
+    set_local_var("show-advanced", show_advanced);
+    update_style();
+}
+
 pub fn get_run_on_format() -> bool {
     get_local_var("run-on-format", || true)
 }

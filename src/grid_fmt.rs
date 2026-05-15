@@ -1,9 +1,10 @@
 //! Pretty printing Uiua arrays
 
 use std::{
+    any::type_name,
     borrow::Cow,
     collections::HashMap,
-    f64::consts::{E, PI, TAU},
+    f64::consts::{E, PI, SQRT_2, TAU},
     iter::{once, repeat_n},
     mem::take,
 };
@@ -11,7 +12,7 @@ use std::{
 use ecow::EcoString;
 
 use crate::{
-    Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
+    ArrayMeta, Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
     algorithm::map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
     boxed::Boxed,
@@ -54,9 +55,9 @@ pub trait GridFmt: Sized {
     fn empty_list_inner() -> &'static str {
         ""
     }
-    /// Separator for formatting
-    fn format_sep() -> &'static str {
-        " "
+    /// How much to separate items when formatting
+    fn separation() -> usize {
+        1
     }
     /// Delimiters for grid formatting
     fn grid_fmt_delims() -> (char, char) {
@@ -69,6 +70,10 @@ pub trait GridFmt: Sized {
     /// Whether to divide cells with box drawing lines when grid formatting
     fn box_lines() -> bool {
         false
+    }
+    /// Whether to allow list elements to be shown on the same line
+    fn list_same_line() -> bool {
+        true
     }
     /// Summarize the elements of an array of this type
     fn summarize(_: &[Self]) -> String {
@@ -148,17 +153,20 @@ impl GridFmt for f64 {
             format!("{minus}e")
         } else if positive == f64::INFINITY {
             format!("{minus}∞")
-        } else if let Some((num, denom, approx)) =
-            [1u8, 2, 3, 4, 5, 6, 8, 9, 12].iter().find_map(|&denom| {
-                let num = (positive * denom as f64) / TAU;
-                let rounded = num.round();
-                if rounded <= 100.0 && (num - rounded).abs() <= 8.0 * f64::EPSILON && rounded != 0.0
-                {
-                    Some((rounded, denom, num != rounded))
-                } else {
-                    None
-                }
-            })
+        } else if positive.fract() != 0.0
+            && let Some((num, denom, approx)) =
+                [1u8, 2, 3, 4, 5, 6, 8, 9, 12].iter().find_map(|&denom| {
+                    let num = (positive * denom as f64) / TAU;
+                    let rounded = num.round();
+                    if rounded <= 100.0
+                        && (num - rounded).abs() <= 8.0 * f64::EPSILON
+                        && rounded != 0.0
+                    {
+                        Some((rounded, denom, num != rounded))
+                    } else {
+                        None
+                    }
+                })
         {
             let prefix = if approx { "~" } else { "" };
             if denom == 1 {
@@ -180,6 +188,21 @@ impl GridFmt for f64 {
             } else {
                 format!("{prefix}{minus}{num}τ/{denom}")
             }
+        } else if positive <= 2.5
+            && positive.fract() != 0.0
+            && let Some((.., sqr)) = [
+                (SQRT_2, 2.0, "2"),
+                (SQRT_2 / 2.0, 0.5, "½"),
+                (3f64.sqrt(), 3.0, "3"),
+                (3f64.sqrt() / 2.0, 0.75, "¾"),
+                (3f64.sqrt() / 3.0, 1.0 / 3.0, "⅓"),
+                (5f64.sqrt(), 5.0, "5"),
+                (5f64.sqrt() / 5.0, 0.2, "⅕"),
+            ]
+            .into_iter()
+            .find(|(sqrt, ..)| (sqrt - positive).abs() <= f64::EPSILON)
+        {
+            format!("√{sqr}")
         } else {
             let mut pos_formatted = positive.to_string();
             if pos_formatted.len() >= 17 {
@@ -392,6 +415,139 @@ impl GridFmt for Complex {
     }
 }
 
+#[cfg(feature = "ga")]
+impl GridFmt for crate::Multivector {
+    fn fmt_grid(&self, _: GridFmtParams) -> Grid {
+        let dims = self.dims();
+        let dim_offset = (self.flavor.metric(0) != 0) as usize;
+        let (mask_table, _) = crate::ga::mask_tables(dims);
+        let mut s = Vec::new();
+        for (i, n) in self.iter().enumerate() {
+            if n == 0.0 {
+                continue;
+            }
+            if s.is_empty() {
+                if n < 0.0 {
+                    s.push('¯');
+                }
+            } else {
+                s.extend(if n > 0.0 { " + " } else { " - " }.chars());
+            }
+            let mask = mask_table[i];
+            if n.abs() != 1.0 || mask == 0 {
+                let n_grid = n.abs().fmt_grid(Default::default());
+                s.extend(n_grid.into_iter().next().unwrap());
+            }
+            if mask == 0 {
+                continue;
+            }
+            s.push('e');
+            for j in 0..dims {
+                if mask & (1 << j) != 0 {
+                    s.push(crate::SUBSCRIPT_DIGITS[j as usize + dim_offset]);
+                }
+            }
+            if dims == 3 && mask == 0b101 {
+                let (a, b) = (s.len() - 1, s.len() - 2);
+                s.swap(a, b);
+            }
+        }
+        if s.is_empty() {
+            s = vec!['0'];
+        }
+        vec![s]
+    }
+    fn list_same_line() -> bool {
+        false
+    }
+    fn separation() -> usize {
+        2
+    }
+    fn summary_min_elems() -> usize {
+        100
+    }
+    fn summarize(mvs: &[Self]) -> String {
+        let mut dims = Vec::new();
+        let mut flavors = Vec::new();
+        let mut min_mag = 0f64;
+        let mut max_mag = 0f64;
+        let mut grades = Vec::new();
+        for mv in mvs {
+            dims.push(mv.dims().saturating_sub(mv.flavor.dim_adjustment()));
+            dims.sort();
+            dims.dedup();
+            flavors.push(mv.flavor);
+            flavors.sort();
+            flavors.dedup();
+            for (g, b) in mv.grades().enumerate() {
+                if b.iter().any(|&b| b != 0.0) {
+                    grades.push(g);
+                }
+            }
+            grades.sort();
+            grades.dedup();
+            let mag = mv.magnitude();
+            min_mag = min_mag.min(mag);
+            max_mag = max_mag.max(mag);
+        }
+        let dims = match dims.len() {
+            1 => {
+                format!("{}D", dims[0])
+            }
+            2.. if dims.windows(2).all(|w| w[1] - w[0] == 1) => {
+                format!("{}-{}D", dims[0], dims.last().unwrap())
+            }
+            _ => {
+                let mut s = String::new();
+                for (i, d) in dims.iter().enumerate() {
+                    if i > 0 {
+                        s.push(' ');
+                    }
+                    s.push_str(&d.to_string());
+                    s.push('D');
+                }
+                s
+            }
+        };
+        let grades = match grades.len() {
+            0 => "no grades".into(),
+            1 => {
+                format!("grade {}", grades[0])
+            }
+            2.. if grades.windows(2).all(|w| w[1] - w[0] == 1) => {
+                format!("grades {}-{}", grades[0], grades.last().unwrap())
+            }
+            _ => {
+                let mut s = "grades".to_string();
+                for g in grades {
+                    s.push(' ');
+                    s.push_str(&g.to_string());
+                }
+                s
+            }
+        };
+        let flavors = match &*flavors {
+            [] => "".into(),
+            [fl] => fl.to_string(),
+            flavors => {
+                let mut s = String::new();
+                for (i, fl) in flavors.iter().enumerate() {
+                    if i > 0 {
+                        s.push('/');
+                    }
+                    s.push_str(&fl.to_string());
+                }
+                s
+            }
+        };
+        format!(
+            "{dims} {flavors} ({grades}) ⌵{}-{}",
+            min_mag.grid_string(false),
+            max_mag.grid_string(false)
+        )
+    }
+}
+
 impl GridFmt for Value {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         if params.depth > 100 {
@@ -402,6 +558,8 @@ impl GridFmt for Value {
             Value::Byte(b) => b.fmt_grid(params),
             Value::Complex(c) => c.fmt_grid(params),
             Value::Char(c) => c.fmt_grid(params),
+            #[cfg(feature = "ga")]
+            Value::Mv(m) => m.fmt_grid(params),
             Value::Box(v) => {
                 let max_boxed_rank = v.data.iter().map(|Boxed(v)| v.rank()).max().unwrap_or(0);
                 v.fmt_grid(GridFmtParams {
@@ -461,8 +619,8 @@ impl GridFmt for char {
     fn format_delims() -> (&'static str, &'static str) {
         ("", "")
     }
-    fn format_sep() -> &'static str {
-        ""
+    fn separation() -> usize {
+        0
     }
     fn grid_fmt_delims() -> (char, char) {
         ('"', '"')
@@ -696,6 +854,8 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     Value::Complex(_) => Complex::alignment(),
                     Value::Char(_) => char::alignment(),
                     Value::Box(_) => Boxed::alignment(),
+                    #[cfg(feature = "ga")]
+                    Value::Mv(_) => crate::Multivector::alignment(),
                 });
                 let metagrid = metagrid.get_or_insert_with(Metagrid::new);
                 for (key, value) in self.map_kv() {
@@ -712,6 +872,8 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         Value::Complex(_) => shape_row::<Complex>(&keys_row_shape),
                         Value::Char(_) => shape_row::<char>(&keys_row_shape),
                         Value::Box(_) => shape_row::<Boxed>(&keys_row_shape),
+                        #[cfg(feature = "ga")]
+                        Value::Mv(_) => shape_row::<crate::Multivector>(&keys_row_shape),
                     };
                     row.extend([' ', '→', ' ']);
                     let mut value_row_shape = self.shape.clone();
@@ -754,7 +916,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     parent_rank: self.rank(),
                     ..params
                 };
-                fmt_array(&self.shape, &self.data, params, &mut metagrid);
+                fmt_array(self.rank(), &self.shape, &self.data, params, &mut metagrid);
                 metagrid
             });
 
@@ -987,93 +1149,135 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             grid
         };
 
-        // Add handle kind
-        if let Some(kind) = &self.meta.handle_kind
-            && grid.len() == 1
-        {
-            grid[0] = (kind.to_string().chars().chain(['(']))
-                .chain(take(&mut grid[0]))
-                .chain([')'])
-                .collect();
-        }
-
-        // Add complex marker
-        if T::TYPE_ID == Complex::TYPE_ID && !grid.iter().flatten().any(|&c| c == 'ℂ' || c == 'i')
-        {
-            if self.shape.is_empty() {
-                grid[0].push('ℂ');
-            } else if grid.len() == 1 {
-                let offset = outlined as usize;
-                grid[0].insert(offset, 'ℂ');
-                grid[0].insert(offset + 1, ' ');
-            } else if outlined {
-                grid[0][2] = 'ℂ';
-            } else {
-                for row in &mut grid {
-                    row.push(' ');
-                    row.push(' ');
-                    row.rotate_right(2);
-                }
-                grid[0][0] = 'ℂ';
-            }
-        }
-
-        // Add label
-        if params.label
-            && let Some(label) = &self.meta.label
-        {
-            if grid.len() == 1 && params.parent_rank == 0 {
-                grid[0] = (label.chars().chain([':', ' ']))
+        // Non-generic function to reduce size of monomophized function
+        fn extras(
+            grid: &mut Grid,
+            shape: &[usize],
+            meta: &ArrayMeta,
+            params: GridFmtParams,
+            outlined: bool,
+            tname: &'static str,
+        ) {
+            // Add handle kind
+            if let Some(kind) = &meta.handle_kind
+                && grid.len() == 1
+            {
+                grid[0] = (kind.to_string().chars().chain(['(']))
                     .chain(take(&mut grid[0]))
+                    .chain([')'])
                     .collect();
-            } else {
-                if grid[0].len() >= 2 && "┌╭".contains(grid[0][1]) {
-                    grid[0] = label
-                        .chars()
-                        .chain(take(&mut grid[0]).into_iter().skip(1))
-                        .collect();
-                    for row in grid.iter_mut().skip(1) {
-                        let ext = label.chars().count() - 1;
-                        row.extend(repeat_n(' ', ext));
-                        row.rotate_right(ext);
-                    }
-                } else {
-                    if "┌╭".contains(grid[0][0]) {
-                        let trunc = if grid[0][2] == 'ℂ' { 3 } else { 2 };
-                        grid[0].truncate(trunc);
-                        grid[0].push(' ');
-                    } else {
-                        grid.insert(0, Vec::new());
-                    }
-                    grid[0].extend(label.chars());
-                }
-                // Normalize lengths
-                while grid[0].len() < grid[1].len() {
-                    grid[0].push(' ');
-                }
-                for i in 1..grid.len() {
-                    while grid[i].len() < grid[0].len() {
-                        grid[i].push(' ');
-                    }
-                }
             }
-        }
 
-        // Handle really big grid
-        if self.rank() > 1 {
-            let max_width = terminal_size().map_or(1000, |(w, _)| w.saturating_sub(4).max(4));
-            for row in grid.iter_mut() {
-                if row.len() > max_width {
-                    let diff = row.len() - max_width;
-                    row.truncate(max_width);
-                    if !(row[max_width - 1].is_whitespace() && diff == 1)
-                        && (2..4).any(|i| !row[max_width - i].is_whitespace())
-                    {
-                        row[max_width - 1] = '…';
+            // Add complex marker
+            if tname == type_name::<Complex>()
+                && !grid.iter().flatten().any(|&c| c == 'ℂ' || c == 'i')
+            {
+                if shape.is_empty() {
+                    grid[0].push('ℂ');
+                } else if grid.len() == 1 {
+                    let offset = outlined as usize;
+                    grid[0].insert(offset, 'ℂ');
+                    grid[0].insert(offset + 1, ' ');
+                } else if outlined {
+                    grid[0][2] = 'ℂ';
+                } else {
+                    for row in &mut *grid {
+                        row.push(' ');
+                        row.push(' ');
+                        row.rotate_right(2);
+                    }
+                    grid[0][0] = 'ℂ';
+                }
+            }
+            // Add multivector marker
+            #[cfg(feature = "ga")]
+            if tname == type_name::<crate::Multivector>()
+                && !(grid.iter().flatten())
+                    .any(|c| *c == '𝕍' || crate::SUBSCRIPT_DIGITS.contains(c))
+            {
+                if shape.is_empty() {
+                    grid[0].push('𝕍');
+                } else if grid.len() == 1 {
+                    let offset = outlined as usize;
+                    grid[0].insert(offset, '𝕍');
+                    grid[0].insert(offset + 1, ' ');
+                } else if outlined {
+                    grid[0][2] = '𝕍';
+                } else {
+                    for row in &mut *grid {
+                        row.push(' ');
+                        row.push(' ');
+                        row.rotate_right(2);
+                    }
+                    grid[0][0] = '𝕍';
+                }
+            }
+
+            // Add label
+            if params.label
+                && let Some(label) = &meta.label
+            {
+                if grid.len() == 1 && params.parent_rank == 0 {
+                    grid[0] = (label.chars().chain([':', ' ']))
+                        .chain(take(&mut grid[0]))
+                        .collect();
+                } else {
+                    if grid[0].len() >= 2 && "┌╭".contains(grid[0][1]) {
+                        grid[0] = label
+                            .chars()
+                            .chain(take(&mut grid[0]).into_iter().skip(1))
+                            .collect();
+                        for row in grid.iter_mut().skip(1) {
+                            let ext = label.chars().count() - 1;
+                            row.extend(repeat_n(' ', ext));
+                            row.rotate_right(ext);
+                        }
+                    } else {
+                        if "┌╭".contains(grid[0][0]) {
+                            let trunc = if grid[0][2] == 'ℂ' { 3 } else { 2 };
+                            grid[0].truncate(trunc);
+                            grid[0].push(' ');
+                        } else {
+                            grid.insert(0, Vec::new());
+                        }
+                        grid[0].extend(label.chars());
+                    }
+                    // Normalize lengths
+                    while grid[0].len() < grid[1].len() {
+                        grid[0].push(' ');
+                    }
+                    for i in 1..grid.len() {
+                        while grid[i].len() < grid[0].len() {
+                            grid[i].push(' ');
+                        }
+                    }
+                }
+            }
+
+            // Handle really big grid
+            if shape.len() > 1 {
+                let max_width = terminal_size().map_or(1000, |(w, _)| w.saturating_sub(4).max(4));
+                for row in grid.iter_mut() {
+                    if row.len() > max_width {
+                        let diff = row.len() - max_width;
+                        row.truncate(max_width);
+                        if !(row[max_width - 1].is_whitespace() && diff == 1)
+                            && (2..4).any(|i| !row[max_width - i].is_whitespace())
+                        {
+                            row[max_width - 1] = '…';
+                        }
                     }
                 }
             }
         }
+        extras(
+            &mut grid,
+            &self.shape,
+            &self.meta,
+            params,
+            outlined,
+            type_name::<T>(),
+        );
 
         grid
     }
@@ -1094,6 +1298,8 @@ impl<T: ArrayValue> Array<T> {
                 Value::Complex(_) => shape_row::<Complex>(&keys_shape),
                 Value::Char(_) => shape_row::<char>(&keys_shape),
                 Value::Box(_) => shape_row::<Boxed>(&keys_shape),
+                #[cfg(feature = "ga")]
+                Value::Mv(_) => shape_row::<crate::Multivector>(&keys_shape),
             }
             .into_iter()
             .collect();
@@ -1154,10 +1360,13 @@ fn value_requires_summary(val: &Value) -> bool {
         Value::Complex(a) => requires_summary::<Complex>(&a.shape),
         Value::Char(a) => requires_summary::<char>(&a.shape),
         Value::Box(a) => requires_summary::<Boxed>(&a.shape),
+        #[cfg(feature = "ga")]
+        Value::Mv(a) => requires_summary::<crate::Multivector>(&a.shape),
     }
 }
 
 fn fmt_array<T: GridFmt + ArrayValue>(
+    max_rank: usize,
     shape: &[usize],
     data: &[T],
     params: GridFmtParams,
@@ -1186,7 +1395,8 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         metagrid.push(vec![data[0].fmt_grid(params)]);
         return;
     }
-    if rank == 1 {
+    let vertical_list = max_rank == 1 && !T::list_same_line();
+    if rank == 1 && !vertical_list {
         let mut row = Vec::with_capacity(shape[0]);
         if T::compress_list_grid() {
             let s: String = data
@@ -1201,7 +1411,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
             for (i, val) in data.iter().enumerate() {
                 let mut grid = val.fmt_grid(params);
                 if i > 0 && !T::box_lines() {
-                    pad_grid_min(grid[0].len() + 1, grid.len(), &mut grid);
+                    pad_grid_min(grid[0].len() + T::separation(), grid.len(), &mut grid);
                 }
                 row.push(grid);
             }
@@ -1217,15 +1427,16 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     let row_shape = &shape[1..];
     let cell_size = data.len() / cell_count;
     let start_len = metagrid.len();
+    let adjusted_rank = rank + vertical_list as usize;
     for (i, cell) in data.chunks(cell_size).enumerate() {
-        if i > 0 && rank > 2 && !T::box_lines() && rank.is_multiple_of(2) {
-            for _ in 0..(rank - 2) / 2 {
+        if i > 0 && adjusted_rank > 2 && !T::box_lines() && adjusted_rank.is_multiple_of(2) {
+            for _ in 0..(adjusted_rank - 2) / 2 {
                 metagrid.push(vec![vec![vec![' ']]; metagrid.last().unwrap().len()]);
             }
         }
         let len_before = metagrid.len();
-        fmt_array(row_shape, cell, params, metagrid);
-        if T::compress_list_grid() && rank == 2 {
+        fmt_array(max_rank, row_shape, cell, params, metagrid);
+        if T::compress_list_grid() && adjusted_rank == 2 {
             let (left, right) = T::grid_fmt_delims();
             for grid in metagrid.last_mut().unwrap() {
                 for row in grid.iter_mut() {
@@ -1234,14 +1445,14 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                 }
             }
         }
-        if i > 0 && (rank > 2 || T::box_lines()) && rank % 2 == 1 {
+        if i > 0 && (adjusted_rank > 2 || T::box_lines()) && adjusted_rank % 2 == 1 {
             let elem_rows = metagrid.iter().flatten().flatten();
             let max_width = elem_rows.map(|r| r.len()).max().unwrap_or(0);
             let div = if max_width > 10 { 1 } else { 2 };
             let rows = metagrid.split_off(len_before);
             for (mrow, row) in metagrid.iter_mut().skip(start_len).zip(rows) {
                 if !T::box_lines() {
-                    mrow.push(vec![vec![' '; rank.div_ceil(div)]]);
+                    mrow.push(vec![vec![' '; adjusted_rank.div_ceil(div)]]);
                 }
                 mrow.extend(row);
             }

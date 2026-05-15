@@ -297,6 +297,9 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                         {
                             frags.push(view!(<Prim prim=prim glyph_only=true/>).into_view())
                         }
+                        Token::Subscr(sub) => {
+                            frags.push(view!(<code>{sub.to_string()}</code>).into_view())
+                        }
                         _ => {
                             frags = vec![view!(<code>{lit.clone()}</code>).into_view()];
                             break;
@@ -481,6 +484,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                         {
                             s.push_str(&prim_html(prim, true, false))
                         }
+                        Token::Subscr(sub) => s.push_str(&format!("<code>{sub}</code>")),
                         _ => return format!("<code>{}</code>", code.literal),
                     }
                 }

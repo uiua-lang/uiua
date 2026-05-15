@@ -1,5 +1,6 @@
 //! Algorithms for monadic array operations
 
+mod multivector;
 mod sort;
 
 use core::str;
@@ -1392,6 +1393,8 @@ impl Value {
             Value::Char(_) => false,
             Value::Box(arr) => arr.data.iter().all(|Boxed(val)| val.all_true()),
             Value::Complex(arr) => arr.data.iter().all(|&c| c.re == 1.0 && c.im == 1.0),
+            #[cfg(feature = "ga")]
+            Value::Mv(_) => false,
         }
     }
     /// Count which occurrence of each row that row is
@@ -2278,12 +2281,78 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    pub(crate) fn grade_decompose(mut self, env: &Uiua) -> UiuaResult<Self> {
+        let val = match self {
+            Value::Num(_) | Value::Byte(_) => {
+                self.shape.insert(0, 1);
+                self
+            }
+            Value::Complex(arr) => arr.grade_decompose().into(),
+            #[cfg(feature = "ga")]
+            Value::Mv(arr) => arr.grade_decompose().into(),
+            value => {
+                return Err(env.error(format!("Cannot get grades of {} array", value.type_name())));
+            }
+        };
+        val.validate();
+        Ok(val)
+    }
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
             Value::Num(n) => n.primes(env),
             Value::Byte(b) => b.convert_ref::<f64>().primes(env),
             value => Err(env.error(format!("Cannot get primes of {} array", value.type_name()))),
         }
+    }
+}
+
+impl Array<Complex> {
+    pub(crate) fn grade_decompose(mut self) -> Self {
+        let len = self.data.len();
+        self.data.extend_repeat(&Complex::ZERO, len * 2);
+        let (c, g) = self.data.as_mut_slice().split_at_mut(len);
+        for (c, im) in c.iter_mut().zip(&mut g[len..]) {
+            im.im = c.im;
+            c.im = 0.0;
+        }
+        self.shape.insert(0, 3);
+        self.meta.take_sorted_flags();
+        self
+    }
+}
+
+#[cfg(feature = "ga")]
+impl Array<crate::Multivector> {
+    pub(crate) fn grade_decompose(mut self) -> Self {
+        use crate::{Multivector as Mv, ga::mask_tables};
+        let len = self.data.len();
+        if len == 0 {
+            return self;
+        }
+        if let Some(flav) = self.data.iter().map(|mv| mv.flavor).max() {
+            for mv in self.data.as_mut_slice() {
+                mv.set_flavor(flav);
+            }
+        }
+        let dims = self.data.iter().map(|mv| mv.dims()).max().unwrap_or(0);
+        if dims == 0 {
+            return self;
+        }
+        self.data.extend_repeat(&Mv::default(), len * dims as usize);
+        let slice = self.data.as_mut_slice();
+        let (mask_table, _) = mask_tables(dims);
+        for blade in 1usize..1 << dims {
+            let mask = mask_table[blade];
+            let grade = mask.count_ones() as usize;
+            for i in 0..len {
+                slice[grade * len + i].set_blade(mask, slice[i].get_blade(mask))
+            }
+        }
+        for mv in &mut slice[..len] {
+            mv.make_scalar_only();
+        }
+        self.shape.insert(0, dims as usize + 1);
+        self
     }
 }
 
@@ -2641,6 +2710,18 @@ impl Value {
                 }
                 Value::Char(arr) => format!("@{}", format_char_inner_repr(arr.data[0])),
                 Value::Box(arr) => format!("□{}", arr.data[0].0.representation()),
+                #[cfg(feature = "ga")]
+                Value::Mv(arr) => {
+                    let mut s = "𝕍[".to_string();
+                    for (i, c) in arr.data[0].iter().enumerate() {
+                        if i > 0 {
+                            s.push(' ');
+                        }
+                        s.push_str(&f64_repr(c));
+                    }
+                    s.push(']');
+                    s
+                }
             },
             1 => match self {
                 Value::Char(arr) => format!("{:?}", arr.data.iter().collect::<String>()),
@@ -2653,6 +2734,18 @@ impl Value {
                         s.push_str(&v.0.representation());
                     }
                     s.push('}');
+                    s
+                }
+                #[cfg(feature = "ga")]
+                value @ Value::Mv(_) => {
+                    let mut s = "𝕍[".to_string();
+                    for (i, v) in value.rows().enumerate() {
+                        if i > 0 {
+                            s.push(' ');
+                        }
+                        s.extend(v.representation().chars().filter(|&c| c != '𝕍'));
+                    }
+                    s.push(']');
                     s
                 }
                 value => {
@@ -2680,6 +2773,8 @@ impl Value {
                     Value::Char(_) => format!("+@a{s}"),
                     Value::Complex(_) => format!("ℂ0{s}"),
                     Value::Box(_) => format!("≡₀□{s}"),
+                    #[cfg(feature = "ga")]
+                    Value::Mv(_) => format!("≡₀𝕍{s}"),
                 }
             }
             _ => {

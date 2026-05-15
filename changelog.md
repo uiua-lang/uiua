@@ -9,10 +9,17 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`oklch`](https://uiua.org/docs/oklch) function
 - Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape
 - Add `$_` syntax to remove labels
-- Add `ᵢ` and `ᵣ` subscripts, which format from `,i` and `,r` respectively
+- Add sided subscripts for [`negate ¯`](https://uiua.org/docs/negate), which get the conjugate or negative conjugate
+- Add experimental `ᵢ` and `ᵣ` subscripts, which format from `,i` and `,r` respectively
   - Only currently compatible with dyadic pervasives and custom subscripts, but may be used for other things in the future
+- Rework experimental [Geometric Algebra](https://uiua.org/docs/experimental#geometric-algebra) system
+  - Add experimental [`multivector 𝕍`](https://uiua.org/docs/multivector) function, which creates an array of geometric algebra multivectors
+  - Add experimental [`inner product ⨰`](<https://uiua.org/docs/inner product>) function
+  - Add experimental [`outer product ⨱`](<https://uiua.org/docs/outer product>) function
+  - Add experimental [blade literals](https://uiua.org/docs/experimental#blade-literal)
+  - Remove experimental `geometric ⩜` modifier
 - Add experimental [custom subscript functions](<https://www.uiua.org/docs/experimental#custom-subscript-functions>)
-  - Remove deprecated `log ₙ` function, which syntactically conflicted
+  - Remove previously deprecated `log ₙ` function, which syntactically conflicted
 - Add experimental [Type Checking](https://uiua.org/docs/experimental#type-checking)
 - Add experimental [`validate ⯾`](https://uiua.org/docs/validate) function to help with type checking
 - Add experimental [`pattern ⍡`](https://uiua.org/docs/pattern) modifier, which makes big pattern match lists easier to debug and maintain

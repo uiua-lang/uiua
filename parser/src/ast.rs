@@ -882,11 +882,20 @@ pub enum NumWord {
     Infinity(bool),
     Complex(Complex),
     Err(String),
+    #[cfg(feature = "multivector")]
+    Blade(crate::Multivector),
 }
 
 impl From<f64> for NumWord {
     fn from(value: f64) -> Self {
         Self::Real(value).normalize()
+    }
+}
+
+#[cfg(feature = "multivector")]
+impl From<crate::Multivector> for NumWord {
+    fn from(mv: crate::Multivector) -> Self {
+        Self::Blade(mv).normalize()
     }
 }
 
@@ -926,6 +935,16 @@ impl From<Result<Complex, String>> for NumWord {
     }
 }
 
+#[cfg(feature = "multivector")]
+impl From<Result<crate::Multivector, String>> for NumWord {
+    fn from(mv: Result<crate::Multivector, String>) -> Self {
+        match mv {
+            Ok(v) => Self::Blade(v),
+            Err(e) => Self::Err(e),
+        }
+    }
+}
+
 impl NumWord {
     fn normalize(self) -> Self {
         match self {
@@ -933,21 +952,6 @@ impl NumWord {
             Self::Real(f64::NEG_INFINITY) => Self::Infinity(true),
             _ => self,
         }
-    }
-    /// Map the number
-    pub fn map<R, C>(self, real: impl FnOnce(f64) -> R, complex: impl FnOnce(Complex) -> C) -> Self
-    where
-        C: Into<Self>,
-        R: Into<Self>,
-    {
-        match self {
-            Self::Real(r) => real(r).into(),
-            Self::Infinity(false) => real(f64::INFINITY).into(),
-            Self::Infinity(true) => real(f64::NEG_INFINITY).into(),
-            Self::Complex(c) => complex(c).into(),
-            Self::Err(e) => Self::Err(e),
-        }
-        .normalize()
     }
     /// Map the number with another
     pub fn map_with<R, C>(
@@ -970,6 +974,12 @@ impl NumWord {
             (Self::Real(a), Self::Complex(b)) => complex(a.into(), b).into(),
             (Self::Complex(a), Self::Real(b)) => complex(a, b.into()).into(),
             (Self::Err(e), _) | (_, Self::Err(e)) => Self::Err(e),
+            #[cfg(feature = "multivector")]
+            (Self::Blade(_), _) | (_, Self::Blade(_)) => Self::Err(
+                "Attempted to map multivector token with another. \
+                This is a bug in the interpreter"
+                    .into(),
+            ),
         }
         .normalize()
     }
@@ -988,6 +998,8 @@ impl fmt::Display for NumWord {
             NumWord::Infinity(false) => write!(f, "∞"),
             NumWord::Infinity(true) => write!(f, "-∞"),
             NumWord::Complex(c) => write!(f, "{c}"),
+            #[cfg(feature = "multivector")]
+            NumWord::Blade(mv) => write!(f, "{mv}"),
             NumWord::Err(e) => write!(f, "error({e})"),
         }
     }

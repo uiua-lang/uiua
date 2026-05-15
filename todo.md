@@ -10,7 +10,6 @@
 - Macro signature comments
 - Data def method to construct with validators but not defaults/initializers
 - Optimize `rows match`
-- Improve GA API
 - `first group/partition` optimization
 - `under group/partition inventory` optimization
 

@@ -130,6 +130,7 @@ static UNSORTED_OPTS: &[&dyn Optimization] = &[
     &((Complex, Abs), AbsComplex),
     &((Abs, Dup, Mul), SquareAbs),
     &((Abs, Neg), NegAbs),
+    &((crate::Complex::I, Mul, Add), Complex),
     &ByToDup,
     &RowsFlipOpt,
     &InlineCustomInverse,
@@ -611,6 +612,14 @@ impl OptPattern for ImplPrimitive {
     }
 }
 impl OptPattern for i32 {
+    fn match_nodes(&self, nodes: &[Node]) -> Option<(usize, Option<usize>)> {
+        match nodes {
+            [Node::Push(n), ..] if n == self => Some((1, None)),
+            _ => None,
+        }
+    }
+}
+impl OptPattern for crate::Complex {
     fn match_nodes(&self, nodes: &[Node]) -> Option<(usize, Option<usize>)> {
         match nodes {
             [Node::Push(n), ..] if n == self => Some((1, None)),

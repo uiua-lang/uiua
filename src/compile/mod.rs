@@ -30,12 +30,11 @@ use crate::{
     Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan, Context,
     CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
     ExactDoubleIterator, Function, FunctionId, FunctionOrigin, GitTarget, Ident, ImplPrimitive,
-    IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript,
+    IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, MvMode, Node, NumericSubscript,
     OTHER_SUBSCRIPT_NUMBERS, PrimClass, Primitive, Purity, RunMode, SUBSCRIPT_DIGITS,
     SemanticComment, SidedSubscript, SigNode, Signature, Sp, Span, SubSide, Subscript,
     SubscriptNumber, SubscriptToken, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
     VERSION, Value,
-    algorithm::ga::{self, Spec},
     ast::*,
     check::nodes_sig,
     format::{format_word, format_words},
@@ -1246,6 +1245,11 @@ impl Compiler {
             Word::Number(NumWord::Infinity(false), _) => Node::new_push(f64::INFINITY),
             Word::Number(NumWord::Infinity(true), _) => Node::new_push(f64::NEG_INFINITY),
             Word::Number(NumWord::Complex(c), _) => Node::new_push(c),
+            #[cfg(feature = "ga")]
+            Word::Number(NumWord::Blade(mv), _) => {
+                self.experimental_error_them(&word.span, || "Blade literals");
+                Node::new_push(mv)
+            }
             Word::Number(NumWord::Err(s), _) => {
                 self.add_error(word.span.clone(), format!("Invalid number `{s}`"));
                 Node::new_push(0.0)
@@ -1661,6 +1665,14 @@ impl Compiler {
                 inner
             }
             SemanticComment::Deprecated(_) => inner,
+            SemanticComment::InvalidGaFlavor(_) => {
+                self.emit_diagnostic(
+                    "Invalid GA flavor specification",
+                    DiagnosticKind::Advice,
+                    span,
+                );
+                inner
+            }
             SemanticComment::Boo => {
                 self.add_error(span, "The compiler is scared!");
                 inner
@@ -2365,6 +2377,9 @@ impl Compiler {
         let spandex = self.add_span(span.clone());
         match prim {
             Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
+            Primitive::Multivector => {
+                Node::ImplPrim(ImplPrimitive::MvImpl(MvMode::default()), spandex)
+            }
             prim => Node::Prim(prim, spandex),
         }
     }
@@ -2493,6 +2508,72 @@ impl Compiler {
                     self.add_span(span),
                 )
             }
+            Multivector => {
+                use crate::ga::*;
+                let sub = self.validate_subscript_int(scr, &Multivector.format());
+                let side = sub.value.side.map(|ss| {
+                    if ss.n.is_some() {
+                        self.add_error(
+                            sub.span.clone(),
+                            format!("{} cannot use a side quantifier", Multivector.format()),
+                        )
+                    }
+                    ss.side
+                });
+                let dims = match sub.value.num {
+                    None => None,
+                    Some(n) => {
+                        if n < 0 {
+                            self.add_error(
+                                sub.span.clone(),
+                                "Cannot have negative multivector dimensions",
+                            );
+                        }
+                        if n > MAX_DIMS as i32 {
+                            self.add_error(
+                                sub.span.clone(),
+                                format!("{n} is too many multivector dimensions"),
+                            );
+                        }
+                        Some(n as u8)
+                    }
+                };
+                Node::ImplPrim(
+                    ImplPrimitive::MvImpl(MvMode { dims, side }),
+                    self.add_span(span),
+                )
+            }
+            Neg => {
+                use {crate::Complex, ImplPrimitive::*};
+                let Some(nos) = self.subscript_int_or_side(&scr, &Neg.format()) else {
+                    return Ok(self.primitive(Neg, span));
+                };
+                match nos {
+                    SubNOrSide::N(n) => {
+                        let rotation = match n {
+                            // Ensure that common cases are exact
+                            -1..=1 => Complex::ONE,
+                            2 | -2 => -Complex::ONE,
+                            4 => return Ok(Node::ImplPrim(Dual, self.add_span(span))),
+                            -4 => return Ok(Node::ImplPrim(UnDual, self.add_span(span))),
+                            _ => Complex::from_polar(1.0, std::f64::consts::TAU / n as f64),
+                        };
+                        Node::from_iter([Node::new_push(rotation), self.primitive(Mul, span)])
+                    }
+                    SubNOrSide::Side(SubSide::Left) => Node::ImplPrim(NegConj, self.add_span(span)),
+                    SubNOrSide::Side(SubSide::Right) => Node::ImplPrim(Conj, self.add_span(span)),
+                }
+            }
+            InnerProduct => {
+                let Some(side) = self.subscript_side_only(&scr, &InnerProduct.format()) else {
+                    return Ok(self.primitive(InnerProduct, span));
+                };
+                let prim = match side {
+                    SubSide::Left => ImplPrimitive::LeftContraction,
+                    SubSide::Right => ImplPrimitive::RightContraction,
+                };
+                Node::ImplPrim(prim, self.add_span(span))
+            }
             prim => {
                 let Some(n) = self.subscript_int_only(&scr, &prim.format()) else {
                     return Ok(self.primitive(prim, span));
@@ -2527,18 +2608,6 @@ impl Compiler {
                             Node::new_push(n - 1),
                             Node::ImplPrim(ImplPrimitive::AntiOrient, self.add_span(span)),
                         ])
-                    }
-                    Neg => {
-                        use crate::Complex;
-                        let rotation = match n {
-                            // Ensure that common cases are exact
-                            -1..=1 => Complex::ONE,
-                            2 | -2 => -Complex::ONE,
-                            4 => Complex::I,
-                            -4 => -Complex::I,
-                            _ => Complex::from_polar(1.0, std::f64::consts::TAU / n as f64),
-                        };
-                        Node::from_iter([Node::new_push(rotation), self.primitive(Mul, span)])
                     }
                     Sqrt => {
                         if n == 0 {
@@ -2761,7 +2830,12 @@ impl Compiler {
         span: &CodeSpan,
     ) -> Option<SubscriptNumber> {
         match num {
-            NumericSubscript::N(n) => Some(*n),
+            NumericSubscript::N(n) => {
+                if !matches!(n, SubscriptNumber::Int(_)) {
+                    self.experimental_error_them(span, || "Non-integer subscripts")
+                }
+                Some(*n)
+            }
             NumericSubscript::NegOnly => {
                 self.add_error(span.clone(), "Subscript is incomplete");
                 None
@@ -2786,7 +2860,7 @@ impl Compiler {
             | SubscriptNumber::NegR => {
                 self.add_error(
                     span.clone(),
-                    format!("Imaginary subscripts are not allowed for {for_what}"),
+                    format!("Complex subscripts are not allowed for {for_what}"),
                 );
                 None
             }
@@ -2836,7 +2910,7 @@ impl Compiler {
             ) => {
                 self.add_error(
                     sub.span.clone(),
-                    format!("Imaginary subscripts are not allowed for {for_what}"),
+                    format!("Complex subscripts are not allowed for {for_what}"),
                 );
                 return None;
             }

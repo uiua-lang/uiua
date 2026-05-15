@@ -2,7 +2,7 @@
 
 use serde::*;
 
-use crate::{Purity, SidedSubscript, SubSide, Subscript, algorithm::ga};
+use crate::{Purity, SidedSubscript, SubSide, Subscript};
 
 macro_rules! impl_primitive {
     ($(
@@ -13,7 +13,6 @@ macro_rules! impl_primitive {
             $([$margs:expr])?,
             $variant:ident $(($($inner:ty),* $(,)?))?
             $(, $purity:ident)?
-            $(,{ga: $ga:literal})?
         )
     ),* $(,)?) => {
         /// Primitives that exist as an implementation detail
@@ -47,7 +46,6 @@ macro_rules! impl_primitive {
             MaxRank(usize),
             BothImpl(Subscript<u32>),
             UnBothImpl(Subscript<u32>),
-            Ga(ga::GaOp, ga::Spec),
         }
 
         impl ImplPrimitive {
@@ -62,7 +60,6 @@ macro_rules! impl_primitive {
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) | ImplPrimitive::MaxRank(n) => *n,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 2,
-                    ImplPrimitive::Ga(op, _) => op.args(),
                     ImplPrimitive::MultiJoin(n) => *n,
                     _ => return None
                 })
@@ -76,7 +73,6 @@ macro_rules! impl_primitive {
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) | ImplPrimitive::MaxRank(n) => *n + 1,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 1,
-                    ImplPrimitive::Ga(op, _) => op.outputs(),
                     _ if self.modifier_args().is_some() => return None,
                     _ => 1
                 })
@@ -138,6 +134,7 @@ impl_primitive!(
     (0(0)[1], UnDump, Impure),
     (0[2], UnFill),
     (1, Primes),
+    (1, GradeDecompose),
     (1, UnBox),
     (2, AntiDrop),
     (2, AntiSelect),
@@ -253,6 +250,11 @@ impl_primitive!(
     (1, Exp10),
     (1, Log2),
     (1, Log10),
+    (1, Conj),
+    (1, NegConj),
+    (1, Dual),
+    (1, UnDual),
+    (1, UnMv(MvMode)),
     // Implementation details
     (2(3), Over),
     ([1], DipN(usize)),
@@ -278,6 +280,10 @@ impl_primitive!(
     (2(0), ValidateTypeConsume),
     (2(0), TestAssert, Impure),
     (2, ValidateImpl(Option<usize>, Option<SubSide>)),
+    (1, MvImpl(MvMode)),
+    (2, RegressiveProduct),
+    (2, LeftContraction),
+    (2, RightContraction),
     /// Validate that a non-boxed variant field has a valid type and rank
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),
@@ -287,3 +293,13 @@ impl_primitive!(
     (2, VoxelsArgs),
     ([1], FoldGif),
 );
+
+#[doc(hidden)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub struct MvMode {
+    pub dims: Option<u8>,
+    pub side: Option<SubSide>,
+}

@@ -23,6 +23,7 @@ pub enum PrimClass {
     IteratingModifier,
     InversionModifier,
     OtherModifier,
+    GeometricAlgebra,
     Comptime,
     Debug,
     Thread,
@@ -61,6 +62,7 @@ impl fmt::Debug for PrimClass {
             Arguments => write!(f, "Arguments"),
             Constant => write!(f, "Constant"),
             MonadicPervasive => write!(f, "MonadicPervasive"),
+            GeometricAlgebra => write!(f, "GeometricAlgebra"),
             DyadicPervasive => write!(f, "DyadicPervasive"),
             MonadicArray => write!(f, "MonadicArray"),
             DyadicArray => write!(f, "DyadicArray"),
@@ -255,10 +257,11 @@ impl Primitive {
                 | Classify,
                 _,
             ) => return self.sig(),
-            (Validate, _) => return self.sig(),
             (Args, Some(SubscriptNumber::Int(n))) if n >= 0 => {
                 Signature::new(n as usize, n as usize)
             }
+            (Multivector, Some(SubscriptNumber::I | SubscriptNumber::R)) => Signature::new(2, 1),
+            (Neg | Validate | Multivector, _) => return self.sig(),
             _ => return None,
         })
     }
@@ -271,8 +274,7 @@ impl Primitive {
         Some(match self {
             (Slf | Backward | On | By | With | Off | Both)
             | (Rows | Each | Inventory | Table)
-            | (Repeat | Tuples | Stencil)
-            | Geometric => 1,
+            | (Repeat | Tuples | Stencil) => 1,
             Bracket | Under | Fill => 2,
             Reach if sub.side.is_some() => 2,
             Reach | OldReach => 1,
@@ -305,6 +307,13 @@ impl Primitive {
             Each => || format!("use {} instead", Rows.format()),
             Unique => || format!("use {Occurrences}₁"),
             IndexOf => || format!("use {} {} instead", Backward.format(), IndexIn.format()),
+            // Complex => || {
+            //     format!(
+            //         "use +×ᵢ or {}{} (written as `comp` or `mv,i`) instead",
+            //         Multivector,
+            //         SubscriptNumber::I
+            //     )
+            // },
             _ => return None,
         })
     }

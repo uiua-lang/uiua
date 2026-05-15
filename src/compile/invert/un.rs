@@ -221,10 +221,12 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &RowsSubPat,
     &Trivial,
     &ScanPat,
+    &ReduceAddPat,
     &ReduceMulPat,
     &ReduceFormatPat,
     &GroupPat,
     &PartitionPat,
+    &GradeDecomposePat,
     &PrimesPat,
     &CustomPat,
     &FormatPat,
@@ -705,6 +707,23 @@ inverse!(ScanPat, input, asm, {
     };
     Ok((input, inverse))
 });
+
+inverse!(
+    (ReduceAddPat, input, _, Reduce, span),
+    [SigNode {
+        node: Prim(Add, _),
+        ..
+    }],
+    Ok((input, ImplPrim(GradeDecompose, span)))
+);
+
+inverse!(
+    (GradeDecomposePat, input, _, ImplPrim(GradeDecompose, span)),
+    Ok((
+        input,
+        Mod(Reduce, eco_vec![Prim(Add, span).sig_node()?], span)
+    ))
+);
 
 inverse!(
     (ReduceMulPat, input, _, Reduce, span),
@@ -1404,6 +1423,10 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         Exp10 => ImplPrim(Log10, span),
         Log2 => ImplPrim(Exp2, span),
         Log10 => ImplPrim(Exp10, span),
+        Conj => ImplPrim(Conj, span),
+        NegConj => ImplPrim(NegConj, span),
+        Dual => ImplPrim(UnDual, span),
+        UnDual => ImplPrim(Dual, span),
         SortDown => ImplPrim(UnSort, span),
         TransposeN(n) => ImplPrim(TransposeN(-n), span),
         UnWhere => Prim(Where, span),
@@ -1445,6 +1468,8 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         UnRawMode => Prim(Sys(SysOp::RawMode), span),
         UnClip => Prim(Sys(SysOp::Clip), span),
         Retropose => ImplPrim(Retropose, span),
+        MvImpl(mode) => ImplPrim(UnMv(mode), span),
+        UnMv(mode) => ImplPrim(MvImpl(mode), span),
         StackN { n, inverse } => ImplPrim(
             StackN {
                 n,

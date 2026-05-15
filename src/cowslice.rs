@@ -5,6 +5,7 @@ use std::{
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
+    iter,
     ops::{Bound, Deref, RangeBounds},
     ptr,
 };
@@ -402,6 +403,16 @@ impl<T: Clone, const N: usize> From<[T; N]> for CowSlice<T> {
             end: N as u32,
             data: array.into(),
         }
+    }
+}
+
+impl<T, I, F> From<iter::Map<I, F>> for CowSlice<T>
+where
+    T: Clone,
+    iter::Map<I, F>: Iterator<Item = T>,
+{
+    fn from(iter: iter::Map<I, F>) -> Self {
+        iter.collect()
     }
 }
 

@@ -15,7 +15,11 @@ macro_rules! primitive {
                 $(($outputs:expr))?
                 $([$mod_args:expr])?
             ,)?
-            $variant:ident, $class:ident, $names:expr $(,$purity:ident)* $(,{experimental: $experimental:literal})?
+            $variant:ident,
+            $class:ident,
+            $names:expr
+            $(,$purity:ident)*
+            $(,{$(experimental: $experimental:literal $(,)?)? $(simple: $simple:literal)?})?
         )
     ),* $(,)?) => {
         /// A built-in function
@@ -81,12 +85,18 @@ macro_rules! primitive {
                 }
             }
             /// Check if this primitive is experimental
-            #[allow(unused_parens)]
             pub fn is_experimental(&self) -> bool {
                 match self {
-                    $($(Primitive::$variant => $experimental,)*)*
+                    $($($(Primitive::$variant => $experimental,)*)*)*
                     Primitive::Sys(op) => op.is_experimental(),
                     _ => false
+                }
+            }
+            /// Check if this primitive is simple, meaning it should be presented to newcomers to the language
+            pub fn is_simple(&self) -> bool {
+                match self {
+                    $($($(Primitive::$variant => $simple,)*)*)*
+                    _ => true
                 }
             }
             /// Get the primitive's documentation string
@@ -570,6 +580,44 @@ primitive!(
     /// ex: °× [1.5 0 ¯4]
     /// ex: °× [i ℂ3 4 2]
     (2, Mul, DyadicPervasive, ("multiply", AsciiToken::Star, '×')),
+    /// Take the inner product of two multivectors
+    ///
+    /// The [inner product] removes parts of the [multivector]s that are the same while multiplying magnitudes.
+    /// ex: # Experimental!
+    ///   : ⨰ 3e₁ 2e₁
+    /// ex: # Experimental!
+    ///   : ⨰ 4e₁₂ 2e₁
+    /// If two multivectors share no basis blades, they become `0`.
+    /// ex: # Experimental!
+    ///   : ⨰ 3e₂ 2e₁
+    /// [inner product] is distributive and anticommutative.
+    /// ex: # Experimental!
+    ///   : ⨰ /+[2 3e₁ 4e₂ 5e₁₂] 2e₁
+    /// Sided subscripts for [inner product] do left and right contraction
+    /// ex: # Experimental!
+    ///   : ⨰⌞ /+[2 3e₁ 4e₂ 5e₁₂] 2e₁
+    ///   : ⨰⌟ /+[2 3e₁ 4e₂ 5e₁₂] 2e₁
+    /// See the [Geometric Algebra tutorial](https://uiua.org/docs/experimental#geometric-algebra) for more information.
+    ///
+    /// See also: [outer product](), [multivector]()
+    (2, InnerProduct, GeometricAlgebra, ("inner product", '⨰'), { experimental: true, simple: false }),
+    /// Take the outer product of two multivectors
+    ///
+    /// The [outer product] combines the blades of [multivector]s that share no basis blades and multiplies magnitudes.
+    /// ex: # Experimental!
+    ///   : ⨱ 3e₂ 2e₁
+    /// ex: # Experimental!
+    ///   : ⨱ 4e₂₃ 2e₁
+    /// If two multivectors share any basis blades, they become `0`.
+    /// ex: # Experimental!
+    ///   : ⨱ 4e₃₁ 2e₁
+    /// [outer product] is distributive and anticommutative.
+    /// ex: # Experimental!
+    ///   : ⨱ /+[2 3e₁ 4e₂ 5e₁₂ 6e₃₁] 2e₂
+    /// See the [Geometric Algebra tutorial](https://uiua.org/docs/experimental#geometric-algebra) for more information.
+    ///
+    /// See also: [inner product](), [multivector]()
+    (2, OuterProduct, GeometricAlgebra, ("outer product", '⨱'), { experimental: true, simple: false }),
     /// Divide values
     ///
     /// Formats from `%`.
@@ -682,6 +730,69 @@ primitive!(
     /// A complex number [equals] a real one if the imaginary part is 0 and the real parts [match].
     /// ex: = 5 ℂ0 5
     (2, Complex, DyadicPervasive, ("complex", 'ℂ')),
+    /// Create a multivector
+    ///
+    /// This page explains the use of [multivector] itself. To understand operations on multivectors and why they are useful, see [Geometric Algebra](https://uiua.org/docs/experimental#geometric-algebra).
+    ///
+    /// The last axis of the array will be used as coefficients for the multivector.
+    /// By default, the numbers of the array are interpreted as coeficients for the vector blades.
+    /// ex: # Experimental!
+    ///   : 𝕍 [1 2 3]
+    /// ex: # Experimental!
+    ///   : 𝕍 [1_2 3_4]
+    /// ex: # Experimental!
+    ///   : 𝕍 [1_2_3 4_5_6]
+    /// ex: # Experimental!
+    ///   : 𝕍 °△3_4_2
+    /// A numeric subscript specifies number of dimensions and allows all coeficients for all blades to be specified.
+    /// Keep in mind that an `n`-dimensional multivector has `2ⁿ` blades
+    /// ex: # Experimental!
+    ///   : 𝕍₂ [1 2 3 4]
+    /// ex: # Experimental!
+    ///   : 𝕍₃ [1 2 3 4 5 6 7 8]
+    /// ex: # Experimental!
+    ///   : 𝕍₂ [1_2_3_4 5_6_7_8]
+    /// If too few blades are provided for the given number of dimensions, the grade with the number of coefficients will be filled, or the even-graded blades will be filled.
+    /// ex: # Experimental!
+    ///   : 𝕍₃ [1 2 3 4] # Even graded-blades
+    /// ex: # Experimental!
+    ///   : 𝕍₄ [1 2 3 4 5 6] # First grade with 6 blades
+    /// ex! # Experimental!
+    ///   : 𝕍₃ [1 2]
+    /// When appropriate, [multivector] may product a [complex] number array instead of multivector array. This works because complex numbers are a subset of multivectors, and will autopromote to multivectors when combined with them.
+    /// ex: # Experimental!
+    ///   : 𝕍₂ [1 2]
+    /// ex: # Experimental!
+    ///   : [i 𝕍[1 2]]
+    /// A sided subscript does something similar. A `⌞` prefers lower/even-grades blades. A `⌟` prefers higher/odd-grades blades.
+    /// ex: # Experimental!
+    ///   : 𝕍⌞ [1 2 3] # 3D grade 1
+    ///   : 𝕍⌟ [1 2 3] # 3D grade 2
+    /// ex: # Experimental!
+    ///   : 𝕍⌞ [1 2 3 4] # 3D even grades
+    ///   : 𝕍⌟ [1 2 3 4] # 3D odd grades
+    /// By default, a sided subscript uses the lowest number of dimensions that works, but this can be overriden with a mixed subscript.
+    /// ex: # Experimental!
+    ///   : 𝕍⌟  [1 2 3 4] # 3D odd grades
+    ///   : 𝕍₄⌟ [1 2 3 4] # 4D grade 3
+    /// [un][multivector] will decompose a multivector back into a number array.
+    /// By default, this will extract vector coefficients only.
+    /// ex: # Experimental!
+    ///   : °𝕍 𝕍₃ [1 2 3 4 5 6 7 8]
+    /// Use a numeric subscript to extract all coefficients.
+    /// ex: # Experimental!
+    ///   : °𝕍₂ 𝕍₂ [1 2 3 4]
+    ///   : °𝕍₂ 𝕍₃ [1 2 3 4 5 6 7 8]
+    /// ex: # Experimental!
+    ///   : °𝕍₂ 3r5i
+    /// Use a sided subscript to extract even or odd-graded coefficients.
+    /// ex: # Experimental!
+    ///   : °𝕍⌞ 𝕍₃ [1 2 3 4 5 6 7 8]
+    ///   : °𝕍⌟ 𝕍₃ [1 2 3 4 5 6 7 8]
+    /// Using [multivector] on a multivector array can change its number of dimensions.
+    /// ex: # Experimental!
+    ///   : 𝕍₂ 𝕍₃ [1 2 3 4 5 6 7 8]
+    (1, Multivector, GeometricAlgebra, ("multivector", '𝕍'), { experimental: true, simple: false }),
     /// Generate a random number in the range `[0, 1)`
     ///
     /// If you need a seeded random number, use [gen].
@@ -3134,37 +3245,6 @@ primitive!(
     ///   : ▽₂ 0.5
     ///   : ⌵⊸⍜°⍉≡fft
     (1, Fft, Algorithm, "fft"),
-    /// Convert an operation to be in geometric algebra
-    ///
-    /// You can read more about [geometric] and its uses [here](/docs/experimental#geometric-algebra). This page only covers its use for complex numbers.
-    ///
-    /// [geometric] treats numeric arrays with a shape ending in `2` as an array of complex numbers. This is different than existing [complex] arrays, and this system would potentially replace that one.
-    /// We can see the basic complex identity by multiplying two arrays that represent `i`. [geometric] [multiply] forms the geometric product, which is equivalent to the complex product in this case.
-    /// ex: # Experimental!
-    ///   : ⩜× [0 1] [0 1]
-    /// [geometric] treats most operations as pervasive down to that last axis.
-    /// ex: # Experimental!
-    ///   : ⩜× [0 1] [1_2 3_4 5_6]
-    ///   : ⩜+ [0 1] [1_2 3_4 5_6]
-    /// [geometric] [sign] normalizes a complex number.
-    /// ex: # Experimental!
-    ///   : ⩜± [3_4 ¯2_0]
-    /// [geometric] [absolute value] gives the magnitude of a complex number.
-    /// ex: # Experimental!
-    ///   : ⩜⌵ [3_4 5_12]
-    /// [geometric] [divide] produces a complex number that, when [multiply]d, rotates the first complex number to the second.
-    /// ex: # Experimental!
-    ///   : ⩜÷ [0 1] [1 0]
-    /// ex: # Experimental!
-    ///   : ⩜(×÷) [0 1] [1 0] [2_3 4_5 6_7]
-    /// [geometric] [couple] creates a complex number array from real and imaginary parts.
-    /// ex: # Experimental!
-    ///   : ⩜⊟ 1_2 [3_4 5_6]
-    /// [geometric][un][parse] formats a complex array as complex numbers.
-    /// ex: # Experimental!
-    ///   : ⩜°⋕ 5_1
-    ///   : ⩜°⋕ [1_2 3_4]
-    ([1], Geometric, Algorithm, ("geometric", '⩜'), { experimental: true }),
     /// Find the shortest path between two things
     ///
     /// Expects 2 functions and at least 1 value.

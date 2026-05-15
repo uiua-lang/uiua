@@ -153,6 +153,8 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Byte(a), Value::Byte(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Complex(a), Value::Complex(b)) => a.join_impl(b, ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Mv(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Char(a), Value::Char(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Byte(a), Value::Num(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
             (Value::Num(a), Value::Byte(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
@@ -160,6 +162,18 @@ impl Value {
             (Value::Num(a), Value::Complex(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
             (Value::Complex(a), Value::Byte(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
             (Value::Byte(a), Value::Complex(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Complex(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Complex(a), Value::Mv(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Num(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Num(a), Value::Mv(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Byte(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
+            #[cfg(feature = "ga")]
+            (Value::Byte(a), Value::Mv(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
             (a, b) => a.bin_coerce_to_boxes(
                 b,
                 ctx,
@@ -175,6 +189,8 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => a.append(b, ext, ctx)?,
             (Value::Byte(a), Value::Byte(b)) => a.append(b, ext, ctx)?,
             (Value::Complex(a), Value::Complex(b)) => a.append(b, ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Mv(b)) => a.append(b, ext, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.append(b, ext, ctx)?,
             (Value::Byte(a), Value::Num(b)) => {
                 let mut a = a.convert_ref();
@@ -190,6 +206,30 @@ impl Value {
             }
             (Value::Complex(a), Value::Byte(b)) => a.append(b.convert(), ext, ctx)?,
             (Value::Byte(a), Value::Complex(b)) => {
+                let mut a = a.convert_ref();
+                a.append(b, ext, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Complex(b)) => a.append(b.convert(), ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Complex(a), Value::Mv(b)) => {
+                let mut a = a.convert_ref();
+                a.append(b, ext, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Num(b)) => a.append(b.convert(), ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Num(a), Value::Mv(b)) => {
+                let mut a = a.convert_ref();
+                a.append(b, ext, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Byte(b)) => a.append(b.convert(), ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Byte(a), Value::Mv(b)) => {
                 let mut a = a.convert_ref();
                 a.append(b, ext, ctx)?;
                 *self = a.into();
@@ -811,6 +851,8 @@ impl Value {
             (Value::Complex(a), Value::Complex(b)) => a.couple_impl(b, allow_ext, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.couple_impl(b, allow_ext, ctx)?,
             (Value::Box(a), Value::Box(b)) => a.couple_impl(b, allow_ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Mv(b)) => a.couple_impl(b, allow_ext, ctx)?,
             (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
             (Value::Byte(a), Value::Num(b)) => {
                 let mut a = a.convert_ref();
@@ -825,6 +867,30 @@ impl Value {
             }
             (Value::Complex(a), Value::Byte(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
             (Value::Byte(a), Value::Complex(b)) => {
+                let mut a = a.convert_ref();
+                a.couple_impl(b, allow_ext, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Complex(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Complex(a), Value::Mv(b)) => {
+                let mut a = a.convert_ref();
+                a.couple_impl(b, allow_ext, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Num(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Num(a), Value::Mv(b)) => {
+                let mut a = a.convert_ref();
+                a.couple_impl(b, allow_ext, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "ga")]
+            (Value::Mv(a), Value::Byte(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
+            #[cfg(feature = "ga")]
+            (Value::Byte(a), Value::Mv(b)) => {
                 let mut a = a.convert_ref();
                 a.couple_impl(b, allow_ext, ctx)?;
                 *self = a.into();
@@ -1062,10 +1128,14 @@ impl Value {
         let mut value = match &values[0] {
             Value::Num(_) => {
                 let mut has_complex = false;
+                #[cfg(feature = "ga")]
+                let mut has_mv = false;
                 let mut box_rank = None;
                 for b in &values[1..] {
                     match b {
                         Value::Complex(_) => has_complex = true,
+                        #[cfg(feature = "ga")]
+                        Value::Mv(_) => has_mv = true,
                         Value::Box(arr) => box_rank = box_rank.max(Some(arr.rank())),
                         Value::Char(_) => {
                             return Err(ctx.error("Cannot combine number and character arrays"));
@@ -1080,20 +1150,35 @@ impl Value {
                 };
                 if let Some(box_rank) = box_rank {
                     Value::Box(arr.box_depth(box_rank))
-                } else if has_complex {
-                    Value::Complex(arr.convert())
                 } else {
-                    Value::Num(arr)
+                    #[cfg(feature = "ga")]
+                    if has_mv {
+                        Value::Mv(arr.convert())
+                    } else if has_complex {
+                        Value::Complex(arr.convert())
+                    } else {
+                        Value::Num(arr)
+                    }
+                    #[cfg(not(feature = "ga"))]
+                    if has_complex {
+                        Value::Complex(arr.convert())
+                    } else {
+                        Value::Num(arr)
+                    }
                 }
             }
             Value::Byte(_) => {
                 let mut has_num = false;
                 let mut has_complex = false;
+                #[cfg(feature = "ga")]
+                let mut has_mv = false;
                 let mut box_rank = None;
                 for b in &values[1..] {
                     match b {
                         Value::Num(_) => has_num = true,
                         Value::Complex(_) => has_complex = true,
+                        #[cfg(feature = "ga")]
+                        Value::Mv(_) => has_mv = true,
                         Value::Box(arr) => box_rank = box_rank.max(Some(arr.rank())),
                         Value::Char(_) => {
                             return Err(ctx.error("Cannot combine number and character arrays"));
@@ -1108,19 +1193,36 @@ impl Value {
                 };
                 if let Some(box_rank) = box_rank {
                     Value::Box(arr.box_depth(box_rank))
-                } else if has_complex {
-                    Value::Complex(arr.convert())
-                } else if has_num {
-                    Value::Num(arr.convert())
                 } else {
-                    Value::Byte(arr)
+                    #[cfg(feature = "ga")]
+                    if has_mv {
+                        Value::Mv(arr.convert())
+                    } else if has_complex {
+                        Value::Complex(arr.convert())
+                    } else if has_num {
+                        Value::Num(arr.convert())
+                    } else {
+                        Value::Byte(arr)
+                    }
+                    #[cfg(not(feature = "ga"))]
+                    if has_complex {
+                        Value::Complex(arr.convert())
+                    } else if has_num {
+                        Value::Num(arr.convert())
+                    } else {
+                        Value::Byte(arr)
+                    }
                 }
             }
             Value::Complex(_) => {
                 let mut box_rank = None;
+                #[cfg(feature = "ga")]
+                let mut has_mv = false;
                 for b in &values[1..] {
                     match b {
                         Value::Box(arr) => box_rank = box_rank.max(Some(arr.rank())),
+                        #[cfg(feature = "ga")]
+                        Value::Mv(_) => has_mv = true,
                         Value::Char(_) => {
                             return Err(ctx.error("Cannot combine complex and character arrays"));
                         }
@@ -1135,6 +1237,13 @@ impl Value {
                 if let Some(box_rank) = box_rank {
                     Value::Box(arr.box_depth(box_rank))
                 } else {
+                    #[cfg(feature = "ga")]
+                    if has_mv {
+                        Value::Mv(arr.convert())
+                    } else {
+                        Value::Complex(arr)
+                    }
+                    #[cfg(not(feature = "ga"))]
                     Value::Complex(arr)
                 }
             }
@@ -1148,6 +1257,12 @@ impl Value {
                         }
                         Value::Complex(_) => {
                             return Err(ctx.error("Cannot combine character and complex arrays"));
+                        }
+                        #[cfg(feature = "ga")]
+                        Value::Mv(_) => {
+                            return Err(
+                                ctx.error("Cannot combine character and multivector arrays")
+                            );
                         }
                         _ => {}
                     }
@@ -1166,6 +1281,31 @@ impl Value {
             Value::Box(_) => {
                 row_values = values.into_iter();
                 row_values.next().unwrap()
+            }
+            #[cfg(feature = "ga")]
+            Value::Mv(_) => {
+                let mut box_rank = None;
+                for b in &values[1..] {
+                    match b {
+                        Value::Box(arr) => box_rank = box_rank.max(Some(arr.rank())),
+                        Value::Char(_) => {
+                            return Err(
+                                ctx.error("Cannot combine multivector and character arrays")
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+                row_values = values.into_iter();
+                let arr = match row_values.next().unwrap() {
+                    Value::Mv(arr) => arr,
+                    _ => unreachable!(),
+                };
+                if let Some(box_rank) = box_rank {
+                    Value::Box(arr.box_depth(box_rank))
+                } else {
+                    Value::Mv(arr)
+                }
             }
         };
 
@@ -1188,6 +1328,10 @@ impl Value {
                     .map(|fill| arr.fill_to_shape(&max_shape, fill)),
                 Value::Box(arr) => ctx
                     .scalar_fill::<Boxed>()
+                    .map(|fill| arr.fill_to_shape(&max_shape, fill)),
+                #[cfg(feature = "ga")]
+                Value::Mv(arr) => ctx
+                    .scalar_fill::<crate::Multivector>()
                     .map(|fill| arr.fill_to_shape(&max_shape, fill)),
             }
             .map_err(|e| {
@@ -1260,6 +1404,19 @@ impl Value {
                     match val {
                         Value::Box(b) => a.append(b, allow_ext, ctx)?,
                         val => a.append(val.box_depth(a.rank()), allow_ext, ctx)?,
+                    }
+                }
+                a.into()
+            }
+            #[cfg(feature = "ga")]
+            Value::Mv(mut a) => {
+                for val in row_values {
+                    match val {
+                        Value::Num(b) => a.append(b.convert(), allow_ext, ctx)?,
+                        Value::Byte(b) => a.append(b.convert(), allow_ext, ctx)?,
+                        Value::Complex(b) => a.append(b.convert(), allow_ext, ctx)?,
+                        Value::Mv(b) => a.append(b, allow_ext, ctx)?,
+                        _ => unreachable!(),
                     }
                 }
                 a.into()

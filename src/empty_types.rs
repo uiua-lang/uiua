@@ -15,6 +15,8 @@ enum ScalarType {
     Complex,
     Char,
     Box(Option<Box<Ty>>),
+    #[cfg(feature = "ga")]
+    Multivector,
 }
 
 impl Value {
@@ -31,6 +33,8 @@ impl Value {
             } else {
                 None
             }),
+            #[cfg(feature = "ga")]
+            Value::Mv(_) => ScalarType::Multivector,
         }
     }
     fn ty(&self) -> Ty {
@@ -103,6 +107,10 @@ fn make_val(mut ty: Ty) -> Value {
         ScalarType::Complex => Array::<Complex>::new(ty.shape, CowSlice::default()).into(),
         ScalarType::Char => Array::<char>::new(ty.shape, CowSlice::default()).into(),
         ScalarType::Box(_) => Array::<Boxed>::new(ty.shape, CowSlice::default()).into(),
+        #[cfg(feature = "ga")]
+        ScalarType::Multivector => {
+            Array::<crate::Multivector>::new(ty.shape, CowSlice::default()).into()
+        }
     }
 }
 
@@ -385,6 +393,25 @@ impl TypeRt<'_> {
                     };
                     let scalar = a.scalar.max(b.scalar);
                     self.stack.push(Ty::new(scalar, shape));
+                }
+                ImplPrimitive::MvImpl(_) => {
+                    let mut a = self.pop()?;
+                    a.shape.pop();
+                    #[cfg(feature = "ga")]
+                    {
+                        a.scalar = ScalarType::Multivector;
+                    }
+                    #[cfg(not(feature = "ga"))]
+                    {
+                        a.scalar = ScalarType::Complex;
+                    }
+                    self.stack.push(Ty::new(a.scalar, a.shape));
+                }
+                ImplPrimitive::UnMv(mode) => {
+                    let mut a = self.pop()?;
+                    a.shape.push(mode.dims.unwrap_or(2) as usize);
+                    a.scalar = ScalarType::Real;
+                    self.stack.push(Ty::new(a.scalar, a.shape));
                 }
                 ImplPrimitive::StackN { .. } => {}
                 _ => return Err(TypeError::NotSupported),

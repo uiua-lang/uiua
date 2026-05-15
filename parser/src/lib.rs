@@ -1,9 +1,14 @@
+#![allow(clippy::single_match)]
+
 pub mod ast;
 mod complex;
 mod defs;
 mod error;
+pub mod ga;
 mod inputs;
 mod lex;
+#[cfg(feature = "multivector")]
+mod multivector;
 pub mod parse;
 mod primitive;
 mod signature;
@@ -11,6 +16,9 @@ mod split;
 mod subscript;
 
 use bytemuck::must_cast;
+pub use ga::Flavor as GaFlavor;
+#[cfg(feature = "multivector")]
+pub use multivector::Multivector;
 pub use {
     complex::*, defs::*, error::*, inputs::*, lex::*, parse::parse, primitive::*, signature::*,
     split::*, subscript::*,

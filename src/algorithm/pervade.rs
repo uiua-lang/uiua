@@ -850,6 +850,10 @@ pub mod not {
     pub fn com(a: Complex) -> Complex {
         1.0 - a
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.dualed()
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot not {a}")
     }
@@ -889,6 +893,10 @@ pub mod scalar_neg {
     pub fn com(a: Complex) -> Complex {
         -a
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        -a
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot negate {a}")
     }
@@ -915,6 +923,10 @@ pub mod scalar_abs {
     }
     pub fn com(a: Complex) -> f64 {
         a.abs()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> f64 {
+        a.magnitude()
     }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot take the absolute value of {a}")
@@ -945,6 +957,10 @@ pub mod sign {
     pub fn com(a: Complex) -> Complex {
         a.normalize()
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.normalized()
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot get the sign of {a}")
     }
@@ -959,6 +975,10 @@ pub mod recip {
     }
     pub fn com(a: Complex) -> Complex {
         a.recip()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.inverted()
     }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot get the reciprocal of {a}")
@@ -978,6 +998,10 @@ pub mod sqrt {
     pub fn com(a: Complex) -> Complex {
         a.sqrt()
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.sqrt()
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot take the square root of {a}")
     }
@@ -993,6 +1017,10 @@ pub mod exp {
     pub fn com(a: Complex) -> Complex {
         a.exp()
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.exp()
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot take the exponential of {a}")
     }
@@ -1006,6 +1034,10 @@ pub mod ln {
         f64::from(a).ln()
     }
     pub fn com(a: Complex) -> Complex {
+        a.ln()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
         a.ln()
     }
     pub fn error<T: Display>(a: T) -> String {
@@ -1124,6 +1156,10 @@ pub mod complex_re {
     pub fn com(a: Complex) -> f64 {
         a.re
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> f64 {
+        a.get_blade(0b0)
+    }
     pub fn generic<T>(a: T) -> T {
         a
     }
@@ -1143,8 +1179,92 @@ pub mod complex_im {
     pub fn byte(_a: u8) -> u8 {
         0
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> f64 {
+        a.get_blade(0b11)
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot get the imaginary part of {a}")
+    }
+}
+pub mod conj {
+    use super::*;
+
+    pub fn com(a: impl Into<Complex>) -> Complex {
+        a.into().conj()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.reversed()
+    }
+    pub fn byte(a: u8) -> Complex {
+        com(a)
+    }
+    pub fn num(a: f64) -> Complex {
+        com(a)
+    }
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the conjugate of {a}")
+    }
+}
+pub mod negconj {
+    use super::*;
+
+    pub fn com(a: impl Into<Complex>) -> Complex {
+        a.into().neg_conj()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.inv_reversed()
+    }
+    pub fn byte(a: u8) -> Complex {
+        com(a)
+    }
+    pub fn num(a: f64) -> Complex {
+        com(a)
+    }
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the negative conjugate of {a}")
+    }
+}
+pub mod dual {
+    use super::*;
+
+    pub fn com(a: impl Into<Complex>) -> Complex {
+        a.into().dual()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.dualed()
+    }
+    pub fn byte(a: u8) -> Complex {
+        com(a)
+    }
+    pub fn num(a: f64) -> Complex {
+        com(a)
+    }
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the dual of {a}")
+    }
+}
+pub mod undual {
+    use super::*;
+
+    pub fn com(a: impl Into<Complex>) -> Complex {
+        a.into().inv_dual()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> crate::Multivector {
+        a.antidualed()
+    }
+    pub fn byte(a: u8) -> Complex {
+        com(a)
+    }
+    pub fn num(a: f64) -> Complex {
+        com(a)
+    }
+    pub fn error<T: Display>(a: T) -> String {
+        format!("Cannot get the inverse dual of {a}")
     }
 }
 
@@ -1160,7 +1280,6 @@ pub mod exp2 {
     pub fn com(a: Complex) -> Complex {
         Complex::from(2.0).powc(a)
     }
-
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot raise {a} to the 2nd")
     }
@@ -1177,7 +1296,6 @@ pub mod exp10 {
     pub fn com(a: Complex) -> Complex {
         Complex::from(10.0).powc(a)
     }
-
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot raise {a} to the 10th")
     }
@@ -1194,7 +1312,6 @@ pub mod log2 {
     pub fn com(a: Complex) -> Complex {
         a.log(2.0)
     }
-
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot get the log₂ of {a}")
     }
@@ -1211,7 +1328,6 @@ pub mod log10 {
     pub fn com(a: Complex) -> Complex {
         a.log(10.0)
     }
-
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot get the log₁₀ of {a}")
     }
@@ -1229,7 +1345,10 @@ pub mod square_abs {
     pub fn com(a: Complex) -> f64 {
         a.re * a.re + a.im * a.im
     }
-
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> f64 {
+        a.squared_magnitude()
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot square {a}")
     }
@@ -1258,6 +1377,10 @@ pub mod neg_abs {
     pub fn com(a: Complex) -> f64 {
         -a.abs()
     }
+    #[cfg(feature = "ga")]
+    pub fn mv(a: crate::Multivector) -> f64 {
+        -a.magnitude()
+    }
     pub fn error<T: Display>(a: T) -> String {
         format!("Cannot take the absolute value of {a}")
     }
@@ -1280,6 +1403,14 @@ macro_rules! eq_impl {
                 (b.into().array_cmp(&a) $eq $ordering) as u8
             }
             pub fn x_com(a: impl Into<Complex>, b: Complex) -> u8 {
+                (b.array_cmp(&a.into()) $eq $ordering) as u8
+            }
+            #[cfg(feature = "ga")]
+            pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> u8 {
+                (b.into().array_cmp(&a) $eq $ordering) as u8
+            }
+            #[cfg(feature = "ga")]
+            pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> u8 {
                 (b.array_cmp(&a.into()) $eq $ordering) as u8
             }
             pub fn byte_num(a: u8, b: f64) -> u8 {
@@ -1327,6 +1458,16 @@ macro_rules! cmp_impl {
                     (b.re.array_cmp(&a.re) $eq $ordering) as u8 as f64,
                     (b.im.array_cmp(&a.im) $eq $ordering) as u8 as f64
                 )
+            }
+            #[cfg(feature = "ga")]
+            pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> u8 {
+                let b = b.into();
+                (b.array_cmp(&a) $eq $ordering) as u8
+            }
+            #[cfg(feature = "ga")]
+            pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> u8 {
+                let a = a.into();
+                (b.array_cmp(&a) $eq $ordering) as u8
             }
             pub fn byte_num(a: u8, b: f64) -> u8 {
                 (b.array_cmp(&f64::from(a)) $eq $ordering) as u8
@@ -1377,6 +1518,14 @@ pub mod add {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b + a.into()
     }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into() + a
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b + a.into()
+    }
     fn on_i64(a: i64, b: i64) -> char {
         char::from_u32(b.saturating_add(a).clamp(0, char::MAX as i64) as u32).unwrap_or('\0')
     }
@@ -1415,6 +1564,14 @@ pub mod sub {
         b.into() - a
     }
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        b - a.into()
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into() - a
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
         b - a.into()
     }
     pub fn num_char(a: f64, b: char) -> char {
@@ -1504,10 +1661,71 @@ pub mod mul {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b * a.into()
     }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into() * a
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b * a.into()
+    }
     pub fn error<T: Display>(a: T, b: T) -> String {
         format!("Cannot multiply {a} and {b}")
     }
 }
+
+pub mod inner_product {
+    use super::*;
+    pub use mul::{byte_byte, byte_num, com_x, num_byte, num_num, x_com};
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into().inner_product(a)
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b.inner_product(a.into())
+    }
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot get inner product of {a} and {b}")
+    }
+}
+
+macro_rules! product {
+    ($name:ident, $s:literal) => {
+        pub mod $name {
+            use super::*;
+            pub use mul::{byte_byte, byte_num, num_byte, num_num};
+            pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+                b.into().$name(a)
+            }
+            pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+                b.$name(a.into())
+            }
+            #[cfg(feature = "ga")]
+            pub fn mv_x(
+                a: crate::Multivector,
+                b: impl Into<crate::Multivector>,
+            ) -> crate::Multivector {
+                b.into().$name(a)
+            }
+            #[cfg(feature = "ga")]
+            pub fn x_mv(
+                a: impl Into<crate::Multivector>,
+                b: crate::Multivector,
+            ) -> crate::Multivector {
+                b.$name(a.into())
+            }
+            pub fn error<T: Display>(a: T, b: T) -> String {
+                format!("Cannot get {} of {a} and {b}", $s)
+            }
+        }
+    };
+}
+
+product!(outer_product, "outer product");
+product!(regressive_product, "regressive product");
+product!(left_contraction, "left contraction");
+product!(right_contraction, "right contraction");
 
 pub mod set_sign {
     use super::*;
@@ -1578,6 +1796,26 @@ pub mod div {
     }
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b / a.into()
+    }
+    #[cfg(feature = "ga")]
+    pub fn byte_mv(a: u8, b: crate::Multivector) -> crate::Multivector {
+        b / a as f64
+    }
+    #[cfg(feature = "ga")]
+    pub fn num_mv(a: f64, b: crate::Multivector) -> crate::Multivector {
+        b / a
+    }
+    #[cfg(feature = "ga")]
+    pub fn comp_mv(a: Complex, b: crate::Multivector) -> crate::Multivector {
+        b / a
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_mv(a: crate::Multivector, b: crate::Multivector) -> crate::Multivector {
+        b / a
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into() / a
     }
     pub fn error<T: Display>(a: T, b: T) -> String {
         format!("Cannot divide {b} by {a}")
@@ -1706,15 +1944,44 @@ pub mod or {
     }
 }
 
-bin_op_mod!(
-    atan2,
-    a,
-    b,
-    f64::from,
-    f64,
-    a.atan2(b),
-    "Cannot get the atan2 of {a} and {b}"
-);
+pub mod atan2 {
+    use super::*;
+    pub fn num_num(a: f64, b: f64) -> f64 {
+        a.atan2(b)
+    }
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
+        let a = f64::from(a);
+        let b = f64::from(b);
+        a.atan2(b)
+    }
+    pub fn byte_num(a: u8, b: f64) -> f64 {
+        let a = f64::from(a);
+        a.atan2(b)
+    }
+    pub fn num_byte(a: f64, b: u8) -> f64 {
+        let b = f64::from(b);
+        a.atan2(b)
+    }
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        let b = b.into();
+        a.atan2(b)
+    }
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        let a = a.into();
+        a.atan2(b)
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        b.into().rotor(a)
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b.rotor(a.into())
+    }
+    pub fn error<T: Display>(a: T, b: T) -> String {
+        format!("Cannot get the atan2 of {a} and {b}")
+    }
+}
 pub mod scalar_pow {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
@@ -1735,8 +2002,16 @@ pub mod scalar_pow {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b.powc(a.into())
     }
+    #[cfg(feature = "ga")]
+    pub fn num_mv(a: impl Into<f64>, b: crate::Multivector) -> crate::Multivector {
+        b.powf(a.into())
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        b.powmv(a.into())
+    }
     pub fn error<T: Display>(a: T, b: T) -> String {
-        format!("Cannot get the power of {a} to {b}")
+        format!("Cannot get the power of {b} to {a}")
     }
 }
 pub mod root {
@@ -1838,6 +2113,14 @@ pub mod max {
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         a.into().max(b)
     }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        a.max(b.into())
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
+        a.into().max(b)
+    }
     pub fn generic<T: Ord>(a: T, b: T) -> T {
         a.max(b)
     }
@@ -1867,6 +2150,14 @@ pub mod min {
         a.min(b.into())
     }
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        a.into().min(b)
+    }
+    #[cfg(feature = "ga")]
+    pub fn mv_x(a: crate::Multivector, b: impl Into<crate::Multivector>) -> crate::Multivector {
+        a.min(b.into())
+    }
+    #[cfg(feature = "ga")]
+    pub fn x_mv(a: impl Into<crate::Multivector>, b: crate::Multivector) -> crate::Multivector {
         a.into().min(b)
     }
     pub fn generic<T: Ord>(a: T, b: T) -> T {

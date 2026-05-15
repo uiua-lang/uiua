@@ -13,7 +13,7 @@ use ecow::EcoString;
 
 use crate::{
     BindingCounts, Complex, Diagnostic, DiagnosticKind, Ident, Inputs, NumComponent,
-    NumericSubscript, Primitive, Signature,
+    NumericSubscript, Primitive, Signature, SubscriptNumber,
     ast::*,
     lex::{AsciiToken::*, Token::*, *},
 };
@@ -898,8 +898,14 @@ impl Parser<'_> {
         let mut ident = self.next_token_map(Token::as_ident)?;
         // Add subscript
         while let Some(sub) = self.next_token_map(Token::as_subscript) {
-            ident.span.merge_with(sub.span);
+            let sub_s = &self.input[sub.span.byte_range()];
+            if (sub.value.n().flatten()).is_none_or(|n| !matches!(n, SubscriptNumber::Int(0)))
+                && (sub_s.starts_with(",0") || sub_s.starts_with('₀'))
+            {
+                ident.value.push('₀')
+            }
             ident.value.push_str(&sub.value.to_string());
+            ident.span.merge_with(sub.span);
         }
         // Add exclams
         while let Some(exclams) = self.next_token_map(|tok| {
@@ -1283,8 +1289,6 @@ impl Parser<'_> {
             refer
         } else if let Some(prim) = self.prim() {
             prim.map(Word::Primitive)
-        } else if let Some(n) = self.num() {
-            n.map(|(n, s)| Word::Number(n, s))
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
@@ -1361,7 +1365,7 @@ impl Parser<'_> {
         // Numerator
         let ((numer, mut s), mut span) = self.numer_or_denom()?.into();
         // Denominator
-        if !s.contains(['.', ',', '∞']) {
+        if !(s.contains(['.', ',', '∞']) || s.contains(SUBSCRIPT_DIGITS)) {
             let reset = self.index;
             if self.exact(Primitive::Reduce.into()).is_some() {
                 if let Some(((denom, ds), dspan)) = self
@@ -1398,6 +1402,9 @@ impl Parser<'_> {
     fn numer_or_denom(&mut self) -> Option<Sp<(NumWord, String)>> {
         fn suffix(s: &str) -> Option<char> {
             s.chars().next_back().filter(|c| "ri".contains(*c))
+        }
+        if let Some(mv) = self.mv() {
+            return Some(mv);
         }
         let first = self.num_frag(false)?;
         let Some(first_suffix) = suffix(&first.value.1) else {
@@ -1617,7 +1624,11 @@ impl Parser<'_> {
     }
     fn real(&mut self) -> Option<Sp<Result<f64, String>>> {
         let span = self.exact(Token::Number)?;
-        let mut s = &self.input[span.byte_range()];
+        let s = &self.input[span.byte_range()];
+        Some(span.sp(Self::real_impl(s)))
+    }
+    fn real_impl(s: &str) -> Result<f64, String> {
+        let mut s = s;
         let mut replaced;
         if s.contains('`') {
             replaced = s.replace('`', "-");
@@ -1631,7 +1642,73 @@ impl Parser<'_> {
             replaced = s.replace(',', "");
             s = &replaced;
         }
-        Some(span.sp(s.parse::<f64>().map_err(|e| e.to_string())))
+        s.parse::<f64>().map_err(|e| e.to_string())
+    }
+    fn mv(&mut self) -> Option<Sp<(NumWord, String)>> {
+        let reset = self.index;
+        let span = self.exact(Token::Number)?;
+        let s = &self.input[span.byte_range()];
+        let Some(i) = s
+            .find('e')
+            .filter(|&i| s[i + 1..].starts_with(',') || s[i + 1..].starts_with(SUBSCRIPT_DIGITS))
+        else {
+            self.index = reset;
+            return None;
+        };
+        let coef = &s[..i];
+        let coef = match coef {
+            "" => 1.0,
+            "¯" | "`" => -1.0,
+            _ => match Self::real_impl(coef) {
+                Ok(f) => f,
+                Err(e) => return Some(span.sp((NumWord::Err(e.to_string()), s.into()))),
+            },
+        };
+        #[cfg(not(feature = "multivector"))]
+        {
+            Some(span.sp((
+                NumWord::Err("Multivectors are not supported in this environment".into()),
+                s.into(),
+            )))
+        }
+        #[cfg(feature = "multivector")]
+        {
+            use {
+                crate::{GaFlavor, Multivector as Mv},
+                ecow::eco_vec,
+            };
+            let blade_str = &s[i + 1..];
+            let mut blades = Vec::with_capacity(blade_str.len());
+            for b in blade_str.chars() {
+                let Some(n) = SUBSCRIPT_DIGITS
+                    .iter()
+                    .position(|&d| d == b)
+                    .or_else(|| b.is_ascii_digit().then(|| b as usize - '0' as usize))
+                else {
+                    continue;
+                };
+                blades.push(n);
+            }
+            let mv = blades
+                .into_iter()
+                .map(|blade| match blade {
+                    0 => Mv::pga_vector([1.0]),
+                    n => {
+                        let mut vector = eco_vec![0.0; n];
+                        *vector.make_mut().last_mut().unwrap() = 1.0;
+                        Mv::vga_vector(vector)
+                    }
+                })
+                .reduce(|a, b| a * b)
+                .unwrap_or_else(|| Mv::from(1.0))
+                * coef;
+            let s = mv.to_string();
+            let num_word = (mv.as_scalar())
+                .filter(|_| coef != 0.0 && mv.flavor == GaFlavor::Vanilla)
+                .map(NumWord::Real)
+                .unwrap_or(NumWord::Blade(mv));
+            Some(span.sp((num_word, s)))
+        }
     }
     fn prim(&mut self) -> Option<Sp<Primitive>> {
         for prim in Primitive::all() {

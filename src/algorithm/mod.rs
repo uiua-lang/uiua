@@ -14,12 +14,11 @@ use smallvec::SmallVec;
 use crate::{
     Array, ArrayValue, Context, ExactDoubleIterator, Ops, PersistentMeta, Shape, SigNode,
     Signature, Uiua, UiuaResult, Value, cowslice::ecovec_extend_cowslice,
-    empty_types::push_empty_rows_value, grid_fmt::GridFmt,
+    empty_types::push_empty_rows_value, grid_fmt::GridFmt, val_as_arr,
 };
 
 mod dyadic;
 pub mod encode;
-pub mod ga;
 pub mod groups;
 pub mod loops;
 pub mod map;
@@ -200,13 +199,7 @@ fn fill_value_shape(
     ctx: Context,
 ) -> Result<(), FillShapeError> {
     val.match_fill(ctx);
-    match val {
-        Value::Num(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
-        Value::Byte(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
-        Value::Complex(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
-        Value::Char(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
-        Value::Box(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
-    }
+    val_as_arr!(val, |arr| fill_array_shape(arr, target, expand_fixed, ctx))
 }
 
 /// The error is a tuple of the size of an array that would be too large and the error message

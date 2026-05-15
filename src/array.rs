@@ -371,7 +371,9 @@ where
                 write!(f, "{start}")?;
                 for (i, x) in self.data.iter().enumerate() {
                     if i > 0 {
-                        write!(f, "{}", T::format_sep())?;
+                        for _ in 0..T::separation() {
+                            write!(f, " ")?;
+                        }
                     }
                     write!(f, "{x}")?;
                 }
@@ -1017,9 +1019,9 @@ pub trait ArrayValue:
     /// An ID for the type
     const TYPE_ID: u8;
     /// Get the scalar fill value from the environment
-    fn get_scalar_fill(fill: &Context) -> Result<FillValue<Self>, &'static str>;
+    fn get_scalar_fill(ctx: Context) -> Result<FillValue<Self>, &'static str>;
     /// Get the array fill value from the environment
-    fn get_array_fill(fill: &Context) -> Result<FillValue<Array<Self>>, &'static str>;
+    fn get_array_fill(ctx: Context) -> Result<FillValue<Array<Self>>, &'static str>;
     /// Hash the value
     fn array_hash<H: Hasher>(&self, hasher: &mut H);
     /// Get the proxy value
@@ -1056,11 +1058,11 @@ impl ArrayValue for f64 {
     const NAME: &'static str = "number";
     const SYMBOL: char = 'ℝ';
     const TYPE_ID: u8 = 0;
-    fn get_scalar_fill(fill: &Context) -> Result<FillValue<Self>, &'static str> {
-        fill.num_scalar()
+    fn get_scalar_fill(ctx: Context) -> Result<FillValue<Self>, &'static str> {
+        ctx.num_scalar()
     }
-    fn get_array_fill(fill: &Context) -> Result<FillValue<Array<Self>>, &'static str> {
-        fill.num_array()
+    fn get_array_fill(ctx: Context) -> Result<FillValue<Array<Self>>, &'static str> {
+        ctx.num_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         let v = if self.to_bits() == EMPTY_NAN.to_bits() {
@@ -1099,11 +1101,11 @@ impl ArrayValue for u8 {
     const NAME: &'static str = "number";
     const SYMBOL: char = 'ℝ';
     const TYPE_ID: u8 = 0;
-    fn get_scalar_fill(fill: &Context) -> Result<FillValue<Self>, &'static str> {
-        fill.byte_scalar()
+    fn get_scalar_fill(ctx: Context) -> Result<FillValue<Self>, &'static str> {
+        ctx.byte_scalar()
     }
-    fn get_array_fill(fill: &Context) -> Result<FillValue<Array<Self>>, &'static str> {
-        fill.byte_array()
+    fn get_array_fill(ctx: Context) -> Result<FillValue<Array<Self>>, &'static str> {
+        ctx.byte_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         (*self as f64).to_bits().hash(hasher)
@@ -1150,11 +1152,11 @@ impl ArrayValue for char {
     const NAME: &'static str = "character";
     const SYMBOL: char = '@';
     const TYPE_ID: u8 = 1;
-    fn get_scalar_fill(fill: &Context) -> Result<FillValue<Self>, &'static str> {
-        fill.char_scalar()
+    fn get_scalar_fill(ctx: Context) -> Result<FillValue<Self>, &'static str> {
+        ctx.char_scalar()
     }
-    fn get_array_fill(fill: &Context) -> Result<FillValue<Array<Self>>, &'static str> {
-        fill.char_array()
+    fn get_array_fill(ctx: Context) -> Result<FillValue<Array<Self>>, &'static str> {
+        ctx.char_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
@@ -1171,11 +1173,11 @@ impl ArrayValue for Boxed {
     const NAME: &'static str = "box";
     const SYMBOL: char = '□';
     const TYPE_ID: u8 = 2;
-    fn get_scalar_fill(fill: &Context) -> Result<FillValue<Self>, &'static str> {
-        fill.box_scalar()
+    fn get_scalar_fill(ctx: Context) -> Result<FillValue<Self>, &'static str> {
+        ctx.box_scalar()
     }
-    fn get_array_fill(fill: &Context) -> Result<FillValue<Array<Self>>, &'static str> {
-        fill.box_array()
+    fn get_array_fill(ctx: Context) -> Result<FillValue<Array<Self>>, &'static str> {
+        ctx.box_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.0.hash(hasher);
@@ -1195,11 +1197,11 @@ impl ArrayValue for Complex {
     const NAME: &'static str = "complex";
     const SYMBOL: char = 'ℂ';
     const TYPE_ID: u8 = 3;
-    fn get_scalar_fill(fill: &Context) -> Result<FillValue<Self>, &'static str> {
-        fill.complex_scalar()
+    fn get_scalar_fill(ctx: Context) -> Result<FillValue<Self>, &'static str> {
+        ctx.complex_scalar()
     }
-    fn get_array_fill(fill: &Context) -> Result<FillValue<Array<Self>>, &'static str> {
-        fill.complex_array()
+    fn get_array_fill(ctx: Context) -> Result<FillValue<Array<Self>>, &'static str> {
+        ctx.complex_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         for n in [self.re, self.im] {
@@ -1208,6 +1210,28 @@ impl ArrayValue for Complex {
     }
     fn default_scalar() -> Self {
         Complex::new(0.0, 0.0)
+    }
+}
+
+#[cfg(feature = "ga")]
+impl ArrayValue for crate::Multivector {
+    const NAME: &'static str = "multivector";
+    const SYMBOL: char = '𝕍';
+    const TYPE_ID: u8 = 3;
+    fn get_scalar_fill(ctx: Context) -> Result<FillValue<Self>, &'static str> {
+        ctx.multivector_scalar()
+    }
+    fn get_array_fill(ctx: Context) -> Result<FillValue<Array<Self>>, &'static str> {
+        ctx.multivector_array()
+    }
+    fn array_hash<H: Hasher>(&self, hasher: &mut H) {
+        self.flavor.hash(hasher);
+        for c in self {
+            c.array_hash(hasher);
+        }
+    }
+    fn default_scalar() -> Self {
+        crate::Multivector::default()
     }
 }
 
@@ -1302,6 +1326,33 @@ impl ArrayCmp<f64> for u8 {
 impl ArrayCmp<u8> for f64 {
     fn array_cmp(&self, other: &u8) -> Ordering {
         self.array_cmp(&(*other as f64))
+    }
+}
+
+#[cfg(feature = "ga")]
+impl ArrayCmp for crate::Multivector {
+    fn array_cmp(&self, other: &Self) -> Ordering {
+        self.cmp(other)
+    }
+}
+
+#[cfg(feature = "ga")]
+impl ArrayCmp<Complex> for crate::Multivector {
+    fn array_eq(&self, other: &Complex) -> bool {
+        self == other
+    }
+    fn array_cmp(&self, other: &Complex) -> Ordering {
+        self.array_cmp(&crate::Multivector::from(*other))
+    }
+}
+
+#[cfg(feature = "ga")]
+impl ArrayCmp<crate::Multivector> for Complex {
+    fn array_eq(&self, other: &crate::Multivector) -> bool {
+        self == other
+    }
+    fn array_cmp(&self, other: &crate::Multivector) -> Ordering {
+        crate::Multivector::from(*self).array_cmp(other)
     }
 }
 
@@ -1526,6 +1577,36 @@ impl ArrayValueSer for f64 {
     }
     fn make_data(collection: Self::Collection) -> CowSlice<Self> {
         collection.into_iter().map(f64::from).collect()
+    }
+}
+
+#[cfg(feature = "ga")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum MultivectorCollection {
+    #[serde(rename = "empty_mv")]
+    Empty([crate::Multivector; 0]),
+    #[serde(untagged)]
+    List(CowSlice<crate::Multivector>),
+}
+#[cfg(feature = "ga")]
+impl ArrayValueSer for crate::Multivector {
+    type Scalar = crate::Multivector;
+    type Collection = MultivectorCollection;
+    fn make_collection(data: CowSlice<Self>) -> Self::Collection {
+        if data.is_empty() {
+            MultivectorCollection::Empty([])
+        } else {
+            MultivectorCollection::List(data)
+        }
+    }
+    fn make_data(collection: Self::Collection) -> CowSlice<Self> {
+        match collection {
+            MultivectorCollection::Empty(_) => CowSlice::new(),
+            MultivectorCollection::List(data) => data,
+        }
+    }
+    fn no_scalar() -> bool {
+        true
     }
 }
 

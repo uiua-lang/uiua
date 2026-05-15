@@ -21,7 +21,7 @@ use crate::{
 
 /// Subscript digit characters
 pub const SUBSCRIPT_DIGITS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
-pub const OTHER_SUBSCRIPT_NUMBERS: [char; 2] = ['ᵣ', 'ᵢ'];
+pub const OTHER_SUBSCRIPT_NUMBERS: [char; 3] = ['ᵣ', 'ᵢ', 'ₒ'];
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub(crate) struct FormatSubscript(pub i32);
 impl fmt::Display for FormatSubscript {
@@ -868,6 +868,8 @@ pub enum SemanticComment {
     TypeCheck,
     /// Mark a function as deprecated
     Deprecated(EcoString),
+    /// An invalid geometric algebra flavor
+    InvalidGaFlavor(EcoString),
     #[doc(hidden)]
     Boo,
 }
@@ -884,6 +886,7 @@ impl fmt::Display for SemanticComment {
             SemanticComment::TypeCheck => write!(f, "# Type check!"),
             SemanticComment::Deprecated(s) if s.is_empty() => write!(f, "# Deprecated!"),
             SemanticComment::Deprecated(s) => write!(f, "# Deprecated! {s}"),
+            SemanticComment::InvalidGaFlavor(fl) => write!(f, "# {fl}!"),
             SemanticComment::Boo => write!(f, "# Boo!"),
         }
     }
@@ -933,7 +936,12 @@ impl<'a> Lexer<'a> {
         }
     }
     fn peek_char(&self) -> Option<&'a str> {
-        self.input_segments.get(self.loc.char_pos as usize).copied()
+        self.peek_char_n(0)
+    }
+    fn peek_char_n(&self, n: usize) -> Option<&'a str> {
+        self.input_segments
+            .get(self.loc.char_pos as usize + n)
+            .copied()
     }
     fn update_loc(&mut self, c: &'a str) {
         for c in c.chars() {
@@ -1115,18 +1123,19 @@ impl<'a> Lexer<'a> {
                 "≈" => self.end(AlmostEqual, start),
                 "'" => self.end(Quote, start),
                 "`" => {
-                    if self.number("-") {
+                    if self.number("`") {
                         self.end(Number, start)
                     } else {
                         self.end(Backtick, start)
                     }
                 }
-                "¯" if self
-                    .peek_char()
-                    .filter(|c| c.chars().all(|c| c.is_ascii_digit()))
-                    .is_some() =>
+                "¯" if (self.peek_char())
+                    .is_some_and(|c| c.chars().all(|c| c.is_ascii_digit()))
+                    || self.peek_char() == Some("e")
+                        && (self.peek_char_n(1))
+                            .is_some_and(|c| c == "," || c.contains(SUBSCRIPT_DIGITS)) =>
                 {
-                    self.number("-");
+                    self.number("¯");
                     self.end(Number, start)
                 }
                 "*" => self.end(Star, start),
@@ -1313,6 +1322,8 @@ impl<'a> Lexer<'a> {
                     };
                     self.end(Char(char), start)
                 }
+                // Blade literals
+                "e" if self.blade_subscript() => self.end(Number, start),
                 // Strings
                 "\"" | "$" => {
                     let first_dollar = c == "$";
@@ -1437,6 +1448,9 @@ impl<'a> Lexer<'a> {
                                 PrimComponent::Sub0 => Subscr(0.into()),
                                 PrimComponent::Sub1 => Subscr(1.into()),
                                 PrimComponent::Sub2 => Subscr(2.into()),
+                                PrimComponent::Sub4 => Subscr(4.into()),
+                                PrimComponent::SubI => Subscr(SubscriptNumber::I.into()),
+                                PrimComponent::SubRight => Subscr(SubSide::Right.into()),
                                 PrimComponent::OpenParen => OpenParen.into(),
                                 PrimComponent::CloseParen => CloseParen.into(),
                                 PrimComponent::Infinity => Glyph(Primitive::Infinity),
@@ -1519,7 +1533,16 @@ impl<'a> Lexer<'a> {
             }
         }
         if !init_is_digit && !got_digit {
-            return false;
+            return if "¯`".contains(init) {
+                let reset = self.loc;
+                if !(self.next_char_exact("e") && self.blade_subscript()) {
+                    self.loc = reset;
+                    return false;
+                }
+                true
+            } else {
+                false
+            };
         }
         if last_is_comma {
             return true;
@@ -1549,17 +1572,20 @@ impl<'a> Lexer<'a> {
         // Exponent
         if !got_comma {
             let loc_before_e = self.loc;
-            if self.next_char_if(|c| c == "e" || c == "E").is_some() {
-                self.next_char_if(|c| c == "-" || c == "`" || c == "¯");
-                let mut got_digit = false;
-                while self
-                    .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
-                    .is_some()
-                {
-                    got_digit = true;
-                }
-                if !got_digit {
-                    self.loc = loc_before_e;
+            if let Some(c) = self.next_char_if(|c| c == "e" || c == "E") {
+                if c == "e" && self.blade_subscript() {
+                } else {
+                    self.next_char_if(|c| c == "-" || c == "`" || c == "¯");
+                    let mut got_digit = false;
+                    while self
+                        .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
+                        .is_some()
+                    {
+                        got_digit = true;
+                    }
+                    if !got_digit {
+                        self.loc = loc_before_e;
+                    }
                 }
             }
         }
@@ -1721,6 +1747,27 @@ impl<'a> Lexer<'a> {
             }),
         }
     }
+    fn blade_subscript(&mut self) -> bool {
+        let mut can_parse_ascii = false;
+        let mut reset = self.loc;
+        let mut got = false;
+        while let Some(c) = self.next_char() {
+            match c {
+                "," => can_parse_ascii = true,
+                c if can_parse_ascii && c.chars().all(|c| c.is_ascii_digit()) => got = true,
+                c if SUBSCRIPT_DIGITS.iter().any(|d| c.contains(*d)) => {
+                    got = true;
+                    can_parse_ascii = false;
+                }
+                _ => {
+                    self.loc = reset;
+                    break;
+                }
+            }
+            reset = self.loc;
+        }
+        got
+    }
     fn character(
         &mut self,
         escaped: &mut bool,
@@ -1864,7 +1911,7 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
 
 /// Whether a character can be among the first characters of a Uiua identifier
 pub fn is_ident_char(c: char) -> bool {
-    c.is_alphabetic() && !"ⁿₙₑℂ".contains(c)
+    c.is_alphabetic() && !"ⁿₙₑℂ𝕍".contains(c)
 }
 
 /// Whether a string is a custom glyph

@@ -22,7 +22,7 @@ use rand::prelude::*;
 use crate::{
     FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive, Shape, SubSide, SysOp, Uiua,
     UiuaErrorKind, UiuaResult,
-    algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
+    algorithm::{self, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
     context::FillFrame,
@@ -98,6 +98,8 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::Add => env.dyadic_oo_env(Value::add)?,
         Primitive::Sub => env.dyadic_oo_env(Value::sub)?,
         Primitive::Mul => env.dyadic_oo_env(Value::mul)?,
+        Primitive::InnerProduct => env.dyadic_oo_env(Value::inner_product)?,
+        Primitive::OuterProduct => env.dyadic_oo_env(Value::outer_product)?,
         Primitive::Div => env.dyadic_oo_env(Value::div)?,
         Primitive::Modulo => env.dyadic_oo_env(Value::modulo)?,
         Primitive::Or => env.dyadic_oo_env(Value::or)?,
@@ -610,6 +612,10 @@ impl ImplPrimitive {
             ImplPrimitive::Exp10 => env.monadic_env(Value::exp10)?,
             ImplPrimitive::Log2 => env.monadic_env(Value::log2)?,
             ImplPrimitive::Log10 => env.monadic_env(Value::log10)?,
+            ImplPrimitive::Conj => env.monadic_env(Value::conj)?,
+            ImplPrimitive::NegConj => env.monadic_env(Value::negconj)?,
+            ImplPrimitive::Dual => env.monadic_env(Value::dual)?,
+            ImplPrimitive::UnDual => env.monadic_env(Value::undual)?,
             ImplPrimitive::UnPop => {
                 let frame = (env.last_fill()).ok_or_else(|| env.error("No fill set").fill())?;
                 env.push(frame.values.first().cloned().unwrap_or_default());
@@ -727,7 +733,7 @@ impl ImplPrimitive {
             }
             ImplPrimitive::UnMul => {
                 let x = env.pop(1)?;
-                let (sign, mag) = x.un_mul()?;
+                let (sign, mag) = x.un_mul(env)?;
                 env.push(mag);
                 env.push(sign);
             }
@@ -747,6 +753,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
             ImplPrimitive::StackN { n, inverse } => stack_n(env, *n, *inverse)?,
             ImplPrimitive::UnStack => stack(env, true)?,
+            ImplPrimitive::GradeDecompose => env.monadic_env(Value::grade_decompose)?,
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
             ImplPrimitive::UnBox => {
                 let val = env.pop(1)?;
@@ -1355,38 +1362,17 @@ impl ImplPrimitive {
                 }
                 env.push(val);
             }
-            &ImplPrimitive::Ga(op, spec) => match op {
-                GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,
-                GaOp::GeometricInner => env.dyadic_oo_env_with(spec, ga::inner_product)?,
-                GaOp::GeometricWedge => env.dyadic_oo_env_with(spec, ga::wedge_product)?,
-                GaOp::GeometricRegressive => {
-                    env.dyadic_oo_env_with(spec, ga::regressive_product)?
-                }
-                GaOp::GeometricDivide => env.dyadic_oo_env_with(spec, ga::divide)?,
-                GaOp::GeometricMagnitude => env.monadic_env_with(spec, ga::magnitude)?,
-                GaOp::GeometricNormalize => env.monadic_env_with(spec, ga::normalize)?,
-                GaOp::GeometricSqrt => env.monadic_env_with(spec, ga::sqrt)?,
-                GaOp::GeometricReverse => env.monadic_env_with(spec, ga::reverse)?,
-                GaOp::GeometricDual => env.monadic_env_with(spec, ga::dual)?,
-                GaOp::GeometricAdd => env.dyadic_oo_env_with(spec, ga::add)?,
-                GaOp::GeometricSub => env.dyadic_oo_env_with(spec, |spec, a, b, env| {
-                    let a = a.neg(env)?;
-                    ga::add(spec, a, b, env)
-                })?,
-                GaOp::GeometricRotor => env.dyadic_oo_env_with(spec, ga::rotor)?,
-                GaOp::GeometricSandwich => env.dyadic_oo_env_with(spec, ga::sandwich)?,
-                GaOp::PadBlades => env.dyadic_oo_env_with(spec, ga::pad_blades)?,
-                GaOp::ExtractBlades => env.dyadic_oo_env_with(spec, ga::extract_blades)?,
-                GaOp::GeometricCouple => env.dyadic_oo_env(ga::couple)?,
-                GaOp::GeometricUnCouple => {
-                    let val = env.pop(1)?;
-                    let (a, b) = ga::uncouple(val, env)?;
-                    env.push(b);
-                    env.push(a);
-                }
-                GaOp::GeometricParse => env.monadic_env_with(spec, ga::parse)?,
-                GaOp::GeometricUnParse => env.monadic_env_with(spec, ga::unparse)?,
-            },
+            &ImplPrimitive::MvImpl(mode) => {
+                let mv = env.pop(1)?.multivector(mode, env)?;
+                env.push(mv);
+            }
+            &ImplPrimitive::UnMv(mode) => {
+                let mv = env.pop(1)?.unmultivector(mode, env)?;
+                env.push(mv);
+            }
+            ImplPrimitive::RegressiveProduct => env.dyadic_oo_env(Value::regressive_product)?,
+            ImplPrimitive::LeftContraction => env.dyadic_oo_env(Value::left_contraction)?,
+            ImplPrimitive::RightContraction => env.dyadic_oo_env(Value::right_contraction)?,
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {
                     format!(
@@ -2538,15 +2524,21 @@ mod tests {
                 }
                 let char_test = match prim.glyph() {
                     None => prim.name().len(),
+                    Some(_) if prim == Primitive::Multivector => 5,
                     Some(c) if c.is_ascii() => continue,
                     Some(_) => 4,
                 };
                 let short: String = prim.name().chars().take(char_test).collect();
-                assert_eq!(test(&short), Some(prim.into()));
+                assert_eq!(
+                    test(&short),
+                    Some(prim.into()),
+                    "{short:?} != {} in {name}",
+                    prim.format()
+                );
             }
             for prim in Primitive::non_deprecated() {
                 use Primitive::*;
-                if matches!(prim, Rand | Parse | Slf | Ne | Le | Ge) {
+                if matches!(prim, Rand | Parse | Slf | Ne | Le | Ge | Multivector) {
                     continue;
                 }
                 let char_test = match prim.glyph() {
@@ -2693,7 +2685,6 @@ mod tests {
 
         let text = format!(
             r##"{{
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 	"name": "Uiua",
 	"firstLineMatch": "^#!/.*\\buiua\\b",
 	"fileTypes": [

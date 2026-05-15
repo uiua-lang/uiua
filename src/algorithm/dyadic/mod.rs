@@ -546,6 +546,8 @@ impl Value {
                 Value::Complex(a) => a.keep_scalar_real(counts[0], env)?.into(),
                 Value::Char(a) => a.keep_scalar_real(counts[0], env)?.into(),
                 Value::Box(a) => a.keep_scalar_real(counts[0], env)?.into(),
+                #[cfg(feature = "ga")]
+                Value::Mv(a) => a.keep_scalar_real(counts[0], env)?.into(),
             }
         } else {
             val_as_arr!(kept, |a| a.keep_list(&counts, env)?.into())
@@ -568,6 +570,8 @@ impl Value {
                 Value::Complex(a) => a.keep_scalar_real(count, env)?.into(),
                 Value::Char(a) => a.keep_scalar_real(count, env)?.into(),
                 Value::Box(a) => a.keep_scalar_real(count, env)?.into(),
+                #[cfg(feature = "ga")]
+                Value::Mv(a) => a.keep_scalar_real(count, env)?.into(),
             }
         } else {
             val_as_arr!(kept, |a| a.anti_keep(&counts, env)?.into())
@@ -1108,13 +1112,12 @@ impl Value {
             Ok(ints)
         };
         rotated.match_fill(env.ctx());
-        match rotated {
-            Value::Num(b) => b.rotate_depth(by_ints()?, depth, forward, env)?,
-            Value::Byte(b) => b.rotate_depth(by_ints()?, depth, forward, env)?,
-            Value::Complex(b) => b.rotate_depth(by_ints()?, depth, forward, env)?,
-            Value::Char(b) => b.rotate_depth(by_ints()?, depth, forward, env)?,
-            Value::Box(a) => a.rotate_depth(by_ints()?, depth, forward, env)?,
-        }
+        val_as_arr!(rotated, |arr| arr.rotate_depth(
+            by_ints()?,
+            depth,
+            forward,
+            env
+        )?);
         rotated.meta.take_sorted_flags();
         Ok(())
     }
@@ -2264,6 +2267,8 @@ impl Value {
                 let frac = Array::new(arr.shape.clone(), frac_data);
                 (frac.into(), whole.into())
             }
+            #[cfg(feature = "ga")]
+            Value::Mv(_) => return Err(env.error("Cannot un-add multivectors")),
         };
         whole.meta.set_per_meta(per_meta.clone());
         whole.meta.take_sorted_flags();
@@ -2274,7 +2279,7 @@ impl Value {
         Ok((whole, frac))
     }
     /// Decompose a value into its sign and magnitude
-    pub(crate) fn un_mul(mut self) -> UiuaResult<(Self, Self)> {
+    pub(crate) fn un_mul(mut self, _env: &Uiua) -> UiuaResult<(Self, Self)> {
         let per_meta = self.meta.take_per_meta();
         let (mut sign, mut mag): (Value, Value) = match self {
             Value::Byte(arr) => {
@@ -2316,7 +2321,7 @@ impl Value {
                 let mut sign_data = EcoVec::with_capacity(arr.element_count());
                 let mut mag_data = EcoVec::with_capacity(arr.element_count());
                 for Boxed(val) in arr.data {
-                    let (mag, sign) = val.un_mul()?;
+                    let (mag, sign) = val.un_mul(_env)?;
                     mag_data.push(Boxed(mag));
                     sign_data.push(Boxed(sign));
                 }
@@ -2324,6 +2329,8 @@ impl Value {
                 let mag = Array::new(arr.shape.clone(), mag_data);
                 (sign.into(), mag.into())
             }
+            #[cfg(feature = "ga")]
+            Value::Mv(_) => return Err(_env.error("Cannot un-multiply multivectors")),
         };
         sign.meta.set_per_meta(per_meta.clone());
         sign.meta.take_sorted_flags();

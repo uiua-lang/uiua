@@ -465,6 +465,7 @@ impl Allowed {
                 PrimClass::Arguments => "arguments",
                 PrimClass::Constant => "constant-functions",
                 PrimClass::MonadicPervasive => "monadic-pervasive-functions",
+                PrimClass::GeometricAlgebra => "geometric-algebra",
                 PrimClass::DyadicPervasive => "dyadic-pervasive-functions",
                 PrimClass::MonadicArray => "monadic-array-functions",
                 PrimClass::DyadicArray => "dyadic-array-functions",
@@ -547,6 +548,9 @@ impl Allowed {
                 PrimClass::OtherModifier => ("Other Modifiers".into_view(), ""),
                 PrimClass::Debug => ("Debug".into_view(), "Debug your code"),
                 PrimClass::Thread => ("Thread".into_view(), "Work with OS threads"),
+                PrimClass::GeometricAlgebra => {
+                    ("Geometric Algebra".into_view(), "Operate on multivectors")
+                }
                 PrimClass::Map => ("Map".into_view(), "Use arrays as hash maps"),
                 PrimClass::Encoding => (
                     "Encoding".into_view(),

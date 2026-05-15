@@ -287,13 +287,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                 return Ok(());
             }
             let scalar = xs.as_nat(env, "Tuples of scalar must be a natural number");
-            xs = match &xs {
-                Value::Num(a) => inner(a, k, f, is_scalar, scalar, env)?,
-                Value::Byte(a) => inner(a, k, f, is_scalar, scalar, env)?,
-                Value::Complex(a) => inner(a, k, f, is_scalar, scalar, env)?,
-                Value::Char(a) => inner(a, k, f, is_scalar, scalar, env)?,
-                Value::Box(a) => inner(a, k, f, is_scalar, scalar, env)?,
-            };
+            xs = val_as_arr!(&xs, |a| inner(a, k, f, is_scalar, scalar, env)?);
         }
     }
     env.push(xs);

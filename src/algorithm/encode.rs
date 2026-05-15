@@ -238,6 +238,8 @@ impl Value {
                                             sheet_row.add_cell(b.format())
                                         }
                                     }
+                                    #[cfg(feature = "ga")]
+                                    Value::Mv(m) => sheet_row.add_cell(m.data[0].to_string()),
                                 }
                             }
                             writer.append_row(sheet_row)?;
@@ -692,6 +694,13 @@ impl Value {
                     bytes.extend(re.to_le_bytes());
                     bytes.extend(im.to_le_bytes());
                 }
+            }
+            #[cfg(feature = "ga")]
+            Value::Mv(_) => {
+                return Err(env.error(
+                    "Converting multivector arrays to \
+                    binary is not currently supported",
+                ));
             }
         }
         Ok(())

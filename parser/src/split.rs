@@ -40,6 +40,9 @@ static ALIASES: LazyLock<HashMap<Primitive, &[&str]>> = LazyLock::new(|| {
         (Primitive::Repr, &["rpr"]),
         (Primitive::Sign, &["sgn"]),
         (Primitive::Backward, &["bw"]),
+        (Primitive::Mul, &["mul", "mult"]),
+        (Primitive::Multivector, &["mv", "multi"]),
+        (Primitive::OuterProduct, &["wedge", "wed"]),
     ]
     .into()
 });
@@ -66,6 +69,12 @@ pub enum PrimComponent {
     Sub1,
     /// Subscript 2
     Sub2,
+    /// Subscript 4
+    Sub4,
+    /// Subscript i
+    SubI,
+    /// Subscript ⌟
+    SubRight,
     /// (
     OpenParen,
     /// )
@@ -105,6 +114,9 @@ impl PrimComponent {
             PrimComponent::Sub0 => "₀",
             PrimComponent::Sub1 => "₁",
             PrimComponent::Sub2 => "₂",
+            PrimComponent::Sub4 => "₄",
+            PrimComponent::SubI => "ᵢ",
+            PrimComponent::SubRight => "⌟",
             PrimComponent::OpenParen => "(",
             PrimComponent::CloseParen => ")",
             PrimComponent::Epsilon => "ε",
@@ -298,6 +310,43 @@ impl Primitive {
             alias!((in, Validate), (t, PrimComponent::Int)),
             alias!((na, Validate), (t, PrimComponent::Nat)),
             alias!((bo, Validate), (ol, PrimComponent::Bool)),
+            // alias!((co, Multivector), (mp, PrimComponent::SubI)),
+            // alias!((com, Multivector), (pl, PrimComponent::SubI)),
+            // alias!((comp, Multivector), (plex, PrimComponent::SubI)),
+            alias!((co, Neg), (nj, PrimComponent::SubRight)),
+            alias!((conju, Neg), (gate, PrimComponent::SubRight)),
+            alias!((du, Neg), (al, PrimComponent::Sub4)),
+            alias!((r, Under), (e, Both), (g, Neg), (, PrimComponent::Sub4), (r, OuterProduct)),
+            alias!(
+                (re, Under),
+                (g, Both),
+                (r, Neg),
+                (e, PrimComponent::Sub4),
+                (s, OuterProduct)
+            ),
+            alias!(
+                (re, Under),
+                (gr, Both),
+                (es, Neg),
+                (si, PrimComponent::Sub4),
+                (ve, OuterProduct)
+            ),
+            alias!(
+                (s, Mul),
+                (a, Fork),
+                (n, Neg),
+                (d, PrimComponent::SubRight),
+                (w, Backward),
+                (i, Mul)
+            ),
+            alias!(
+                (sa, Mul),
+                (b, Fork),
+                (d, Neg),
+                (w, PrimComponent::SubRight),
+                (i, Backward),
+                (ch, Mul)
+            ),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

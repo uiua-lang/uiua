@@ -2790,7 +2790,7 @@ primitive!(
     ///   : ⯾[] 5
     ///   : ⯾[3] [1 2 3]
     ///   : ⯾[2 3] ["abc" "def"]
-    /// [infinity] can be used as a wildard axis length in the shape requirement.
+    /// [infinity] can be used as a wildcard axis length in the shape requirement.
     /// ex: # Experimental!
     ///   : ⯾[∞ 2] [1_2]
     ///   : ⯾[∞ 2] [1_2 3_4]

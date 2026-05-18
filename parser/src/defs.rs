@@ -599,7 +599,7 @@ primitive!(
     ///   : ⨰⌟ /+[2 3e₁ 4e₂ 5e₁₂] 2e₁
     /// See the [Geometric Algebra tutorial](https://uiua.org/docs/experimental#geometric-algebra) for more information.
     ///
-    /// See also: [outer product](), [multivector]()
+    /// See also: [outer product], [multivector]
     (2, InnerProduct, GeometricAlgebra, ("inner product", '⨰'), { experimental: true, simple: false }),
     /// Take the outer product of two multivectors
     ///
@@ -616,7 +616,7 @@ primitive!(
     ///   : ⨱ /+[2 3e₁ 4e₂ 5e₁₂ 6e₃₁] 2e₂
     /// See the [Geometric Algebra tutorial](https://uiua.org/docs/experimental#geometric-algebra) for more information.
     ///
-    /// See also: [inner product](), [multivector]()
+    /// See also: [inner product], [multivector]
     (2, OuterProduct, GeometricAlgebra, ("outer product", '⨱'), { experimental: true, simple: false }),
     /// Divide values
     ///

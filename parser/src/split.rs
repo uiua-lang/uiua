@@ -344,7 +344,7 @@ impl Primitive {
             ),
             alias!(
                 (sa, Mul),
-                (b, Fork),
+                (n, Fork),
                 (d, Neg),
                 (w, PrimComponent::SubRight),
                 (i, Backward),

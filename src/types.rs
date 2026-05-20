@@ -681,7 +681,6 @@ pub enum Scalar {
     Nat,
     Num,
     Complex,
-    #[cfg(feature = "ga")]
     Multivector,
     Char,
     Stream,
@@ -708,8 +707,6 @@ impl Scalar {
             1.0 => Scalar::Char,
             2.0 => Scalar::Box(ScalarBox::Any),
             3.0 => Scalar::Complex,
-            #[cfg(feature = "ga")]
-            5.0 => Scalar::Multivector,
             _ => return None,
         })
     }
@@ -2259,6 +2256,42 @@ impl<'a> TypeEnv<'a> {
                     let x = self.pop(1)?;
                     self.push(x.into_row());
                 }
+                Dual => self.monadic_pervasive_hint(Scalar::Complex, Scalar::dual, dual::com)?,
+                UnDual => {
+                    self.monadic_pervasive_hint(Scalar::Complex, Scalar::undual, undual::com)?
+                }
+                Conj => self.monadic_pervasive_hint(Scalar::Complex, Scalar::conj, conj::com)?,
+                NegConj => {
+                    self.monadic_pervasive_hint(Scalar::Complex, Scalar::negconj, negconj::com)?
+                }
+                MvImpl(mode) => {
+                    self.type_hint([Scalar::Num.into()]);
+                    let x = self.pop(1)?;
+                    if !Scalar::Num.superset_of(&x.scalar()) {
+                        return Err(
+                            format!("Cannot make multivector from {} array", x.scalar()).into()
+                        );
+                    }
+                    let mut ty = x.ty();
+                    let n = (ty.shape.suffix.as_ref())
+                        .and_then(|s| s.last())
+                        .or_else(|| ty.shape.dims.last())
+                        .copied();
+                    ty.scalar = if mode.side == Some(SubSide::Left)
+                        && (mode.dims == Some(2)
+                            || mode.dims.is_none() && n == Some(Dim::Static(2)))
+                    {
+                        Scalar::Complex
+                    } else {
+                        Scalar::Multivector
+                    };
+                    if let Some(suf) = &mut ty.shape.suffix {
+                        suf.pop();
+                    } else {
+                        ty.shape.dims.pop();
+                    }
+                    self.push(ty);
+                }
                 &ValidateImpl(type_id, side) => {
                     let spec = self.pop(1)?;
                     let val = self.top_mut("validated value")?;
@@ -2474,19 +2507,19 @@ impl<'a> TypeEnv<'a> {
         }
         Ok(())
     }
-    fn monadic_pervasive_hint(
+    fn monadic_pervasive_hint<N: Into<TypeVal>>(
         &mut self,
         hint: Scalar,
         f: impl Fn(Scalar) -> Result<Scalar, String>,
-        f64: impl Fn(f64) -> f64,
+        f64: impl Fn(f64) -> N,
     ) -> TypeResult {
         self.type_hint([hint.any_shape()]);
         self.monadic_pervasive(f, f64)
     }
-    fn monadic_pervasive(
+    fn monadic_pervasive<N: Into<TypeVal>>(
         &mut self,
         f: impl Fn(Scalar) -> Result<Scalar, String>,
-        f64: impl Fn(f64) -> f64,
+        f64: impl Fn(f64) -> N,
     ) -> TypeResult {
         self.monadic(
             |mut ty| {
@@ -2495,12 +2528,27 @@ impl<'a> TypeEnv<'a> {
                     ..ty
                 })
             },
-            |n| Ok(TypeVal::Num(f64(n))),
+            |n| Ok(f64(n).into()),
             |mut ns| {
-                for n in ns.make_mut() {
-                    *n = f64(*n);
+                if ns.is_empty() {
+                    return Ok(TypeVal::NumList(ns));
                 }
-                Ok(TypeVal::NumList(ns))
+                Ok(match f64(ns[0]).into() {
+                    TypeVal::Num(_) => {
+                        for n in ns.make_mut() {
+                            *n = if let TypeVal::Num(n) = f64(*n).into() {
+                                n
+                            } else {
+                                unreachable!()
+                            };
+                        }
+                        TypeVal::NumList(ns)
+                    }
+                    mut tv => {
+                        tv.prepend_dim(Dim::Static(ns.len()));
+                        tv
+                    }
+                })
             },
             |_| None,
         )

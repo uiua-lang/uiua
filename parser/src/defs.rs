@@ -2832,7 +2832,8 @@ primitive!(
     /// ex! # Experimental!
     ///   : ⯾□1⯾□∞ {1_2 3_4_5}
     /// This [box]ed form can also be shortened with a subscript.
-    /// ex: ⯾₁□∞ □"a boxed string"
+    /// ex: # Experimental!
+    ///   : ⯾₁□∞ □"a boxed string"
     /// An additional [validate] call can be used to validate the outer shape.
     /// ex: # Experimental!
     ///   : ⯾₁□∞ ⯾∞ {"some" "strings"}

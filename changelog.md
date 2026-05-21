@@ -31,6 +31,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Remove proxy values, which where a hacky solution to maintaining correct types and shapes when iterating over arrays with 0 rows.
   - The type analyzer for these cases has been improved to make them mostly unnecessary
 - Add `raze` alias for `/◇⊂`
+- Add `#exp` alias for `# Experimental!`
 - Uncaught errors in threads now immediately print to stderr
 
 ## 0.18.1 - 2026-02-14

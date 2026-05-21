@@ -1249,13 +1249,13 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 // Comments
+                "#" if self.next_chars_exact(["e", "x", "p"]) => self.end(Experimental, start),
+                "#" if self.next_char_exact("?") => {
+                    // Type sig comment
+                    while self.next_char_if(|c| !c.ends_with('\n')).is_some() {}
+                    self.end(TypeSigComment, start);
+                }
                 "#" => {
-                    if self.next_char_exact("?") {
-                        // Type sig comment
-                        while self.next_char_if(|c| !c.ends_with('\n')).is_some() {}
-                        self.end(TypeSigComment, start);
-                        continue;
-                    }
                     let mut n = 0;
                     while self.next_char_exact("#") {
                         n += 1;

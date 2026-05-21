@@ -416,7 +416,6 @@ impl Parser<'_> {
         let span = if let Some(end) = close_span.clone() {
             open_span.clone().merge(end)
         } else {
-            self.errors.push(self.expected([Expectation::CloseModule]));
             open_span.clone()
         };
         let module = ScopedModule {

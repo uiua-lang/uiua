@@ -32,6 +32,8 @@ This version is not yet released. If you are reading this on the website, then t
   - The type analyzer for these cases has been improved to make them mostly unnecessary
 - Add `raze` alias for `/◇⊂`
 - Add `#exp` alias for `# Experimental!`
+- Allow modules to be unclosed
+  - The closing delimiter will be formatted in
 - Uncaught errors in threads now immediately print to stderr
 
 ## 0.18.1 - 2026-02-14

@@ -57,8 +57,8 @@ a.header:hover::before {
     opacity: 0.5;
 }
 
-h1>a>code,
-h2>a>code {
+h1 > a > code,
+h2 > a > code {
     font-weight: normal;
 }
 
@@ -75,7 +75,7 @@ button:enabled:active {
 }
 
 code,
-code>* {
+code > * {
     font-family: "Code Font", monospace;
     border-radius: 0.2em;
     padding: 0.2em;
@@ -94,7 +94,6 @@ td {
     border-radius: 0.5em;
 }
 
-
 tr:nth-child(even) {
     background-color: #0001;
 }
@@ -106,7 +105,7 @@ tr:nth-child(even) {
 }
 
 .all-centered-table,
-.header-centered-table>tr>th {
+.header-centered-table > tr > th {
     text-align: center;
 }
 
@@ -115,7 +114,7 @@ tr:nth-child(even) {
 }
 
 .all-centered-table,
-.cell-centered-table>tr>td {
+.cell-centered-table > tr > td {
     text-align: center;
 }
 
@@ -124,7 +123,6 @@ li {
 }
 
 @media (prefers-color-scheme: dark) {
-
     body,
     #header-uiua,
     .spoiler:hover {
@@ -144,11 +142,11 @@ li {
 
     .code,
     .input-div,
-    input[type=text],
+    input[type="text"],
     select,
     option,
-    #settings>*>*>input,
-    #settings>*>*>select {
+    #settings > * > * > input,
+    #settings > * > * > select {
         color: #d1daec;
         background-color: #1d2c3a;
     }
@@ -188,7 +186,7 @@ li {
         background-color: #579;
     }
 
-    .tutorial-nav>* {
+    .tutorial-nav > * {
         background-color: #1d2c3a;
     }
 
@@ -211,7 +209,6 @@ li {
 }
 
 @media (prefers-color-scheme: light) {
-
     body,
     #header-uiua,
     .spoiler:hover {
@@ -231,11 +228,11 @@ li {
 
     .code,
     .input-div,
-    input[type=text],
+    input[type="text"],
     select,
     option,
-    #settings>*>*>input,
-    #settings>*>*>select {
+    #settings > * > * > input,
+    #settings > * > * > select {
         color: #344;
         background-color: #f4f6f6;
     }
@@ -275,7 +272,7 @@ li {
         background-color: #bee2e7;
     }
 
-    .tutorial-nav>* {
+    .tutorial-nav > * {
         background-color: #f6f8f8;
     }
 
@@ -311,7 +308,6 @@ li {
     margin-bottom: 1em;
 }
 
-
 #header-left {
     display: flex;
     align-items: last baseline;
@@ -344,7 +340,7 @@ li {
     font-size: 0.9em;
 }
 
-.long-subtitle>div {
+.long-subtitle > div {
     display: flex;
     gap: 0.5em;
     flex-wrap: nowrap;
@@ -369,7 +365,7 @@ li {
     overflow: hidden;
 }
 
-#links>* {
+#links > * {
     display: flex;
     gap: 1em;
     flex-wrap: wrap;
@@ -430,7 +426,7 @@ li {
     }
 
     #links,
-    #links>* {
+    #links > * {
         flex-direction: column;
         flex-wrap: nowrap;
         gap: 0.5em;
@@ -442,7 +438,7 @@ li {
         flex-direction: column;
     }
 
-    #mobile-menu-toggle:not(:checked)~#links-grid {
+    #mobile-menu-toggle:not(:checked) ~ #links-grid {
         grid-template-rows: 0fr;
     }
 }
@@ -478,7 +474,6 @@ li {
     border-radius: 0.5rem;
 }
 
-
 .wee-wuh-span {
     opacity: 0.8;
 }
@@ -501,8 +496,8 @@ li {
     gap: min(2em, 2vw);
 }
 
-.wider>*,
-.features>* {
+.wider > *,
+.features > * {
     flex: 1 1 22em;
     width: 0;
 }
@@ -545,7 +540,7 @@ li {
     position: relative;
 }
 
-#editor-wrapper>div {
+#editor-wrapper > div {
     margin-bottom: 0.5em;
     font-size: min(1em, 3.5vw);
 }
@@ -576,7 +571,9 @@ li {
     overflow: hidden;
     grid-template-rows: 0fr;
     visibility: hidden;
-    transition: grid-template-rows 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    transition:
+        grid-template-rows 0.3s ease-in-out,
+        visibility 0.3s ease-in-out;
 
     @media (prefers-reduced-motion: reduce) {
         transition: none;
@@ -618,7 +615,7 @@ li {
     margin-left: -0.2em;
 }
 
-.settings-group label input[type=checkbox] {
+.settings-group label input[type="checkbox"] {
     margin-right: 0.5em;
 }
 
@@ -633,21 +630,21 @@ li {
     max-width: 8.5em;
 }
 
-.settings-group-grid>div {
+.settings-group-grid > div {
     display: grid;
     grid-template-columns: subgrid;
     grid-column: span 2;
 }
 
-.settings-group-grid>div>* {
+.settings-group-grid > div > * {
     grid-column: 2;
 }
 
-.settings-group-grid>div>*:first-child {
+.settings-group-grid > div > *:first-child {
     grid-column: 1;
 }
 
-input[type=number] {
+input[type="number"] {
     appearance: textfield;
     -moz-appearance: textfield;
     max-width: 2.5em;
@@ -661,8 +658,8 @@ input[type=number] {
 
 select,
 option,
-#settings>*>*>input,
-#settings>*>*>select {
+#settings > * > * > input,
+#settings > * > * > select {
     border-radius: 0.1em;
     border: none;
     margin-left: 0.5em;
@@ -769,7 +766,7 @@ option,
 }
 
 .code-span,
-.code-span>* {
+.code-span > * {
     font-size: 1em;
     font-family: "Code Font", monospace;
     white-space: pre;
@@ -975,7 +972,7 @@ option,
     border-radius: 0.25em;
     opacity: 0.5;
     padding: 0.75em;
-    transition: .25s;
+    transition: 0.25s;
 }
 
 .editor-right-button:hover {
@@ -1157,7 +1154,7 @@ option,
     display: none;
 }
 
-.additional-functions>* {
+.additional-functions > * {
     font-family: "Code Font", monospace;
 }
 
@@ -1168,7 +1165,6 @@ option,
 }
 
 @media (prefers-color-scheme: dark) {
-
     .glyph-doc {
         background-color: #000c;
     }
@@ -1179,7 +1175,6 @@ option,
 }
 
 @media (prefers-color-scheme: light) {
-
     .glyph-doc {
         background-color: #fffd;
     }
@@ -1259,7 +1254,7 @@ option,
 }
 
 .triadic-modifier {
-    color: #40f0a0
+    color: #40f0a0;
 }
 
 .space-character {
@@ -1336,7 +1331,6 @@ option,
 }
 
 @media (prefers-color-scheme: light) {
-
     .output-a {
         color: #225;
     }
@@ -1375,7 +1369,7 @@ option,
     display: none;
 }
 
-#editor-help>* {
+#editor-help > * {
     line-height: 1em;
     margin: 0;
     white-space: pre-wrap;
@@ -1394,14 +1388,14 @@ option,
     gap: 0.5em;
 }
 
-.tutorial-nav>* {
+.tutorial-nav > * {
     border-radius: 0.5em;
     border-color: #0003;
     border-radius: 0.5em;
     padding: 0.5em;
 }
 
-.tutorial-nav>*:empty {
+.tutorial-nav > *:empty {
     background-color: #0000;
 }
 
@@ -1411,7 +1405,7 @@ option,
     flex-direction: column;
 }
 
-.primitive-list>* {
+.primitive-list > * {
     margin-bottom: 0.5em;
 }
 
@@ -1430,7 +1424,7 @@ option,
     width: min(100%, max(30%, 22em));
 }
 
-input[type=text] {
+input[type="text"] {
     font-size: 1em;
     border-radius: 0.5em;
     padding: 0 0.5em;
@@ -1471,7 +1465,6 @@ input[type=text] {
 }
 
 @keyframes fadeAnimation {
-
     0%,
     100% {
         opacity: 0.5;
@@ -1482,9 +1475,7 @@ input[type=text] {
     }
 }
 
-
 @keyframes pulseAnimation {
-
     0%,
     100% {
         transform: scale(1) translate(0);
@@ -1523,355 +1514,418 @@ a.clean {
 }
 
 .trans {
-    background-image: linear-gradient(180deg,
-            #5BCEFA 34%,
-            #F5A9B8 34%,
-            #F5A9B8 45%,
-            #FFFFFF 45%,
-            #FFFFFF 56%,
-            #F5A9B8 56%,
-            #F5A9B8 67%,
-            #5BCEFA 67%);
+    background-image: linear-gradient(
+        180deg,
+        #5bcefa 34%,
+        #f5a9b8 34%,
+        #f5a9b8 45%,
+        #ffffff 45%,
+        #ffffff 56%,
+        #f5a9b8 56%,
+        #f5a9b8 67%,
+        #5bcefa 67%
+    );
 }
 
 .transfem {
-    background-image: linear-gradient(180deg,
-            #73deff 34%,
-            #ffe1ed 34%,
-            #ffe1ed 41%,
-            #ffb5b6 41%,
-            #ffb5b6 47%,
-            #fe8cbf 47%,
-            #fe8cbf 54%,
-            #ffb5b6 54%,
-            #ffb5b6 60%,
-            #ffe1ed 60%,
-            #ffe1ed 67%,
-            #73deff 67%);
+    background-image: linear-gradient(
+        180deg,
+        #73deff 34%,
+        #ffe1ed 34%,
+        #ffe1ed 41%,
+        #ffb5b6 41%,
+        #ffb5b6 47%,
+        #fe8cbf 47%,
+        #fe8cbf 54%,
+        #ffb5b6 54%,
+        #ffb5b6 60%,
+        #ffe1ed 60%,
+        #ffe1ed 67%,
+        #73deff 67%
+    );
 }
 
 .transmasc {
-    background-image: linear-gradient(180deg,
-            #ff8abd 34%,
-            #cdf5fe 34%,
-            #cdf5fe 41%,
-            #9aebff 41%,
-            #9aebff 47%,
-            #74dfff 47%,
-            #74dfff 54%,
-            #9aebff 54%,
-            #9aebff 60%,
-            #cdf5fe 60%,
-            #cdf5fe 67%,
-            #ff8abd 67%);
+    background-image: linear-gradient(
+        180deg,
+        #ff8abd 34%,
+        #cdf5fe 34%,
+        #cdf5fe 41%,
+        #9aebff 41%,
+        #9aebff 47%,
+        #74dfff 47%,
+        #74dfff 54%,
+        #9aebff 54%,
+        #9aebff 60%,
+        #cdf5fe 60%,
+        #cdf5fe 67%,
+        #ff8abd 67%
+    );
 }
 
 .bi {
-    background-image: linear-gradient(180deg,
-            #D60270 45%,
-            #9B4F96 45%,
-            #9B4F96 64%,
-            #0038A8 64%);
+    background-image: linear-gradient(
+        180deg,
+        #d60270 45%,
+        #9b4f96 45%,
+        #9b4f96 64%,
+        #0038a8 64%
+    );
 }
 
 .pan {
-    background-image: linear-gradient(180deg,
-            #FF218C 45%,
-            #FFD800 45%,
-            #FFD800 64%,
-            #21B1FF 64%);
+    background-image: linear-gradient(
+        180deg,
+        #ff218c 45%,
+        #ffd800 45%,
+        #ffd800 64%,
+        #21b1ff 64%
+    );
 }
 
 .monadic-pan {
-    background-image: linear-gradient(180deg,
-            #FF218C 30%,
-            #FFD800 30%,
-            #FFD800 67%,
-            #21B1FF 67%);
+    background-image: linear-gradient(
+        180deg,
+        #ff218c 30%,
+        #ffd800 30%,
+        #ffd800 67%,
+        #21b1ff 67%
+    );
 }
 
 .rainbow {
-    background-image: linear-gradient(180deg,
-            #E40303 30%,
-            #FFA52C 30%,
-            #FFA52C 40%,
-            #FFFF41 40%,
-            #FFFF41 50%,
-            #008018 50%,
-            #008018 60%,
-            #0000F9 60%,
-            #0000F9 70%,
-            #86007D 70%);
+    background-image: linear-gradient(
+        180deg,
+        #e40303 30%,
+        #ffa52c 30%,
+        #ffa52c 40%,
+        #ffff41 40%,
+        #ffff41 50%,
+        #008018 50%,
+        #008018 60%,
+        #0000f9 60%,
+        #0000f9 70%,
+        #86007d 70%
+    );
 }
 
 .gay {
-    background-image: linear-gradient(180deg,
-            #078d70 20%,
-            #26ceaa 20%,
-            #26ceaa 32%,
-            #98e8c1 32%,
-            #98e8c1 44%,
-            #ffffff 44%,
-            #ffffff 56%,
-            #7bade2 56%,
-            #7bade2 68%,
-            #5049cc 68%,
-            #5049cc 80%,
-            #3d1a78 80%);
+    background-image: linear-gradient(
+        180deg,
+        #078d70 20%,
+        #26ceaa 20%,
+        #26ceaa 32%,
+        #98e8c1 32%,
+        #98e8c1 44%,
+        #ffffff 44%,
+        #ffffff 56%,
+        #7bade2 56%,
+        #7bade2 68%,
+        #5049cc 68%,
+        #5049cc 80%,
+        #3d1a78 80%
+    );
 }
 
 .dyadic-gay {
-    background-image: linear-gradient(180deg,
-            #078d70 20%,
-            #26ceaa 20%,
-            #26ceaa 28%,
-            #98e8c1 28%,
-            #98e8c1 36%,
-            #ffffff 36%,
-            #ffffff 44%,
-            #7bade2 44%,
-            #7bade2 66%,
-            #5049cc 66%,
-            #5049cc 84%,
-            #3d1a78 84%);
+    background-image: linear-gradient(
+        180deg,
+        #078d70 20%,
+        #26ceaa 20%,
+        #26ceaa 28%,
+        #98e8c1 28%,
+        #98e8c1 36%,
+        #ffffff 36%,
+        #ffffff 44%,
+        #7bade2 44%,
+        #7bade2 66%,
+        #5049cc 66%,
+        #5049cc 84%,
+        #3d1a78 84%
+    );
 }
 
 .ace {
-    background-image: linear-gradient(180deg,
-            #000000 30%,
-            #A3A3A3 30%,
-            #A3A3A3 50%,
-            #FFFFFF 50%,
-            #FFFFFF 70%,
-            #800080 70%);
+    background-image: linear-gradient(
+        180deg,
+        #000000 30%,
+        #a3a3a3 30%,
+        #a3a3a3 50%,
+        #ffffff 50%,
+        #ffffff 70%,
+        #800080 70%
+    );
 }
 
 .aro {
-    background-image: linear-gradient(180deg,
-            #3DA542 36%,
-            #A7D379 36%,
-            #A7D379 47%,
-            #FFFFFF 47%,
-            #FFFFFF 58%,
-            #A9A9A9 58%,
-            #A9A9A9 69%,
-            #000000 69%);
-
+    background-image: linear-gradient(
+        180deg,
+        #3da542 36%,
+        #a7d379 36%,
+        #a7d379 47%,
+        #ffffff 47%,
+        #ffffff 58%,
+        #a9a9a9 58%,
+        #a9a9a9 69%,
+        #000000 69%
+    );
 }
 
 .monadic-aro {
-    background-image: linear-gradient(180deg,
-            #3DA542 25%,
-            #A7D379 25%,
-            #A7D379 37%,
-            #FFFFFF 37%,
-            #FFFFFF 44%,
-            #A9A9A9 44%,
-            #A9A9A9 65%,
-            #000000 65%);
-
+    background-image: linear-gradient(
+        180deg,
+        #3da542 25%,
+        #a7d379 25%,
+        #a7d379 37%,
+        #ffffff 37%,
+        #ffffff 44%,
+        #a9a9a9 44%,
+        #a9a9a9 65%,
+        #000000 65%
+    );
 }
 
 .aroace {
-    background-image: linear-gradient(180deg,
-            #ef9007 36%,
-            #f6d317 36%,
-            #f6d317 47%,
-            #FFFFFF 47%,
-            #FFFFFF 58%,
-            #45bcee 58%,
-            #45bcee 69%,
-            #1e3f54 69%);
-
+    background-image: linear-gradient(
+        180deg,
+        #ef9007 36%,
+        #f6d317 36%,
+        #f6d317 47%,
+        #ffffff 47%,
+        #ffffff 58%,
+        #45bcee 58%,
+        #45bcee 69%,
+        #1e3f54 69%
+    );
 }
 
 .nb {
-    background-image: linear-gradient(180deg,
-            #FCF434 30%,
-            #FFFFFF 30%,
-            #FFFFFF 50%,
-            #9C59D1 50%,
-            #9C59D1 70%,
-            #2C2C2C 70%);
+    background-image: linear-gradient(
+        180deg,
+        #fcf434 30%,
+        #ffffff 30%,
+        #ffffff 50%,
+        #9c59d1 50%,
+        #9c59d1 70%,
+        #2c2c2c 70%
+    );
 }
 
 .nb2 {
-    background-image: linear-gradient(135deg,
-            #FCF434 30%,
-            #FFFFFF 30%,
-            #FFFFFF 50%,
-            #9C59D1 50%,
-            #9C59D1 70%,
-            #2C2C2C 70%);
+    background-image: linear-gradient(
+        135deg,
+        #fcf434 30%,
+        #ffffff 30%,
+        #ffffff 50%,
+        #9c59d1 50%,
+        #9c59d1 70%,
+        #2c2c2c 70%
+    );
 }
 
 .fluid {
-    background-image: linear-gradient(180deg,
-            #FF76A4 36%,
-            #FFFFFF 36%,
-            #FFFFFF 47%,
-            #C011D7 47%,
-            #C011D7 58%,
-            #000000 58%,
-            #000000 69%,
-            #2F3CBE 69%);
+    background-image: linear-gradient(
+        180deg,
+        #ff76a4 36%,
+        #ffffff 36%,
+        #ffffff 47%,
+        #c011d7 47%,
+        #c011d7 58%,
+        #000000 58%,
+        #000000 69%,
+        #2f3cbe 69%
+    );
 }
 
 .dyadic-fluid {
-    background-image: linear-gradient(180deg,
-            #FF76A4 30%,
-            #FFFFFF 30%,
-            #FFFFFF 40%,
-            #C011D7 40%,
-            #C011D7 65%,
-            #000000 65%,
-            #000000 75%,
-            #2F3CBE 75%);
+    background-image: linear-gradient(
+        180deg,
+        #ff76a4 30%,
+        #ffffff 30%,
+        #ffffff 40%,
+        #c011d7 40%,
+        #c011d7 65%,
+        #000000 65%,
+        #000000 75%,
+        #2f3cbe 75%
+    );
 }
 
 .queer {
-    background-image: linear-gradient(180deg,
-            #B57EDC 48%,
-            #FFFFFF 48%,
-            #FFFFFF 65%,
-            #4A8123 65%);
+    background-image: linear-gradient(
+        180deg,
+        #b57edc 48%,
+        #ffffff 48%,
+        #ffffff 65%,
+        #4a8123 65%
+    );
 }
 
 .lesbian {
-    background-image: linear-gradient(180deg,
-            #d42c00 34%,
-            #fd9855 34%,
-            #fd9855 45%,
-            #FFFFFF 45%,
-            #FFFFFF 56%,
-            #d161a2 56%,
-            #d161a2 67%,
-            #a20161 67%);
+    background-image: linear-gradient(
+        180deg,
+        #d42c00 34%,
+        #fd9855 34%,
+        #fd9855 45%,
+        #ffffff 45%,
+        #ffffff 56%,
+        #d161a2 56%,
+        #d161a2 67%,
+        #a20161 67%
+    );
 }
 
 .number-lesbian {
-    background-image: linear-gradient(180deg,
-            #d42c00 30%,
-            #fd9855 30%,
-            #fd9855 60%,
-            #FFFFFF 60%,
-            #FFFFFF 68%,
-            #d161a2 68%,
-            #d161a2 76%,
-            #a20161 76%);
+    background-image: linear-gradient(
+        180deg,
+        #d42c00 30%,
+        #fd9855 30%,
+        #fd9855 60%,
+        #ffffff 60%,
+        #ffffff 68%,
+        #d161a2 68%,
+        #d161a2 76%,
+        #a20161 76%
+    );
 }
 
 .agender {
-    background-image: linear-gradient(180deg,
-            #000000 30%,
-            #BCC4C7 30%,
-            #BCC4C7 38%,
-            #FFFFFF 38%,
-            #FFFFFF 46%,
-            #B7F684 46%,
-            #B7F684 54%,
-            #FFFFFF 54%,
-            #FFFFFF 62%,
-            #BCC4C7 62%,
-            #BCC4C7 70%,
-            #000000 70%);
+    background-image: linear-gradient(
+        180deg,
+        #000000 30%,
+        #bcc4c7 30%,
+        #bcc4c7 38%,
+        #ffffff 38%,
+        #ffffff 46%,
+        #b7f684 46%,
+        #b7f684 54%,
+        #ffffff 54%,
+        #ffffff 62%,
+        #bcc4c7 62%,
+        #bcc4c7 70%,
+        #000000 70%
+    );
 }
 
 .poly {
-    background-image: radial-gradient(ellipse 200% 70% at 0% 30%,
-            #FCBF00 20%,
-            #FFFFFF 20%,
-            #FFFFFF 30%,
-            #009FE3 30%,
-            #009FE3 45%,
-            #E50051 45%,
-            #E50051 60%,
-            #340C46 60%)
+    background-image: radial-gradient(
+        ellipse 200% 70% at 0% 30%,
+        #fcbf00 20%,
+        #ffffff 20%,
+        #ffffff 30%,
+        #009fe3 30%,
+        #009fe3 45%,
+        #e50051 45%,
+        #e50051 60%,
+        #340c46 60%
+    );
 }
 
 .nb {
-    background-image: linear-gradient(180deg,
-            #FCF434 30%,
-            #FFFFFF 30%,
-            #FFFFFF 50%,
-            #9C59D1 50%,
-            #9C59D1 70%,
-            #2C2C2C 70%);
+    background-image: linear-gradient(
+        180deg,
+        #fcf434 30%,
+        #ffffff 30%,
+        #ffffff 50%,
+        #9c59d1 50%,
+        #9c59d1 70%,
+        #2c2c2c 70%
+    );
 }
 
 .nb2 {
-    background-image: linear-gradient(135deg,
-            #FCF434 30%,
-            #FFFFFF 30%,
-            #FFFFFF 50%,
-            #9C59D1 50%,
-            #9C59D1 70%,
-            #2C2C2C 70%);
+    background-image: linear-gradient(
+        135deg,
+        #fcf434 30%,
+        #ffffff 30%,
+        #ffffff 50%,
+        #9c59d1 50%,
+        #9c59d1 70%,
+        #2c2c2c 70%
+    );
 }
 
 .rainbow {
-    background-image: linear-gradient(180deg,
-            #E40303 30%,
-            #FFA52C 30%,
-            #FFA52C 40%,
-            #FFFF41 40%,
-            #FFFF41 50%,
-            #008018 50%,
-            #008018 60%,
-            #0000F9 60%,
-            #0000F9 70%,
-            #86007D 70%);
+    background-image: linear-gradient(
+        180deg,
+        #e40303 30%,
+        #ffa52c 30%,
+        #ffa52c 40%,
+        #ffff41 40%,
+        #ffff41 50%,
+        #008018 50%,
+        #008018 60%,
+        #0000f9 60%,
+        #0000f9 70%,
+        #86007d 70%
+    );
 }
 
 .bright-rainbow {
-    background-image: linear-gradient(90deg,
-            #F00 20%,
-            #F80 25%,
-            #FF0 31%,
-            #8F0 36%,
-            #0F0 42%,
-            #0F8 47%,
-            #0FF 53%,
-            #08F 58%,
-            #00F 64%,
-            #80F 69%,
-            #F0F 75%,
-            #F08 80%);
+    background-image: linear-gradient(
+        90deg,
+        #f00 20%,
+        #f80 25%,
+        #ff0 31%,
+        #8f0 36%,
+        #0f0 42%,
+        #0f8 47%,
+        #0ff 53%,
+        #08f 58%,
+        #00f 64%,
+        #80f 69%,
+        #f0f 75%,
+        #f08 80%
+    );
 }
 
 .graynbow {
-    background-image: linear-gradient(110deg,
-            #505050 20%,
-            #585858 25%,
-            #606060 31%,
-            #686868 36%,
-            #707070 42%,
-            #787878 47%,
-            #808080 53%,
-            #888888 58%,
-            #909090 64%,
-            #989898 69%,
-            #A0A0A0 75%,
-            #A8A8A8 80%);
+    background-image: linear-gradient(
+        110deg,
+        #505050 20%,
+        #585858 25%,
+        #606060 31%,
+        #686868 36%,
+        #707070 42%,
+        #787878 47%,
+        #808080 53%,
+        #888888 58%,
+        #909090 64%,
+        #989898 69%,
+        #a0a0a0 75%,
+        #a8a8a8 80%
+    );
 }
 
 .caution {
-    background-image: linear-gradient(135deg,
-            #000000 30%,
-            #FFF000 30%,
-            #FFF000 40%,
-            #000000 40%,
-            #000000 50%,
-            #FFF000 50%,
-            #FFF000 60%,
-            #000000 60%,
-            #000000 70%,
-            #FFF000 70%);
+    background-image: linear-gradient(
+        135deg,
+        #000000 30%,
+        #fff000 30%,
+        #fff000 40%,
+        #000000 40%,
+        #000000 50%,
+        #fff000 50%,
+        #fff000 60%,
+        #000000 60%,
+        #000000 70%,
+        #fff000 70%
+    );
 }
 
 .random {
     animation: animate-random 1s linear infinite;
-    background-image: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000, #ffff00);
+    background-image: linear-gradient(
+        90deg,
+        #ff0000,
+        #ffff00,
+        #00ff00,
+        #00ffff,
+        #0000ff,
+        #ff00ff,
+        #ff0000,
+        #ffff00
+    );
     background-size: 700% 100%;
 }
 
@@ -1891,7 +1945,6 @@ a.clean {
 }
 
 @media (prefers-color-scheme: dark) {
-
     .image-visibility {
         -webkit-filter: invert(1);
         filter: invert(1);
@@ -1899,7 +1952,6 @@ a.clean {
 }
 
 @media (prefers-color-scheme: light) {
-
     .trans,
     .transfem,
     .transmasc,
@@ -1927,7 +1979,6 @@ a.clean {
 }
 
 @media (prefers-color-scheme: dark) {
-
     .bi,
     .nb,
     .nb2,
@@ -1951,7 +2002,7 @@ a.clean {
     }
 }
 
-.glyph-buttons+.pad-files {
+.glyph-buttons + .pad-files {
     border-top: 0.1em solid #60646838;
 
     @media (prefers-color-scheme: light) {
@@ -1975,7 +2026,7 @@ a.clean {
     background-color: #294259;
     border-radius: 999px;
     cursor: pointer;
-    font-size: .6em;
+    font-size: 0.6em;
     line-height: 1em;
 
     @media (prefers-color-scheme: light) {
@@ -2019,19 +2070,20 @@ a.clean {
 .normal-editor {
     display: grid;
     grid-template-areas:
-        'glyphs'
-        'files'
-        'settings'
-        'editor'
-        'output'
-    ;
+        "glyphs"
+        "files"
+        "settings"
+        "editor"
+        "output";
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto 1fr auto;
 
     --line-numbers-width: 0;
 
     .code-area {
-        min-height: calc(var(--line-count) * var(--rounded-line-height) + 0.75em);
+        min-height: calc(
+            var(--line-count) * var(--rounded-line-height) + 0.75em
+        );
         overflow-y: hidden;
         resize: vertical;
     }
@@ -2044,11 +2096,10 @@ a.clean {
 .fullscreen-editor {
     display: grid;
     grid-template-areas:
-        'glyphs draggable output'
-        'files draggable output'
-        'settings draggable output'
-        'editor draggable output'
-    ;
+        "glyphs draggable output"
+        "files draggable output"
+        "settings draggable output"
+        "editor draggable output";
     grid-template-columns: 1fr 0.25em 1fr;
     grid-template-rows: auto auto auto 1fr;
 
@@ -2090,8 +2141,8 @@ a.clean {
     .output-frame {
         display: grid;
         grid-template-areas:
-            'actions'
-            'output';
+            "actions"
+            "output";
         grid-template-columns: 1fr;
         grid-template-rows: auto 1fr;
 

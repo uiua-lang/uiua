@@ -19,8 +19,9 @@ use uiua_parser::SubscriptToken;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
-    CodeSpan, Compiler, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode, Primitive, RunMode,
-    SUBSCRIPT_DIGITS, SafeSys, Signature, Sp, SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value,
+    CodeSpan, Compiler, CustomNames, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode, Primitive,
+    RunMode, SUBSCRIPT_DIGITS, SafeSys, Signature, Sp, SysBackend, Uiua, UiuaErrorKind, UiuaResult,
+    Value,
     ast::*,
     is_ident_char,
     parse::{flip_unsplit_items, flip_unsplit_lines, parse, split_words, trim_spaces},
@@ -112,6 +113,8 @@ macro_rules! create_config {
             $(
                 $name: Option<$ty>,
             )*
+            /// Custom format names
+            pub custom_names: CustomNames,
         }
 
         #[test]
@@ -150,7 +153,7 @@ The following configuration options are available:
         impl PartialFormatConfig {
             paste! {
                 fn from_file(file_path: PathBuf) -> UiuaResult<Self> {
-                    let asm = Compiler::new().print_diagnostics(false).load_file(file_path)?.finish();
+                    let asm = Compiler::with_backend(SafeSys::default()).print_diagnostics(false).load_file(file_path)?.finish();
                     let mut env = Uiua::with_backend(SafeSys::default());
                     env.run_asm(asm)?;
                     let mut bindings = env.bound_values();
@@ -165,12 +168,12 @@ The following configuration options are available:
                             }
                         };
                     )*
-
-                    return Ok(Self {
-                        $(
-                            $name,
-                        )*
-                    });
+                    let mut config = Self {
+                        $($name,)*
+                        custom_names: CustomNames::default()
+                    };
+                    config.load_custom_names(bindings);
+                    Ok(config)
                 }
             }
         }
@@ -185,6 +188,8 @@ The following configuration options are available:
             )*
             /// The source inputs for the formatter
             pub inputs: Inputs,
+            /// Custom format names
+            pub custom_names: CustomNames,
             /// An optional backend for the formatter
             pub backend: Option<Arc<dyn SysBackend>>,
         }
@@ -206,9 +211,8 @@ The following configuration options are available:
         impl Default for FormatConfig {
             fn default() -> Self {
                 Self {
-                    $(
-                        $name: $default,
-                    )*
+                    $($name: $default,)*
+                    custom_names: CustomNames::default(),
                     inputs: Inputs::default(),
                     backend: None,
                 }
@@ -216,14 +220,27 @@ The following configuration options are available:
         }
 
         impl From<PartialFormatConfig> for FormatConfig {
-            fn from(config: PartialFormatConfig) -> Self {
+            fn from(partial: PartialFormatConfig) -> Self {
                 Self {
-                    $(
-                        $name: config.$name.unwrap_or($default),
-                    )*
+                    $($name: partial.$name.unwrap_or($default),)*
+                    custom_names: partial.custom_names,
                     inputs: Inputs::default(),
                     backend: None,
                 }
+            }
+        }
+    }
+}
+
+impl PartialFormatConfig {
+    fn load_custom_names(&mut self, values: HashMap<EcoString, Value>) {
+        for (name, val) in values {
+            if let Value::Char(arr) = val
+                && arr.rank() <= 1
+            {
+                let name = name.to_lowercase();
+                let replacement: EcoString = arr.data.into_iter().collect();
+                self.custom_names.insert(name, replacement);
             }
         }
     }
@@ -277,8 +294,7 @@ impl Display for FormatConfigSource {
 impl FormatConfig {
     /// Load the formatter configuration from the specified file
     pub fn from_file(path: PathBuf) -> UiuaResult<Self> {
-        let partial = PartialFormatConfig::from_file(path);
-        partial.map(Into::into)
+        PartialFormatConfig::from_file(path).map(Into::into)
     }
     /// Find the formatter configuration relative to the current directory
     pub fn find() -> UiuaResult<Self> {
@@ -407,7 +423,7 @@ pub fn format_str(input: &str, config: &FormatConfig) -> UiuaResult<FormatOutput
 
 fn format_impl(input: &str, src: InputSrc, config: &FormatConfig) -> UiuaResult<FormatOutput> {
     let mut inputs = Inputs::default();
-    let (items, errors, _) = parse(input, src.clone(), &mut inputs);
+    let (items, errors, _) = parse(input, src.clone(), &mut inputs, &config.custom_names);
     if errors.is_empty() {
         let (output, glyph_map) = Formatter {
             src,

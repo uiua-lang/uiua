@@ -285,7 +285,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 lit = lit.replace("UIUA_VERSION", uiua::VERSION);
             }
             let mut inputs = Inputs::default();
-            let (tokens, errors, _) = uiua::lex(&lit, (), &mut inputs);
+            let (tokens, errors, _) = uiua::lex(&lit, (), &mut inputs, &Default::default());
             if errors.is_empty() && lit != "---" {
                 let mut frags = Vec::new();
                 for token in tokens {
@@ -344,7 +344,9 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 view!(<Editor example=LOGO/>).into_view()
             } else if block.info.starts_with("uiua")
                 || block.info.is_empty()
-                    && uiua::parse(lit, (), &mut Default::default()).1.is_empty()
+                    && uiua::parse(lit, (), &mut Default::default(), &Default::default())
+                        .1
+                        .is_empty()
             {
                 let mut help: &[_] = &[];
                 let hlp;
@@ -472,7 +474,8 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
         NodeValue::Paragraph => format!("<p>{}</p>", children()),
         NodeValue::Code(code) => {
             let mut inputs = Inputs::default();
-            let (tokens, errors, _) = uiua::lex(&code.literal, (), &mut inputs);
+            let (tokens, errors, _) =
+                uiua::lex(&code.literal, (), &mut inputs, &Default::default());
             if errors.is_empty() && code.literal != "---" {
                 let mut s = "<code>".to_string();
                 for token in tokens {
@@ -517,8 +520,8 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                     "".to_string()
                 };
                 format!(
-                    r#"<a 
-                        href="https://uiua.org/docs/{}" 
+                    r#"<a
+                        href="https://uiua.org/docs/{}"
                         data-title={:?}
                         class="prim_code_a"
                         style="text-decoration: none;">

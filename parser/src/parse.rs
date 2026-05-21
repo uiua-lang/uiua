@@ -12,7 +12,7 @@ use std::{
 use ecow::EcoString;
 
 use crate::{
-    BindingCounts, Complex, Diagnostic, DiagnosticKind, Ident, Inputs, NumComponent,
+    BindingCounts, Complex, CustomNames, Diagnostic, DiagnosticKind, Ident, Inputs, NumComponent,
     NumericSubscript, Primitive, Signature, SubscriptNumber,
     ast::*,
     lex::{AsciiToken::*, Token::*, *},
@@ -115,8 +115,9 @@ pub fn parse(
     input: &str,
     src: impl IntoInputSrc,
     inputs: &mut Inputs,
+    custom_names: &CustomNames,
 ) -> (Vec<Item>, Vec<Sp<ParseError>>, Vec<Diagnostic>) {
-    let (tokens, lex_errors, src) = lex(input, src, inputs);
+    let (tokens, lex_errors, src) = lex(input, src, inputs, custom_names);
     fn parse(
         input: &str,
         inputs: &mut Inputs,

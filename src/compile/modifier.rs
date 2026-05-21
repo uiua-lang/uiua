@@ -2164,7 +2164,7 @@ impl Compiler {
     }
     fn quote(&mut self, code: &str, name: Option<Ident>, span: &CodeSpan) -> UiuaResult<Node> {
         let src = InputSrc::Macro(span.clone().into());
-        let (items, errors, _) = parse(code, src, &mut self.asm.inputs);
+        let (items, errors, _) = parse(code, src, &mut self.asm.inputs, &self.custom_names);
         if !errors.is_empty() {
             return Err(UiuaErrorKind::Parse(errors, self.asm.inputs.clone().into())
                 .error()

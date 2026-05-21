@@ -4,7 +4,7 @@ use std::{collections::HashMap, fmt, sync::LazyLock};
 
 use enum_iterator::Sequence;
 
-use crate::{Complex, SysOp, ast::NumWord};
+use crate::{Complex, CustomNames, Ident, SysOp, ast::NumWord};
 
 use super::Primitive;
 
@@ -57,12 +57,14 @@ pub enum NumComponent {
 }
 
 /// A parsed primitive component
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PrimComponent {
     /// A primitive
     Prim(Primitive),
     /// A numeric component
     Num(NumComponent),
+    /// An identifier
+    Ident(Ident),
     /// Subscript 0
     Sub0,
     /// Subscript 1
@@ -109,10 +111,11 @@ impl From<NumComponent> for PrimComponent {
 
 impl PrimComponent {
     /// Get the name of this component
-    pub fn name(&self) -> &'static str {
+    pub fn name(&self) -> &str {
         match self {
             PrimComponent::Prim(prim) => prim.name(),
             PrimComponent::Num(num) => num.name(),
+            PrimComponent::Ident(s) => s,
             PrimComponent::Sub0 => "₀",
             PrimComponent::Sub1 => "₁",
             PrimComponent::Sub2 => "₂",
@@ -363,7 +366,10 @@ impl Primitive {
 }
 
 /// Try to parse multiple primitives from the concatenation of their name prefixes
-pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
+pub fn split_name<'a>(
+    name: &'a str,
+    custom_names: &CustomNames,
+) -> Option<Vec<(PrimComponent, &'a str)>> {
     let mut indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
     indices.push(name.len());
     // Forward parsing
@@ -398,6 +404,12 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
                     }
                 }
             }
+            // Custom names
+            if let Some(replacement) = custom_names.get(sub_name).cloned() {
+                prims.push((PrimComponent::Ident(replacement), sub_name));
+                start += len;
+                continue 'outer;
+            }
             if sub_name.len() == 1 {
                 continue;
             }
@@ -426,7 +438,7 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
             }
             // Aliases
             if let Some(ps) = Primitive::get_multi_alias(sub_name) {
-                prims.extend(ps.iter().map(|(p, s)| (*p, *s)));
+                prims.extend(ps.iter().map(|(p, s)| (p.clone(), *s)));
                 start += len;
                 continue 'outer;
             }
@@ -510,7 +522,7 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
             }
             // Aliases
             if let Some(ps) = Primitive::get_multi_alias(sub_name) {
-                prims.extend(ps.iter().rev().map(|(p, s)| (*p, *s)));
+                prims.extend(ps.iter().rev().map(|(p, s)| (p.clone(), *s)));
                 end -= len;
                 continue 'outer;
             }

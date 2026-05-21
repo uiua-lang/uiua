@@ -15,7 +15,10 @@ mod signature;
 mod split;
 mod subscript;
 
+use std::collections::HashMap;
+
 use bytemuck::must_cast;
+use ecow::EcoString;
 pub use ga::Flavor as GaFlavor;
 #[cfg(feature = "multivector")]
 pub use multivector::Multivector;
@@ -35,3 +38,5 @@ pub type Ident = ecow::EcoString;
 pub const WILDCARD_NAN: f64 = must_cast(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000_0003);
 /// A character value used as a wildcard that will equal any character
 pub const WILDCARD_CHAR: char = '\u{100000}';
+
+pub type CustomNames = HashMap<EcoString, EcoString>;

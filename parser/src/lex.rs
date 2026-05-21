@@ -15,8 +15,8 @@ use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
-    Ident, Inputs, NumericSubscript, PrimComponent, Primitive, SidedSubscript, SubSide, Subscript,
-    SubscriptNumber, SubscriptToken, WILDCARD_CHAR, split_name,
+    CustomNames, Ident, Inputs, NumericSubscript, PrimComponent, Primitive, SidedSubscript,
+    SubSide, Subscript, SubscriptNumber, SubscriptToken, WILDCARD_CHAR, split_name,
 };
 
 /// Subscript digit characters
@@ -42,6 +42,7 @@ pub fn lex(
     input: &str,
     src: impl IntoInputSrc,
     inputs: &mut Inputs,
+    custom_names: &CustomNames,
 ) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>, InputSrc) {
     let src = inputs.add_src(src, input);
 
@@ -79,7 +80,7 @@ pub fn lex(
             byte_pos += c.len_utf8() as u32;
         }
     }
-    let (tokens, errors) = Lexer::new(input, src.clone()).run();
+    let (tokens, errors) = Lexer::new(input, src.clone(), custom_names).run();
     (tokens, errors, src)
 }
 
@@ -897,12 +898,13 @@ struct Lexer<'a> {
     input_segments: Vec<&'a str>,
     loc: Loc,
     src: InputSrc,
+    custom_names: &'a CustomNames,
     tokens: Vec<Sp<Token>>,
     errors: Vec<Sp<LexError>>,
 }
 
 impl<'a> Lexer<'a> {
-    fn new(input: &'a str, src: InputSrc) -> Self {
+    fn new(input: &'a str, src: InputSrc, custom_names: &'a CustomNames) -> Self {
         // Collect graphemes
         let mut input_segments: Vec<&str> = input.graphemes(true).collect();
         // Split combining characters from some base characters
@@ -931,6 +933,7 @@ impl<'a> Lexer<'a> {
                 col: 1,
             },
             src,
+            custom_names,
             tokens: Vec::new(),
             errors: Vec::new(),
         }
@@ -1422,7 +1425,7 @@ impl<'a> Lexer<'a> {
                         .find(|(_, c)| !c.is_lowercase() && !"&!".contains(*c))
                         .map_or(ident.len(), |(i, _)| i);
                     let lowercase = &ident[..lowercase_end];
-                    if let Some(prims) = split_name(lowercase) {
+                    if let Some(prims) = split_name(lowercase, self.custom_names) {
                         let first_start = start;
                         let mut start = start;
                         let prim_count = prims.len();
@@ -1870,18 +1873,6 @@ impl<'a> Lexer<'a> {
             }
         }
         string
-    }
-}
-
-#[allow(dead_code)]
-pub(crate) fn subscript(s: &str) -> Option<(SubscriptToken, &str)> {
-    let mut lexer = Lexer::new(s, InputSrc::Literal(s.into()));
-    let sub = lexer.subscript(",");
-    if sub.num.is_some() || sub.side.is_some() {
-        let rest = &s[lexer.loc.byte_pos as usize..];
-        Some((sub, rest))
-    } else {
-        None
     }
 }
 

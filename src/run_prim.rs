@@ -2515,7 +2515,11 @@ mod tests {
                 PrimComponent::from_format_name as fn(&str) -> Option<PrimComponent>,
             ),
             ("from_format_name_multi", |name| {
-                split_name(name).unwrap().first().map(|(prim, _)| *prim)
+                split_name(name, &Default::default())
+                    .unwrap()
+                    .into_iter()
+                    .next()
+                    .map(|(prim, _)| prim)
             }),
         ] {
             for prim in Primitive::non_deprecated() {
@@ -2564,24 +2568,24 @@ mod tests {
     #[test]
     fn from_multiname() {
         assert!(matches!(
-            &*split_name("rev").expect("rev"),
+            &*split_name("rev", &Default::default()).expect("rev"),
             [(PrimComponent::Prim(Primitive::Reverse), _)]
         ));
         assert!(matches!(
-            &*split_name("revrev").expect("revrev"),
+            &*split_name("revrev", &Default::default()).expect("revrev"),
             [
                 (PrimComponent::Prim(Primitive::Reverse), _),
                 (PrimComponent::Prim(Primitive::Reverse), _)
             ]
         ));
         assert!(matches!(
-            &*split_name("tabkee").unwrap(),
+            &*split_name("tabkee", &Default::default()).unwrap(),
             [
                 (PrimComponent::Prim(Primitive::Table), _),
                 (PrimComponent::Prim(Primitive::Keep), _)
             ]
         ));
-        assert_eq!(split_name("foo"), None);
+        assert_eq!(split_name("foo", &Default::default()), None);
     }
 
     #[cfg(test)]

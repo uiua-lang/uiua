@@ -140,7 +140,7 @@ pub fn Editor<'a>(
     let (show_format_hint, set_show_format_hint) = create_signal(format_hint);
     let update_token_count = move |code: &str| {
         set_token_count.set(
-            lex(code, (), &mut Default::default())
+            lex(code, (), &mut Default::default(), &Default::default())
                 .0
                 .into_iter()
                 .filter(|tok| {

@@ -13,8 +13,11 @@ use std::{
 use crate::{
     Assembly, BindingInfo, BindingKind, BindingMeta, CONSTANTS, CodeSpan, Compiler, Ident,
     InputSrc, Inputs, LocalIndex, PreEvalMode, Primitive, SafeSys, Shape, Signature, Sp,
-    SubscriptToken, SysBackend, UiuaError, Value, ast::*, is_custom_glyph, parse,
-    parse::ident_modifier_args,
+    SubscriptToken, SysBackend, UiuaError, Value,
+    ast::*,
+    format::FormatConfig,
+    is_custom_glyph,
+    parse::{ident_modifier_args, parse},
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -114,7 +117,12 @@ impl Spans {
     /// Get spans and their kinds from Uiua code with a custom backend
     pub fn with_backend(input: &str, backend: impl SysBackend) -> Self {
         let src = InputSrc::Str(0);
-        let (items, _, _) = parse(input, src.clone(), &mut Inputs::default());
+        let (items, _, _) = parse(
+            input,
+            src.clone(),
+            &mut Inputs::default(),
+            &FormatConfig::find().unwrap_or_default().custom_names,
+        );
         let spanner = Spanner::new(src, input, backend);
         let spans = spanner.items_spans(&items);
         let inputs = spanner.asm.inputs;
@@ -135,7 +143,8 @@ impl Spans {
     pub fn with_compiler(input: &str, compiler: &Compiler) -> Self {
         let mut compiler = compiler.clone();
         let src = InputSrc::Str(compiler.asm.inputs.strings.len().saturating_sub(1));
-        let (items, _, _) = parse(input, src.clone(), &mut compiler.asm.inputs);
+        let custom_names = FormatConfig::find().unwrap_or_default().custom_names;
+        let (items, _, _) = parse(input, src.clone(), &mut compiler.asm.inputs, &custom_names);
         let spanner = Spanner {
             src,
             asm: compiler.asm,
@@ -919,7 +928,8 @@ mod server {
                 .and_then(|curr| pathdiff::diff_paths(&path, curr))
                 .unwrap_or(path);
             let src = InputSrc::File(path.into());
-            let (items, _, _) = parse(&input, src.clone(), &mut Inputs::default());
+            let custom_names = FormatConfig::find().unwrap_or_default().custom_names;
+            let (items, _, _) = parse(&input, src.clone(), &mut Inputs::default(), &custom_names);
             let spanner = Spanner::new(src, &input, NativeSys);
             let spans = spanner.items_spans(&items);
             Self {
@@ -1579,7 +1589,10 @@ mod server {
                         break;
                     }
                 }
-            } else if let Some(prims) = split_name(&ident) {
+            } else if let Some(prims) = split_name(
+                &ident,
+                &FormatConfig::find().unwrap_or_default().custom_names,
+            ) {
                 for (p, _) in prims {
                     formatted.push_str(&p.to_string());
                 }
@@ -2263,8 +2276,10 @@ mod server {
                     continue;
                 }
                 let is_too_short = || {
-                    let mut tokens =
-                        span.as_str(&doc.asm.inputs, |s| lex(s, (), &mut Inputs::default()).0);
+                    let custom_names = FormatConfig::find().unwrap_or_default().custom_names;
+                    let mut tokens = span.as_str(&doc.asm.inputs, |s| {
+                        lex(s, (), &mut Inputs::default(), &custom_names).0
+                    });
                     if tokens.first().is_some_and(|t| {
                         matches!(
                             t.value,

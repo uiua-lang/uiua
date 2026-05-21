@@ -224,7 +224,8 @@ fn main() {
                     .map_err(|e| format!("Failed to read file: {e}"))
                     .unwrap_or_else(fail);
                 let mut inputs = Default::default();
-                let (items, errors, _) = parse(&input, &path, &mut inputs);
+                let custom_names = FormatConfig::find().unwrap_or_default().custom_names;
+                let (items, errors, _) = parse(&input, &path, &mut inputs, &custom_names);
                 if !errors.is_empty() {
                     eprintln!(
                         "{}",
@@ -638,7 +639,8 @@ impl WatchArgs {
 
         eprintln!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
 
-        let config = FormatConfig::from_source(format_config_source, initial_path.as_deref()).ok();
+        let mut config =
+            FormatConfig::from_source(format_config_source.clone(), initial_path.as_deref()).ok();
         #[cfg(feature = "audio")]
         let audio_time = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0f64.to_bits()));
         #[cfg(feature = "audio")]
@@ -650,7 +652,10 @@ impl WatchArgs {
             socket.set_nonblocking(true)?;
             (socket, port)
         };
-        let run = |path: &Path, stdin_file: Option<&PathBuf>| -> io::Result<()> {
+        let run = |path: &Path,
+                   stdin_file: Option<&PathBuf>,
+                   config: Option<&FormatConfig>|
+         -> io::Result<()> {
             if let Some(mut child) = WATCH_CHILD.lock().take() {
                 _ = child.kill();
                 print_watching();
@@ -665,7 +670,7 @@ impl WatchArgs {
                 path.to_path_buf()
             };
             for i in 0..TRIES {
-                let formatted = if let (Some(config), true) = (&config, format) {
+                let formatted = if let (Some(config), true) = (config, format) {
                     format_file(&path, config).map(|f| f.output)
                 } else {
                     fs::read_to_string(&path)
@@ -726,8 +731,8 @@ impl WatchArgs {
             eprintln!("Failed to format file after {TRIES} tries");
             Ok(())
         };
-        if let Some(path) = initial_path {
-            run(&path, stdin_file.as_ref())?;
+        if let Some(path) = &initial_path {
+            run(path, stdin_file.as_ref(), config.as_ref())?;
         }
         let mut last_time = Instant::now();
         loop {
@@ -753,7 +758,12 @@ impl WatchArgs {
                         _ = Command::new("clear").status();
                     }
                 }
-                run(&path, stdin_file.as_ref())?;
+                config = FormatConfig::from_source(
+                    format_config_source.clone(),
+                    initial_path.as_deref(),
+                )
+                .ok();
+                run(&path, stdin_file.as_ref(), config.as_ref())?;
                 last_time = Instant::now();
             }
             let mut child = WATCH_CHILD.lock();
@@ -1504,7 +1514,8 @@ fn find(path: Option<PathBuf>, text: String, raw: bool) -> UiuaResult {
                 }
             }
             Needle::Prim(prim) => {
-                let (tokens, ..) = lex(&contents, (), &mut Default::default());
+                let custom_names = FormatConfig::find().unwrap_or_default().custom_names;
+                let (tokens, ..) = lex(&contents, (), &mut Default::default(), &custom_names);
                 for tok in tokens {
                     let Token::Glyph(prim2) = &tok.value else {
                         continue;

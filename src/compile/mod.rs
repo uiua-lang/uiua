@@ -25,6 +25,7 @@ use std::{
 use ecow::{EcoString, EcoVec, eco_vec};
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
+use uiua_parser::CustomNames;
 
 use crate::{
     Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan, Context,
@@ -37,7 +38,7 @@ use crate::{
     VERSION, Value,
     ast::*,
     check::nodes_sig,
-    format::{format_word, format_words},
+    format::{FormatConfig, format_word, format_words},
     function::DynamicFunction,
     lsp::{CodeMeta, Completion, ImportSrc, SetInverses, SigDecl},
     parse::{
@@ -96,6 +97,8 @@ pub struct Compiler {
     prim_arg_bindings: HashMap<(Primitive, Ident), usize>,
     /// Type signatures for type sig comments
     pub(crate) type_sigs: HashMap<usize, TypeSig>,
+    /// Custom names for parsing/formatting
+    custom_names: CustomNames,
 }
 
 impl Default for Compiler {
@@ -124,6 +127,7 @@ impl Default for Compiler {
             start_addrs: Vec::new(),
             prim_arg_bindings: HashMap::new(),
             type_sigs: HashMap::new(),
+            custom_names: Default::default(),
         }
     }
 }
@@ -174,10 +178,7 @@ impl LocalNames {
         (self.0.iter()).flat_map(|(name, locals)| locals.iter().map(move |local| (name, *local)))
     }
     pub fn get(&self, name: &str, pref: LookupPreference, asm: &Assembly) -> Option<LocalIndex> {
-        let locals = self
-            .0
-            .get(name)
-            .or_else(|| self.0.get(name.strip_suffix('!')?))?;
+        let locals = (self.0.get(name)).or_else(|| self.0.get(name.strip_suffix('!')?))?;
         let iter = || locals.iter().rev();
         let b = &asm.bindings;
         match pref {
@@ -541,8 +542,14 @@ impl Compiler {
         Ok((module, res))
     }
     fn load_impl(&mut self, input: &str, src: InputSrc) -> UiuaResult<&mut Self> {
+        if self.custom_names.is_empty()
+            && !matches!(&src, InputSrc::File(path) if path.ends_with(".fmt.ua"))
+        {
+            self.custom_names = FormatConfig::find().unwrap_or_default().custom_names;
+        }
         let node_start = self.asm.root.len();
-        let (items, errors, diagnostics) = parse(input, src.clone(), &mut self.asm.inputs);
+        let (items, errors, diagnostics) =
+            parse(input, src.clone(), &mut self.asm.inputs, &self.custom_names);
         for diagnostic in diagnostics {
             self.emit_diagnostic_impl(diagnostic);
         }

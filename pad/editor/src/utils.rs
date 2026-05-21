@@ -1430,7 +1430,7 @@ pub fn report_view(report: &Report, state: WriteSignal<State>) -> impl IntoView 
 
 pub fn progressive_strings(input: &str) -> Vec<String> {
     let mut inputs = Inputs::default();
-    let (items, errors, _) = uiua::parse(input, (), &mut inputs);
+    let (items, errors, _) = uiua::parse(input, (), &mut inputs, &Default::default());
     if !errors.is_empty() {
         return vec![input.into()];
     }

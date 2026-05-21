@@ -1735,7 +1735,7 @@ fn layout_text_impl(
     if size <= 0.0 {
         return Err(env.error("Text size must be positive"));
     }
-    let mut line_height = 1.0;
+    let mut line_height = 1.1;
     let mut width = None;
     let mut height = None;
     let mut color: Option<Color> = None;

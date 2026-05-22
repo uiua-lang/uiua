@@ -315,12 +315,11 @@ pub fn Editor<'a>(
         set_output.set(view! { <div class="running-text">"Running"</div> }.into_view());
         let allow_autoplay = !matches!(mode, EditorMode::Example) && get_autoplay();
         let render_output_item = move |item| match item {
-            OutputItem::String(s) => {
+            OutputItem::String(mut s) => {
                 if s.is_empty() {
-                    view!().into_view()
-                } else {
-                    view! { <div class="output-item">{s}</div> }.into_view()
+                    s.push(' ');
                 }
+                view! { <div class="output-item">{s}</div> }.into_view()
             }
             OutputItem::Classed(class, s) => {
                 let class = format!("output-item {class}");
@@ -412,7 +411,6 @@ pub fn Editor<'a>(
                     <hr />
                 </div>)
             .into_view(),
-            [OutputItem::String(s)] if s.is_empty() => View::default(),
             _ => view!(<div class="output-values" style=flex_wrap>
                     {(items.into_iter())
                         .map(|item| {

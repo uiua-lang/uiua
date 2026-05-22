@@ -118,6 +118,7 @@ impl WebBackend {
     }
 }
 
+#[derive(Debug)]
 pub enum OutputItem {
     String(String),
     Svg(String, Option<String>),
@@ -179,7 +180,7 @@ impl SysBackend for WebBackend {
             weewuh();
         }
         let mut stdout = self.stdout.lock().unwrap();
-        let mut lines = s.lines();
+        let mut lines = s.split('\n');
         let Some(first) = lines.next() else {
             return Ok(());
         };
@@ -190,9 +191,6 @@ impl SysBackend for WebBackend {
         }
         for line in lines {
             stdout.push(OutputItem::String(line.into()));
-        }
-        if s.ends_with('\n') {
-            stdout.push(OutputItem::String("".into()));
         }
         Ok(())
     }

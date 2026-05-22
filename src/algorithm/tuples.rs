@@ -1,5 +1,3 @@
-use std::collections::{HashMap, hash_map::Entry};
-
 use ecow::EcoVec;
 
 use crate::{
@@ -166,10 +164,9 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
             } else {
                 xs.row_count()
             };
-            let range: Value = match range(&[n as isize], 0, false, env)? {
-                Ok(data) => data.into(),
-                Err(data) => data.into(),
-            };
+            let range: Value = range(&[n as isize], 0, false, env)?
+                .map(Into::into)
+                .unwrap_or_else(Into::into);
             env.push(range.clone());
             env.push(range);
             table_impl(f, env)?;
@@ -215,14 +212,14 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
             where
                 Value: From<Array<T>>,
             {
-                let mut cache = HashMap::new();
-                let mut curr = vec![0; k];
                 let mut data = EcoVec::new();
                 let mut count = 0;
                 let row_count = if is_scalar { scalar? } else { arr.row_count() };
                 if is_scalar && row_count == 0 {
                     return Ok(0.into());
                 }
+                let mut curr = vec![0; k];
+                let mut cache = vec![None; row_count * row_count];
                 let row_len = arr.row_len();
                 'outer: loop {
                     // println!("curr: {curr:?}");
@@ -230,17 +227,19 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                     'ij: for (ii, &i) in curr.iter().enumerate() {
                         for &j in curr.iter().skip(ii + 1) {
                             // println!("i: {i}, j: {j}");
-                            let entry = cache.entry((i, j));
+                            let entry = &mut cache[i * row_count + j];
                             add_it &= match entry {
-                                Entry::Occupied(o) => *o.get(),
-                                Entry::Vacant(v) => {
+                                Some(pass) => *pass,
+                                None => {
                                     env.push(i);
                                     env.push(j);
                                     env.exec(f.node.clone())?;
-                                    *v.insert(env.pop("tuples's function result")?.as_bool(
+                                    let pass = env.pop("tuples's function result")?.as_bool(
                                         env,
                                         "tuples of 3 or more must return a boolean",
-                                    )?)
+                                    )?;
+                                    *entry = Some(pass);
+                                    pass
                                 }
                             };
                             if !add_it {

@@ -9,6 +9,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`oklch`](https://uiua.org/docs/oklch) function
 - Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape
 - Add `$_` syntax to remove labels
+- Add [`cos`](https://uiua.org/docs/cos), [`sinh`](https://uiua.org/docs/sinh), and [`cosh`](https://uiua.org/docs/cosh) functions, with associated inverses
 - Add sided subscripts for [`negate ¯`](https://uiua.org/docs/negate), which get the conjugate or negative conjugate
 - Lone numeric subscripts now format to number literals, making it easier to split them off
 - Add experimental `ᵢ` and `ᵣ` subscripts, which format from `,i` and `,r` respectively

@@ -1044,66 +1044,34 @@ pub mod ln {
         format!("Cannot take the natural logarithm of {a}")
     }
 }
-pub mod sin {
-    use super::*;
-    pub fn num(a: f64) -> f64 {
-        a.sin()
-    }
-    pub fn byte(a: u8) -> f64 {
-        f64::from(a).sin()
-    }
-    pub fn com(a: Complex) -> Complex {
-        a.sin()
-    }
-    pub fn error<T: Display>(a: T) -> String {
-        format!("Cannot get the sine of {a}")
-    }
+macro_rules! trig {
+    ($name:ident, $s:literal) => {
+        pub mod $name {
+            use super::*;
+            pub fn num(a: f64) -> f64 {
+                a.$name()
+            }
+            pub fn byte(a: u8) -> f64 {
+                f64::from(a).$name()
+            }
+            pub fn com(a: Complex) -> Complex {
+                a.$name()
+            }
+            pub fn error<T: Display>(a: T) -> String {
+                format!("Cannot get the {} of {a}", $s)
+            }
+        }
+    };
 }
-pub mod cos {
-    use super::*;
-    pub fn num(a: f64) -> f64 {
-        a.cos()
-    }
-    pub fn byte(a: u8) -> f64 {
-        f64::from(a).cos()
-    }
-    pub fn com(a: Complex) -> Complex {
-        a.cos()
-    }
-    pub fn error<T: Display>(a: T) -> String {
-        format!("Cannot get the cosine of {a}")
-    }
-}
-pub mod asin {
-    use super::*;
-    pub fn num(a: f64) -> f64 {
-        a.asin()
-    }
-    pub fn byte(a: u8) -> f64 {
-        f64::from(a).asin()
-    }
-    pub fn com(a: Complex) -> Complex {
-        a.asin()
-    }
-    pub fn error<T: Display>(a: T) -> String {
-        format!("Cannot get the arcsine of {a}")
-    }
-}
-pub mod acos {
-    use super::*;
-    pub fn num(a: f64) -> f64 {
-        a.acos()
-    }
-    pub fn byte(a: u8) -> f64 {
-        f64::from(a).acos()
-    }
-    pub fn com(a: Complex) -> Complex {
-        a.acos()
-    }
-    pub fn error<T: Display>(a: T) -> String {
-        format!("Cannot get the arcsine of {a}")
-    }
-}
+trig!(sin, "sine");
+trig!(cos, "cosine");
+trig!(sinh, "hyperbolic sine");
+trig!(cosh, "hyperbolic cosine");
+trig!(asin, "arcsine");
+trig!(acos, "arccosine");
+trig!(asinh, "hyperbolic arcsine");
+trig!(acosh, "hyperbolic arccosine");
+
 pub mod floor {
     use super::*;
     pub fn num(a: f64) -> f64 {

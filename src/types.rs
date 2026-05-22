@@ -2160,9 +2160,8 @@ impl<'a> TypeEnv<'a> {
             ImplPrim(prim, _) => match prim {
                 Over => self.over()?,
                 Ln => self.monadic_pervasive_hint(Scalar::Num, Scalar::ln, ln::num)?,
-                Cos => self.monadic_pervasive_hint(Scalar::Num, Scalar::cos, cos::num)?,
-                Asin => self.monadic_pervasive_hint(Scalar::Num, Scalar::asin, asin::num)?,
-                Acos => self.monadic_pervasive_hint(Scalar::Num, Scalar::acos, acos::num)?,
+                ASin => self.monadic_pervasive_hint(Scalar::Num, Scalar::asin, asin::num)?,
+                ACos => self.monadic_pervasive_hint(Scalar::Num, Scalar::acos, acos::num)?,
                 Exp2 => self.monadic_pervasive_hint(Scalar::Num, Scalar::exp2, exp2::num)?,
                 Exp10 => self.monadic_pervasive_hint(Scalar::Num, Scalar::exp10, exp10::num)?,
                 Log2 => self.monadic_pervasive_hint(Scalar::Num, Scalar::log2, log2::num)?,

@@ -430,14 +430,28 @@ primitive!(
     (1, Exp, MonadicPervasive, ("exponential", 'ₑ')),
     /// Get the sine of a number
     ///
-    /// ex: ∿ 1
-    /// You can get a cosine function by [add]ing [eta].
-    /// ex: ∿+η 1
+    /// ex: ∿ [0 1 η]
     /// You can get an arcsine function with [un].
-    /// ex: °∿ 1
-    /// You can get an arccosine function by [subtract]ing the arcsine from [eta].
-    /// ex: ˜-η°∿ 0
+    /// ex: °∿ [0 1]
     (1, Sin, MonadicPervasive, ("sine", '∿')),
+    /// Get the cosine of a number
+    ///
+    /// ex: cos [0 1 η]
+    /// You can get an arcsine function with [un].
+    /// ex: °cos [0 1]
+    (1, Cos, MonadicPervasive, "cos"),
+    /// Get the hyperbolic sine of a number
+    ///
+    /// ex: sinh [0 1 η]
+    /// You can get an arcsine function with [un].
+    /// ex: °sinh [0 1]
+    (1, SinH, MonadicPervasive, "sinh"),
+    /// Get the hyperbolic cosine of a number
+    ///
+    /// ex: cosh [0 1 η]
+    /// You can get an arcsine function with [un].
+    /// ex: °cosh [0 1]
+    (1, CosH, MonadicPervasive, "cosh"),
     /// Round to the nearest integer towards `¯∞`
     ///
     /// ex: ⌊1.5

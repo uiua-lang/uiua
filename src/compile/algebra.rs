@@ -214,6 +214,14 @@ fn expr_deriv(expr: Expr) -> Option<Expr> {
                 let prime = expr_deriv(expr.clone())?.as_constant()?;
                 *deriv.0.entry(Term::Sin(expr)).or_default() -= coef * prime;
             }
+            Term::SinH(expr) => {
+                let prime = expr_deriv(expr.clone())?.as_constant()?;
+                *deriv.0.entry(Term::CosH(expr)).or_default() += coef * prime;
+            }
+            Term::CosH(expr) => {
+                let prime = expr_deriv(expr.clone())?.as_constant()?;
+                *deriv.0.entry(Term::SinH(expr)).or_default() += coef * prime;
+            }
         }
     }
     if deriv.0.is_empty() {
@@ -240,6 +248,12 @@ fn expr_integral(expr: Expr) -> Option<Expr> {
             }
             Term::Cos(expr) if expr == Term::X(1.0).into() => {
                 deriv.0.insert(Term::Sin(Term::X(1.0).into()), coef);
+            }
+            Term::SinH(expr) if expr == Term::X(1.0).into() => {
+                deriv.0.insert(Term::CosH(Term::X(1.0).into()), coef);
+            }
+            Term::CosH(expr) if expr == Term::X(1.0).into() => {
+                deriv.0.insert(Term::SinH(Term::X(1.0).into()), coef);
             }
             _ => return None,
         }
@@ -314,7 +328,15 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
                 }
                 Term::Cos(expr) => {
                     recur(node, expr, any_complex, span);
-                    node.push(ImplPrim(Cos, span));
+                    node.push(Prim(Cos, span));
+                }
+                Term::SinH(expr) => {
+                    recur(node, expr, any_complex, span);
+                    node.push(Prim(SinH, span));
+                }
+                Term::CosH(expr) => {
+                    recur(node, expr, any_complex, span);
+                    node.push(Prim(CosH, span));
                 }
             }
             if mul_coef {
@@ -524,6 +546,11 @@ impl<'a> AlgebraEnv<'a> {
                     self.stack.push(Term::Sin(a).into());
                     self.handled += 1;
                 }
+                Cos => {
+                    let a = self.pop()?;
+                    self.stack.push(Term::Cos(a).into());
+                    self.handled += 1;
+                }
                 Reciprocal => {
                     let a = self.pop()?;
                     self.stack
@@ -546,11 +573,6 @@ impl<'a> AlgebraEnv<'a> {
                 prim => return Err(AlgebraError::NotSupported(prim.format().to_string())),
             },
             ImplPrim(prim, _) => match prim {
-                Cos => {
-                    let a = self.pop()?;
-                    self.stack.push(Term::Cos(a).into());
-                    self.handled += 1;
-                }
                 Exp2 => {
                     let a = self.pop()?;
                     let res = Expr::from(2.0).pow(a).ok_or(AlgebraError::TooComplex)?;
@@ -713,6 +735,8 @@ enum Term {
     Exp(Expr),
     Sin(Expr),
     Cos(Expr),
+    SinH(Expr),
+    CosH(Expr),
 }
 
 impl fmt::Debug for Term {
@@ -740,6 +764,14 @@ impl fmt::Debug for Term {
             }
             Term::Cos(expr) => {
                 write!(f, "cos")?;
+                expr.fmt(f)
+            }
+            Term::SinH(expr) => {
+                write!(f, "sinh")?;
+                expr.fmt(f)
+            }
+            Term::CosH(expr) => {
+                write!(f, "cosh")?;
                 expr.fmt(f)
             }
         }
@@ -784,10 +816,12 @@ impl Expr {
         self.0.keys().any(|term| match term {
             Term::X(x) => *x != 0.0 && *x != 1.0,
             Term::Div(expr)
+            | Term::Exp(expr)
             | Term::Log(_, expr)
             | Term::Sin(expr)
             | Term::Cos(expr)
-            | Term::Exp(expr) => expr.is_complex(),
+            | Term::SinH(expr)
+            | Term::CosH(expr) => expr.is_complex(),
         })
     }
     fn single(&self) -> Option<(Term, Complex)> {

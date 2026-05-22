@@ -108,9 +108,10 @@ impl_primitive!(
     // Inverses
     (2, Root),
     (2, Log),
-    (1, Cos),
-    (1, Asin),
-    (1, Acos),
+    (1, ASin),
+    (1, ACos),
+    (1, ASinH),
+    (1, ACosH),
     (1, Ln),
     (0, UnPop),
     (1, UnBits),

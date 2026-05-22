@@ -1,6 +1,6 @@
 //! The [`Complex`] type
 
-use std::{fmt, ops::*};
+use std::{f64::consts::FRAC_PI_2, fmt, ops::*};
 
 use bytemuck::{Pod, Zeroable};
 use serde::*;
@@ -190,13 +190,35 @@ impl Complex {
             -self.re.sin() * self.im.sinh(),
         )
     }
+    /// Calculate the hyperbolic sine of a complex number
+    pub fn sinh(self) -> Self {
+        Self::new(
+            self.re.sinh() * self.im.cos(),
+            self.re.cosh() * self.im.sin(),
+        )
+    }
+    /// Calculate the hyperbolic cosine of a complex number
+    pub fn cosh(self) -> Self {
+        Self::new(
+            self.re.cosh() * self.im.cos(),
+            self.re.sinh() * self.im.sin(),
+        )
+    }
     /// Calculate the arc sine of a complex number
     pub fn asin(self) -> Self {
         -Self::I * ((Self::ONE - self * self).sqrt() + Self::I * self).ln()
     }
     /// Calculate the arc cosine of a complex number
     pub fn acos(self) -> Self {
-        -Self::I * (Self::I * (Self::ONE - self * self).sqrt() + self).ln()
+        Self::new(FRAC_PI_2, 0.0) - self.asin()
+    }
+    /// Calculate the hyperbolic arc sine of a complex number
+    pub fn asinh(self) -> Self {
+        -Self::I * (Self::I * self).asin()
+    }
+    /// Calculate the hyperbolic arc cosine of a complex number
+    pub fn acosh(self) -> Self {
+        (self + (self + Self::ONE).sqrt() * (self - Self::ONE).sqrt()).ln()
     }
     /// Check if either real or imaginary part is NaN
     pub fn is_nan(&self) -> bool {

@@ -577,6 +577,18 @@
     "class": "OtherModifier",
     "description": "Unbox the arguments to a function before calling it"
   },
+  "cos": {
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Get the cosine of a number"
+  },
+  "cosh": {
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Get the hyperbolic cosine of a number"
+  },
   "couple": {
     "glyph": "⊟",
     "args": 2,
@@ -1408,6 +1420,12 @@
     "outputs": 1,
     "class": "MonadicPervasive",
     "description": "Get the sine of a number"
+  },
+  "sinh": {
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Get the hyperbolic sine of a number"
   },
   "sort": {
     "glyph": "⍆",

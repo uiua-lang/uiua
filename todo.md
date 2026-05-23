@@ -1,6 +1,7 @@
 # Uiua Todo
 
 # 0.19
+- Subscripts for `rise` and `fall`
 - Type system
   - Tests
   - Data def types

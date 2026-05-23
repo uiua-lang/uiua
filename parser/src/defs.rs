@@ -437,19 +437,19 @@ primitive!(
     /// Get the cosine of a number
     ///
     /// ex: cos [0 1 η]
-    /// You can get an arcsine function with [un].
+    /// You can get an arccosine function with [un].
     /// ex: °cos [0 1]
     (1, Cos, MonadicPervasive, "cos"),
     /// Get the hyperbolic sine of a number
     ///
     /// ex: sinh [0 1 η]
-    /// You can get an arcsine function with [un].
+    /// You can get a hyperbolic arcsine function with [un].
     /// ex: °sinh [0 1]
     (1, SinH, MonadicPervasive, "sinh"),
     /// Get the hyperbolic cosine of a number
     ///
     /// ex: cosh [0 1 η]
-    /// You can get an arcsine function with [un].
+    /// You can get a hyperbolic cosine function with [un].
     /// ex: °cosh [0 1]
     (1, CosH, MonadicPervasive, "cosh"),
     /// Round to the nearest integer towards `¯∞`

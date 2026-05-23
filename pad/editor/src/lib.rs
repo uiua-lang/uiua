@@ -1175,11 +1175,7 @@ pub fn Editor<'a>(
 
     // Glyph buttons
     // These are the buttons that appear above the editor and allow the user to insert glyphs
-    let make_glyph_button = move |prim: Primitive| {
-        let text = prim
-            .glyph()
-            .map(Into::into)
-            .or_else(|| prim.ascii().map(|s| s.to_string()))?;
+    let make_glyph_button = move |prim: Primitive, glyph: char| {
         let mut title = prim.name().to_string();
         if let Some(ascii) = prim.ascii() {
             title = format!("({ascii}) {title}");
@@ -1223,20 +1219,18 @@ pub fn Editor<'a>(
             );
             _ = glyph_doc_element().style().remove_property("display");
         };
-        Some(
-            view! {
-                <button
-                    class="glyph-button glyph-title"
-                    data-title=title
-                    on:click=onclick
-                    on:mouseover=onmouseover
-                    on:mouseleave=onmouseleave
-                >
-                    <div class=prim_class(prim)>{text}</div>
-                </button>
-            }
-            .into_view(),
-        )
+        view! {
+            <button
+                class="glyph-button glyph-title"
+                data-title=title
+                on:click=onclick
+                on:mouseover=onmouseover
+                on:mouseleave=onmouseleave
+            >
+                <div class=prim_class(prim)>{glyph}</div>
+            </button>
+        }
+        .into_view()
     };
 
     // Show or hide the glyph buttons
@@ -1249,15 +1243,14 @@ pub fn Editor<'a>(
         show_glyphs.get().then(|| {
             let show_advanced = get_show_advanced();
             let shown_prims = Primitive::non_deprecated()
-                .filter(|prim| !prim.is_experimental() && (show_advanced || prim.is_simple()));
-            let insertion_point = shown_prims
-                .clone()
-                .enumerate()
-                .find(|(_, p)| p.class() == PrimClass::MonadicArray)
+                .filter(|prim| !prim.is_experimental() && (show_advanced || prim.is_simple()))
+                .filter_map(|prim| prim.glyph().map(|g| (prim, g)));
+            let insertion_point = (shown_prims.clone().enumerate())
+                .find(|(_, (p, _))| p.class() == PrimClass::MonadicArray)
                 .unwrap()
-                .0
-                - 2;
-            let mut glyph_buttons: Vec<_> = shown_prims.filter_map(make_glyph_button).collect();
+                .0;
+            let mut glyph_buttons: Vec<_> =
+                shown_prims.map(|(p, g)| make_glyph_button(p, g)).collect();
 
             // Additional code buttons
             let syntax_buttons = [
@@ -1435,7 +1428,7 @@ pub fn Editor<'a>(
 
             let experimental_glyph_buttons: Vec<_> = Primitive::non_deprecated()
                 .filter(|prim| prim.is_experimental())
-                .filter_map(make_glyph_button)
+                .filter_map(|prim| prim.glyph().map(|g| make_glyph_button(prim, g)))
                 .collect();
 
             view! { <div>

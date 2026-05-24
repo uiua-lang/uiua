@@ -2597,6 +2597,8 @@ impl Compiler {
                             Node::ImplPrim(ImplPrimitive::DeshapeSub(n), self.add_span(span))
                         }
                     }
+                    Rise => Node::ImplPrim(ImplPrimitive::RiseSub(n), self.add_span(span)),
+                    Fall => Node::ImplPrim(ImplPrimitive::FallSub(n), self.add_span(span)),
                     Transpose => {
                         self.subscript_experimental(prim, &span);
                         if n == 0 {

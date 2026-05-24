@@ -253,8 +253,8 @@ impl Primitive {
             (Box, None) => Signature::new(1, 1),
             (Json, _) => Signature::new(1, 1),
             (
-                Transpose | Sqrt | Exp | Round | Floor | Ceil | Rand | Utf8 | Len | Shape | Range
-                | Classify,
+                Deshape | Transpose | Sqrt | Exp | Round | Floor | Ceil | Rand | Utf8 | Len | Shape
+                | Rise | Fall | Range | Classify,
                 _,
             ) => return self.sig(),
             (Args, Some(SubscriptNumber::Int(n))) if n >= 0 => {

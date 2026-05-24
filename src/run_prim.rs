@@ -583,6 +583,16 @@ impl ImplPrimitive {
                 let res = val.classify_sub(i);
                 env.push(res);
             }
+            &ImplPrimitive::RiseSub(i) => {
+                let val = env.pop(1)?;
+                let res = val.rise_rank(i);
+                env.push(res);
+            }
+            &ImplPrimitive::FallSub(i) => {
+                let val = env.pop(1)?;
+                let res = val.fall_rank(i);
+                env.push(res);
+            }
             &ImplPrimitive::ParseSub(i) => {
                 let strs = env.pop(1)?;
                 let nums = strs.parse_base(i, env)?;

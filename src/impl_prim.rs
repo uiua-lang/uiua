@@ -261,6 +261,8 @@ impl_primitive!(
     ([1], DipN(usize)),
     (1, NBits(usize)),
     (1, DeshapeSub(i32)),
+    (1, RiseSub(i32)),
+    (1, FallSub(i32)),
     ([1], TableSub(i32)),
     ([2], FoldWhile),
     (1, ClassifySub(usize)),

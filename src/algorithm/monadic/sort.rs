@@ -11,9 +11,15 @@ impl Value {
     pub fn rise(&self) -> Array<f64> {
         val_as_arr!(self, Array::rise)
     }
+    pub(crate) fn rise_rank(&self, rank: i32) -> Array<f64> {
+        val_as_arr!(self, |arr| arr.rise_rank(rank))
+    }
     /// Get the `fall` of the value
     pub fn fall(&self) -> Array<f64> {
         val_as_arr!(self, Array::fall)
+    }
+    pub(crate) fn fall_rank(&self, rank: i32) -> Array<f64> {
+        val_as_arr!(self, |arr| arr.fall_rank(rank))
     }
     /// Sort the value ascending
     pub fn sort_up(&mut self) {
@@ -42,27 +48,75 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// Get the `rise` of the array
     pub fn rise(&self) -> Array<f64> {
+        self.rise_impl(None)
+    }
+    pub(crate) fn rise_rank(&self, rank: i32) -> Array<f64> {
+        self.rise_impl(Some(rank))
+    }
+    fn rise_impl(&self, rank: Option<i32>) -> Array<f64> {
         if self.rank() == 0 {
-            return Array::scalar(0.0);
+            return if rank.is_some() {
+                Array::default()
+            } else {
+                Array::scalar(0.0)
+            };
         }
-        if self.row_count() == 0 {
-            return Array::default();
+        if let Some(rank) = rank {
+            let rank = if rank >= 0 {
+                self.rank().min(rank as usize)
+            } else {
+                (self.rank() as i32 + rank).max(0) as usize
+            };
+            let depth = self.rank() - rank;
+            let item_count: usize = self.shape[..depth].iter().product();
+            if item_count == 0 {
+                return Array::new([item_count, depth], EcoVec::new());
+            }
+            let item_size: usize = self.shape[depth..].iter().product();
+            let mut indices: Vec<(Vec<f64>, usize)> = Vec::new();
+            let mut curr = vec![0.0; depth];
+            let mut offset = 0;
+            'outer: loop {
+                indices.push((curr.clone(), offset));
+                offset += 1;
+                for (c, s) in curr.iter_mut().zip(&self.shape).rev() {
+                    *c += 1.0;
+                    if *c as usize == *s {
+                        *c = 0.0;
+                    } else {
+                        continue 'outer;
+                    }
+                }
+                break;
+            }
+            indices.par_sort_by(|&(_, ai), &(_, bi)| {
+                (self.data[ai * item_size..][..item_size].iter())
+                    .zip(&self.data[bi * item_size..][..item_size])
+                    .map(|(a, b)| a.array_cmp(b))
+                    .find(|x| x != &Ordering::Equal)
+                    .unwrap_or(Ordering::Equal)
+            });
+            let data: EcoVec<f64> = indices.into_iter().flat_map(|(is, _)| is).collect();
+            Array::new([item_count, depth], data)
+        } else {
+            if self.row_count() == 0 {
+                return Array::default();
+            }
+            let mut indices = (0..self.row_count())
+                .map(|i| i as f64)
+                .collect::<EcoVec<_>>();
+            if self.meta.is_sorted_up() {
+                return indices.into();
+            }
+            indices.make_mut().par_sort_by(|&a, &b| {
+                (self.row_slice(a as usize).iter())
+                    .zip(self.row_slice(b as usize))
+                    .map(|(a, b)| a.array_cmp(b))
+                    .find(|x| x != &Ordering::Equal)
+                    .unwrap_or(Ordering::Equal)
+            });
+            indices.into()
         }
-        let mut indices = (0..self.row_count())
-            .map(|i| i as f64)
-            .collect::<EcoVec<_>>();
-        if self.meta.is_sorted_up() {
-            return indices.into();
-        }
-        indices.make_mut().par_sort_by(|&a, &b| {
-            self.row_slice(a as usize)
-                .iter()
-                .zip(self.row_slice(b as usize))
-                .map(|(a, b)| a.array_cmp(b))
-                .find(|x| x != &Ordering::Equal)
-                .unwrap_or(Ordering::Equal)
-        });
-        indices.into()
     }
     pub(crate) fn rise_indices(&self) -> Vec<usize> {
         if self.rank() == 0 {
@@ -87,27 +141,76 @@ impl<T: ArrayValue> Array<T> {
     }
     /// Get the `fall` of the array
     pub fn fall(&self) -> Array<f64> {
+        self.fall_impl(None)
+    }
+    pub(crate) fn fall_rank(&self, rank: i32) -> Array<f64> {
+        self.fall_impl(Some(rank))
+    }
+    fn fall_impl(&self, rank: Option<i32>) -> Array<f64> {
         if self.rank() == 0 {
-            return Array::scalar(0.0);
+            return if rank.is_some() {
+                Array::default()
+            } else {
+                Array::scalar(0.0)
+            };
         }
-        if self.row_count() == 0 {
-            return Array::default();
+        if let Some(rank) = rank {
+            let rank = if rank >= 0 {
+                self.rank().min(rank as usize)
+            } else {
+                (self.rank() as i32 + rank).max(0) as usize
+            };
+            let depth = self.rank() - rank;
+            let item_count: usize = self.shape[..depth].iter().product();
+            if item_count == 0 {
+                return Array::new([item_count, depth], EcoVec::new());
+            }
+            let item_size: usize = self.shape[depth..].iter().product();
+            let mut indices: Vec<(Vec<f64>, usize)> = Vec::new();
+            let mut curr = vec![0.0; depth];
+            let mut offset = 0;
+            'outer: loop {
+                indices.push((curr.clone(), offset));
+                offset += 1;
+                for (c, s) in curr.iter_mut().zip(&self.shape).rev() {
+                    *c += 1.0;
+                    if *c as usize == *s {
+                        *c = 0.0;
+                    } else {
+                        continue 'outer;
+                    }
+                }
+                break;
+            }
+            indices.par_sort_by(|&(_, ai), &(_, bi)| {
+                (self.data[ai * item_size..][..item_size].iter())
+                    .zip(&self.data[bi * item_size..][..item_size])
+                    .map(|(a, b)| b.array_cmp(a))
+                    .find(|x| x != &Ordering::Equal)
+                    .unwrap_or(Ordering::Equal)
+            });
+            let data: EcoVec<f64> = indices.into_iter().flat_map(|(is, _)| is).collect();
+            Array::new([item_count, depth], data)
+        } else {
+            if self.row_count() == 0 {
+                return Array::default();
+            }
+            let mut indices = (0..self.row_count())
+                .map(|i| i as f64)
+                .collect::<EcoVec<_>>();
+            if self.meta.is_sorted_down() {
+                return indices.into();
+            }
+            indices.make_mut().par_sort_by(|&a, &b| {
+                self.row_slice(a as usize)
+                    .iter()
+                    .zip(self.row_slice(b as usize))
+                    .map(|(a, b)| b.array_cmp(a))
+                    .find(|x| x != &Ordering::Equal)
+                    .unwrap_or(Ordering::Equal)
+            });
+            indices.into()
         }
-        let mut indices = (0..self.row_count())
-            .map(|i| i as f64)
-            .collect::<EcoVec<_>>();
-        if self.meta.is_sorted_down() {
-            return indices.into();
-        }
-        indices.make_mut().par_sort_by(|&a, &b| {
-            self.row_slice(a as usize)
-                .iter()
-                .zip(self.row_slice(b as usize))
-                .map(|(a, b)| b.array_cmp(a))
-                .find(|x| x != &Ordering::Equal)
-                .unwrap_or(Ordering::Equal)
-        });
-        indices.into()
     }
     pub(crate) fn fall_indices(&self) -> Vec<usize> {
         if self.rank() == 0 {

@@ -301,7 +301,7 @@ pub(crate) fn match_format_pattern(parts: EcoVec<EcoString>, env: &mut Uiua) -> 
     match parts.as_slice() {
         [] => {}
         [part] => {
-            if val != part.as_ref() {
+            if *part != val {
                 return Err(env.error("String did not match pattern exactly"));
             }
         }

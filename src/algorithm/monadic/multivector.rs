@@ -191,8 +191,10 @@ impl Value {
                 _ => {
                     arr.data.extend_repeat(&T::default(), len * (blades - 1));
                     let slice = arr.data.as_mut_slice();
-                    for i in 0..len - 1 {
-                        slice.swap(len - 1 - i, (len - 1) * blades - blades * i);
+                    if slice.len() >= 2 {
+                        for i in 0..len - 1 {
+                            slice.swap(len - 1 - i, (len - 1) * blades - blades * i);
+                        }
                     }
                 }
             }

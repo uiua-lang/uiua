@@ -1249,7 +1249,6 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 // Comments
-                "#" if self.next_chars_exact(["e", "x", "p"]) => self.end(Experimental, start),
                 "#" if self.next_char_exact("?") => {
                     // Type sig comment
                     while self.next_char_if(|c| !c.ends_with('\n')).is_some() {}
@@ -1265,6 +1264,10 @@ impl<'a> Lexer<'a> {
                         let mut comment = String::new();
                         while let Some(c) = self.next_char_if(|c| !c.ends_with('\n')) {
                             comment.push_str(c);
+                        }
+                        if comment == "exp" {
+                            self.end(Experimental, start);
+                            continue;
                         }
                         if comment.starts_with(' ') {
                             comment.remove(0);

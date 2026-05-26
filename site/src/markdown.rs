@@ -1,7 +1,9 @@
 use std::{borrow::Cow, cell::Cell, fmt::Display};
 
 use comrak::{
+    Options,
     nodes::{AstNode, ListType, NodeValue},
+    options::Extension,
     *,
 };
 use leptos::*;
@@ -34,12 +36,13 @@ pub fn Fetch<S: Into<String>, F: Fn(&str) -> View + 'static>(src: S, f: F) -> im
     }}
 }
 
-fn options() -> ComrakOptions<'static> {
-    ComrakOptions {
-        extension: ExtensionOptions::builder()
-            .table(true)
-            .strikethrough(true)
-            .build(),
+fn options() -> Options<'static> {
+    Options {
+        extension: Extension {
+            table: true,
+            strikethrough: true,
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -116,7 +119,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
             {
                 return view!(<Prim prim=prim/>).into_view();
             }
-            let mut text = Cow::Borrowed(text.as_str());
+            let mut text = Cow::Borrowed(&**text);
             if replace_lang_name() && text.contains("Uiua") {
                 text = Cow::Owned(text.replace("Uiua", lang()))
             }
@@ -453,7 +456,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
             {
                 return format!("{prim:?}");
             }
-            text.clone()
+            text.to_string()
         }
         NodeValue::Heading(heading) => {
             let id = all_text(node).to_lowercase().replace(' ', "-");
@@ -517,8 +520,8 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                     "".to_string()
                 };
                 format!(
-                    r#"<a 
-                        href="https://uiua.org/docs/{}" 
+                    r#"<a
+                        href="https://uiua.org/docs/{}"
                         data-title={:?}
                         class="prim_code_a"
                         style="text-decoration: none;">
@@ -624,7 +627,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
 
 fn leaf_text<'a>(node: &'a AstNode<'a>) -> Option<String> {
     match &node.data.borrow().value {
-        NodeValue::Text(text) => Some(text.into()),
+        NodeValue::Text(text) => Some(text.to_string()),
         NodeValue::Code(code) => Some(code.literal.clone()),
         _ => node.first_child().and_then(leaf_text),
     }
@@ -678,7 +681,7 @@ fn text_code_blocks() {
             .replace("```", "<code block delim>")
             .replace("``", "` `")
             .replace("<code block delim>", "```");
-        let root = parse_document(&arena, &text, &ComrakOptions::default());
+        let root = parse_document(&arena, &text, &Options::default());
 
         fn text_code_blocks<'a>(node: &'a AstNode<'a>) -> Vec<(String, Expect)> {
             let mut blocks = Vec::new();

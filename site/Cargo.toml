@@ -15,7 +15,7 @@ workspace = true
 
 [dependencies]
 base64.workspace = true
-comrak = "0.39.0"
+comrak = {version = "0.52.0", default-features = false}
 console_error_panic_hook = "0.1.7"
 enum-iterator.workspace = true
 flate2.workspace = true

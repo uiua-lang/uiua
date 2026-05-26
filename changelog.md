@@ -37,6 +37,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Allow modules to be unclosed
   - The closing delimiter will be formatted in
 - Uncaught errors in threads now immediately print to stderr
+- Optimize `⧋/` on pervasive dyadic functions
 
 ## 0.18.1 - 2026-02-14
 ### Interpreter

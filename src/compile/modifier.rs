@@ -1070,7 +1070,18 @@ impl Compiler {
                     }
                 }
 
-                if fixable(&sn.node) {
+                if let Node::Mod(Reduce, ref args, span) = sn.node
+                    && let [f] = args.as_slice()
+                    && f.node
+                        .as_primitive()
+                        .is_some_and(|p| p.class() == PrimClass::DyadicPervasive)
+                {
+                    Node::ImplMod(
+                        ImplPrimitive::RowsSub(1i32.into(), false),
+                        eco_vec![sn],
+                        span,
+                    )
+                } else if fixable(&sn.node) {
                     Node::ImplMod(ImplPrimitive::FixMatchRanks, eco_vec![sn], span)
                 } else {
                     let retropose = Node::ImplPrim(ImplPrimitive::Retropose, span)

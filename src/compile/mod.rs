@@ -1400,7 +1400,8 @@ impl Compiler {
                 }
                 // Diagnostic for array of characters
                 let line_count = arr.lines.len();
-                if line_count <= 1
+                if !arr.boxes
+                    && line_count <= 1
                     && arr.lines.iter().any(|item| match item {
                         Item::Words(words) => {
                             words.iter().any(|w| matches!(w.value, Word::Char(_)))

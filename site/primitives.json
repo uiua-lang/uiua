@@ -1483,6 +1483,18 @@
     "class": "DyadicArray",
     "description": "Take the first n rows of an array"
   },
+  "tan": {
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Get the cosine of a number"
+  },
+  "tanh": {
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Get the hyperbolic cosine of a number"
+  },
   "tau": {
     "glyph": "τ",
     "args": 0,

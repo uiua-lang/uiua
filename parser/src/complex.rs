@@ -190,6 +190,12 @@ impl Complex {
             -self.re.sin() * self.im.sinh(),
         )
     }
+    /// Calculate the tangent of a complex number
+    pub fn tan(self) -> Self {
+        let (sin_2x, cos_2x) = (2.0 * self.re).sin_cos();
+        let denom = cos_2x + (2.0 * self.im).cosh();
+        Complex::new(sin_2x / denom, (2.0 * self.im).sinh() / denom)
+    }
     /// Calculate the hyperbolic sine of a complex number
     pub fn sinh(self) -> Self {
         Self::new(
@@ -204,6 +210,12 @@ impl Complex {
             self.re.sinh() * self.im.sin(),
         )
     }
+    /// Calculate the hyperbolic tangent of a complex number
+    pub fn tanh(self) -> Self {
+        let (sin_2y, cos_2y) = (2.0 * self.im).sin_cos();
+        let denom = (2.0 * self.re).cosh() + cos_2y;
+        Complex::new((2.0 * self.re).sinh() / denom, sin_2y / denom)
+    }
     /// Calculate the arc sine of a complex number
     pub fn asin(self) -> Self {
         -Self::I * ((Self::ONE - self * self).sqrt() + Self::I * self).ln()
@@ -212,6 +224,17 @@ impl Complex {
     pub fn acos(self) -> Self {
         Self::new(FRAC_PI_2, 0.0) - self.asin()
     }
+    /// Calculate the arc tangent of a complex number
+    pub fn atan(self) -> Self {
+        let x2 = self.re * self.re;
+        let y2 = self.im * self.im;
+        let num_im = x2 + (self.im + 1.0) * (self.im + 1.0);
+        let den_im = x2 + (self.im - 1.0) * (self.im - 1.0);
+        Complex::new(
+            0.5 * (2.0 * self.re).atan2(1.0 - x2 - y2),
+            0.25 * (num_im / den_im).ln(),
+        )
+    }
     /// Calculate the hyperbolic arc sine of a complex number
     pub fn asinh(self) -> Self {
         -Self::I * (Self::I * self).asin()
@@ -219,6 +242,17 @@ impl Complex {
     /// Calculate the hyperbolic arc cosine of a complex number
     pub fn acosh(self) -> Self {
         (self + (self + Self::ONE).sqrt() * (self - Self::ONE).sqrt()).ln()
+    }
+    /// Calculate the hyperbolic arc tangent of a complex number
+    pub fn atanh(self) -> Self {
+        let x2 = self.re * self.re;
+        let y2 = self.im * self.im;
+        let num_re = (1.0 + self.re) * (1.0 + self.re) + y2;
+        let den_re = (1.0 - self.re) * (1.0 - self.re) + y2;
+        Complex::new(
+            0.25 * (num_re / den_re).ln(),
+            0.5 * (2.0 * self.im).atan2(1.0 - x2 - y2),
+        )
     }
     /// Check if either real or imaginary part is NaN
     pub fn is_nan(&self) -> bool {

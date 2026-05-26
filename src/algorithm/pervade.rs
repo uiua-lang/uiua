@@ -1065,12 +1065,16 @@ macro_rules! trig {
 }
 trig!(sin, "sine");
 trig!(cos, "cosine");
+trig!(tan, "tangent");
 trig!(sinh, "hyperbolic sine");
 trig!(cosh, "hyperbolic cosine");
+trig!(tanh, "hyperbolic arctangent");
 trig!(asin, "arcsine");
 trig!(acos, "arccosine");
+trig!(atan, "arctangent");
 trig!(asinh, "hyperbolic arcsine");
 trig!(acosh, "hyperbolic arccosine");
+trig!(atanh, "hyperbolic arctangent");
 
 pub mod floor {
     use super::*;

@@ -1877,12 +1877,16 @@ value_mon_impl!(
 );
 value_mon_impl!(sin, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(cos, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(tan, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(sinh, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(cosh, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(tanh, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(asin, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(acos, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(atan, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(asinh, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(acosh, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(atanh, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(
     floor,
     [Num, num],

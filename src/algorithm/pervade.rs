@@ -372,7 +372,6 @@ where
     };
     let (new_shape, requires_fill) =
         derive_new_shape(&a.shape, &b.shape, fill.as_ref().err().copied(), env)?;
-    validate_size::<T>(new_shape.iter().copied(), env)?;
     let fill = if requires_fill { fill.ok() } else { None };
 
     // dbg!(a.shape, b.shape, &new_shape, &fill);
@@ -695,6 +694,7 @@ where
         *b = a;
     } else {
         // Allocate a new array
+        validate_size::<T>(new_shape.iter().copied(), env)?;
         let mut new_data = eco_vec![T::default(); new_shape.elements()];
         let slice = new_data.make_mut();
         if let Some(fill) = fill {

@@ -554,6 +554,8 @@ pub fn Subscripts() -> impl IntoView {
             "⧆₁ \"lego helmet\"",
         ),
         subscript(Classify, "Rank-N subrows", "⊛₀ [\"hello\"\"world\"]"),
+        subscript(Rise, "Rank-N sort indices", "⍏₀ [\"cd\"\"ad\"]"),
+        subscript(Fall, "Rank-N sort indices", "⍖₀ [\"cd\"\"ad\"]"),
         subscript(On, "First N values", "{⟜₂[⊙⊙∘] 1 2 3}"),
         subscript(By, "Last N values", "{⊸₂[⊙⊙∘] 1 2 3}"),
         subscript(With, "Last N values", "{⤙₂[⊙⊙∘] 1 2 3}"),

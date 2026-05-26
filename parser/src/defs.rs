@@ -1175,6 +1175,10 @@ primitive!(
     /// Here, we sort the array ascending by the [absolute value] of its elements.
     /// ex: ⊏⍏⊸⌵ 6_2_7_0_¯1_5
     ///
+    /// Numeric subscripts for [rise] give the list of multidimensional indices that would sort the array ascending if used with [pick].
+    /// ex:   ⍏₀ ["dei""abg""fhc"]
+    ///   : ⊡⊸⍏₀ ["dei""abg""fhc"]
+    ///
     /// [first][rise] and [first][reverse][rise] are optimized in the interpreter to be O(n).
     (1, Rise, MonadicArray, ("rise", '⍏')),
     /// Get the indices into an array if it were sorted descending
@@ -1187,6 +1191,10 @@ primitive!(
     /// If we transform the array before [fall]ing, we can sort by a key.
     /// Here, we sort the array descending by the [absolute value] of its elements.
     /// ex: ⊏⍖⊸⌵ 6_2_7_0_¯1_5
+    ///
+    /// Numeric subscripts for [fall] give the list of multidimensional indices that would sort the array descending if used with [pick].
+    /// ex:   ⍖₀ ["dei""abg""fhc"]
+    ///   : ⊡⊸⍖₀ ["dei""abg""fhc"]
     ///
     /// [first][fall] and [first][reverse][fall] are optimized in the interpreter to be O(n).
     (1, Fall, MonadicArray, ("fall", '⍖')),

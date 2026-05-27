@@ -9,15 +9,17 @@ use std::{
     slice,
 };
 
-use ecow::{EcoVec, eco_vec};
+use ecow::EcoVec;
 use serde::*;
 
-use crate::{Complex, SUBSCRIPT_DIGITS, ga::*};
+use crate::{Complex, SUBSCRIPT_DIGITS, ebuf::EBuf, ga::*};
+
+type Coefs = EBuf<f64, 4>;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Multivector {
-    #[serde(default, skip_serializing_if = "EcoVec::is_empty", rename = "c")]
-    coefs: EcoVec<f64>,
+    #[serde(default, skip_serializing_if = "<[f64]>::is_empty", rename = "c")]
+    coefs: Coefs,
     /// The geometric algebra flavor
     #[serde(default, skip_serializing_if = "is_vanilla", rename = "f")]
     pub flavor: Flavor,
@@ -37,7 +39,7 @@ impl Multivector {
                 // Expansion
                 self.coefs
                     .extend(repeat_n(0.0, (1 << new_dims) - (1 << dims)));
-                let slice = self.coefs.make_mut();
+                let slice = self.coefs.as_mut_slice();
                 let mut left = 0;
                 for d in 0..=dims {
                     let ai = grade_size(dims, d);
@@ -51,7 +53,7 @@ impl Multivector {
             }
             Ordering::Greater => {
                 // Contraction
-                let slice = self.coefs.make_mut();
+                let slice = self.coefs.as_mut_slice();
                 let dim_mask = (1 << new_dims) - 1;
                 let mut left = 0;
                 let (mask_table, _) = mask_tables(dims);
@@ -75,7 +77,7 @@ impl Multivector {
         }
         self.coefs
             .extend(repeat_n(0.0, (1 << dims) - (1 << low_dims)));
-        let slice = self.coefs.make_mut();
+        let slice = self.coefs.as_mut_slice();
         let mut b_left = 0;
         for d in 0..=low_dims {
             let ai = grade_size(low_dims, d);
@@ -123,7 +125,7 @@ impl Multivector {
         Self::all([re.into(), 0.0, 0.0, im.into()])
     }
     /// Create a multivector from all of its coefficients
-    pub fn all(coefs: impl Into<EcoVec<f64>>) -> Self {
+    pub fn all(coefs: impl Into<Coefs>) -> Self {
         let coefs = coefs.into();
         assert!(
             coefs.len().max(1).is_power_of_two(),
@@ -136,38 +138,38 @@ impl Multivector {
         }
     }
     /// Create a multivector from its vector coefficients
-    pub fn vector(vector: impl Into<EcoVec<f64>>, flavor: Flavor) -> Self {
+    pub fn vector(vector: impl Into<Coefs>, flavor: Flavor) -> Self {
         let mut coefs = vector.into();
         let dims = coefs.len();
         coefs.insert(0, 0.0);
         coefs.extend(repeat_n(0.0, (1 << dims) - 1 - dims));
         Multivector { coefs, flavor }
     }
-    pub fn vga_vector(vector: impl Into<EcoVec<f64>>) -> Self {
+    pub fn vga_vector(vector: impl Into<Coefs>) -> Self {
         Self::vector(vector.into(), Flavor::Vanilla)
     }
-    pub fn pga_vector(vector: impl Into<EcoVec<f64>>) -> Self {
+    pub fn pga_vector(vector: impl Into<Coefs>) -> Self {
         Self::vector(vector.into(), Flavor::Projective)
     }
     /// Create a multivector from its n-1 blade coefficients
-    pub fn n_1_blades(blades: impl Into<EcoVec<f64>>, flavor: Flavor) -> Self {
+    pub fn n_1_blades(blades: impl Into<Coefs>, flavor: Flavor) -> Self {
         let mut coefs = blades.into();
         let dims = coefs.len();
         coefs.insert(0, 0.0);
         coefs.extend(repeat_n(0.0, (1 << dims) - 1 - dims));
-        coefs.make_mut().rotate_left(dims + 2);
+        coefs.as_mut_slice().rotate_left(dims + 2);
         Multivector { coefs, flavor }
     }
-    pub fn vga_n_1_blades(blades: impl Into<EcoVec<f64>>) -> Self {
+    pub fn vga_n_1_blades(blades: impl Into<Coefs>) -> Self {
         Self::n_1_blades(blades.into(), Flavor::Vanilla)
     }
-    pub fn pga_n_1_blades(blades: impl Into<EcoVec<f64>>) -> Self {
+    pub fn pga_n_1_blades(blades: impl Into<Coefs>) -> Self {
         Self::n_1_blades(blades.into(), Flavor::Projective)
     }
     /// Create a multivector from some low-grade, even, or all blades
     pub fn blades_left(
         dims: u8,
-        blades: impl Into<EcoVec<f64>>,
+        blades: impl Into<Coefs>,
         flavor: Flavor,
     ) -> Result<Self, EcoVec<f64>> {
         Self::blades_impl(dims, blades.into(), false, flavor)
@@ -175,14 +177,14 @@ impl Multivector {
     /// Create a multivector from some high-grade, even, or all blades
     pub fn blades_right(
         dims: u8,
-        blades: impl Into<EcoVec<f64>>,
+        blades: impl Into<Coefs>,
         flavor: Flavor,
     ) -> Result<Self, EcoVec<f64>> {
         Self::blades_impl(dims, blades.into(), true, flavor)
     }
     fn blades_impl(
         dims: u8,
-        mut blades: EcoVec<f64>,
+        mut blades: Coefs,
         odd: bool,
         flavor: Flavor,
     ) -> Result<Self, EcoVec<f64>> {
@@ -191,7 +193,7 @@ impl Multivector {
             Self::all(blades)
         } else if blades.len() * 2 == blade_count {
             blades.extend(repeat_n(0.0, blade_count / 2));
-            let slice = blades.make_mut();
+            let slice = blades.as_mut_slice();
             let mut left = 0;
             for g in 0..=dims {
                 let i = grade_size(dims, g);
@@ -212,18 +214,18 @@ impl Multivector {
                 let grade_size = grade_size(dims, g);
                 if grade_size == blades.len() {
                     blades.extend(repeat_n(0.0, blade_count - grade_size));
-                    blades.make_mut().rotate_right(left);
+                    blades.as_mut_slice().rotate_right(left);
                     return Ok(Self::all(blades).flavor(flavor));
                 }
                 left += grade_size;
             }
-            return Err(blades);
+            return Err(blades.into());
         })
     }
     pub fn scalar(mut dims: u8, f: f64, flavor: Flavor) -> Self {
         dims += flavor.dim_adjustment();
-        let mut coefs = eco_vec![0.0; 1 << dims];
-        coefs.make_mut()[0] = f;
+        let mut coefs = Coefs::new_n(0.0, 1 << dims);
+        coefs[0] = f;
         Multivector { coefs, flavor }
     }
     /// Create a unit pseudoscalar
@@ -245,8 +247,8 @@ impl Multivector {
     /// Create a pseudoscalar
     pub fn pseudoscalar(mut dims: u8, n: f64, flavor: Flavor) -> Self {
         dims += flavor.dim_adjustment();
-        let mut coefs = eco_vec![0.0; 1 << dims];
-        *coefs.make_mut().last_mut().unwrap() = n;
+        let mut coefs = Coefs::new_n(0.0, 1 << dims);
+        *coefs.last_mut().unwrap() = n;
         Multivector { coefs, flavor }
     }
     /// Set the flavor
@@ -278,7 +280,7 @@ impl Multivector {
         self.coefs.iter().copied()
     }
     pub fn iter_mut(&mut self) -> slice::IterMut<'_, f64> {
-        self.coefs.make_mut().iter_mut()
+        self.coefs.as_mut_slice().iter_mut()
     }
     /// Geometrically dual the multivector
     pub fn dual(&mut self) {
@@ -400,8 +402,8 @@ impl Multivector {
     fn product_impl(&mut self, rhs: Self, flavor: Flavor, mode: MetricMode) {
         let (a, b) = (self, rhs);
         let dims = a.dims();
-        let mut new_coefs = eco_vec![0.0; a.coefs.len()];
-        let slice = new_coefs.make_mut();
+        let mut new_coefs = Coefs::new_n(0.0, a.coefs.len());
+        let slice = new_coefs.as_mut_slice();
         let (mask_table, inv_mask_table) = mask_tables(dims);
         let metrics = blade_metrics(dims, flavor, mode);
         for (bi, &b_mask) in mask_table.iter().enumerate() {
@@ -471,12 +473,12 @@ impl Multivector {
     }
     #[doc(hidden)]
     pub fn make_scalar_only(&mut self) {
-        for c in self.coefs.make_mut().iter_mut().skip(1) {
+        for c in self.coefs.as_mut_slice().iter_mut().skip(1) {
             *c = 0.0;
         }
     }
     fn nanify(&mut self) {
-        self.coefs.make_mut().fill(0.0);
+        self.coefs.as_mut_slice().fill(0.0);
         self.set_blade(0b0, f64::NAN);
     }
     pub fn inverted(mut self) -> Self {
@@ -714,7 +716,9 @@ impl PartialEq for Multivector {
     fn eq(&self, other: &Self) -> bool {
         self.as_scalar() == other.as_scalar()
             || self.coefs.len() == other.coefs.len()
-                && self.coefs.iter().zip(&other.coefs).all(|(a, b)| eq(*a, *b))
+                && (self.coefs.iter())
+                    .zip(other.coefs.iter())
+                    .all(|(a, b)| eq(*a, *b))
     }
 }
 
@@ -746,8 +750,7 @@ impl Ord for Multivector {
             return (a.partial_cmp(&b)).unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()));
         }
         self.coefs.len().cmp(&other.coefs.len()).then_with(|| {
-            self.iter()
-                .zip(other)
+            (self.iter().zip(other))
                 .map(|(a, b)| {
                     a.partial_cmp(&b)
                         .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
@@ -760,12 +763,12 @@ impl Ord for Multivector {
 
 impl PartialEq<[f64]> for Multivector {
     fn eq(&self, other: &[f64]) -> bool {
-        self.coefs == other
+        (self.coefs.iter().zip(other)).all(|(a, b)| a == b || a.is_nan() == b.is_nan())
     }
 }
 impl<const N: usize> PartialEq<[f64; N]> for Multivector {
     fn eq(&self, other: &[f64; N]) -> bool {
-        self.coefs == other
+        self == other.as_slice()
     }
 }
 
@@ -782,7 +785,7 @@ impl Neg for Multivector {
 impl AddAssign<f64> for Multivector {
     fn add_assign(&mut self, rhs: f64) {
         if self.coefs.is_empty() {
-            self.coefs = eco_vec![rhs]
+            self.coefs = [rhs].into()
         } else {
             self[0] += rhs
         }
@@ -803,7 +806,7 @@ impl AddAssign for Multivector {
             *self += b;
         } else {
             self.conform(&mut rhs);
-            for (a, b) in self.coefs.make_mut().iter_mut().zip(rhs.coefs) {
+            for (a, b) in self.coefs.as_mut_slice().iter_mut().zip(rhs.coefs) {
                 *a += b;
             }
         }
@@ -826,7 +829,7 @@ impl SubAssign for Multivector {
             self[0] -= b;
         } else {
             self.conform(&mut rhs);
-            for (a, b) in self.coefs.make_mut().iter_mut().zip(rhs.coefs) {
+            for (a, b) in self.coefs.as_mut_slice().iter_mut().zip(rhs.coefs) {
                 *a -= b;
             }
         }
@@ -942,7 +945,7 @@ impl Index<usize> for Multivector {
 }
 impl IndexMut<usize> for Multivector {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.coefs.make_mut()[index]
+        &mut self.coefs.as_mut_slice()[index]
     }
 }
 impl<'a> IntoIterator for &'a Multivector {

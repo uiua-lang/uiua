@@ -3,6 +3,7 @@
 pub mod ast;
 mod complex;
 mod defs;
+mod ebuf;
 mod error;
 pub mod ga;
 mod inputs;

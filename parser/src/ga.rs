@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, fmt, iter::repeat_n};
+use std::{cell::RefCell, collections::HashMap, iter::repeat_n};
 
 use serde::*;
 
@@ -61,6 +61,39 @@ pub fn mask_tables(dims: u8) -> MaskTables {
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
 )]
+pub struct Flavor2 {
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    e0: bool,
+    #[serde(skip_serializing_if = "zero")]
+    neg: u8,
+}
+fn zero(n: &u8) -> bool {
+    *n == 0
+}
+impl Flavor2 {
+    pub const VANILLA: Self = Flavor2 { e0: false, neg: 0 };
+    pub fn is_vanilla(&self) -> bool {
+        self == &Self::VANILLA
+    }
+    pub fn metric(&self, index: u8) -> i32 {
+        if self == &Self::VANILLA {
+            1
+        } else if self.neg == 0 {
+            index.min(1) as i32
+        } else if index == 0 {
+            0
+        } else if index <= self.neg {
+            -1
+        } else {
+            1
+        }
+    }
+}
+
+/// A geometric algebra flavor
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
 pub enum Flavor {
     /// Cl(n, 0, 0)
     #[default]
@@ -96,37 +129,6 @@ impl Flavor {
         match self {
             Flavor::Projective => 1,
             _ => 0,
-        }
-    }
-    pub fn try_from_str(s: &str) -> Option<Result<Self, &'static str>> {
-        Some(Ok(match s {
-            "VGA" => Flavor::Vanilla,
-            "PGA" => Flavor::Projective,
-            s => {
-                let s = s.strip_prefix("Cl")?.trim();
-                let mut iter = s.split([' ', '\t', ',']).filter(|s| !s.is_empty());
-                let mut next = || iter.next().and_then(|s| s.parse::<u8>().ok());
-                let fl = next()
-                    .map(|p1| Flavor::Cl(p1, next().unwrap_or(0), next().unwrap_or(0)))
-                    .filter(|_| iter.next().is_none())
-                    .ok_or("Invalid GA spec");
-                match fl {
-                    Ok(fl) => fl,
-                    Err(e) => return Some(Err(e)),
-                }
-            }
-        }))
-    }
-}
-
-impl fmt::Display for Flavor {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Flavor::Vanilla => write!(f, "VGA"),
-            Flavor::Projective => write!(f, "PGA"),
-            Flavor::Cl(p1, 0, 0) => write!(f, "Cl{p1}"),
-            Flavor::Cl(p1, n1, 0) => write!(f, "Cl {p1} {n1}"),
-            Flavor::Cl(p1, n1, z) => write!(f, "Cl {p1} {n1} {z}"),
         }
     }
 }

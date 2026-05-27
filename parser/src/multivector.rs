@@ -16,13 +16,32 @@ use crate::{Complex, SUBSCRIPT_DIGITS, ebuf::EBuf, ga::*};
 
 type Coefs = EBuf<f64, 4>;
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Multivector {
     #[serde(default, skip_serializing_if = "<[f64]>::is_empty", rename = "c")]
     coefs: Coefs,
     /// The geometric algebra flavor
     #[serde(default, skip_serializing_if = "is_vanilla", rename = "f")]
     pub flavor: Flavor,
+    mode: Mode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+enum Mode {
+    Scalar(u8),
+    Pseduscalar(u8),
+    Vector,
+    N1,
+    All,
+}
+impl Mode {
+    fn coef_dims(&self, coefs_len: usize) -> u8 {
+        match self {
+            Mode::Scalar(d) | Mode::Pseduscalar(d) => *d,
+            Mode::N1 | Mode::Vector => coefs_len as u8,
+            Mode::All => (coefs_len.max(1) as f64).log2() as u8,
+        }
+    }
 }
 
 fn is_vanilla(flavor: &Flavor) -> bool {
@@ -30,6 +49,27 @@ fn is_vanilla(flavor: &Flavor) -> bool {
 }
 
 impl Multivector {
+    fn make_all(&mut self) {
+        match self.mode {
+            Mode::Scalar(d) => self.coefs.extend(repeat_n(0.0, (1 << d) - 1)),
+            Mode::Pseduscalar(d) => {
+                self.coefs.extend(repeat_n(0.0, (1 << d) - 1));
+                self.coefs.rotate_left(1);
+            }
+            Mode::Vector => {
+                let dims = self.coefs.len();
+                self.coefs.insert(0, 0.0);
+                self.coefs.extend(repeat_n(0.0, (1 << dims) - 1 - dims));
+            }
+            Mode::N1 => {
+                let dims = self.coefs.len();
+                self.coefs.insert(0, 0.0);
+                self.coefs.extend(repeat_n(0.0, (1 << dims) - 1 - dims));
+                self.coefs.as_mut_slice().rotate_left(dims + 2);
+            }
+            Mode::All => {}
+        }
+    }
     /// Set the maximum number of dimensions
     pub fn set_dims(&mut self, new_dims: u8) {
         let dims = self.dims();
@@ -118,7 +158,7 @@ impl Multivector {
     }
     /// Get the maximum number of dimensions
     pub fn dims(&self) -> u8 {
-        (self.coefs.len().max(1) as f64).log2() as u8
+        self.mode.coef_dims(self.coefs.len())
     }
     /// Create a multivector from the real and imaginary parts of a complex number
     pub fn complex(re: impl Into<f64>, im: impl Into<f64>) -> Self {
@@ -135,15 +175,16 @@ impl Multivector {
         Multivector {
             coefs,
             flavor: Flavor::Vanilla,
+            mode: Mode::All,
         }
     }
     /// Create a multivector from its vector coefficients
     pub fn vector(vector: impl Into<Coefs>, flavor: Flavor) -> Self {
-        let mut coefs = vector.into();
-        let dims = coefs.len();
-        coefs.insert(0, 0.0);
-        coefs.extend(repeat_n(0.0, (1 << dims) - 1 - dims));
-        Multivector { coefs, flavor }
+        Multivector {
+            coefs: vector.into(),
+            flavor,
+            mode: Mode::Vector,
+        }
     }
     pub fn vga_vector(vector: impl Into<Coefs>) -> Self {
         Self::vector(vector.into(), Flavor::Vanilla)
@@ -153,12 +194,11 @@ impl Multivector {
     }
     /// Create a multivector from its n-1 blade coefficients
     pub fn n_1_blades(blades: impl Into<Coefs>, flavor: Flavor) -> Self {
-        let mut coefs = blades.into();
-        let dims = coefs.len();
-        coefs.insert(0, 0.0);
-        coefs.extend(repeat_n(0.0, (1 << dims) - 1 - dims));
-        coefs.as_mut_slice().rotate_left(dims + 2);
-        Multivector { coefs, flavor }
+        Multivector {
+            coefs: blades.into(),
+            flavor,
+            mode: Mode::N1,
+        }
     }
     pub fn vga_n_1_blades(blades: impl Into<Coefs>) -> Self {
         Self::n_1_blades(blades.into(), Flavor::Vanilla)
@@ -222,11 +262,12 @@ impl Multivector {
             return Err(blades.into());
         })
     }
-    pub fn scalar(mut dims: u8, f: f64, flavor: Flavor) -> Self {
-        dims += flavor.dim_adjustment();
-        let mut coefs = Coefs::new_n(0.0, 1 << dims);
-        coefs[0] = f;
-        Multivector { coefs, flavor }
+    pub fn scalar(dims: u8, f: f64, flavor: Flavor) -> Self {
+        Multivector {
+            coefs: Coefs::new_n(f, 1),
+            flavor,
+            mode: Mode::Scalar(dims + flavor.dim_adjustment()),
+        }
     }
     /// Create a unit pseudoscalar
     pub fn pseudo_unit(dims: u8, flavor: Flavor) -> Self {
@@ -245,11 +286,12 @@ impl Multivector {
         Self::pseudoscalar(dims, n, Flavor::Projective)
     }
     /// Create a pseudoscalar
-    pub fn pseudoscalar(mut dims: u8, n: f64, flavor: Flavor) -> Self {
-        dims += flavor.dim_adjustment();
-        let mut coefs = Coefs::new_n(0.0, 1 << dims);
-        *coefs.last_mut().unwrap() = n;
-        Multivector { coefs, flavor }
+    pub fn pseudoscalar(dims: u8, f: f64, flavor: Flavor) -> Self {
+        Multivector {
+            coefs: Coefs::new_n(f, 1),
+            flavor,
+            mode: Mode::Pseduscalar(dims + flavor.dim_adjustment()),
+        }
     }
     /// Set the flavor
     pub fn flavor(mut self, flavor: Flavor) -> Self {
@@ -262,19 +304,23 @@ impl Multivector {
     }
     /// Check if the multivector is a scalar
     pub fn is_scalar(&self) -> bool {
-        !self.coefs.is_empty() && self.coefs.iter().skip(1).all(|&c| c == 0.0)
+        match self.mode {
+            Mode::Scalar(_) => true,
+            Mode::All => !self.coefs.is_empty() && self.coefs.iter().skip(1).all(|&c| c == 0.0),
+            _ => false,
+        }
     }
     /// Try to get the multivector as a scalar
     pub fn as_scalar(&self) -> Option<f64> {
-        self.is_scalar().then(|| self[0])
+        self.is_scalar().then(|| self.coefs[0])
     }
     /// Try to get the multivector as a complex number
     pub fn as_complex(&self) -> Option<Complex> {
         (self.flavor == Flavor::Vanilla
             && self.coefs.len() == 4
-            && self[1] == 0.0
-            && self[2] == 0.0)
-            .then(|| Complex::new(self[0], self[3]))
+            && self.get_blade(0b01) == 0.0
+            && self.get_blade(0b10) == 0.0)
+            .then(|| Complex::new(self.get_blade(0), self.get_blade(0b11)))
     }
     pub fn iter(&self) -> iter::Copied<slice::Iter<'_, f64>> {
         self.coefs.iter().copied()
@@ -400,7 +446,7 @@ impl Multivector {
         self
     }
     fn product_impl(&mut self, rhs: Self, flavor: Flavor, mode: MetricMode) {
-        let (a, b) = (self, rhs);
+        let (a, mut b) = (self, rhs);
         let dims = a.dims();
         let mut new_coefs = Coefs::new_n(0.0, a.coefs.len());
         let slice = new_coefs.as_mut_slice();
@@ -442,8 +488,40 @@ impl Multivector {
         if (mask & !dim_mask).count_ones() > 0 {
             0.0
         } else {
-            let (_, inv_mask_table) = mask_tables(dims);
-            self[inv_mask_table[mask]]
+            match self.mode {
+                Mode::Scalar(_) => {
+                    if mask == 0 {
+                        self.coefs[0]
+                    } else {
+                        0.0
+                    }
+                }
+                Mode::Pseduscalar(_) => {
+                    if mask.count_ones() == dims as u32 {
+                        self.coefs[(1 << dims) - 1]
+                    } else {
+                        0.0
+                    }
+                }
+                Mode::Vector => {
+                    if mask.count_ones() == 1 {
+                        self.coefs[mask.trailing_zeros() as usize]
+                    } else {
+                        0.0
+                    }
+                }
+                Mode::N1 => {
+                    if mask.count_ones() == dims as u32 {
+                        self.coefs[mask.trailing_ones() as usize]
+                    } else {
+                        0.0
+                    }
+                }
+                Mode::All => {
+                    let (_, inv_mask_table) = mask_tables(dims);
+                    self.coefs[inv_mask_table[mask]]
+                }
+            }
         }
     }
     pub fn set_blade(&mut self, mask: usize, coef: f64) {
@@ -453,8 +531,35 @@ impl Multivector {
             self.set_dims(dims + 1);
             self.set_blade(mask, coef);
         } else {
+            match self.mode {
+                Mode::Scalar(_) => {
+                    if mask == 0 {
+                        self.coefs[0] = coef;
+                        return;
+                    }
+                }
+                Mode::Pseduscalar(_) => {
+                    if mask.count_ones() == dims as u32 {
+                        self.coefs[(1 << dims) - 1] = coef;
+                        return;
+                    }
+                }
+                Mode::Vector => {
+                    if mask.count_ones() == 1 {
+                        self.coefs[mask.trailing_zeros() as usize] = coef;
+                        return;
+                    }
+                }
+                Mode::N1 => {
+                    if mask.count_ones() == dims as u32 {
+                        self.coefs[mask.trailing_ones() as usize] = coef;
+                        return;
+                    }
+                }
+                Mode::All => {}
+            }
             let (_, inv_mask_table) = mask_tables(dims);
-            self[inv_mask_table[mask]] = coef;
+            self.coefs[inv_mask_table[mask]] = coef;
         }
     }
     pub fn grades(&self) -> impl Iterator<Item = &[f64]> {
@@ -653,18 +758,18 @@ enum MetricMode {
 }
 
 /// Calculate, cache, and access the blade metrics for a given number of dimensions and GA flavor
-fn blade_metrics(dims: u8, flavor: Flavor, mode: MetricMode) -> &'static [f64] {
+fn blade_metrics(dims: u8, flavor: Flavor, metric_mode: MetricMode) -> &'static [f64] {
     type Cache = HashMap<(u8, Flavor, MetricMode), &'static [f64]>;
     thread_local! {
         static CACHE: RefCell<Cache> = Default::default();
     }
     let blade_count = 1 << dims;
     CACHE.with(move |r| {
-        *(r.borrow_mut().entry((dims, flavor, mode))).or_insert_with(|| {
+        *(r.borrow_mut().entry((dims, flavor, metric_mode))).or_insert_with(|| {
             let mut metrics = Vec::with_capacity(blade_count * blade_count);
             for a in 0..blade_count {
                 for b in 0..blade_count {
-                    let has_metric = match mode {
+                    let has_metric = match metric_mode {
                         MetricMode::All => true,
                         MetricMode::Left => a == 0 || a & b == a,
                         MetricMode::Right => b == 0 || a & b == b,
@@ -937,17 +1042,6 @@ impl Div for Multivector {
 #[derive(Debug, Clone)]
 pub struct UnableToInvert<M = Multivector>(pub M);
 
-impl Index<usize> for Multivector {
-    type Output = f64;
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.coefs[index]
-    }
-}
-impl IndexMut<usize> for Multivector {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.coefs.as_mut_slice()[index]
-    }
-}
 impl<'a> IntoIterator for &'a Multivector {
     type Item = f64;
     type IntoIter = iter::Copied<slice::Iter<'a, f64>>;

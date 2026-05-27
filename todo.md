@@ -7,7 +7,6 @@
   - Missing primitives
   - Blog post
 - `match` subscripts
-- Macro signature comments
 - Data def method to construct with validators but not defaults/initializers
 - Optimize `rows match`
 - `first group/partition` optimization

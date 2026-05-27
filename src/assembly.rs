@@ -2,6 +2,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     fmt,
     hash::{Hash, Hasher},
+    mem::swap,
     ops::{Index, IndexMut},
     path::PathBuf,
     str::FromStr,
@@ -13,10 +14,11 @@ use ecow::{EcoString, EcoVec, eco_vec};
 use indexmap::IndexMap;
 use rapidhash::quality::RapidHasher;
 use serde::*;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
-    BindingCounts, CodeSpan, FunctionId, Ident, InputSrc, Inputs, LocalNames, Node,
-    SUBSCRIPT_DIGITS, SigNode, Signature, Sp, Span, Uiua, UiuaResult, Value,
+    BindingCounts, CodeSpan, FunctionId, Ident, InputSrc, Inputs, LocalNames, Node, SigNode,
+    Signature, Sp, Span, Uiua, UiuaResult, Value,
     ast::Word,
     compile::{LocalIndex, Module},
     is_ident_char,
@@ -793,7 +795,16 @@ pub struct DocComment {
     pub text: EcoString,
     /// The signature of the binding
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub sig: Option<DocCommentSig>,
+    pub sig: Option<Result<DocCommentSig, DocCommentSigError>>,
+}
+
+/// An error encountered when parsing a doc comment signature
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct DocCommentSigError {
+    /// The error message
+    pub message: String,
+    /// The original comment line text
+    pub original: String,
 }
 
 /// A signature in a doc comment
@@ -808,6 +819,9 @@ pub struct DocCommentSig {
     /// The outputs of the signature
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub outputs: Option<Vec<DocCommentArg>>,
+    /// Functions
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub functions: Option<Vec<DocCommentSig>>,
 }
 
 impl DocCommentSig {
@@ -838,6 +852,13 @@ impl DocCommentSig {
 
 impl fmt::Display for DocCommentSig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(functions) = &self.functions {
+            for function in functions {
+                write!(f, "(")?;
+                function.fmt(f)?;
+                write!(f, ") ")?;
+            }
+        }
         if let Some(outputs) = &self.outputs {
             for output in outputs {
                 write!(f, " {}", output.name)?;
@@ -883,75 +904,120 @@ fn is_sig_line(s: &str) -> bool {
         return false;
     }
     let s = s.trim_end();
-    (!s.ends_with(['?', '$']) || s.ends_with(" ?") || s.ends_with(" $"))
-        && (s.chars()).all(|c| {
-            c.is_whitespace()
-                || "?$:".contains(c)
-                || is_ident_char(c)
-                || SUBSCRIPT_DIGITS.contains(&c)
-        })
+    !s.ends_with(['?', '$']) || s.ends_with(" ?") || s.ends_with(" $")
 }
 
 impl FromStr for DocCommentSig {
-    type Err = ();
+    type Err = Option<String>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if !is_sig_line(s) {
-            return Err(());
+            return Err(None);
         }
-        // Split into args and outputs
-        let mut label = false;
-        let (mut outputs_text, mut args_text) = s
-            .split_once('?')
-            .or_else(|| s.split_once('$').inspect(|_| label = true))
-            .ok_or(())?;
-        outputs_text = outputs_text.trim();
-        args_text = args_text.trim();
-        // Parse args and outputs
-        let mut args = Vec::new();
-        let mut outputs = Vec::new();
-        for (args, text) in [(&mut args, args_text), (&mut outputs, outputs_text)] {
-            // Tokenize text
-            let mut tokens = Vec::new();
-            for frag in text.split_whitespace() {
-                for (i, token) in frag.split(':').enumerate() {
-                    if i > 0 {
-                        tokens.push(":");
-                    }
-                    tokens.push(token);
+        enum Token {
+            OpenParen,
+            CloseParen,
+            QuestionMark,
+            DollarSign,
+            Colon,
+            Ident(EcoString),
+        }
+        impl Token {
+            fn str(&self) -> &str {
+                match self {
+                    OpenParen => "(",
+                    CloseParen => ")",
+                    QuestionMark => "?",
+                    DollarSign => "$",
+                    Colon => ":",
+                    Ident(ident) => ident.as_str(),
                 }
             }
-            // Parse tokens into args
-            let mut curr_arg_name = None;
-            let mut tokens = tokens.into_iter().peekable();
-            while let Some(token) = tokens.next() {
-                if token == ":" {
-                    let ty = tokens.next().unwrap_or_default();
-                    args.push(DocCommentArg {
-                        name: curr_arg_name.take().unwrap_or_default(),
-                        ty: if ty.is_empty() { None } else { Some(ty.into()) },
-                    });
-                } else {
-                    if let Some(curr) = curr_arg_name.take() {
-                        args.push(DocCommentArg {
-                            name: curr,
-                            ty: None,
-                        });
+        }
+        use Token::*;
+        let mut tokens = Vec::new();
+        let mut graphemes = s.graphemes(true).peekable();
+        while let Some(c) = graphemes.next() {
+            match c {
+                "(" => tokens.push(OpenParen),
+                ")" => tokens.push(CloseParen),
+                "?" => tokens.push(QuestionMark),
+                "$" => tokens.push(DollarSign),
+                ":" => tokens.push(Colon),
+                c if c.chars().all(is_ident_char) => {
+                    let mut ident = EcoString::from(c);
+                    while graphemes
+                        .peek()
+                        .is_some_and(|c| c.chars().all(is_ident_char))
+                    {
+                        ident.push_str(graphemes.next().unwrap());
                     }
-                    curr_arg_name = Some(token.into());
+                    tokens.push(Ident(ident))
                 }
-            }
-            if let Some(curr) = curr_arg_name.take() {
-                args.push(DocCommentArg {
-                    name: curr,
-                    ty: None,
-                });
+                c if c.chars().all(char::is_whitespace) => {}
+                c => return Err(Some(format!("Unexpected character `{c}`"))),
             }
         }
-        Ok(DocCommentSig {
-            label,
-            args: (!args.is_empty()).then_some(args),
-            outputs: (!outputs.is_empty()).then_some(outputs),
-        })
+        let mut tokens = tokens.as_slice();
+        fn parse_sig(tokens: &mut &[Token]) -> Option<DocCommentSig> {
+            let (mut args, mut outputs) = (Vec::new(), Vec::new());
+            let mut curr: &mut Vec<DocCommentArg> = &mut outputs;
+            let mut label = None;
+            let mut set_type = false;
+            while let [token, rest @ ..] = *tokens {
+                match token {
+                    Ident(ty) if set_type => {
+                        let Some(last) = curr.last_mut().filter(|arg| arg.ty.is_none()) else {
+                            break;
+                        };
+                        last.ty = Some(ty.clone());
+                        set_type = false;
+                    }
+                    _ if set_type => break,
+                    QuestionMark if label.is_none() => {
+                        label = Some(false);
+                        curr = &mut args;
+                    }
+                    DollarSign if label.is_none() => {
+                        label = Some(true);
+                        curr = &mut args;
+                    }
+                    Colon => set_type = true,
+                    Ident(ident) => curr.push(DocCommentArg {
+                        name: ident.clone(),
+                        ty: None,
+                    }),
+                    _ => break,
+                }
+                *tokens = rest;
+            }
+            if label.is_none() {
+                swap(&mut args, &mut outputs);
+            }
+            Some(DocCommentSig {
+                label: label.unwrap_or(false),
+                args: (!args.is_empty()).then_some(args),
+                outputs: (!outputs.is_empty()).then_some(outputs),
+                functions: None,
+            })
+        }
+        let mut functions: Option<Vec<_>> = None;
+        while let [OpenParen, rest @ ..] = tokens {
+            let mut rest = rest;
+            if let Some(function) = parse_sig(&mut rest) {
+                functions.get_or_insert_default().push(function);
+            }
+            match rest {
+                [CloseParen, rest @ ..] => tokens = rest,
+                [] => return Err(Some("Expected `)`".into())),
+                [token, ..] => return Err(Some(format!("Unexpected token `{}`", token.str()))),
+            }
+        }
+        let mut sig = parse_sig(&mut tokens).unwrap_or_default();
+        if let Some(token) = tokens.first() {
+            return Err(Some(format!("Unexpected token `{}`", token.str())));
+        }
+        sig.functions = functions;
+        Ok(sig)
     }
 }
 
@@ -966,7 +1032,15 @@ impl From<&str> for DocComment {
         let mut sig = None;
         let sig_line = text.lines().position(is_sig_line);
         let raw_text = if let Some(i) = sig_line {
-            sig = text.lines().nth(i).unwrap().parse().ok();
+            let sig_line = text.lines().nth(i).unwrap();
+            sig = match sig_line.parse::<DocCommentSig>() {
+                Ok(sig) => Some(Ok(sig)),
+                Err(None) => None,
+                Err(Some(message)) => Some(Err(DocCommentSigError {
+                    message,
+                    original: sig_line.into(),
+                })),
+            };
 
             let mut text: EcoString = (text.lines().take(i))
                 .chain(["\n"])

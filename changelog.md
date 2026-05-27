@@ -13,6 +13,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add sided subscripts for [`negate ¯`](https://uiua.org/docs/negate), which get the conjugate or negative conjugate
 - Add numeric subscripts for [`rise ⍏`](https://uiua.org/docs/rise) and [`fall ⍖`](https://uiua.org/docs/fall), which give [`pick ⊡`](https://uiua.org/docs/pick)-compatible indices
 - Lone numeric subscripts now format to number literals, making it easier to split them off
+- Allow for function arguments to macros to be indicated in a signature comment
+  - Put signature comments for each function between `()`s at the beginning of the macro's signature comment
 - Add experimental `ᵢ` and `ᵣ` subscripts, which format from `,i` and `,r` respectively
   - Only currently compatible with dyadic pervasives and custom subscripts, but may be used for other things in the future
 - Rework experimental [Geometric Algebra](https://uiua.org/docs/experimental#geometric-algebra) system

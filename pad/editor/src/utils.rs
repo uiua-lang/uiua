@@ -998,7 +998,10 @@ pub fn gen_code_view(id: &str, code: &str, hidden: &str) -> View {
                                     }
                                 }
                                 if let Some(sig) = &comment.sig {
-                                    title.push_str(&sig.to_string());
+                                    match sig {
+                                        Ok(sig) => title.push_str(&sig.to_string()),
+                                        Err(e) => title.push_str(&e.original),
+                                    }
                                     title.push('\n');
                                 }
                                 title.push_str(&comment.text.replace("\n\n\n", "\n"));

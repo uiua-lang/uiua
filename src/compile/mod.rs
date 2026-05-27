@@ -971,6 +971,7 @@ impl Compiler {
         }
         Ok(node)
     }
+    /// Validate a `DocCommentSig` against a concrete `Node`. Doesn't apply to macros.
     fn apply_node_comment(
         &mut self,
         node: &mut Node,
@@ -980,19 +981,27 @@ impl Compiler {
     ) {
         let mut spandex: Option<usize> = None;
         // Validate comment signature
-        if let Ok(sig) = node.sig()
-            && !comment_sig.matches_sig(sig)
-        {
-            let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
-            self.emit_diagnostic(
-                format!(
-                    "{name} comment describes {}, \
+        if let Ok(sig) = node.sig() {
+            if comment_sig.functions.is_some() {
+                let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
+                self.emit_diagnostic(
+                    "Comment specifies functions, but this is not a macro",
+                    DiagnosticKind::Warning,
+                    self.get_span(span).clone().code().unwrap(),
+                );
+            }
+            if !comment_sig.matches_sig(sig) {
+                let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
+                self.emit_diagnostic(
+                    format!(
+                        "{name} comment describes {}, \
                         but its code has signature {sig}",
-                    comment_sig.sig_string()
-                ),
-                DiagnosticKind::Warning,
-                self.get_span(span).clone().code().unwrap(),
-            );
+                        comment_sig.sig_string()
+                    ),
+                    DiagnosticKind::Warning,
+                    self.get_span(span).clone().code().unwrap(),
+                );
+            }
         }
         if comment_sig.label {
             // Add argument labels
@@ -1016,6 +1025,29 @@ impl Compiler {
                 );
                 node.push(labels);
             }
+        }
+    }
+    /// Validate a `DocCommentSig` against a macro.
+    fn apply_macro_comment(
+        &mut self,
+        margs: usize,
+        comment_sig: &DocCommentSig,
+        name: &str,
+        span: &CodeSpan,
+    ) {
+        let Some(functions) = &comment_sig.functions else {
+            return;
+        };
+        if functions.len() != margs {
+            self.emit_diagnostic(
+                format!(
+                    "{name} comment lists {} function{}, but it takes {margs}",
+                    functions.len(),
+                    if functions.len() == 1 { "" } else { "s" }
+                ),
+                DiagnosticKind::Warning,
+                span.clone(),
+            );
         }
     }
     /// Compile modifier args

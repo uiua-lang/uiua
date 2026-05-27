@@ -119,11 +119,26 @@ impl Compiler {
 
         // Handle macro
         let max_placeholder = max_placeholder(&binding.words);
-        if ident_margs > 0 && custom_subscript {
-            self.add_error(
-                span.clone(),
-                "Custom subscripts in macros are not supported",
-            );
+        if ident_margs > 0 {
+            if let Some(comment) = &meta.comment
+                && let Some(sig) = &comment.sig
+            {
+                // Apply doc comment
+                match sig {
+                    Ok(sig) => self.apply_macro_comment(ident_margs, sig, &name, span),
+                    Err(e) => self.emit_diagnostic(
+                        e.message.clone(),
+                        DiagnosticKind::Warning,
+                        span.clone(),
+                    ),
+                }
+            }
+            if custom_subscript {
+                self.add_error(
+                    span.clone(),
+                    "Custom subscripts in macros are not supported",
+                );
+            }
         }
         if binding.code_macro {
             if prelude.external {
@@ -404,7 +419,12 @@ impl Compiler {
         if let Some(comment) = &meta.comment
             && let Some(sig) = &comment.sig
         {
-            self.apply_node_comment(&mut node, sig, &name, span);
+            match sig {
+                Ok(sig) => self.apply_node_comment(&mut node, sig, &name, span),
+                Err(e) => {
+                    self.emit_diagnostic(e.message.clone(), DiagnosticKind::Warning, span.clone())
+                }
+            }
         }
 
         // Resolve signature

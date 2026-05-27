@@ -757,18 +757,18 @@ impl WatchArgs {
                 last_time = Instant::now();
             }
             let mut child = WATCH_CHILD.lock();
-            if let Some(ch) = &mut *child {
-                if ch.try_wait()?.is_some() {
-                    print_watching();
-                    *child = None;
-                }
-                #[cfg(feature = "audio")]
-                {
-                    let mut buf = [0; 8];
-                    if audio_time_socket.recv(&mut buf).is_ok_and(|n| n == 8) {
-                        let time = f64::from_be_bytes(buf);
-                        audio_time.store(time.to_bits(), Ordering::Relaxed);
-                    }
+            if let Some(ch) = &mut *child
+                && ch.try_wait()?.is_some()
+            {
+                print_watching();
+                *child = None;
+            }
+            #[cfg(feature = "audio")]
+            {
+                let mut buf = [0; 8];
+                if audio_time_socket.recv(&mut buf).is_ok_and(|n| n == 8) {
+                    let time = f64::from_be_bytes(buf);
+                    audio_time.store(time.to_bits(), Ordering::Relaxed);
                 }
             }
         }

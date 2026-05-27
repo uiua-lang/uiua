@@ -1217,7 +1217,10 @@ mod server {
                         value.push_str("\n\n");
                         if let Some(sig) = &comment.sig {
                             value.push('`');
-                            value.push_str(&sig.to_string());
+                            match sig {
+                                Ok(sig) => value.push_str(&sig.to_string()),
+                                Err(e) => value.push_str(&e.original),
+                            }
                             value.push_str("`\n\n");
                         }
                         value.push_str(&comment.text);

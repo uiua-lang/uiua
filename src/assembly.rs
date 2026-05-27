@@ -900,7 +900,7 @@ pub struct DocCommentArg {
 }
 
 fn is_sig_line(s: &str) -> bool {
-    if s.chars().filter(|&c| "$?".contains(c)).count() != 1 {
+    if !s.contains(['?', '$']) {
         return false;
     }
     let s = s.trim_end();

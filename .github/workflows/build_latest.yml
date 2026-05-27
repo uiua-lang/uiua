@@ -164,7 +164,7 @@ jobs:
       - name: Prepare release notes
         run: echo "This release contains binaries for the latest \`main\` branch." >> release_notes.md
       - name: Create release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: latest
           name: Latest Build
@@ -254,7 +254,7 @@ jobs:
       - name: Zip
         run: 7z a -tzip uiua-bin-${{ matrix.target }}${{ matrix.name }}.zip ./target/${{ matrix.target }}/release/uiua${{ env.BINARY_EXT }}
       - name: Upload release assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: latest
           files: |

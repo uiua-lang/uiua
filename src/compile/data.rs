@@ -91,6 +91,7 @@ impl Compiler {
             span: usize,
             global_index: usize,
             comment: Option<EcoString>,
+            validator: Option<SigNode>,
             validator_inv: Option<Node>,
             init: Option<SigNode>,
         }
@@ -98,6 +99,7 @@ impl Compiler {
         // Collect fields
         let mut boxed = false;
         let mut has_fields = false;
+        let mut has_initializers = false;
         if let Some(data_fields) = data.fields {
             boxed = data_fields.boxed;
             has_fields = true;
@@ -168,7 +170,9 @@ impl Compiler {
                                 }
                                 .into(),
                                 span,
-                            ),
+                            )
+                            .sig_node()
+                            .unwrap(),
                             Node::CustomInverse(
                                 CustomInverse {
                                     un: Some(validator.clone()),
@@ -191,7 +195,9 @@ impl Compiler {
                                     }
                                     .into(),
                                     span,
-                                ),
+                                )
+                                .sig_node()
+                                .unwrap(),
                                 Node::CustomInverse(
                                     CustomInverse {
                                         normal: Ok(inverse.clone()),
@@ -209,7 +215,7 @@ impl Compiler {
                                 data_field.name.span.clone(),
                                 format!("Transforming validator has no inverse: {e}"),
                             );
-                            Some((validator.node, Node::empty()))
+                            Some((validator, Node::empty()))
                         }
                     }
                 } else {
@@ -222,6 +228,7 @@ impl Compiler {
                     data_field.init = None;
                 }
                 let init = if let Some(mut init) = data_field.init {
+                    has_initializers = true;
                     // Process comment
                     let mut sem = None;
                     if let Some(word) = init.words.pop() {
@@ -238,7 +245,7 @@ impl Compiler {
                     // Compile words
                     let mut sn = self.words_sig(init.words)?;
                     if let Some((va_node, _)) = &validator_and_inv {
-                        sn.node.push(va_node.clone());
+                        sn.node.push(va_node.node.clone());
                     }
                     if sn.sig.outputs() != 1 {
                         self.add_error(
@@ -262,13 +269,18 @@ impl Compiler {
                         .as_ref()
                         .map(|(va_node, _)| SigNode::new(Signature::new(1, 1), va_node.clone()))
                 };
+                let (validator, validator_inv) = match validator_and_inv {
+                    Some((a, b)) => (Some(a), Some(b)),
+                    None => (None, None),
+                };
                 fields.push(Field {
                     name: data_field.name.value,
                     name_span: data_field.name.span,
                     global_index: 0,
                     comment,
                     span,
-                    validator_inv: validator_and_inv.map(|(_, inv)| inv),
+                    validator,
+                    validator_inv,
                     init,
                 });
             }
@@ -364,7 +376,7 @@ impl Compiler {
             .iter()
             .map(|f| f.init.as_ref().map(|sn| sn.sig.args()).unwrap_or(1))
             .sum();
-        let mut node = if has_fields {
+        let mut con_node = if has_fields {
             let mut field_nodes = EcoVec::with_capacity(fields.len());
             for field in &fields {
                 let mut arg = if let Some(sn) = &field.init {
@@ -398,16 +410,46 @@ impl Compiler {
         } else {
             Node::empty()
         };
+        let mut no_init_node = if has_fields && has_initializers && data.func.is_none() {
+            let mut field_nodes = EcoVec::with_capacity(fields.len());
+            for field in &mut fields {
+                let mut arg = (field.validator.take())
+                    .unwrap_or_else(|| SigNode::new(Signature::new(1, 1), Node::empty()));
+                if boxed {
+                    arg.node.push(Node::Label(field.name.clone(), span));
+                } else if data.variant {
+                    arg.node.push(Node::TrackCaller(
+                        Node::ImplPrim(ImplPrimitive::ValidateNonBoxedVariant, field.span)
+                            .sig_node()
+                            .unwrap()
+                            .into(),
+                    ));
+                }
+                field_nodes.push(arg);
+            }
+            Some(Node::Array {
+                len: fields.len(),
+                inner: Node::Mod(Primitive::Bracket, field_nodes, span).into(),
+                boxed,
+                allow_ext: true,
+                prim: None,
+                span,
+            })
+        } else {
+            None
+        };
         // Handle variant
         if data.variant {
-            node.push(Node::new_push(variant_index));
-            if let Some(name) = data.name {
-                node.push(Node::Label(name.value, span));
-            } else {
-                self.add_error(data.init_span.clone(), "Variants must have a name");
-            }
-            if has_fields {
-                node.push(Node::ImplPrim(ImplPrimitive::TagVariant, span));
+            for node in no_init_node.as_mut().into_iter().chain([&mut con_node]) {
+                node.push(Node::new_push(variant_index));
+                if let Some(name) = &data.name {
+                    node.push(Node::Label(name.value.clone(), span));
+                } else {
+                    self.add_error(data.init_span.clone(), "Variants must have a name");
+                }
+                if has_fields {
+                    node.push(Node::ImplPrim(ImplPrimitive::TagVariant, span));
+                }
             }
         }
         let constructor_name = Ident::from("New");
@@ -419,7 +461,7 @@ impl Compiler {
         let constructor_func = self.asm.add_function(
             FunctionId::Named(constructor_name.clone()),
             Signature::new(constructor_args, 1),
-            node,
+            con_node,
             constr_local.index,
         );
         let mut constr_comment = match (&def_name, data.func.is_some()) {
@@ -428,21 +470,30 @@ impl Compiler {
             (None, false) => "Create a new data instance\nInstance ?".into(),
             (None, true) => "Create a new args instance\nArgs ?".into(),
         };
-        for field in &fields {
-            match field.init.as_ref().map(|sn| sn.sig.args()) {
-                Some(0) => continue,
-                Some(1) | None => {
-                    constr_comment.push(' ');
-                    constr_comment.push_str(&field.name);
-                }
-                Some(n) => {
-                    for i in 0..n {
-                        constr_comment.push(' ');
-                        constr_comment.push_str(&field.name);
-                        let mut i = i + 1;
-                        while i > 0 {
-                            constr_comment.push(SUBSCRIPT_DIGITS[i % 10]);
-                            i /= 10;
+        let mut no_init_comment = match &def_name {
+            Some(name) => format!("Create a new {name} without running initializers\n{name} ?"),
+            None => "Create a new data instance without running initializers\nInstance ?".into(),
+        };
+        for (comment, no_init) in [(&mut constr_comment, false), (&mut no_init_comment, true)] {
+            for field in &fields {
+                match (field.init.as_ref().filter(|_| !no_init)).map(|sn| sn.sig.args()) {
+                    Some(0) => continue,
+                    Some(1) | None => {
+                        comment.push(' ');
+                        if no_init && field.init.is_some() {
+                            comment.push_str("Initialized");
+                        }
+                        comment.push_str(&field.name);
+                    }
+                    Some(n) => {
+                        for i in 0..n {
+                            comment.push(' ');
+                            comment.push_str(&field.name);
+                            let mut i = i + 1;
+                            while i > 0 {
+                                comment.push(SUBSCRIPT_DIGITS[i % 10]);
+                                i /= 10;
+                            }
                         }
                     }
                 }
@@ -531,6 +582,27 @@ impl Compiler {
                 ..Default::default()
             };
             self.compile_bind_function("Args".into(), local, func, span, meta)?;
+        }
+
+        // Bind the no-init constructor
+        if let Some(node) = no_init_node {
+            let name = Ident::from("NoInit");
+            let local = LocalIndex {
+                index: self.next_global,
+                public: true,
+            };
+            self.next_global += 1;
+            let func = self.asm.add_function(
+                FunctionId::Named(constructor_name.clone()),
+                Signature::new(fields.len(), 1),
+                node,
+                local.index,
+            );
+            let meta = BindingMeta {
+                comment: Some(DocComment::from(no_init_comment.as_str())),
+                ..Default::default()
+            };
+            self.compile_bind_function(name, local, func, span, meta)?;
         }
 
         // Bind the constructor

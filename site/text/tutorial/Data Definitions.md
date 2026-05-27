@@ -101,19 +101,26 @@ Fields can also be put on multiple lines.
 ]
 ```
 
-If the code for a default value has a signature that takes arguments, those arguments become part of the constructor.
+If the code for a default value has a signature that takes arguments, those arguments become part of the constructor. This is called an *initializer*.
 
 ```uiua
 ~Particle {Mass Velocity ← ⊟}
 Particle 1 3 5
 ```
 
-If the default functions for all fields are invertible (or if fields have no default), then the constructor can be inverted with [`un`]().
+If the initializer functions for all fields are invertible (or if fields have no initializer), then the constructor can be inverted with [`un`]().
 
 ```uiua
 ~Particle {Mass Velocity ← ⊟}
 Particle 1 3 5
 ⊸°Particle
+```
+
+The data can be constructred *without* running initializers by using the `NoInit` constructor.
+
+```uiua
+~Particle {Mass Velocity ← ⊟}
+Particle.NoInit 1 [3 5]
 ```
 
 Fields can be easily set with the [`un`]()[`by`]() idiom.

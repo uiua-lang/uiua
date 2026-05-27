@@ -2,31 +2,31 @@ name: Validate
 
 on:
   push:
-    branches: ['main']
+    branches: ["main"]
     paths:
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'src/**'
-      - 'parser/**'
-      - 'site/**'
-      - 'pad/**'
-      - 'tests*/**'
-      - 'changelog.md'
-      - 'readme.md'
-      - '.github/workflows/validate.yml'
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "src/**"
+      - "parser/**"
+      - "site/**"
+      - "pad/**"
+      - "tests*/**"
+      - "changelog.md"
+      - "readme.md"
+      - ".github/workflows/validate.yml"
   pull_request:
-    branches: ['main']
+    branches: ["main"]
     paths:
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'src/**'
-      - 'parser/**'
-      - 'site/**'
-      - 'pad/**'
-      - 'tests*/**'
-      - 'changelog.md'
-      - 'readme.md'
-      - '.github/workflows/validate.yml'
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "src/**"
+      - "parser/**"
+      - "site/**"
+      - "pad/**"
+      - "tests*/**"
+      - "changelog.md"
+      - "readme.md"
+      - ".github/workflows/validate.yml"
 
 env:
   CARGO_TERM_COLOR: always
@@ -39,25 +39,25 @@ jobs:
   check_formatting:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Check formatting
         run: cargo fmt --all --check
   clippy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Rust version
         id: rustv
         run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
       - name: Cargo cache (registry+git)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
       - name: Cargo cache (target)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target
           key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
@@ -74,19 +74,19 @@ jobs:
   test_bin:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Rust version
         id: rustv
         run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
       - name: Cargo cache (registry+git)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
       - name: Cargo cache (target)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target
           key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
@@ -98,19 +98,19 @@ jobs:
   test_site:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Rust version
         id: rustv
         run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
       - name: Cargo cache (registry+git)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
       - name: Cargo cache (target)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target
           key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
@@ -122,19 +122,19 @@ jobs:
   test_ffi:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Rust version
         id: rustv
         run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
       - name: Cargo cache (registry+git)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
       - name: Cargo cache (target)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target
           key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}

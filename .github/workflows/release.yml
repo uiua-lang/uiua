@@ -5,9 +5,9 @@ permissions:
 on:
   push:
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
-      - '[0-9]+.[0-9]+.[0-9]+-dev.[0-9]+'
-      - '[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+-dev.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+"
 
 env:
   CARGO_TERM_COLOR: always
@@ -18,7 +18,7 @@ jobs:
     name: Create release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Ensure tag matches cargo version
         run: |
           CARGO_PKG_VERSION=$(cargo pkgid | cut -d# -f2)
@@ -45,14 +45,39 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-latest,   target: x86_64-apple-darwin,       features: "audio,window"                   }
-          - { os: macos-latest,   target: aarch64-apple-darwin,      features: "audio,window"                   }
-          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,  features: "full"                           }
-          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,  features: "window",      name: "-no-audio" }
-          - { os: windows-latest, target: x86_64-pc-windows-msvc,    features: "full"                           }
-          - { os: windows-latest, target: aarch64-pc-windows-msvc,   features: "audio,window"                   }
+          - {
+              os: macos-latest,
+              target: x86_64-apple-darwin,
+              features: "audio,window",
+            }
+          - {
+              os: macos-latest,
+              target: aarch64-apple-darwin,
+              features: "audio,window",
+            }
+          - {
+              os: ubuntu-latest,
+              target: x86_64-unknown-linux-gnu,
+              features: "full",
+            }
+          - {
+              os: ubuntu-latest,
+              target: x86_64-unknown-linux-gnu,
+              features: "window",
+              name: "-no-audio",
+            }
+          - {
+              os: windows-latest,
+              target: x86_64-pc-windows-msvc,
+              features: "full",
+            }
+          - {
+              os: windows-latest,
+              target: aarch64-pc-windows-msvc,
+              features: "audio,window",
+            }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Install dependencies
       - if: matrix.target == 'x86_64-unknown-linux-musl'

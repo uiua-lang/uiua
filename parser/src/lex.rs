@@ -1691,8 +1691,11 @@ impl<'a> Lexer<'a> {
             _ => {}
         }
         // Parse negative sign
-        got_neg =
-            got_neg || (can_parse_ascii && self.next_char_exact("`") || self.next_char_exact("₋"));
+        got_neg = got_neg
+            || (can_parse_ascii
+                && (self.next_char_exact("`")
+                    || self.next_char_exact("¯")
+                    || self.next_char_exact("₋")));
         // Parse number
         if side.is_none() {
             self.sub_num(

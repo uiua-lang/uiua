@@ -433,6 +433,7 @@ mod tests {
     /// cargo t fuzz -- --nocapture --ignored
     /// ```
     fn fuzz() {
+        use Primitive::*;
         let iter = Primitive::non_deprecated().filter(|p| !matches!(p, Primitive::Sys(_)));
         let arg_strs: Vec<_> = ((0..3).map(|n| {
             ((0..=6).map(|i| {
@@ -456,8 +457,10 @@ mod tests {
         }))
         .collect();
         for needs_name in [false, true] {
-            for a in
-                (iter.clone()).filter(|p| p.class() != PrimClass::Arguments || p.sig().is_none())
+            for a in iter
+                .clone()
+                // .skip_while(|&p| p != Assert)
+                .filter(|p| p.class() != PrimClass::Arguments || p.sig().is_none())
             {
                 for b in iter.clone() {
                     for c in iter.clone() {
@@ -467,9 +470,11 @@ mod tests {
                         {
                             continue;
                         }
-                        if [a, c] == [Primitive::Repeat, Primitive::Infinity]
-                            || [a, b] == [Primitive::Un, Primitive::Repeat]
-                            || a == Primitive::Do
+                        if [a, c] == [Repeat, Infinity]
+                            || [a, b] == [Un, Repeat]
+                            || a == Do
+                            || matches!([a, c], [Repeat, Reciprocal | Div])
+                                && b.sig().is_some_and(|s| s == (1, 1))
                         {
                             continue;
                         }

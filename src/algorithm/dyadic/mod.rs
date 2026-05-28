@@ -240,6 +240,9 @@ impl<T: ArrayValue> Array<T> {
             self.data.truncate(target_len);
         }
         self.shape = shape;
+        if !reversed_axes.is_empty() {
+            self.meta.take_sorted_flags();
+        }
         for s in reversed_axes {
             self.reverse_depth(s);
         }

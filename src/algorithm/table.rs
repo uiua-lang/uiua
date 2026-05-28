@@ -118,7 +118,10 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
                 }
                 Ok(())
             })?;
-            for items in items.into_iter().rev() {
+            for mut items in items.into_iter().rev() {
+                for item in &mut items {
+                    item.meta.take_map_keys();
+                }
                 let mut tabled = env.rows_to_value(items)?;
                 let mut new_shape = new_shape.clone();
                 if y_scalar {

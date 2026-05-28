@@ -829,7 +829,8 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
                 Primitive::Atan if flipped => fast_scan(nums, flip(atan2::num_num)),
                 Primitive::Atan => fast_scan(nums, atan2::num_num),
                 Primitive::Min => {
-                    sorted_down = true;
+                    sorted_down =
+                        nums.meta.is_sorted_down() || !nums.data.iter().any(|n| n.is_nan());
                     if nums.rank() == 1 && nums.meta.is_sorted_down() {
                         nums
                     } else {
@@ -837,7 +838,7 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
                     }
                 }
                 Primitive::Max => {
-                    sorted_up = true;
+                    sorted_up = nums.meta.is_sorted_up() || !nums.data.iter().any(|n| n.is_nan());
                     if nums.rank() == 1 && nums.meta.is_sorted_up() {
                         nums
                     } else {

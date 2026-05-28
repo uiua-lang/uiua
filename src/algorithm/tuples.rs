@@ -317,7 +317,7 @@ impl Value {
 }
 
 pub fn combinations(n: usize, k: usize, same: bool) -> f64 {
-    let calc_n = if same { n + k - 1 } else { n };
+    let calc_n = if same { (n + k).saturating_sub(1) } else { n };
     if k > calc_n {
         return 0.0;
     }

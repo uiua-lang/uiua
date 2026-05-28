@@ -1521,6 +1521,8 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         into.meta.take_sorted_flags();
+        into.meta.take_value_flags();
+        into.validate();
         Ok(into)
     }
     fn anti_select(
@@ -1659,7 +1661,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let outer_size: usize = outer_shape.iter().product();
         if indices.is_empty() {
-            return Ok(if indices_shape == [0] {
+            return Ok(if indices_shape.contains(&0) {
                 self
             } else {
                 let mut shape = outer_shape;

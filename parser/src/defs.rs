@@ -3754,6 +3754,8 @@ primitive!(
     /// ex: # Experimental!
     ///   : layout!(°⊸Color Green °⊸Bg Red) 100 "Green on Red!"
     (2, Layout, Encoding, "layout", Impure, { experimental: true }),
+    /// Generate a signed distance field
+    (2(2), Sdf, Encoding, "sdf", { experimental: true }),
     /// Project a voxel array to an image
     ///
     /// [voxels] orthographically projects a 3D array of voxels to an image.

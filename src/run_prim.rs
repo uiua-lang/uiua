@@ -331,6 +331,13 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             let res = media::layout_text(size, text, None, env)?;
             env.push(res);
         }
+        Primitive::Sdf => {
+            let val = env.pop(1)?;
+            let canvas = env.pop(2)?;
+            let (sdf, canvas) = media::sdf(val, canvas, env)?;
+            env.push(canvas);
+            env.push(sdf);
+        }
         Primitive::Voxels => {
             let val = env.pop(1)?;
             let res = media::voxels(val, None, env)?;

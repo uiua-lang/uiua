@@ -6,10 +6,6 @@
   - Data def types
   - Missing primitives
   - Blog post
-- `match` subscripts
-- Optimize `rows match`
-- `first group/partition` optimization
-- `under group/partition inventory` optimization
 
 ## Planned Features
 Features that are planned to be implemented in the future.

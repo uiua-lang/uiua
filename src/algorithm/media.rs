@@ -2,8 +2,9 @@
 
 use std::{
     borrow::Cow,
-    f64::consts::PI,
+    f64::{self, consts::PI},
     hash::{Hash, Hasher},
+    iter::repeat_n,
 };
 
 use ecow::{EcoVec, eco_vec};
@@ -19,7 +20,7 @@ use serde::*;
 use crate::{Array, Uiua, UiuaResult, Value};
 #[cfg(feature = "gif")]
 use crate::{ArrayValue, RealArrayValue};
-use crate::{Complex, OptionalArg, Shape, SigNode, SysBackend};
+use crate::{Complex, OptionalArg, Shape, SigNode, SysBackend, algorithm::validate_size};
 
 use super::monadic::hsv_to_rgb;
 
@@ -1181,6 +1182,108 @@ pub(crate) fn value_to_apng_bytes(value: &Value, frame_rate: f64) -> Result<EcoV
     }
     writer.finish().map_err(err("finishing encoding"))?;
     Ok(buffer)
+}
+
+pub(crate) fn sdf(value: Value, canvas: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Array<f64>)> {
+    let spec = match value {
+        Value::Num(arr) => arr,
+        Value::Byte(arr) => arr.convert(),
+        val => return Err(env.error(format!("Cannot make SDF from {} array", val.type_name()))),
+    };
+    let canvas = match canvas {
+        Value::Num(arr) => arr,
+        Value::Byte(arr) => arr.convert(),
+        val => {
+            return Err(env.error(format!(
+                "Cannot make SDF canvas from {} array",
+                val.type_name()
+            )));
+        }
+    };
+    let dims = match *spec.shape {
+        [n] => n,
+        [_, n] => n,
+        _ => return Err(env.error(format!("Cannot make SDF from shape {}", spec.shape))),
+    };
+    let vertices = spec.data.as_slice();
+    if dims == 0 {
+        return Err(env.error("Cannot make 0-dimensional SDF"));
+    }
+    let canvas = match canvas.rank() {
+        0 => {
+            let size = Value::from(canvas).as_nat(env, "Scalar canvas must be a natural number")?;
+            let shape = Shape::from_iter(repeat_n(size, dims));
+            let size = validate_size::<f64>(shape.iter().copied(), env)?;
+            let data = eco_vec![0.0; size];
+            Array::new(shape, data)
+        }
+        1 => {
+            let shape = Value::from(canvas).as_nats(env, "1D canvas array must specify a shape")?;
+            let shape = Shape::from(shape);
+            let size = validate_size::<f64>(shape.iter().copied(), env)?;
+            let data = eco_vec![0.0; size];
+            Array::new(shape, data)
+        }
+        n => {
+            if n != dims {
+                return Err(env.error(format!(
+                    "SDF array with shape {} indicates {dims} dimension(s), \
+                    but the canvas is rank {n}",
+                    spec.shape
+                )));
+            }
+            canvas
+        }
+    };
+    let scale = ((canvas.shape.iter().copied().min().unwrap_or_default() - 1) / 2).max(1) as f64;
+    let mut field = Array::new(canvas.shape.clone(), eco_vec![0.0; canvas.element_count()]);
+    const RANGE: f64 = 100.0;
+    let mut point = vec![-RANGE; dims];
+    let mut curr = vec![0; dims];
+    let (mut pa, mut ba) = (vec![0.0; dims], vec![0.0; dims]);
+    fn dot(a: &[f64], b: &[f64]) -> f64 {
+        a.iter().zip(b).map(|(a, b)| *a * *b).sum()
+    }
+    fn distance(a: &[f64], b: &[f64]) -> f64 {
+        (a.iter().zip(b))
+            .map(|(a, b)| (*a - *b).powi(2))
+            .sum::<f64>()
+            .sqrt()
+    }
+    let mut segment = |p: &[f64], a: &[f64], b: &[f64]| {
+        (a.iter().zip(p).zip(&mut pa)).for_each(|((a, p), pa)| *pa = *p - *a);
+        (a.iter().zip(b).zip(&mut ba)).for_each(|((a, b), ba)| *ba = *b - *a);
+        let h = (dot(&pa, &ba) / dot(&ba, &ba)).clamp(0.0, 1.0);
+        (pa.iter().zip(&ba))
+            .map(|(pa, ba)| (*pa - *ba * h).powi(2))
+            .sum::<f64>()
+            .sqrt()
+    };
+    for dist in field.data.as_mut_slice() {
+        let mut vertices = vertices.chunks_exact(dims);
+        *dist = if let Some(mut a) = vertices.next() {
+            let mut dist = distance(&point, a);
+            for b in vertices {
+                dist = dist.min(segment(&point, a, b));
+                a = b
+            }
+            dist
+        } else {
+            f64::INFINITY
+        };
+        // Increment curr
+        for ((c, d), p) in curr.iter_mut().zip(&field.shape).zip(&mut point) {
+            *c += 1;
+            if *c == *d {
+                *c = 0;
+                *p = -RANGE;
+            } else {
+                *p = (*c as f64 / scale - 1.0) * RANGE;
+                break;
+            }
+        }
+    }
+    Ok((field, canvas))
 }
 
 /// Create optional parameters that can be passed in to primitives

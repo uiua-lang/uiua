@@ -62,7 +62,6 @@ pub struct State {
     pub hidden: String,
     pub curr: Record,
     pub challenge: Option<ChallengeDef>,
-    pub loading_module: bool,
 }
 
 /// A record of a code change
@@ -1107,23 +1106,22 @@ fn challenge_code(input: &str, test: &str, flip: bool) -> String {
 
 impl State {
     /// Run code and return the output
-    pub fn run_code(&mut self, code: &str) -> Vec<Vec<OutputItem>> {
+    pub fn run_code(&mut self, code: &str) -> Run {
         let full_code = if self.hidden.is_empty() {
             code.into()
         } else {
             format!("{}\n{code}", self.hidden)
         };
         if let Some(chal) = &self.challenge {
-            let mut example = run_code_single(
+            let mut res = run_code_single(
                 &self.code_id,
                 &challenge_code(&chal.intended_answer, &chal.example, chal.flip),
-            )
-            .0;
-            example.insert(
+            );
+            res.output.insert(
                 0,
                 vec![OutputItem::Faint(format!("Example: {}", chal.example))],
             );
-            let mut output_sections = vec![example];
+            let mut output_sections = vec![res.output];
             let mut correct = true;
             for (i, test) in chal.tests.iter().enumerate() {
                 let answer = || {
@@ -1140,7 +1138,7 @@ impl State {
                         (Err(answer), Err(users)) => answer.to_string() == users.to_string(),
                         _ => false,
                     };
-                let mut output = run_code_single(&self.code_id, &user_input).0;
+                let mut output = run_code_single(&self.code_id, &user_input).output;
                 output.insert(
                     0,
                     vec![OutputItem::Faint(format!("Test {}: {test}", i + 1))],
@@ -1161,28 +1159,43 @@ impl State {
                 output.push(vec![OutputItem::Separator]);
                 output.extend(section);
             }
-            output
+            res.output = output;
+            res
         } else {
-            let (output, error) = run_code_single(&self.code_id, &full_code);
-            self.loading_module = false;
-            if let Some(error) = error
-                && error.to_string().contains("Waiting for module")
-            {
-                self.loading_module = true;
-            }
-            output
+            run_code_single(&self.code_id, &full_code)
         }
+    }
+    pub fn continue_code(&self, run: Run) -> Run {
+        let code = run.comp.assembly().inputs.strings[0].clone();
+        run_code_impl(&self.code_id, &code, Some(run))
     }
 }
 
+pub struct Run {
+    pub output: Vec<Vec<OutputItem>>,
+    pub stack: Vec<Value>,
+    pub comp: Compiler,
+    pub error: Option<UiuaError>,
+}
+
+fn run_code_single(id: &str, code: &str) -> Run {
+    run_code_impl(id, code, None)
+}
 #[allow(clippy::mutable_key_type)]
-fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaError>) {
+fn run_code_impl(id: &str, code: &str, run: Option<Run>) -> Run {
     // Run
     let mut rt = init_rt(id, code);
     let mut error = None;
-    let mut comp = Compiler::with_backend(WebBackend::new(id, code));
+    let (res, mut comp) = if let Some(mut run) = run {
+        rt.set_stack(run.stack);
+        let res = Ok(rt.run_compiler(&mut run.comp));
+        (res, run.comp)
+    } else {
+        let mut comp = Compiler::with_backend(WebBackend::new(id, code));
+        let res = comp.load_str(code).map(|comp| rt.run_compiler(comp));
+        (res, comp)
+    };
     let comp_backend;
-    let res = comp.load_str(code).map(|comp| rt.run_compiler(comp));
     let (mut value_lines, io) = match res {
         Ok(Ok(())) => {
             let stack = rt.take_stack_lines();
@@ -1221,7 +1234,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaEr
         SmartOutput::from_value
     };
     let mut i = 0;
-    for value_line in value_lines {
+    for value_line in &value_lines {
         let mut stack_line = Vec::new();
         for value in value_line {
             let value = match make_smart_output(value, 24.0, io) {
@@ -1268,6 +1281,9 @@ fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaEr
             i += 1;
         }
         stack_lines.push(stack_line);
+    }
+    if get_top_at_top() {
+        value_lines.reverse();
     }
     let stderr = take(&mut *io.stderr.lock().unwrap());
     let trace = take(&mut *io.trace.lock().unwrap());
@@ -1316,7 +1332,10 @@ fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaEr
             output[0] = vec![OutputItem::String("Previous output truncated...".into())];
         }
         let report = error.report();
-        let execution_limit_reached = report.fragments.iter().any(|frag| matches!(frag, ReportFragment::Plain(s) if s.contains("Maximum execution time exceeded")));
+        let execution_limit_reached = report.fragments.iter().any(|frag| {
+            matches!(frag, ReportFragment::Plain(s)
+                if s.contains("Maximum execution time exceeded"))
+        });
         output.push(vec![OutputItem::Report(report)]);
         if execution_limit_reached {
             output.push(vec![OutputItem::String(
@@ -1337,7 +1356,15 @@ fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaEr
             .into_iter()
             .map(|r| vec![OutputItem::Report(r)]),
     );
-    (output, error)
+    if get_top_at_top() {
+        value_lines.reverse();
+    }
+    Run {
+        output,
+        stack: value_lines.into_iter().flatten().collect(),
+        comp,
+        error,
+    }
 }
 
 pub fn report_view(report: &Report, state: WriteSignal<State>) -> impl IntoView {

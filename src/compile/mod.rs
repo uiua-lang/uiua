@@ -59,7 +59,7 @@ pub struct Compiler {
     /// The index of the next global binding
     next_global: usize,
     /// The current scope
-    pub(crate) scope: Scope,
+    pub scope: Scope,
     /// Ancestor scopes of the current one
     higher_scopes: Vec<Scope>,
     /// Determines which How test scopes are run
@@ -284,14 +284,14 @@ struct CurrentBinding {
 
 /// A scope where names are defined
 #[derive(Debug, Clone)]
-pub(crate) struct Scope {
+pub struct Scope {
     kind: ScopeKind,
     /// The name of the current file, if any
     file_path: Option<PathBuf>,
     /// The top level comment
     comment: Option<EcoString>,
     /// Map local names to global indices
-    names: LocalNames,
+    pub names: LocalNames,
     /// Whether the scope has a data def defined
     has_data_def: bool,
     /// Whether the scope's data def is a data function

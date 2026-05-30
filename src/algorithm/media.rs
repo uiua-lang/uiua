@@ -41,17 +41,21 @@ impl SmartOutput {
     /// Convert a value to a SmartOutput
     ///
     /// Animations default to GIF
-    pub fn from_value(value: Value, frame_rate: f64, backend: &dyn SysBackend) -> Self {
+    pub fn from_value(value: &Value, frame_rate: f64, backend: &dyn SysBackend) -> Self {
         Self::from_value_impl(value, frame_rate, false, backend)
     }
     /// Convert a value to a SmartOutput
     ///
     /// Animations default to APNG
-    pub fn from_value_prefer_apng(value: Value, frame_rate: f64, backend: &dyn SysBackend) -> Self {
+    pub fn from_value_prefer_apng(
+        value: &Value,
+        frame_rate: f64,
+        backend: &dyn SysBackend,
+    ) -> Self {
         Self::from_value_impl(value, frame_rate, true, backend)
     }
     fn from_value_impl(
-        value: Value,
+        value: &Value,
         frame_rate: f64,
         prefer_apng: bool,
         backend: &dyn SysBackend,
@@ -60,14 +64,14 @@ impl SmartOutput {
         #[cfg(feature = "audio_encode")]
         if value.row_count() >= 44100 / 4
             && matches!(&value, Value::Num(arr) if arr.elements().all(|x| x.abs() <= 5.0))
-            && let Ok(bytes) = value_to_wav_bytes(&value, backend.audio_sample_rate())
+            && let Ok(bytes) = value_to_wav_bytes(value, backend.audio_sample_rate())
         {
             let label = value.meta.label.as_ref().map(Into::into);
             return Self::Wav(bytes, label);
         }
         // Try to convert the value to an image
         #[cfg(feature = "image")]
-        if let Ok(image) = value_to_image(&value)
+        if let Ok(image) = value_to_image(value)
             && image.width() >= MIN_AUTO_IMAGE_DIM as u32
             && image.height() >= MIN_AUTO_IMAGE_DIM as u32
             && let Ok(bytes) = image_to_bytes(&image, ImageFormat::Png)
@@ -77,9 +81,9 @@ impl SmartOutput {
         }
         // Try to convert the value to a gif or apng
         let animation = if prefer_apng {
-            Self::try_apng(&value, frame_rate).or_else(|| Self::try_gif(&value, frame_rate))
+            Self::try_apng(value, frame_rate).or_else(|| Self::try_gif(value, frame_rate))
         } else {
-            Self::try_gif(&value, frame_rate).or_else(|| Self::try_apng(&value, frame_rate))
+            Self::try_gif(value, frame_rate).or_else(|| Self::try_apng(value, frame_rate))
         };
         if let Some(anim) = animation {
             return anim;
@@ -93,7 +97,7 @@ impl SmartOutput {
                 }
                 return Self::Svg {
                     svg: str,
-                    original: value,
+                    original: value.clone(),
                 };
             }
         }

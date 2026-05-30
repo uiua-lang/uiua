@@ -1140,6 +1140,10 @@ impl Uiua {
     pub fn stack_mut(&mut self) -> &mut [Value] {
         &mut self.rt.stack
     }
+    /// Set the stack
+    pub fn set_stack(&mut self, stack: Vec<Value>) {
+        self.rt.stack = stack;
+    }
     /// Get all bound values in the assembly
     ///
     /// Bindings are only given values once the assembly has been run successfully

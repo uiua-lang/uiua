@@ -16,7 +16,8 @@ use leptos::{
 
 use leptos_router::{BrowserIntegration, History, LocationChange, NavigateOptions, use_navigate};
 use uiua::{
-    PrimClass, PrimDoc, Primitive, Signature, Subscript, SubscriptToken, SysOp, Token, Value,
+    BindingKind, PrimClass, PrimDoc, Primitive, Signature, Subscript, SubscriptToken, SysOp, Token,
+    Value,
     format::{FormatConfig, format_str},
     is_ident_char, lex,
     lsp::{BindingDocs, BindingDocsKind},
@@ -167,7 +168,6 @@ pub fn Editor<'a>(
         past: Vec::new(),
         future: Vec::new(),
         challenge,
-        loading_module: false,
         hidden: hidden.clone(),
         curr: {
             let code = initial_code.get_untracked().unwrap();
@@ -313,159 +313,185 @@ pub fn Editor<'a>(
 
         // Run code
         set_output.set(view! { <div class="running-text">"Running"</div> }.into_view());
-        let allow_autoplay = !matches!(mode, EditorMode::Example) && get_autoplay();
-        let render_output_item = move |item| match item {
-            OutputItem::String(mut s) => {
-                if s.is_empty() {
-                    s.push(' ');
+        fn render_output_item(
+            state: WriteSignal<State>,
+            mode: EditorMode,
+            item: OutputItem,
+        ) -> View {
+            let allow_autoplay = !matches!(mode, EditorMode::Example) && get_autoplay();
+            match item {
+                OutputItem::String(mut s) => {
+                    if s.is_empty() {
+                        s.push(' ');
+                    }
+                    view! { <div class="output-item">{s}</div> }.into_view()
                 }
-                view! { <div class="output-item">{s}</div> }.into_view()
-            }
-            OutputItem::Classed(class, s) => {
-                let class = format!("output-item {class}");
-                view! { <div class=class>{s}</div> }.into_view()
-            }
-            OutputItem::Faint(s) => {
-                view! { <div class="output-item output-fainter">{s}</div> }.into_view()
-            }
-            OutputItem::Image(bytes, label) => {
-                let encoded = STANDARD.encode(bytes);
-                view! {
+                OutputItem::Classed(class, s) => {
+                    let class = format!("output-item {class}");
+                    view! { <div class=class>{s}</div> }.into_view()
+                }
+                OutputItem::Faint(s) => {
+                    view! { <div class="output-item output-fainter">{s}</div> }.into_view()
+                }
+                OutputItem::Image(bytes, label) => {
+                    let encoded = STANDARD.encode(bytes);
+                    view! {
                     <div class="output-media-wrapper">
                         <div class="output-image-label">{label}</div>
                         <img class="output-image" src=format!("data:image/png;base64,{encoded}") />
                     </div>
                 }
                 .into_view()
-            }
-            OutputItem::Gif(mut bytes, label) => {
-                bytes.extend(uiua::random().to_ne_bytes());
-                let encoded = STANDARD.encode(bytes);
-                view! {
+                }
+                OutputItem::Gif(mut bytes, label) => {
+                    bytes.extend(uiua::random().to_ne_bytes());
+                    let encoded = STANDARD.encode(bytes);
+                    view! {
                     <div class="output-media-wrapper">
                         <div class="output-image-label">{label}</div>
                         <img class="output-image" src=format!("data:image/gif;base64,{encoded}") />
                     </div>
                 }
                 .into_view()
-            }
-            OutputItem::Apng(mut bytes, label) => {
-                bytes.extend(uiua::random().to_ne_bytes());
-                let encoded = STANDARD.encode(bytes);
-                view! {
+                }
+                OutputItem::Apng(mut bytes, label) => {
+                    bytes.extend(uiua::random().to_ne_bytes());
+                    let encoded = STANDARD.encode(bytes);
+                    view! {
                     <div class="output-media-wrapper">
                         <div class="output-image-label">{label}</div>
                         <img class="output-image" src=format!("data:image/png;base64,{encoded}") />
                     </div>
                 }
                 .into_view()
+                }
+                OutputItem::Audio(bytes, label) => {
+                    let encoded = STANDARD.encode(bytes);
+                    let src = format!("data:audio/wav;base64,{encoded}");
+                    let label = label.map(|s| format!("{s}:"));
+                    if allow_autoplay {
+                        view! {
+                            <div class="output-media-wrapper">
+                                <div class="output-item output-audio-label">{label}</div>
+                                <audio class="output-audio" controls autoplay src=src />
+                            </div>
+                        }
+                        .into_view()
+                    } else {
+                        view! {
+                            <div class="output-media-wrapper">
+                                <div class="output-item output-audio-label">{label}</div>
+                                <audio class="output-audio" controls src=src />
+                            </div>
+                        }
+                        .into_view()
+                    }
+                }
+                OutputItem::Svg(s, label) => view! {
+                    <div class="output-media-wrapper">
+                        <div class="output-image-label">{label}</div>
+                        <img
+                            class="output-image"
+                            src=format!("data:image/svg+xml;utf8, {}", urlencoding::encode(&s))
+                        />
+                    </div>
+                }
+                .into_view(),
+                OutputItem::Report(report) => report_view(&report, state).into_view(),
+                OutputItem::Separator => view! {
+                    <div class="output-item">
+                        <hr />
+                    </div>
+                }
+                .into_view(),
             }
-            OutputItem::Audio(bytes, label) => {
-                let encoded = STANDARD.encode(bytes);
-                let src = format!("data:audio/wav;base64,{encoded}");
-                let label = label.map(|s| format!("{s}:"));
-                if allow_autoplay {
-                    view! {
-                        <div class="output-media-wrapper">
-                            <div class="output-item output-audio-label">{label}</div>
-                            <audio class="output-audio" controls autoplay src=src />
-                        </div>
-                    }
-                    .into_view()
-                } else {
-                    view! {
-                        <div class="output-media-wrapper">
-                            <div class="output-item output-audio-label">{label}</div>
-                            <audio class="output-audio" controls src=src />
-                        </div>
-                    }
-                    .into_view()
+        }
+        fn render_output_items(
+            state: WriteSignal<State>,
+            mode: EditorMode,
+            items: Vec<OutputItem>,
+        ) -> View {
+            let flex_wrap = if get_top_at_top() {
+                "flex-wrap: wrap;"
+            } else {
+                "flex-wrap: wrap-reverse;"
+            };
+            match items.as_slice() {
+                [] => View::default(),
+                [OutputItem::Separator] => view!(<div class="output-item">
+                    <hr />
+                </div>)
+                .into_view(),
+                _ => {
+                    let values = (items.into_iter())
+                        .map(|item| render_output_item(state, mode, item).into_view())
+                        .collect::<Vec<_>>();
+                    view!(<div class="output-values" style=flex_wrap>{values}</div>).into_view()
                 }
             }
-            OutputItem::Svg(s, label) => view! {
-                <div class="output-media-wrapper">
-                    <div class="output-image-label">{label}</div>
-                    <img
-                        class="output-image"
-                        src=format!("data:image/svg+xml;utf8, {}", urlencoding::encode(&s))
-                    />
-                </div>
+        }
+        let run = move |st: &mut State| {
+            seed_random(seed);
+            let mut run = st.run_code(&input);
+            if run.error.is_none()
+                && let Some(local) = run.comp.scope.names.get_last("Loop")
+            {
+                fn go(
+                    state: WriteSignal<State>,
+                    mode: EditorMode,
+                    set_output: WriteSignal<View>,
+                    set_diag_output: WriteSignal<View>,
+                    mut run: Run,
+                ) {
+                    set_timeout(
+                        move || {
+                            state.update(|st| {
+                                let (diags, items): (Vec<_>, Vec<_>) = take(&mut run.output)
+                                    .into_iter()
+                                    .partition(|line| line.len() == 1 && line[0].is_report());
+                                let items: Vec<_> = items
+                                    .into_iter()
+                                    .map(|item| render_output_items(state, mode, item))
+                                    .collect();
+                                let diags: Vec<_> = (diags.into_iter())
+                                    .map(|line| {
+                                        render_output_item(
+                                            state,
+                                            mode,
+                                            line.into_iter().next().unwrap(),
+                                        )
+                                    })
+                                    .collect();
+                                set_output.set(items.into_view());
+                                set_diag_output.set(diags.into_view());
+                                if run.error.is_none() {
+                                    let run = st.continue_code(run);
+                                    go(state, mode, set_output, set_diag_output, run);
+                                }
+                            })
+                        },
+                        Duration::from_secs_f32(1.0 / 60.0),
+                    );
+                }
+                if let BindingKind::Func(f) = &run.comp.assembly().bindings[local.index].kind {
+                    run.comp.assembly_mut().root = run.comp.assembly()[f].clone();
+                    go(state, mode, set_output, set_diag_output, run);
+                }
+                return;
             }
-            .into_view(),
-            OutputItem::Report(report) => report_view(&report, state).into_view(),
-            OutputItem::Separator => view! {
-                <div class="output-item">
-                    <hr />
-                </div>
-            }
-            .into_view(),
+            let (diags, items): (Vec<_>, Vec<_>) =
+                (run.output.into_iter()).partition(|line| line.len() == 1 && line[0].is_report());
+            let items: Vec<_> = items
+                .into_iter()
+                .map(|item| render_output_items(state, mode, item))
+                .collect();
+            let diags: Vec<_> = (diags.into_iter())
+                .map(|line| render_output_item(state, mode, line.into_iter().next().unwrap()))
+                .collect();
+            set_output.set(items.into_view());
+            set_diag_output.set(diags.into_view());
         };
-        let flex_wrap = if get_top_at_top() {
-            "flex-wrap: wrap;"
-        } else {
-            "flex-wrap: wrap-reverse;"
-        };
-        let render_output_items = move |items: Vec<OutputItem>| match items.as_slice() {
-            [] => View::default(),
-            [OutputItem::Separator] => view!(<div class="output-item">
-                    <hr />
-                </div>)
-            .into_view(),
-            _ => view!(<div class="output-values" style=flex_wrap>
-                    {(items.into_iter())
-                        .map(|item| {
-                            render_output_item(item)
-                                .into_view()
-                        })
-                        .collect::<Vec<_>>()
-                    }
-                </div>)
-            .into_view(),
-        };
-        set_timeout(
-            move || {
-                state.update(|st| {
-                    seed_random(seed);
-                    let output = st.run_code(&input);
-                    if take(&mut st.loading_module) {
-                        set_timeout(
-                            move || {
-                                state.update(|st| {
-                                    seed_random(seed);
-                                    let output = st.run_code(&input);
-                                    let (diags, items): (Vec<_>, Vec<_>) = output
-                                        .into_iter()
-                                        .partition(|line| line.len() == 1 && line[0].is_report());
-                                    let items: Vec<_> =
-                                        items.into_iter().map(render_output_items).collect();
-                                    let diags: Vec<_> = diags
-                                        .into_iter()
-                                        .map(|line| {
-                                            render_output_item(line.into_iter().next().unwrap())
-                                        })
-                                        .collect();
-                                    set_output.set(items.into_view());
-                                    set_diag_output.set(diags.into_view());
-                                });
-                            },
-                            Duration::from_millis(200),
-                        );
-                    } else {
-                        let (diags, items): (Vec<_>, Vec<_>) = output
-                            .into_iter()
-                            .partition(|line| line.len() == 1 && line[0].is_report());
-                        let items: Vec<_> = items.into_iter().map(render_output_items).collect();
-                        let diags: Vec<_> = diags
-                            .into_iter()
-                            .map(|line| render_output_item(line.into_iter().next().unwrap()))
-                            .collect();
-                        set_output.set(items.into_view());
-                        set_diag_output.set(diags.into_view());
-                    }
-                });
-            },
-            Duration::ZERO,
-        );
+        set_timeout(move || state.update(run), Duration::ZERO);
     };
 
     // Replace the selected text in the editor with the given string

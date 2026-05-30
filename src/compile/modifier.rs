@@ -473,9 +473,11 @@ impl Compiler {
                 return Ok(node);
             }
         }
-
         // Handle macros
         let prim = match modified.modifier.value {
+            Modifier::Primitive(prim) if prim.modifier_args().is_none() => {
+                return self.prim_args_macro(prim, modified.modifier.span, modified.operands);
+            }
             Modifier::Primitive(prim) => prim,
             Modifier::Ref(r) => {
                 return self.modifier_ref(r, modified.modifier.span, modified.operands);
@@ -1695,13 +1697,6 @@ impl Compiler {
         modifier_span: CodeSpan,
         operands: Vec<Sp<Word>>,
     ) -> UiuaResult<Node> {
-        if let Some(prim) = (r.name.value.strip_suffix('!'))
-            .and_then(Primitive::from_name)
-            .filter(|p| r.path.is_empty() && p.glyph().is_none())
-        {
-            return self.prim_args_macro(prim, modifier_span, operands);
-        }
-
         let Some((path_locals, local)) = self.ref_local_impl(&r, LookupPreference::Macro)? else {
             return Ok(Node::empty());
         };

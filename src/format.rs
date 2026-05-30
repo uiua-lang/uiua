@@ -1342,7 +1342,10 @@ impl Formatter<'_> {
         }
     }
     fn format_primitive(&mut self, prim: Primitive, span: &CodeSpan) {
-        let as_str = prim.to_string();
+        self.format_primitive_impl(prim, span, false);
+    }
+    fn format_primitive_impl(&mut self, prim: Primitive, span: &CodeSpan, modifier: bool) {
+        let as_str = format!("{prim}{}", if modifier { "!" } else { "" });
         if self.output.ends_with(' ')
             && span.end.char_pos - span.start.char_pos > 1
             && !(as_str.starts_with(is_ident_char) || as_str.starts_with('&'))
@@ -1444,7 +1447,9 @@ impl Formatter<'_> {
     }
     fn format_modifier(&mut self, modifier: &Sp<Modifier>, depth: usize) {
         match &modifier.value {
-            Modifier::Primitive(prim) => self.format_primitive(*prim, &modifier.span),
+            Modifier::Primitive(prim) => {
+                self.format_primitive_impl(*prim, &modifier.span, prim.glyph().is_none())
+            }
             Modifier::Ref(r) => self.format_ref(r),
             Modifier::Macro(mac) => {
                 self.func(&mac.func.value, depth);

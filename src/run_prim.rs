@@ -2600,6 +2600,20 @@ mod tests {
             ]
         ));
         assert_eq!(split_name("foo"), None);
+        assert!(matches!(
+            &*split_name("absoff").unwrap(),
+            [
+                (PrimComponent::Prim(Primitive::Abs), _),
+                (PrimComponent::Prim(Primitive::Off), _)
+            ]
+        ));
+        assert!(matches!(
+            &*split_name("rowvoxels!").unwrap(),
+            [
+                (PrimComponent::Prim(Primitive::Rows), _),
+                (PrimComponent::PrimExclam(Primitive::Voxels), _)
+            ]
+        ));
     }
 
     #[cfg(test)]

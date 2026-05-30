@@ -830,7 +830,7 @@ impl Modifier {
     /// Get the number of arguments this modifier takes given a subscript
     pub fn subscript_margs<N>(&self, sub: Option<&Subscript<N>>) -> usize {
         match self {
-            Modifier::Primitive(prim) => prim.subscript_margs(sub).unwrap_or_else(|| self.args()),
+            Modifier::Primitive(prim) => prim.subscript_margs(sub).unwrap_or(1),
             m => m.args(),
         }
     }

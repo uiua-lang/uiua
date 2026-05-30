@@ -1145,6 +1145,11 @@ impl Parser<'_> {
                     .map(|span| span.sp(prim))
             }) {
             (Modifier::Primitive(prim.value), prim.span)
+        } else if let Some(prim) = Primitive::all()
+            .filter(|prim| prim.glyph().is_none())
+            .find_map(|prim| self.exact(PrimExclam(prim)).map(|span| span.sp(prim)))
+        {
+            (Modifier::Primitive(prim.value), prim.span)
         } else {
             let term = self.term()?;
             match term.value {

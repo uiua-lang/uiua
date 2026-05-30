@@ -1,6 +1,6 @@
 //! Splitting primitive names
 
-use std::{collections::HashMap, fmt, sync::LazyLock};
+use std::{borrow::Cow, collections::HashMap, fmt, sync::LazyLock};
 
 use enum_iterator::Sequence;
 
@@ -61,6 +61,8 @@ pub enum NumComponent {
 pub enum PrimComponent {
     /// A primitive
     Prim(Primitive),
+    /// A primitive name with a trailing !
+    PrimExclam(Primitive),
     /// A numeric component
     Num(NumComponent),
     /// Subscript 0
@@ -109,9 +111,10 @@ impl From<NumComponent> for PrimComponent {
 
 impl PrimComponent {
     /// Get the name of this component
-    pub fn name(&self) -> &'static str {
-        match self {
+    pub fn name(&self) -> Cow<'static, str> {
+        Cow::Borrowed(match self {
             PrimComponent::Prim(prim) => prim.name(),
+            PrimComponent::PrimExclam(prim) => return Cow::Owned(format!("{}!", prim.name())),
             PrimComponent::Num(num) => num.name(),
             PrimComponent::Sub0 => "₀",
             PrimComponent::Sub1 => "₁",
@@ -128,7 +131,7 @@ impl PrimComponent {
             PrimComponent::Nat => "ℕ",
             PrimComponent::Bool => "𝔹",
             PrimComponent::E => "e",
-        }
+        })
     }
     /// Try to parse a component from a name prefix
     pub fn from_format_name(name: &str) -> Option<Self> {
@@ -364,168 +367,186 @@ impl Primitive {
 
 /// Try to parse multiple primitives from the concatenation of their name prefixes
 pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
+    if let Some(no_exclam) = name.strip_suffix('!')
+        && !no_exclam.is_empty()
+    {
+        let mut comps = split_name(no_exclam)?;
+        let (last_prim, last_name) = &mut comps.last_mut().unwrap();
+        if let PrimComponent::Prim(prim) = last_prim
+            && prim.glyph().is_none()
+        {
+            *last_name = &name[name.len() - last_name.len() - 1..];
+            *last_prim = PrimComponent::PrimExclam(*prim);
+            return Some(comps);
+        }
+    }
     let mut indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
     indices.push(name.len());
     // Forward parsing
     let mut prims = Vec::new();
     let mut start = 0;
-    'outer: loop {
-        if start == indices.len() {
-            return Some(prims);
+    for one_letter in [false, true] {
+        'outer: loop {
+            if start == indices.len() {
+                return Some(prims);
+            }
+            let start_index = indices[start];
+            for len in (1..=indices.len() - start).rev() {
+                let end_index = indices.get(start + len).copied().unwrap_or(name.len());
+                if start_index == end_index {
+                    continue;
+                }
+                let sub_name = &name[start_index..end_index];
+                // Normal primitive matching
+                if let Some(p) = PrimComponent::from_format_name(sub_name)
+                    && (sub_name.len() > 1 || p.name().len() == 1)
+                {
+                    prims.push((p, sub_name));
+                    start += len;
+                    continue 'outer;
+                }
+                // Greek
+                if sub_name.chars().count() == 1 {
+                    for prim in [Primitive::Eta, Primitive::Pi, Primitive::Tau] {
+                        if sub_name.chars().next() == prim.glyph() {
+                            prims.push((prim.into(), sub_name));
+                            start += len;
+                            continue 'outer;
+                        }
+                    }
+                }
+                if sub_name.len() == 1 {
+                    continue;
+                }
+                // 1-letter planet notation
+                let unforked = sub_name.strip_prefix('f').unwrap_or(sub_name);
+                if one_letter
+                    && unforked
+                        .strip_suffix(['i', 'p', 'f'])
+                        .unwrap_or(unforked)
+                        .chars()
+                        .all(|c| "gd".contains(c))
+                {
+                    for (i, c) in sub_name.char_indices() {
+                        let prim = match c {
+                            'f' if i == 0 => Primitive::Fork,
+                            'f' => Primitive::Fix,
+                            'g' => Primitive::Gap,
+                            'd' => Primitive::Dip,
+                            'i' => Primitive::Identity,
+                            'p' => Primitive::Pop,
+                            _ => unreachable!(),
+                        };
+                        prims.push((prim.into(), &sub_name[i..i + 1]))
+                    }
+                    start += len;
+                    continue 'outer;
+                }
+                // Aliases
+                if let Some(ps) = Primitive::get_multi_alias(sub_name) {
+                    prims.extend(ps.iter().map(|(p, s)| (*p, *s)));
+                    start += len;
+                    continue 'outer;
+                }
+            }
+            break;
         }
-        let start_index = indices[start];
-        for len in (1..=indices.len() - start).rev() {
-            let end_index = indices.get(start + len).copied().unwrap_or(name.len());
-            if start_index == end_index {
-                continue;
+        // Backward parsing
+        prims.clear();
+        let mut end = indices.len() - 1;
+        'outer: loop {
+            if end == 0 {
+                prims.reverse();
+                return Some(prims);
             }
-            let sub_name = &name[start_index..end_index];
-            // Normal primitive matching
-            if let Some(p) = PrimComponent::from_format_name(sub_name)
-                && (sub_name.len() > 1 || p.name().len() == 1)
-            {
-                prims.push((p, sub_name));
-                start += len;
-                continue 'outer;
-            }
-            // Greek
-            if sub_name.chars().count() == 1 {
-                for prim in [Primitive::Eta, Primitive::Pi, Primitive::Tau] {
-                    if sub_name.chars().next() == prim.glyph() {
-                        prims.push((prim.into(), sub_name));
-                        start += len;
-                        continue 'outer;
+            let end_index = indices[end];
+            for len in (1..=end).rev() {
+                let start_index = indices.get(end - len).copied().unwrap_or(0);
+                let sub_name = &name[start_index..end_index];
+                // Normal primitive matching
+                if let Some(p) = Primitive::from_format_name(sub_name)
+                    && (sub_name.len() > 1 || p.name().len() == 1)
+                {
+                    prims.push((p.into(), sub_name));
+                    end -= len;
+                    continue 'outer;
+                }
+                // Greek
+                if sub_name.chars().count() == 1 {
+                    for prim in [Primitive::Eta, Primitive::Pi, Primitive::Tau] {
+                        if sub_name.chars().next() == prim.glyph() {
+                            prims.push((prim.into(), sub_name));
+                            end -= len;
+                            continue 'outer;
+                        }
+                    }
+                }
+                if sub_name.len() == 1 {
+                    continue;
+                }
+                // 1-letter planet notation
+                if one_letter
+                    && sub_name
+                        .strip_prefix('f')
+                        .unwrap_or(sub_name)
+                        .strip_suffix(['i', 'p'])
+                        .unwrap_or(sub_name)
+                        .chars()
+                        .all(|c| "gd".contains(c))
+                    && sub_name != "fi"
+                {
+                    for (i, c) in sub_name.char_indices().rev() {
+                        let prim = match c {
+                            'f' => Primitive::Fork,
+                            'g' => Primitive::Gap,
+                            'd' => Primitive::Dip,
+                            'i' => Primitive::Identity,
+                            'p' => Primitive::Pop,
+                            _ => unreachable!(),
+                        };
+                        prims.push((prim.into(), &sub_name[i..i + 1]))
+                    }
+                    end -= len;
+                    continue 'outer;
+                }
+                // Dip fix
+                if one_letter
+                    && sub_name
+                        .strip_suffix('f')
+                        .unwrap_or(sub_name)
+                        .chars()
+                        .all(|c| c == 'd')
+                {
+                    for (i, c) in sub_name.char_indices().rev() {
+                        let prim = match c {
+                            'd' => Primitive::Dip,
+                            'f' => Primitive::Fix,
+                            _ => unreachable!(),
+                        };
+                        prims.push((prim.into(), &sub_name[i..i + 1]))
+                    }
+                    end -= len;
+                    continue 'outer;
+                }
+                // Aliases
+                if let Some(ps) = Primitive::get_multi_alias(sub_name) {
+                    prims.extend(ps.iter().rev().map(|(p, s)| (*p, *s)));
+                    end -= len;
+                    continue 'outer;
+                }
+                // Greek
+                if sub_name.chars().count() == 1 {
+                    for prim in [Primitive::Eta, Primitive::Pi, Primitive::Tau] {
+                        if sub_name.chars().next() == prim.glyph() {
+                            prims.push((prim.into(), sub_name));
+                            end -= len;
+                            continue 'outer;
+                        }
                     }
                 }
             }
-            if sub_name.len() == 1 {
-                continue;
-            }
-            // 1-letter planet notation
-            let unforked = sub_name.strip_prefix('f').unwrap_or(sub_name);
-            if unforked
-                .strip_suffix(['i', 'p', 'f'])
-                .unwrap_or(unforked)
-                .chars()
-                .all(|c| "gd".contains(c))
-            {
-                for (i, c) in sub_name.char_indices() {
-                    let prim = match c {
-                        'f' if i == 0 => Primitive::Fork,
-                        'f' => Primitive::Fix,
-                        'g' => Primitive::Gap,
-                        'd' => Primitive::Dip,
-                        'i' => Primitive::Identity,
-                        'p' => Primitive::Pop,
-                        _ => unreachable!(),
-                    };
-                    prims.push((prim.into(), &sub_name[i..i + 1]))
-                }
-                start += len;
-                continue 'outer;
-            }
-            // Aliases
-            if let Some(ps) = Primitive::get_multi_alias(sub_name) {
-                prims.extend(ps.iter().map(|(p, s)| (*p, *s)));
-                start += len;
-                continue 'outer;
-            }
+            break;
         }
-        break;
-    }
-    // Backward parsing
-    prims.clear();
-    let mut end = indices.len() - 1;
-    'outer: loop {
-        if end == 0 {
-            prims.reverse();
-            return Some(prims);
-        }
-        let end_index = indices[end];
-        for len in (1..=end).rev() {
-            let start_index = indices.get(end - len).copied().unwrap_or(0);
-            let sub_name = &name[start_index..end_index];
-            // Normal primitive matching
-            if let Some(p) = Primitive::from_format_name(sub_name)
-                && (sub_name.len() > 1 || p.name().len() == 1)
-            {
-                prims.push((p.into(), sub_name));
-                end -= len;
-                continue 'outer;
-            }
-            // Greek
-            if sub_name.chars().count() == 1 {
-                for prim in [Primitive::Eta, Primitive::Pi, Primitive::Tau] {
-                    if sub_name.chars().next() == prim.glyph() {
-                        prims.push((prim.into(), sub_name));
-                        end -= len;
-                        continue 'outer;
-                    }
-                }
-            }
-            if sub_name.len() == 1 {
-                continue;
-            }
-            // 1-letter planet notation
-            if sub_name
-                .strip_prefix('f')
-                .unwrap_or(sub_name)
-                .strip_suffix(['i', 'p'])
-                .unwrap_or(sub_name)
-                .chars()
-                .all(|c| "gd".contains(c))
-                && sub_name != "fi"
-            {
-                for (i, c) in sub_name.char_indices().rev() {
-                    let prim = match c {
-                        'f' => Primitive::Fork,
-                        'g' => Primitive::Gap,
-                        'd' => Primitive::Dip,
-                        'i' => Primitive::Identity,
-                        'p' => Primitive::Pop,
-                        _ => unreachable!(),
-                    };
-                    prims.push((prim.into(), &sub_name[i..i + 1]))
-                }
-                end -= len;
-                continue 'outer;
-            }
-            // Dip fix
-            if sub_name
-                .strip_suffix('f')
-                .unwrap_or(sub_name)
-                .chars()
-                .all(|c| c == 'd')
-            {
-                for (i, c) in sub_name.char_indices().rev() {
-                    let prim = match c {
-                        'd' => Primitive::Dip,
-                        'f' => Primitive::Fix,
-                        _ => unreachable!(),
-                    };
-                    prims.push((prim.into(), &sub_name[i..i + 1]))
-                }
-                end -= len;
-                continue 'outer;
-            }
-            // Aliases
-            if let Some(ps) = Primitive::get_multi_alias(sub_name) {
-                prims.extend(ps.iter().rev().map(|(p, s)| (*p, *s)));
-                end -= len;
-                continue 'outer;
-            }
-            // Greek
-            if sub_name.chars().count() == 1 {
-                for prim in [Primitive::Eta, Primitive::Pi, Primitive::Tau] {
-                    if sub_name.chars().next() == prim.glyph() {
-                        prims.push((prim.into(), sub_name));
-                        end -= len;
-                        continue 'outer;
-                    }
-                }
-            }
-        }
-        break;
     }
     None
 }

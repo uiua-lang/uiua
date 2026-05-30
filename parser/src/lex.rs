@@ -639,6 +639,7 @@ pub enum Token {
     MultilineFormatStr(Vec<String>),
     Simple(AsciiToken),
     Glyph(Primitive),
+    PrimExclam(Primitive),
     Placeholder(Option<usize>),
     PlaceholderN,
     Subscr(SubscriptToken),
@@ -762,6 +763,7 @@ impl fmt::Display for Token {
             }
             Token::Simple(t) => t.fmt(f),
             Token::Glyph(p) => p.fmt(f),
+            Token::PrimExclam(p) => write!(f, "{}!", p.name()),
             Token::LeftArrow => write!(f, "←"),
             Token::LeftStrokeArrow => write!(f, "↚"),
             Token::TildeStroke => write!(f, "≁"),
@@ -1448,6 +1450,7 @@ impl<'a> Lexer<'a> {
                             };
                             let tok = match prim {
                                 PrimComponent::Prim(prim) => Glyph(prim),
+                                PrimComponent::PrimExclam(prim) => PrimExclam(prim),
                                 PrimComponent::Sub0 => Subscr(0.into()),
                                 PrimComponent::Sub1 => Subscr(1.into()),
                                 PrimComponent::Sub2 => Subscr(2.into()),

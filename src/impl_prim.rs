@@ -297,6 +297,7 @@ impl_primitive!(
     (3, MapArgs),
     (3, LayoutArgs),
     (2, VoxelsArgs),
+    (3, ImageArgs),
     ([1], FoldGif),
 );
 

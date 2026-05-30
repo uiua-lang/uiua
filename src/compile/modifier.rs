@@ -1780,6 +1780,7 @@ impl Compiler {
             Primitive::Map => (ImplPrimitive::MapArgs, MapParam::args()),
             Primitive::Layout => (ImplPrimitive::LayoutArgs, LayoutParam::args()),
             Primitive::Voxels => (ImplPrimitive::VoxelsArgs, VoxelsParam::args()),
+            Primitive::ImageEncode => (ImplPrimitive::ImageArgs, ImageParam::args()),
             Primitive::GifEncode => {
                 let inner = self.words_sig(operands)?;
                 let span = self.add_span(modifier_span);

@@ -67,7 +67,7 @@ impl SmartOutput {
         }
         // Try to convert the value to an image
         #[cfg(feature = "image")]
-        if let Ok(image) = value_to_image(&value)
+        if let Ok(image) = value_to_image(&value, ImagePalette::Exact)
             && image.width() >= MIN_AUTO_IMAGE_DIM as u32
             && image.height() >= MIN_AUTO_IMAGE_DIM as u32
             && let Ok(bytes) = image_to_bytes(&image, ImageFormat::Png)
@@ -142,13 +142,61 @@ impl SmartOutput {
     }
 }
 
+builtin_params!(ImageParam, (Palette, "Color palette for dithering", 0));
+
 pub(crate) fn image_encode(env: &mut Uiua) -> UiuaResult {
+    image_encode_impl(false, env)
+}
+pub(crate) fn image_encode_params(env: &mut Uiua) -> UiuaResult {
+    image_encode_impl(true, env)
+}
+fn image_encode_impl(args: bool, env: &mut Uiua) -> UiuaResult {
     #[cfg(feature = "image")]
     {
+        let mut palette = ImagePalette::Exact;
+        let mut palette_arr;
+        if args {
+            let args = env.pop(1)?;
+            for (i, arg) in args.into_rows().map(Value::unboxed).enumerate() {
+                match all::<ImageParam>().nth(i) {
+                    Some(ImageParam::Palette) => {
+                        let arg = match arg {
+                            Value::Num(arr) => arr,
+                            Value::Byte(arr) => arr.convert(),
+                            arg => {
+                                return Err(env.error(format!(
+                                    "Cannot make palette from {} array",
+                                    arg.type_name()
+                                )));
+                            }
+                        };
+                        match *arg.shape {
+                            [] => {
+                                if arg.data[0] == 1.0 {
+                                    palette = ImagePalette::Dither255
+                                } else if arg.data[0] != 0.0 {
+                                    return Err(env.error(format!("Invalid palette {arg}")));
+                                }
+                            }
+                            [n, 3] if n > 0 => {
+                                palette_arr = arg.data;
+                                palette = ImagePalette::DitherPalette(&palette_arr);
+                            }
+                            _ => {
+                                return Err(
+                                    env.error(format!("Invalid palette shape {}", arg.shape))
+                                );
+                            }
+                        }
+                    }
+                    None => return Err(env.error(format!("Invalid img params index {i}"))),
+                }
+            }
+        }
         let format = env
-            .pop(1)?
+            .pop(1 + args as i32)?
             .as_string(env, "Image format must be a string")?;
-        let value = env.pop(2)?;
+        let value = env.pop(2 + args as i32)?;
         let output_format = match format.as_str() {
             "jpg" | "jpeg" => ImageFormat::Jpeg,
             "png" => ImageFormat::Png,
@@ -159,8 +207,8 @@ pub(crate) fn image_encode(env: &mut Uiua) -> UiuaResult {
             "webp" => ImageFormat::WebP,
             format => return Err(env.error(format!("Invalid image format: {format}"))),
         };
-        let bytes =
-            crate::media::value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
+        let bytes = crate::media::value_to_image_bytes(&value, output_format, palette)
+            .map_err(|e| env.error(e))?;
         env.push(Array::<u8>::from(bytes.as_slice()));
         Ok(())
     }
@@ -315,8 +363,12 @@ pub(crate) fn audio_decode(env: &mut Uiua) -> UiuaResult {
 
 #[doc(hidden)]
 #[cfg(feature = "image")]
-pub fn value_to_image_bytes(value: &Value, format: ImageFormat) -> Result<Vec<u8>, String> {
-    image_to_bytes(&value_to_image(value)?, format)
+pub fn value_to_image_bytes(
+    value: &Value,
+    format: ImageFormat,
+    palette: ImagePalette,
+) -> Result<Vec<u8>, String> {
+    image_to_bytes(&value_to_image(value, palette)?, format)
 }
 
 #[doc(hidden)]
@@ -404,7 +456,17 @@ pub fn image_to_bytes(image: &DynamicImage, format: ImageFormat) -> Result<Vec<u
 
 #[doc(hidden)]
 #[cfg(feature = "image")]
-pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
+#[derive(Default)]
+pub enum ImagePalette<'a> {
+    #[default]
+    Exact,
+    Dither255,
+    DitherPalette(&'a [f64]),
+}
+
+#[doc(hidden)]
+#[cfg(feature = "image")]
+pub fn value_to_image(value: &Value, palette: ImagePalette) -> Result<DynamicImage, String> {
     let is_complex = matches!(value, Value::Complex(_));
     if !is_complex && ![2, 3].contains(&value.rank()) || is_complex && value.rank() != 2 {
         return Err(format!(
@@ -428,7 +490,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
         &[a, b, c] => [a, b, c],
         _ => unreachable!("Shape checked above"),
     };
-    Ok(match px_size {
+    let mut img: DynamicImage = match px_size {
         1 => image::GrayImage::from_raw(width as u32, height as u32, bytes)
             .ok_or("Failed to create image")?
             .into(),
@@ -446,7 +508,24 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
                 "For a color image, the last dimension of the image array must be between 1 and 4 but it is {n}"
             ));
         }
-    })
+    };
+    match palette {
+        ImagePalette::Exact => {}
+        ImagePalette::Dither255 => {
+            img = img.into_rgba8().into();
+            dither(img.as_mut_rgba8().unwrap(), width as u32, height as u32);
+        }
+        ImagePalette::DitherPalette(palette) => {
+            img = img.into_rgba8().into();
+            dither_palette(
+                img.as_mut_rgba8().unwrap(),
+                width as u32,
+                height as u32,
+                palette,
+            );
+        }
+    }
+    Ok(img)
 }
 
 fn complex_color(c: Complex) -> [f64; 3] {
@@ -803,14 +882,17 @@ fn nearest_color(image::Rgba([r, g, b, a]): image::Rgba<u8>) -> (u8, [f32; 3]) {
 
 /// Returns flat dithered color indices and whether there are any transparent pixels
 #[cfg(feature = "gif")]
-fn dither(mut img: image::RgbaImage, width: u32, height: u32) -> (Vec<u8>, bool) {
+fn dither(img: &mut image::RgbaImage, width: u32, height: u32) -> (Vec<u8>, bool) {
     let (width, height) = (width, height);
     let mut buffer = vec![0; (width * height) as usize];
     let mut has_transparent = false;
     for y in 0..height {
-        // TODO: Maybe use a scanline buffer for the adjusted colors on this line
         for x in 0..width {
-            let (index, err) = nearest_color(img[(x, y)]);
+            let px = &mut img[(x, y)];
+            let (index, err) = nearest_color(*px);
+            for i in 0..3 {
+                px.0[i] = GIF_PALETTE[index as usize * 3 + i]
+            }
             has_transparent |= index == 0;
             buffer[(y * width + x) as usize] = index;
             if err == [0.0; 3] {
@@ -838,6 +920,59 @@ fn dither(mut img: image::RgbaImage, width: u32, height: u32) -> (Vec<u8>, bool)
         }
     }
     (buffer, has_transparent)
+}
+
+fn dither_palette(
+    img: &mut image::RgbaImage,
+    width: u32,
+    height: u32,
+    palette: &[f64],
+) -> Vec<usize> {
+    assert!(!palette.is_empty(), "palette cannot be empty");
+    let (width, height) = (width, height);
+    let mut buffer = vec![0; (width * height) as usize];
+    fn dist(palette: &[f64], px: &[u8]) -> f64 {
+        (palette.iter().zip(px))
+            .map(|(a, b)| (*a - *b as f64 / 255.0).powi(2))
+            .sum()
+    }
+    for y in 0..height {
+        for x in 0..width {
+            let px = &mut img[(x, y)];
+            let (index, nearest) = (palette.chunks_exact(3).enumerate())
+                .min_by(|(_, a), (_, b)| dist(a, &px.0).partial_cmp(&dist(b, &px.0)).unwrap())
+                .unwrap();
+            let mut err = [0.0; 3];
+            for i in 0..3 {
+                err[i] = px.0[i] as f32 - nearest[i] as f32 * 255.0;
+                px.0[i] = (nearest[i] * 255.0).round() as u8;
+            }
+            buffer[(y * width + x) as usize] = index;
+            if err == [0.0; 3] {
+                continue;
+            }
+            let [er, eg, eb] = err;
+            for (f, dx, dy) in [
+                (7f32 / 16.0, 1i32, 0i32),
+                (3f32 / 16.0, -1, 1),
+                (5f32 / 16.0, 0, 1),
+                (1f32 / 16.0, 1, 1),
+            ] {
+                let Some(image::Rgba([r, g, b, a])) =
+                    img.get_pixel_mut_checked((x as i32 + dx) as u32, (y as i32 + dy) as u32)
+                else {
+                    continue;
+                };
+                if *a == 0 {
+                    continue;
+                }
+                *r = (*r as f32 + er * f).round() as u8;
+                *g = (*g as f32 + eg * f).round() as u8;
+                *b = (*b as f32 + eb * f).round() as u8;
+            }
+        }
+    }
+    buffer
 }
 
 #[cfg(not(feature = "gif"))]
@@ -928,7 +1063,7 @@ fn encode_gif_impl<C, E>(
     let mut t = 0;
 
     let mut encoder = if first_frame.rank() == 2 && first_frame.type_id() == f64::TYPE_ID {
-        let first_frame = value_to_image(&first_frame)
+        let first_frame = value_to_image(&first_frame, ImagePalette::Exact)
             .map_err(|e| error(ctx, e))?
             .to_luma8();
         let pallete: Vec<u8> = (0..=255).flat_map(|c| [c, c, c]).collect();
@@ -945,7 +1080,7 @@ fn encode_gif_impl<C, E>(
         write_frame(0, first_frame, ctx)?;
         let mut i = 1;
         while let Some(frame) = next_frame(ctx)? {
-            let frame = value_to_image(&frame)
+            let frame = value_to_image(&frame, ImagePalette::Exact)
                 .map_err(|e| error(ctx, e))?
                 .to_luma8();
             let (this_width, this_height) = frame.dimensions();
@@ -963,12 +1098,12 @@ fn encode_gif_impl<C, E>(
         }
         encoder
     } else {
-        let first_frame = value_to_image(&first_frame)
+        let mut first_frame = value_to_image(&first_frame, ImagePalette::Exact)
             .map_err(|e| error(ctx, e))?
             .to_rgba8();
         let mut encoder = Encoder::new(&mut bytes, width as u16, height as u16, &GIF_PALETTE)
             .map_err(|e| error(ctx, e.to_string()))?;
-        let mut write_frame = |i: usize, frame, ctx: &mut C| -> Result<(), E> {
+        let mut write_frame = |i: usize, frame: &mut _, ctx: &mut C| -> Result<(), E> {
             let (indices, has_transparent) = dither(frame, width, height);
             let mut frame =
                 Frame::from_indexed_pixels(width as u16, height as u16, indices, Some(0));
@@ -982,10 +1117,10 @@ fn encode_gif_impl<C, E>(
             (encoder.write_frame(&frame)).map_err(|e| error(ctx, e.to_string()))?;
             Ok(())
         };
-        write_frame(0, first_frame, ctx)?;
+        write_frame(0, &mut first_frame, ctx)?;
         let mut i = 1;
         while let Some(frame) = next_frame(ctx)? {
-            let frame = value_to_image(&frame)
+            let mut frame = value_to_image(&frame, ImagePalette::Exact)
                 .map_err(|e| error(ctx, e))?
                 .to_rgba8();
             let (this_width, this_height) = frame.dimensions();
@@ -998,7 +1133,7 @@ fn encode_gif_impl<C, E>(
                     ),
                 ));
             }
-            write_frame(i, frame, ctx)?;
+            write_frame(i, &mut frame, ctx)?;
             i += 1;
         }
         encoder
@@ -1176,7 +1311,7 @@ pub(crate) fn value_to_apng_bytes(value: &Value, frame_rate: f64) -> Result<EcoV
     encoder.set_color(ColorType::Rgba);
     let mut writer = encoder.write_header().map_err(err("writing header"))?;
     for row in value.rows() {
-        let image = value_to_image(&row)?.into_rgba8();
+        let image = value_to_image(&row, ImagePalette::Exact)?.into_rgba8();
         (writer.write_image_data(&image.into_raw())).map_err(err("writing frame"))?;
     }
     writer.finish().map_err(err("finishing encoding"))?;

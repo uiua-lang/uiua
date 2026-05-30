@@ -1365,13 +1365,14 @@ impl ImplPrimitive {
                 let res = media::voxels(val, Some(args), env)?;
                 env.push(res);
             }
-            &ImplPrimitive::MapArgs => {
+            ImplPrimitive::MapArgs => {
                 let args = env.pop(1)?;
                 let keys = env.pop(2)?;
                 let mut vals = env.pop(3)?;
                 vals.map_args(keys, Some(args), env)?;
                 env.push(vals);
             }
+            ImplPrimitive::ImageArgs => media::image_encode_params(env)?,
             &ImplPrimitive::ValidateImpl(type_id, side) => {
                 let spec = env.pop(1)?;
                 let val = env.pop(2)?;

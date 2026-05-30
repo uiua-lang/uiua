@@ -43,7 +43,7 @@ Bar ← \"bar\"";
 
 /// The text of Uiua's example text file
 pub const EXAMPLE_TXT: &str = "\
-This is a simple text file for 
+This is a simple text file for
 use in example Uiua code ✨";
 
 /// Access the built-in `example.ua` file
@@ -1110,7 +1110,8 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             #[cfg(feature = "image")]
             {
                 let value = env.pop(1)?;
-                let image = crate::media::value_to_image(&value).map_err(|e| env.error(e))?;
+                let image = crate::media::value_to_image(&value, Default::default())
+                    .map_err(|e| env.error(e))?;
                 (env.rt.backend)
                     .show_image(image, value.meta.label.as_deref())
                     .map_err(|e| env.error(e))?;

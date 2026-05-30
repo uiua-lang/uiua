@@ -426,9 +426,6 @@ pub fn Editor<'a>(
             move || {
                 state.update(|st| {
                     seed_random(seed);
-                    if input.contains("Load ←") {
-                        return;
-                    }
                     let output = st.run_code(&input);
                     if take(&mut st.loading_module) {
                         set_timeout(

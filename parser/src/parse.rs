@@ -1127,10 +1127,7 @@ impl Parser<'_> {
         }
         // Insert the first word that was parsed
         items.insert(0, word);
-        let span = items[0]
-            .span
-            .clone()
-            .merge(items.last().unwrap().span.clone());
+        let span = (items[0].span.clone()).merge(items.last().unwrap().span.clone());
         Some(span.sp(Word::Strand(items)))
     }
     fn modified(&mut self) -> Option<Sp<Word>> {
@@ -1343,6 +1340,16 @@ impl Parser<'_> {
             span.sp(Word::BreakLine)
         } else if let Some(sc) = self.next_token_map(Token::as_semantic_comment) {
             sc.map(Word::SemanticComment)
+        } else if let Some(sup) = self.next_token_map(Token::as_superscript) {
+            // Lone superscript
+            sup.span.sp(match sup.value {
+                Ok(i) => Word::Number((i as f64).into(), i.to_string()),
+                Err(s) => {
+                    let n = s.parse::<f64>().unwrap_or(0.0);
+                    let s = n.to_string();
+                    Word::Number(n.into(), s)
+                }
+            })
         } else if let Some(sub) = self.next_token_map(Token::as_subscript) {
             // Lone subscript
             sub.span.clone().sp(
@@ -1393,6 +1400,9 @@ impl Parser<'_> {
                     script: n,
                     word,
                 })));
+            } else if let Some(n) = self.next_token_map(Token::as_superscript) {
+                let span = word.span.clone().merge(n.span.clone());
+                word = span.sp(Word::Superscripted(Box::new(word), n.value));
             } else {
                 self.index = reset;
                 break;

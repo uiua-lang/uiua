@@ -21,6 +21,7 @@ use crate::{
 
 /// Subscript digit characters
 pub const SUBSCRIPT_DIGITS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
+pub const SUPERSCRIPT_DIGITS: [char; 10] = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
 pub const OTHER_SUBSCRIPT_NUMBERS: [char; 2] = ['ᵣ', 'ᵢ'];
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub(crate) struct FormatSubscript(pub i32);
@@ -32,6 +33,24 @@ impl fmt::Display for FormatSubscript {
         }
         for c in n.abs().to_string().chars() {
             write!(f, "{}", SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])?;
+        }
+        Ok(())
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct FormatSuperscript(pub i32);
+impl fmt::Display for FormatSuperscript {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let &FormatSuperscript(n) = self;
+        if n < 0 {
+            write!(f, "ᐨ")?;
+        }
+        for c in n.abs().to_string().chars() {
+            write!(
+                f,
+                "{}",
+                SUPERSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize]
+            )?;
         }
         Ok(())
     }
@@ -643,6 +662,7 @@ pub enum Token {
     Placeholder(Option<usize>),
     PlaceholderN,
     Subscr(SubscriptToken),
+    Superscript(Result<i32, EcoString>),
     LeftArrow,
     LeftStrokeArrow,
     TildeStroke,
@@ -725,6 +745,12 @@ impl Token {
             _ => None,
         }
     }
+    pub(crate) fn as_superscript(&self) -> Option<Result<i32, EcoString>> {
+        match self {
+            Token::Superscript(sup) => Some(sup.clone()),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -775,6 +801,8 @@ impl fmt::Display for Token {
             Token::Newline => write!(f, "newline"),
             Token::Spaces => write!(f, "space(s)"),
             Token::Subscr(sub) => sub.fmt(f),
+            Token::Superscript(Ok(n)) => FormatSuperscript(*n).fmt(f),
+            Token::Superscript(Err(e)) => e.fmt(f),
             Token::OpenModule => write!(f, "┌─╴"),
             Token::OpenPrivateModule => write!(f, "┌╶╶"),
             Token::CloseModule => write!(f, "└─╴"),
@@ -1111,7 +1139,11 @@ impl<'a> Lexer<'a> {
                 }
                 "," => {
                     let sub = self.subscript(",");
-                    self.end(Subscr(sub), start)
+                    self.end(Subscr(sub), start);
+                }
+                "/" if self.peek_char().is_some_and(is_superscript_char) => {
+                    let sup = self.superscript("/");
+                    self.end(Superscript(sup), start);
                 }
                 "|" if self.next_char_exact(",") => self.end(DownArrow, start),
                 "|" => self.end(Bar, start),
@@ -1409,6 +1441,10 @@ impl<'a> Lexer<'a> {
                     let sub = self.subscript(c);
                     self.end(Subscr(sub), start)
                 }
+                c if is_formatted_superscript(c) => {
+                    let sup = self.superscript(c);
+                    self.end(Superscript(sup), start)
+                }
                 // Identifiers and unformatted glyphs
                 c if is_custom_glyph(c)
                     || c.chars().any(is_ident_char)
@@ -1642,7 +1678,7 @@ impl<'a> Lexer<'a> {
                 let (new_num, overflow) = new_num.overflowing_add(n);
                 *too_large |= overflow;
                 *num = new_num;
-                s.push(char::from_u32('₀' as u32 + n as u32).unwrap());
+                s.push(SUBSCRIPT_DIGITS[n as usize]);
             } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_DIGITS.contains(&c)) {
                 let i = SUBSCRIPT_DIGITS
                     .iter()
@@ -1666,6 +1702,71 @@ impl<'a> Lexer<'a> {
             } else {
                 break;
             }
+        }
+    }
+    fn superscript(&mut self, init: &str) -> Result<i32, EcoString> {
+        let mut got_neg = false;
+        let mut can_parse_ascii = false;
+        let mut too_large = false;
+        let mut num = None;
+        let mut n_str = EcoString::new();
+        match init {
+            "ᐨ" => got_neg = true,
+            "/" => can_parse_ascii = true,
+            c if c.chars().all(|c| SUPERSCRIPT_DIGITS.contains(&c)) => {
+                let n = (SUPERSCRIPT_DIGITS.iter())
+                    .position(|&d| d == c.chars().next().unwrap())
+                    .map(|i| i as i32)
+                    .unwrap();
+                num = Some(n);
+                n_str.push_str(c);
+            }
+            _ => {}
+        }
+        // Parse negative sign
+        got_neg = got_neg || (can_parse_ascii && self.next_char_if(is_superscript_neg).is_some());
+        loop {
+            if let Some(c) = can_parse_ascii
+                .then(|| self.next_char_if_all(|c| c.is_ascii_digit()))
+                .flatten()
+            {
+                let num = num.get_or_insert(0);
+                let (new_num, overflow) = num.overflowing_mul(10);
+                too_large |= overflow;
+                let n = c.parse::<i32>().unwrap();
+                let (new_num, overflow) = new_num.overflowing_add(n);
+                too_large |= overflow;
+                *num = new_num;
+                n_str.push(SUPERSCRIPT_DIGITS[n as usize]);
+            } else if let Some(c) = self.next_char_if_all(|c| SUPERSCRIPT_DIGITS.contains(&c)) {
+                let i = SUPERSCRIPT_DIGITS
+                    .iter()
+                    .position(|&d| d == c.chars().next().unwrap())
+                    .unwrap() as i32;
+                let num = num.get_or_insert(0);
+                let (new_num, overflow) = num.overflowing_mul(10);
+                too_large |= overflow;
+                let (new_num, overflow) = new_num.overflowing_add(i);
+                too_large |= overflow;
+                *num = new_num;
+                can_parse_ascii = false;
+                n_str.push_str(c);
+            } else if self.peek_char_n(1).is_some_and(is_superscript_num)
+                && self.next_char_exact("/")
+            {
+                can_parse_ascii = true;
+            } else {
+                break;
+            }
+        }
+        if too_large {
+            Err(n_str)
+        } else {
+            let mut num = num.unwrap_or(0);
+            if got_neg {
+                num = -num;
+            }
+            Ok(num)
         }
     }
     fn subscript(&mut self, init: &str) -> SubscriptToken {
@@ -1942,6 +2043,23 @@ fn is_formatted_subscript(c: &str) -> bool {
     "₋⌞⌟ₙ".contains(c)
         || c.chars()
             .all(|c| SUBSCRIPT_DIGITS.contains(&c) || OTHER_SUBSCRIPT_NUMBERS.contains(&c))
+}
+
+fn is_superscript_char(c: &str) -> bool {
+    is_superscript_num(c) || is_superscript_neg(c)
+}
+
+fn is_superscript_neg(c: &str) -> bool {
+    "`ᐨ¯".contains(c)
+}
+
+fn is_superscript_num(c: &str) -> bool {
+    c.chars()
+        .all(|c| c.is_ascii_digit() || SUPERSCRIPT_DIGITS.contains(&c))
+}
+
+fn is_formatted_superscript(c: &str) -> bool {
+    c == "ᐨ" || c.chars().all(|c| SUPERSCRIPT_DIGITS.contains(&c))
 }
 
 pub(crate) fn canonicalize_ident(ident: &str) -> Ident {

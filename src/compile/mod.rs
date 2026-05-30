@@ -1572,6 +1572,15 @@ impl Compiler {
             Word::TypeSigComment { .. } => Node::empty(),
             Word::OutputComment { i, n } => Node::SetOutputComment { i, n },
             Word::Subscripted(sub) => self.subscripted(*sub, word.span)?,
+            Word::Superscripted(inner, n) => {
+                let n = n.unwrap_or_else(|_| {
+                    self.add_error(word.span.clone(), "Superscript is too large");
+                    0
+                });
+                let mut word = self.word(word.span.sp(*inner))?;
+                word.prepend(Node::new_push(n));
+                word
+            }
             Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::FlipLine => Node::empty(),
             Word::InlineMacro(_) => {
                 self.add_error(

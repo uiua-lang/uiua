@@ -753,6 +753,9 @@ impl Spanner {
                     spans.push(word.span.clone().sp(SpanKind::Placeholder(*op)))
                 }
                 Word::PlaceholderN => spans.push(word.span.clone().sp(SpanKind::PlaceholderN)),
+                Word::Superscripted(inner, n) => {
+                    todo!()
+                }
                 #[allow(clippy::match_single_binding)]
                 Word::Subscripted(sub) => {
                     let n = Some(sub.script.value.clone());

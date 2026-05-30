@@ -6,8 +6,8 @@ use ecow::EcoString;
 use serde::*;
 
 use crate::{
-    BindingCounts, CodeSpan, Complex, Ident, Primitive, SemanticComment, Signature, Sp, Subscript,
-    SubscriptNumber, SubscriptToken, parse::ident_modifier_args,
+    BindingCounts, CodeSpan, Complex, FormatSuperscript, Ident, Primitive, SemanticComment,
+    Signature, Sp, Subscript, SubscriptNumber, SubscriptToken, parse::ident_modifier_args,
 };
 
 /// A top-level item
@@ -362,6 +362,7 @@ pub enum Word {
     TypeSigComment { i: usize },
     OutputComment { i: usize, n: usize },
     Subscripted(Box<Subscripted>),
+    Superscripted(Box<Sp<Word>>, Result<i32, EcoString>),
     InlineMacro(Box<InlineMacro>),
 }
 
@@ -389,6 +390,8 @@ impl PartialEq for Word {
             }
             (Self::Placeholder(_), Self::Placeholder(_)) => false,
             (Self::Comment(a), Self::Comment(b)) => a == b,
+            (Self::Subscripted(a), Self::Subscripted(b)) => a == b,
+            (Self::Superscripted(a, asup), Self::Superscripted(b, bsup)) => a == b && asup == bsup,
             _ => discriminant(self) == discriminant(other),
         }
     }
@@ -487,6 +490,14 @@ impl fmt::Debug for Word {
             Word::OutputComment { i, n } => write!(f, "output_comment({i}/{n})"),
             Word::TypeSigComment { i } => write!(f, "type_sig_comment({i}"),
             Word::Subscripted(sub) => sub.fmt(f),
+            Word::Superscripted(word, Ok(n)) => {
+                word.fmt(f)?;
+                FormatSuperscript(*n).fmt(f)
+            }
+            Word::Superscripted(word, Err(e)) => {
+                word.fmt(f)?;
+                e.fmt(f)
+            }
             Word::InlineMacro(mac) => {
                 write!(f, "inline_macro({:?}{}))", mac.func.value, mac.ident.value)
             }
@@ -859,7 +870,7 @@ impl ArgSetter {
 }
 
 /// A subscripted word
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Subscripted {
     /// The subscript
     pub script: Sp<SubscriptToken>,

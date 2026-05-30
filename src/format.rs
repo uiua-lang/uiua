@@ -15,12 +15,12 @@ use std::{
 
 use ecow::EcoString;
 use paste::paste;
-use uiua_parser::SubscriptToken;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
-    CodeSpan, Compiler, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode, Primitive, RunMode,
-    SUBSCRIPT_DIGITS, SafeSys, Signature, Sp, SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value,
+    CodeSpan, Compiler, FormatSuperscript, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode,
+    Primitive, RunMode, SUBSCRIPT_DIGITS, SUPERSCRIPT_DIGITS, SafeSys, Signature, Sp,
+    SubscriptToken, SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value,
     ast::*,
     is_ident_char,
     parse::{flip_unsplit_items, flip_unsplit_lines, parse, split_words, trim_spaces},
@@ -1148,6 +1148,16 @@ impl Formatter<'_> {
             Word::Placeholder(Some(i)) => self.push(&word.span, &format!("^{i}")),
             Word::Placeholder(None) => self.push(&word.span, "^"),
             Word::PlaceholderN => self.push(&word.span, "^n"),
+            Word::Superscripted(inner, n) => {
+                self.format_word(inner, depth);
+                if self.output.ends_with(SUPERSCRIPT_DIGITS) {
+                    self.output.push(' ');
+                }
+                match n {
+                    Ok(n) => self.output.push_str(&FormatSuperscript(*n).to_string()),
+                    Err(e) => self.output.push_str(&e),
+                }
+            }
             Word::Subscripted(sub) => match &sub.word.value {
                 Word::Modified(m) => {
                     if sub.script.value.num.is_some()
@@ -1742,6 +1752,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         }
         Word::Placeholder(_) | Word::PlaceholderN => false,
         Word::Subscripted(sub) => word_is_multiline(&sub.word.value),
+        Word::Superscripted(inner, _) => word_is_multiline(&inner.value),
         Word::Comment(_) => true,
         Word::Spaces => false,
         Word::BreakLine => true,

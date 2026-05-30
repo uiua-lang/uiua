@@ -143,7 +143,6 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::MemberOf => env.dyadic_rr_env(Value::memberof)?,
         Primitive::Find => env.dyadic_rr_env(Value::find)?,
         Primitive::Mask => env.dyadic_rr_env(Value::mask)?,
-        Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
         Primitive::IndexIn => {
             let a = env.pop(1)?;
             let b = env.pop(2)?;
@@ -1052,6 +1051,7 @@ impl ImplPrimitive {
                 env.push(max_rank);
             }
             ImplPrimitive::SetSign => env.dyadic_oo_env(Value::set_sign)?,
+            ImplPrimitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
             // Optimizations
             ImplPrimitive::AbsComplex => env.dyadic_oo_env(Value::abs_complex)?,
             ImplPrimitive::SquareAbs => env.monadic_env(Value::square_abs)?,

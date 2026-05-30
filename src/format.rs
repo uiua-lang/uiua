@@ -1142,15 +1142,8 @@ impl Formatter<'_> {
             Word::Pack(pack) => self.pack(pack, depth),
             Word::Primitive(prim) => self.format_primitive(*prim, &word.span),
             Word::Modified(m) => {
-                if matches!(m.modifier.value, Modifier::Primitive(Primitive::Backward))
-                    && m.operands.len() == 1
-                    && matches!(m.operands[0].value, Word::Primitive(Primitive::IndexOf))
-                {
-                    self.push(&m.operands[0].span, "⨂");
-                } else {
-                    self.format_modifier(&m.modifier, depth);
-                    self.format_words(&m.operands, true, depth);
-                }
+                self.format_modifier(&m.modifier, depth);
+                self.format_words(&m.operands, true, depth);
             }
             Word::Placeholder(Some(i)) => self.push(&word.span, &format!("^{i}")),
             Word::Placeholder(None) => self.push(&word.span, "^"),
@@ -1375,7 +1368,6 @@ impl Formatter<'_> {
                 }
                 self.push(span, &as_str)
             }
-            Primitive::IndexOf => self.push(span, "˜⨂"),
             _ => self.push(span, &as_str),
         }
     }
@@ -2178,8 +2170,6 @@ fn formatter_correctness() {
     let input = "\
 F,1
 \\\\25cb
-⊗
-˜⊗
 `5
 unwrench
 ran,1 10
@@ -2195,8 +2185,6 @@ Abc  by
     let output = "\
 F₁
 ○
-˜⨂
-⨂
 ¯5
 °(-⊸¬)
 ⇡₁10

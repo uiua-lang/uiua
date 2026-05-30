@@ -289,6 +289,7 @@ impl_primitive!(
     (2, RegressiveProduct),
     (2, LeftContraction),
     (2, RightContraction),
+    (2, IndexOf),
     /// Validate that a non-boxed variant field has a valid type and rank
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),

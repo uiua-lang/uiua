@@ -54,14 +54,14 @@ The parentheses of the function pack can be replaced with the array brackets.
 ⊓{⍉|+|⇡} [1_2 3_4] 6 10_20 5
 ```
 
-## [`indexin ⨂`](https://uiua.org/docs/indexin)
+## [`indexin ⊗`](https://uiua.org/docs/indexin)
 
 [`indexof ⊗`](https://uiua.org/docs/indexof) is now deprecated. It was almost always used along with [`backward ˜`](https://uiua.org/docs/backward), and this change also makes its argument order convention match that of [`memberof ∊`](https://uiua.org/docs/memberof).
 
-It has been replaced with [`indexin ⨂`](https://uiua.org/docs/indexin), which has the exact same functionality, except its arguments are flipped.
+It has been replaced with [`indexin ⊗`](https://uiua.org/docs/indexin), which has the exact same functionality, except its arguments are flipped.
 
 ```uiua
-F ← ⨂"abcde"
+F ← ⊗"abcde"
 F "beefcake"
 ```
 

@@ -23,7 +23,7 @@ GetExt ← °□⊣ ⊜□ ⊸≠@.
 ]
 ExtMimeExt  ←
 ExtMimeMime ←
-ExtMime     ← °□⊏⊃(⨂ExtMimeExt□|⊂ExtMimeMime□⊂"text/")
+ExtMime     ← °□⊏⊃(⊗ExtMimeExt□|⊂ExtMimeMime□⊂"text/")
 
 # ? Status Mime Bytes
 Response ← (
@@ -31,8 +31,8 @@ Response ← (
   $$ HTTP/1.1 _
   $$ Content-Type: _
   $$ Content-Length: _
-  $$ 
-  $$ 
+  $$
+  $$
   ⊂ utf₈
 )
 

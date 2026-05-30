@@ -2609,7 +2609,6 @@ fn prim_sig_class(prim: Primitive, subscript: Option<&SubscriptToken>) -> &'stat
             n => sig_class((n.unsigned_abs() as usize, 1).into()),
         },
         Primitive::Rand if very_gay() => code_font!("text-gradient random"),
-        Primitive::IndexOf => code_font!("text-gradient caution"),
         prim if matches!(prim.class(), PrimClass::Arguments | PrimClass::Debug)
             && prim.modifier_args().is_none() =>
         {

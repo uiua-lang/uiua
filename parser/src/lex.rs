@@ -1075,6 +1075,7 @@ impl<'a> Lexer<'a> {
                     self.end(Primitive::Identity, self.loc);
                 }
                 "∈" => self.end(Primitive::MemberOf, start),
+                "⨂" => self.end(Primitive::IndexIn, start),
                 "◰" => {
                     self.end(Primitive::Occurrences, start);
                     self.end(Subscr(Subscript::from(1)), self.loc);

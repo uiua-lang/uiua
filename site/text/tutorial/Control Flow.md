@@ -133,7 +133,7 @@ With [indexin](), [switch]() can be used to implement behavior similar to `switc
 
 ```uiua
 F ← (
-  ⨂{"foo" "bar" "baz"} □
+  ⊗{"foo" "bar" "baz"} □
   ⨬(+1|×10|÷2|¯)
 )
 F "foo" 5

@@ -16,6 +16,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add `NoInit` constructor to data definitions construct data without running initializers (but still running validators)
 - Allow for function arguments to macros to be indicated in a signature comment
   - Put signature comments for each function between `()`s at the beginning of the macro's signature comment
+- Allow for subfolder imports from Git repos specified like `~ "git: example.com/user/repo subfolder"`
 - Add experimental `ᵢ` and `ᵣ` subscripts, which format from `,i` and `,r` respectively
   - Only currently compatible with dyadic pervasives and custom subscripts, but may be used for other things in the future
 - Rework experimental [Geometric Algebra](https://uiua.org/docs/experimental#geometric-algebra) system
@@ -29,7 +30,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [Type Checking](https://uiua.org/docs/experimental#type-checking)
 - Add experimental [`validate ⯾`](https://uiua.org/docs/validate) function to help with type checking
 - Add experimental [`pattern ⍡`](https://uiua.org/docs/pattern) modifier, which makes big pattern match lists easier to debug and maintain
-- Allow for subfolder imports from Git repos specified like `~ "git: example.com/user/repo subfolder"`
+- Remove the previously deprecated `indexof ⊗` function
+  - As planned, [`indexin ⊗`](https://uiua.org/docs/indexin)'s glyph has been changed, and the old one will format to `⊗`.
 ### Interpreter
 - Tweak the formatter to make indentation always a multiple of 2
 - Add number output rules for some square roots
@@ -183,7 +185,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`occurrences ⧆`](https://uiua.org/docs/occurrences)
 - Add experimental sided subscripts for [`backward ˜`](https://uiua.org/docs/backward)
 - Add numeric subscripts for [`occurrences ⧆`](https://uiua.org/docs/occurrences)
-- Add [`indexin ⨂`](https://uiua.org/docs/indexin) function, which is a flipped version of [`indexof ⊗`](https://uiua.org/docs/indexof)
+- Add [`indexin ⊗`](https://uiua.org/docs/indexin) function, which is a flipped version of `indexof ⊗`
   - This makes its calling convention match [`memberof ∊`](https://uiua.org/docs/memberof)
   - It also matches the argument order of the more common case
   - [`indexof ⊗`](https://uiua.org/docs/indexof) has been deprecated

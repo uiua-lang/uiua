@@ -408,7 +408,7 @@ Every data definition has a generated `Fields` constant which is a list of the f
 ~Person {Name Age Score}
 Person "Dave" 31 5
 "Age" # Imagine this is user input
-°□⊏˜⨂⊓□Person.Fields
+°□⊏˜⊗⊓□Person.Fields
 ```
 
 The `Fields` constant can also be used to turn a data structure into a [`map`]().

@@ -721,7 +721,12 @@ impl Spanner {
                             ))
                         }
                         Modifier::Primitive(p) => {
-                            spans.push((m.modifier.span.clone()).sp(SpanKind::Primitive(*p, None)))
+                            let kind = if p.modifier_args().is_none() && p.glyph().is_none() {
+                                SpanKind::PrimArgs(*p)
+                            } else {
+                                SpanKind::Primitive(*p, None)
+                            };
+                            spans.push((m.modifier.span.clone()).sp(kind))
                         }
                         Modifier::Ref(r) => spans.extend(self.ref_spans(r)),
                         Modifier::Macro(mac) => {

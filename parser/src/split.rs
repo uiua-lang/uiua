@@ -380,12 +380,13 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
             return Some(comps);
         }
     }
-    let mut indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
-    indices.push(name.len());
+    let indices: Vec<usize> = (name.char_indices().map(|(i, _)| i))
+        .chain([name.len()])
+        .collect();
     // Forward parsing
-    let mut prims = Vec::new();
-    let mut start = 0;
     for one_letter in [false, true] {
+        let mut prims = Vec::new();
+        let mut start = 0;
         'outer: loop {
             if start == indices.len() {
                 return Some(prims);

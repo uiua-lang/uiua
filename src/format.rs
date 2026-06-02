@@ -2181,6 +2181,7 @@ Abc by
 Abc  by
 @\\Z
 \"\\B\\N\\R\"
+bacdi
 ";
     let output = "\
 F₁
@@ -2196,6 +2197,7 @@ Abc⊸
 Abc ⊸
 @ℤ
 \"𝔹ℕℝ\"
+˜⊙∘
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     assert_eq!(formatted, output);

@@ -2079,10 +2079,6 @@ primitive!(
     /// For a box and non-box array, [inventory] will unbox the box array's rows and then re-box the results.
     /// ex: ⍚⊂ {"a" "bc" "def"} "123"
     ///
-    /// A common use case is in conjunction with [under] and boxing array notation as a sort of n-wise [both].
-    /// ex: {⍜ {⊙⊙∘}⍚⊂    1_2 3_4_5 6_7_8_9 10}
-    ///   : {⍜⊙{⊙⊙∘}⍚⊂ 10 1_2 3_4_5 6_7_8_9   }
-    ///
     /// Subscripted [inventory] operates on rank-N subarrays.
     /// ex: ⍚₀∘ °△2_3_4
     ///   : ⍚₁∘ °△2_3_4

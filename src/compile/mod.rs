@@ -2409,7 +2409,7 @@ impl Compiler {
         self.validate_primitive(prim, &span);
         let spandex = self.add_span(span.clone());
         match prim {
-            Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None, None), spandex),
+            Primitive::Validate => Node::ImplPrim(ImplPrimitive::ValidateImpl(None), spandex),
             Primitive::Multivector => {
                 Node::ImplPrim(ImplPrimitive::MvImpl(MvMode::default()), spandex)
             }
@@ -2519,27 +2519,10 @@ impl Compiler {
                     }
                 }
             }
-            Validate => {
-                let sub = self.validate_subscript_int(scr, &Validate.format());
-                Node::ImplPrim(
-                    ImplPrimitive::ValidateImpl(
-                        (sub.value.num).map(|n| self.positive_subscript(n, Validate, &sub.span)),
-                        sub.value.side.map(|ss| {
-                            if ss.n.is_some() {
-                                self.add_error(
-                                    sub.span.clone(),
-                                    format!(
-                                        "Side quantifiers are not allowed for {}",
-                                        Validate.format()
-                                    ),
-                                );
-                            }
-                            ss.side
-                        }),
-                    ),
-                    self.add_span(span),
-                )
-            }
+            Validate => Node::ImplPrim(
+                ImplPrimitive::ValidateImpl(self.subscript_side_only(&scr, &Validate.format())),
+                self.add_span(span),
+            ),
             Multivector => {
                 use crate::ga::*;
                 let sub = self.validate_subscript_int(scr, &Multivector.format());

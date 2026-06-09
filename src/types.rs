@@ -303,7 +303,7 @@ impl TypeVal {
                 'ℤ' => Scalar::Int,
                 'ℕ' => Scalar::Nat,
                 '𝔹' => Scalar::Bool,
-                '@' => Scalar::Char,
+                '@' | '𝕌' => Scalar::Char,
                 '□' => Scalar::Box(ScalarBox::Any),
                 'ℂ' => Scalar::Complex,
                 _ => return None,
@@ -374,6 +374,21 @@ impl TypeVal {
                 .insert(0, dim);
                 *self = ty.into();
             }
+        }
+    }
+    fn as_scalar_char(&self) -> Option<char> {
+        match self {
+            TypeVal::Val(Value::Char(arr)) if arr.rank() == 0 => Some(arr.data[0]),
+            _ => None,
+        }
+    }
+    fn as_scalar_dim(&self) -> Option<Dim> {
+        match self {
+            TypeVal::Num(f64::INFINITY) => Some(Dim::Dyn),
+            &TypeVal::Num(n) if n.fract() == 0.0 && n >= 0.0 && n < usize::MAX as f64 => {
+                Some(Dim::Static(n as usize))
+            }
+            _ => None,
         }
     }
 }
@@ -2300,11 +2315,11 @@ impl<'a> TypeEnv<'a> {
                     }
                     self.push(ty);
                 }
-                &ValidateImpl(type_id, side) => {
+                &ValidateImpl(side) => {
                     let spec = self.pop(1)?;
                     let val = self.top_mut("validated value")?;
                     let mut ch = val.clone().ty();
-                    validate(spec, &mut ch, type_id, side)?;
+                    validate(spec, &mut ch, side)?;
                     val.set_scalar(ch.scalar);
                     val.set_shape(ch.shape);
                     self.update_arg_types();
@@ -2907,19 +2922,14 @@ fn get_ops<const N: usize>(ops: &[SigNode]) -> &[SigNode; N] {
     ops.try_into().unwrap()
 }
 
-pub fn validate(
-    spec: TypeVal,
-    ch: &mut Type,
-    type_id: Option<usize>,
-    side: Option<SubSide>,
-) -> TypeResult {
+pub fn validate(spec: TypeVal, ch: &mut Type, side: Option<SubSide>) -> TypeResult {
     if spec.is_boxed() {
         let spec = spec.unboxed();
         match &mut ch.scalar {
-            Scalar::Box(ScalarBox::All(inner)) => validate(spec, inner, type_id, side)?,
+            Scalar::Box(ScalarBox::All(inner)) => validate(spec, inner, side)?,
             Scalar::Any | Scalar::Box(_) => {
                 let mut inner = Type::default();
-                validate(spec, &mut inner, type_id, side)?;
+                validate(spec, &mut inner, side)?;
                 ch.scalar = Scalar::Box(ScalarBox::All(inner.into()));
             }
             scalar => {
@@ -2929,7 +2939,16 @@ pub fn validate(
                 ));
             }
         }
+        Ok(())
     } else if let Some((spec_name, field_specs)) = spec.as_boxes() {
+        if let Some((scalar, dims)) = field_specs.split_first().and_then(|(first, rest)| {
+            (first.as_scalar_spec())
+                .zip((rest.iter().map(|tv| tv.as_scalar_dim())).collect::<Option<Vec<_>>>())
+        }) {
+            check_scalar(scalar, ch)?;
+            check_shape(dims, ch, side)?;
+            return Ok(());
+        }
         let len = field_specs.len();
         let Some((name, fields)) = ch
             .as_mut_fields(spec_name.as_deref(), field_specs.len())
@@ -2947,7 +2966,7 @@ pub fn validate(
             *name = spec_name;
         }
         for (spec, ty) in field_specs.into_iter().zip(fields) {
-            validate(spec, ty, None, None)?;
+            validate(spec, ty, None)?;
         }
         if ch.shape.is_any() {
             ch.shape = Dim::Static(len).into();
@@ -2958,80 +2977,74 @@ pub fn validate(
         } else if ch.shape.dims.ends_with(&[Dim::Dyn]) {
             ch.shape.dims.push(Dim::Static(len));
         }
-    } else if let Some(expected) = type_id
-        .map(|type_id| {
-            Scalar::from_num(type_id as f64)
-                .ok_or_else(|| format!("Invalid scalar type id {type_id}"))
-        })
-        .transpose()?
-        .or_else(|| side.is_none().then(|| spec.as_scalar_spec()).flatten())
-    {
-        // Non-boxed type checking
-        if let Scalar::Any = ch.scalar {
-            ch.scalar = expected;
-        } else if !expected.superset_of(&ch.scalar) {
-            return Err(TypeError::ScalarMismatch(expected, ch.scalar.clone()));
-        }
-        // If the subscripted type id was used, also do normal shape checking
-        if type_id.is_some() {
-            check_shape(spec, ch, side)?;
-        }
-    } else {
-        // Normal shape checking
-        check_shape(spec, ch, side)?;
-    }
-
-    fn check_shape(spec: TypeVal, ch: &mut Type, side: Option<SubSide>) -> TypeResult {
-        if let Some(dims) = spec.as_dims().or_else(|| spec.as_dim().map(|d| vec![d])) {
-            // Shape checking
-            let ch_dims = &ch.shape.dims;
-            let mismatch = !ch.shape.is_any()
-                && match side {
-                    Some(SubSide::Left) => {
-                        ch_dims.len() < dims.len() && ch.shape.suffix.is_none()
-                            || (ch_dims.iter().zip(&dims)).any(|(a, b)| !a.compatible(*b))
-                    }
-                    Some(SubSide::Right) => {
-                        let val_dims = if let Some(suf) = &ch.shape.suffix {
-                            suf
-                        } else {
-                            ch_dims
-                        };
-                        ch.shape.rank() < dims.len()
-                            || (val_dims.iter().rev())
-                                .zip(dims.iter().rev())
-                                .any(|(a, b)| !a.compatible(*b))
-                    }
-                    None => {
-                        if let Some(suf) = &ch.shape.suffix {
-                            ch_dims.len() + suf.len() > dims.len()
-                                || !(ch_dims.iter()).eq(dims.iter().take(ch_dims.len()))
-                                || !(suf.iter().rev()).eq(dims[ch_dims.len()..].iter().rev())
-                        } else {
-                            ch_dims.len() != dims.len()
-                                || ch_dims.iter().zip(&dims).any(|(a, b)| !a.compatible(*b))
-                        }
-                    }
-                };
-
-            let shape = match side {
-                None => DynShape { dims, suffix: None },
-                Some(SubSide::Left) => DynShape {
-                    dims,
-                    suffix: Some(Vec::new()),
-                },
-                Some(SubSide::Right) => DynShape {
-                    dims: Vec::new(),
-                    suffix: Some(dims),
-                },
-            };
-            if mismatch {
-                return Err(TypeError::ShapeMismatch(shape, ch.shape.clone()));
-            } else {
-                ch.shape.merge_from(shape);
-            }
-        }
         Ok(())
+    } else if let Some(expected) = spec.as_scalar_spec().filter(|_| side.is_none()) {
+        // Non-boxed type checking
+        check_scalar(expected, ch)
+    } else if let Some(dims) = spec.as_dims().or_else(|| spec.as_dim().map(|d| vec![d])) {
+        // Normal shape checking
+        check_shape(dims, ch, side)
+    } else {
+        Ok(())
+    }
+}
+
+fn check_scalar(expected: Scalar, ch: &mut Type) -> TypeResult {
+    if let Scalar::Any = ch.scalar {
+        ch.scalar = expected;
+    } else if !expected.superset_of(&ch.scalar) {
+        return Err(TypeError::ScalarMismatch(expected, ch.scalar.clone()));
+    }
+    Ok(())
+}
+
+fn check_shape(dims: Vec<Dim>, ch: &mut Type, side: Option<SubSide>) -> TypeResult {
+    // Shape checking
+    let ch_dims = &ch.shape.dims;
+    let mismatch = !ch.shape.is_any()
+        && match side {
+            Some(SubSide::Left) => {
+                ch_dims.len() < dims.len() && ch.shape.suffix.is_none()
+                    || (ch_dims.iter().zip(&dims)).any(|(a, b)| !a.compatible(*b))
+            }
+            Some(SubSide::Right) => {
+                let val_dims = if let Some(suf) = &ch.shape.suffix {
+                    suf
+                } else {
+                    ch_dims
+                };
+                ch.shape.rank() < dims.len()
+                    || (val_dims.iter().rev())
+                        .zip(dims.iter().rev())
+                        .any(|(a, b)| !a.compatible(*b))
+            }
+            None => {
+                if let Some(suf) = &ch.shape.suffix {
+                    ch_dims.len() + suf.len() > dims.len()
+                        || !(ch_dims.iter()).eq(dims.iter().take(ch_dims.len()))
+                        || !(suf.iter().rev()).eq(dims[ch_dims.len()..].iter().rev())
+                } else {
+                    ch_dims.len() != dims.len()
+                        || ch_dims.iter().zip(&dims).any(|(a, b)| !a.compatible(*b))
+                }
+            }
+        };
+
+    let shape = match side {
+        None => DynShape { dims, suffix: None },
+        Some(SubSide::Left) => DynShape {
+            dims,
+            suffix: Some(Vec::new()),
+        },
+        Some(SubSide::Right) => DynShape {
+            dims: Vec::new(),
+            suffix: Some(dims),
+        },
+    };
+    if mismatch {
+        return Err(TypeError::ShapeMismatch(shape, ch.shape.clone()));
+    } else {
+        ch.shape.merge_from(shape);
     }
     Ok(())
 }

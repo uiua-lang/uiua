@@ -93,6 +93,8 @@ pub enum PrimComponent {
     Nat,
     /// 𝔹
     Bool,
+    /// 𝕌
+    Char,
     /// Basis vector e
     E,
 }
@@ -130,6 +132,7 @@ impl PrimComponent {
             PrimComponent::Int => "ℤ",
             PrimComponent::Nat => "ℕ",
             PrimComponent::Bool => "𝔹",
+            PrimComponent::Char => "𝕌",
             PrimComponent::E => "e",
         })
     }
@@ -306,16 +309,17 @@ impl Primitive {
             alias!((epsilon, PrimComponent::Epsilon)),
             alias!((r, Reduce), (a, Content), (ze, Join)),
             alias!((r, Reduce), (a, Content), (z, Join)),
-            alias!((li, Validate), (st, PrimComponent::Infinity)),
             alias!(
-                (s, Validate),
-                (t, PrimComponent::Sub1),
-                (r, PrimComponent::Infinity)
+                (s, PrimComponent::OpenParen),
+                (t, PrimComponent::Char),
+                (r, PrimComponent::Infinity),
+                ( , PrimComponent::CloseParen),
             ),
-            alias!((nu, Validate), (m, PrimComponent::Real)),
-            alias!((in, Validate), (t, PrimComponent::Int)),
-            alias!((na, Validate), (t, PrimComponent::Nat)),
-            alias!((bo, Validate), (ol, PrimComponent::Bool)),
+            alias!((num, PrimComponent::Real)),
+            alias!((int, PrimComponent::Int)),
+            alias!((nat, PrimComponent::Nat)),
+            alias!((bool, PrimComponent::Bool)),
+            alias!((char, PrimComponent::Char)),
             // alias!((co, Multivector), (mp, PrimComponent::SubI)),
             // alias!((com, Multivector), (pl, PrimComponent::SubI)),
             // alias!((comp, Multivector), (plex, PrimComponent::SubI)),

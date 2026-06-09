@@ -278,6 +278,8 @@ constant!(
     ("ℕ", Types, 'ℕ'),
     /// Tag for boolean numbers for use with `validate`
     ("𝔹", Types, '𝔹'),
+    /// Tag for characters for use with `validate`
+    ("𝕌", Types, '𝕌'),
     /// 1-dimensional adjacent neighbors offsets
     ("A₁", Spatial, [1, -1]),
     /// 2-dimensional adjacent neighbors offsets

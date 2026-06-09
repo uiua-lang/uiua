@@ -1372,10 +1372,10 @@ impl ImplPrimitive {
                 vals.map_args(keys, Some(args), env)?;
                 env.push(vals);
             }
-            &ImplPrimitive::ValidateImpl(type_id, side) => {
+            &ImplPrimitive::ValidateImpl(side) => {
                 let spec = env.pop(1)?;
                 let val = env.pop(2)?;
-                if let Err(e) = validate(spec.into(), &mut Type::from(&val), type_id, side) {
+                if let Err(e) = validate(spec.into(), &mut Type::from(&val), side) {
                     return Err(env.error(format!("Type error: {e}")));
                 }
                 env.push(val);

@@ -3719,7 +3719,7 @@ primitive!(
     ///   : layout 15 ⬚""↯∞_12 ⊜□⊸≠@  Lorem
     ///
     /// 4 optionals arguments are accepted:
-    /// - `LineHeight` - The height of a line relative to the font size (default 1.1)
+    /// - `LineHeight` - The height of a line relative to the font size (default 1)
     /// - `Size` - The size of the rendering area. Use `∞` to use the smallest possible size.
     /// - `Color` - The text color. If set, the background defaults to transparent.
     /// - `Bg` - The background color.

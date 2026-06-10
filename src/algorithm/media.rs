@@ -927,7 +927,7 @@ fn encode_gif_impl<C, E>(
     frame_rate = frame_rate.max(MIN_FRAME_RATE).abs();
     let mut t = 0;
 
-    let mut encoder = if first_frame.rank() == 2 && first_frame.type_id() == f64::TYPE_ID {
+    if first_frame.rank() == 2 && first_frame.type_id() == f64::TYPE_ID {
         let first_frame = value_to_image(&first_frame)
             .map_err(|e| error(ctx, e))?
             .to_luma8();
@@ -968,6 +968,7 @@ fn encode_gif_impl<C, E>(
             .to_rgba8();
         let mut encoder = Encoder::new(&mut bytes, width as u16, height as u16, &GIF_PALETTE)
             .map_err(|e| error(ctx, e.to_string()))?;
+        (encoder.set_repeat(gif::Repeat::Infinite)).map_err(|e| error(ctx, e.to_string()))?;
         let mut write_frame = |i: usize, frame, ctx: &mut C| -> Result<(), E> {
             let (indices, has_transparent) = dither(frame, width, height);
             let mut frame =
@@ -1002,11 +1003,9 @@ fn encode_gif_impl<C, E>(
             i += 1;
         }
         encoder
-    };
-    (encoder.set_repeat(gif::Repeat::Infinite)).map_err(|e| error(ctx, e.to_string()))?;
-    encoder
-        .into_inner()
-        .map_err(|e| error(ctx, e.to_string()))?;
+    }
+    .into_inner()
+    .map_err(|e| error(ctx, e.to_string()))?;
     Ok(bytes.into_inner())
 }
 

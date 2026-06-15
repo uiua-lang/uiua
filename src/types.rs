@@ -2,7 +2,7 @@
 
 use std::{
     borrow::Cow,
-    cmp::Ordering,
+    cmp::{self, Ordering},
     fmt,
     iter::repeat_n,
     mem::{discriminant, replace, swap, take},
@@ -289,25 +289,7 @@ impl TypeVal {
     pub fn as_scalar_spec(&self) -> Option<Scalar> {
         match self {
             TypeVal::Num(n) => Scalar::from_num(*n),
-            TypeVal::Val(Value::Num(arr)) if arr.rank() == 0 => Scalar::from_num(arr.data[0]),
-            TypeVal::Val(Value::Byte(arr)) if arr.rank() == 0 => {
-                Scalar::from_num(arr.data[0] as f64)
-            }
-            TypeVal::Val(Value::Complex(arr))
-                if arr.data.as_slice() == [Complex::I] || arr.data.as_slice() == [Complex::ONE] =>
-            {
-                Some(Scalar::Complex)
-            }
-            TypeVal::Val(Value::Char(arr)) if arr.rank() == 0 => Some(match arr.data[0] {
-                'ℝ' => Scalar::Num,
-                'ℤ' => Scalar::Int,
-                'ℕ' => Scalar::Nat,
-                '𝔹' => Scalar::Bool,
-                '@' | '𝕌' => Scalar::Char,
-                '□' => Scalar::Box(ScalarBox::Any),
-                'ℂ' => Scalar::Complex,
-                _ => return None,
-            }),
+            TypeVal::Val(val) => value_as_scalar_spec(val),
             _ => None,
         }
     }
@@ -495,6 +477,41 @@ impl From<DynShape> for TypeVal {
             TypeVal::NumList(list)
         }
     }
+}
+
+fn value_as_scalar_spec(val: &Value) -> Option<Scalar> {
+    match val {
+        Value::Num(arr) if arr.rank() == 0 => Scalar::from_num(arr.data[0]),
+        Value::Byte(arr) if arr.rank() == 0 => Scalar::from_num(arr.data[0] as f64),
+        Value::Complex(arr)
+            if arr.data.as_slice() == [Complex::I] || arr.data.as_slice() == [Complex::ONE] =>
+        {
+            Some(Scalar::Complex)
+        }
+        Value::Char(arr) if arr.rank() == 0 => Some(match arr.data[0] {
+            'ℝ' => Scalar::Num,
+            'ℤ' => Scalar::Int,
+            'ℕ' => Scalar::Nat,
+            '𝔹' => Scalar::Bool,
+            '𝕌' => Scalar::Char,
+            '@' => Scalar::Ascii,
+            '□' => Scalar::Box(ScalarBox::Any),
+            'ℂ' => Scalar::Complex,
+            _ => return None,
+        }),
+        val => Some(Scalar::Box(ScalarBox::All(Type::from(val).into()))),
+    }
+}
+
+fn value_as_dim(val: &Value) -> Option<Dim> {
+    Some(match val {
+        Value::Num(arr) if arr.rank() == 0 && arr.data[0] == f64::INFINITY => Dim::Dyn,
+        Value::Num(arr) if arr.rank() == 0 && arr.data[0] >= 0.0 && arr.data[0].fract() == 0.0 => {
+            Dim::Static(arr.data[0] as usize)
+        }
+        Value::Byte(arr) if arr.rank() == 0 => Dim::Static(arr.data[0] as usize),
+        _ => return None,
+    })
 }
 
 impl From<Scalar> for Type {
@@ -692,11 +709,12 @@ impl ScalarBox {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub enum Scalar {
     Bool,
-    Int,
     Nat,
+    Int,
     Num,
     Complex,
     Multivector,
+    Ascii,
     Char,
     Stream,
     Box(ScalarBox),
@@ -750,6 +768,7 @@ impl Scalar {
             (Scalar::Num, Scalar::Int | Scalar::Nat | Scalar::Bool) => true,
             (Scalar::Int, Scalar::Nat | Scalar::Bool) => true,
             (Scalar::Nat, Scalar::Bool) => true,
+            (Scalar::Char, Scalar::Ascii) => true,
             (a, b) => discriminant(a) == discriminant(b),
         }
     }
@@ -788,6 +807,7 @@ impl Scalar {
     pub fn unrefine(&mut self) {
         match self {
             Scalar::Int | Scalar::Nat | Scalar::Bool => *self = Scalar::Num,
+            Scalar::Ascii => *self = Scalar::Char,
             Scalar::Box(ScalarBox::All(ty)) => ty.scalar.unrefine(),
             Scalar::Box(ScalarBox::Def(_, fields)) => {
                 fields.iter_mut().for_each(|t| t.scalar.unrefine())
@@ -1170,7 +1190,8 @@ impl fmt::Display for Scalar {
             Scalar::Int => write!(f, "ℤ"),
             Scalar::Nat => write!(f, "ℕ"),
             Scalar::Bool => write!(f, "𝔹"),
-            Scalar::Char => write!(f, "@"),
+            Scalar::Ascii => write!(f, "@"),
+            Scalar::Char => write!(f, "𝕌"),
             Scalar::Box(ScalarBox::Any) => write!(f, "□"),
             Scalar::Box(ScalarBox::All(inner)) => write!(f, "□{inner}"),
             Scalar::Box(ScalarBox::Def(Some(name), _)) => write!(f, "{name}"),
@@ -1251,26 +1272,39 @@ impl BitOr for TypeVal {
 
 impl From<&Value> for Type {
     fn from(val: &Value) -> Self {
-        let scalar = Scalar::from(val);
-        let shape = DynShape::from(&val.shape);
-        Type { scalar, shape }
+        if let Value::Box(arr) = val
+            && arr.rank() == 1
+            && let Some((first, rest)) = arr.data.split_first()
+            && let Some(scalar) = value_as_scalar_spec(&first.0)
+            && let Some(dims) = (rest.iter())
+                .map(|Boxed(val)| value_as_dim(val))
+                .collect::<Option<Vec<_>>>()
+        {
+            let shape = DynShape { dims, suffix: None };
+            Type { scalar, shape }
+        } else {
+            let scalar = Scalar::from(val);
+            let shape = DynShape::from(&val.shape);
+            Type { scalar, shape }
+        }
     }
 }
 
 impl From<&[f64]> for Scalar {
     fn from(nums: &[f64]) -> Self {
+        let mut max = Scalar::Bool;
         for &n in nums {
             if n.fract() != 0.0 {
                 return Scalar::Num;
             }
             if n < 0.0 {
-                return Scalar::Int;
+                max = cmp::max(max, Scalar::Int);
             }
             if n > 1.0 {
-                return Scalar::Nat;
+                max = cmp::max(max, Scalar::Nat);
             }
         }
-        Scalar::Bool
+        max
     }
 }
 
@@ -1286,7 +1320,14 @@ impl From<&Value> for Scalar {
                 }
                 Scalar::Bool
             }
-            Value::Char(_) => Scalar::Char,
+            Value::Char(arr) => {
+                for c in &arr.data {
+                    if !c.is_ascii() {
+                        return Scalar::Char;
+                    }
+                }
+                Scalar::Ascii
+            }
             Value::Complex(_) => Scalar::Complex,
             Value::Box(arr) => Scalar::Box(
                 (arr.data.iter())

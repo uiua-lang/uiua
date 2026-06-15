@@ -2782,7 +2782,7 @@ primitive!(
     (2(0), Assert, Misc, ("assert", '⍤'), Impure),
     /// Validate a value's type and/or shape
     ///
-    /// The first argument specifies the type or shape. The second argument is the array to be validated.
+    /// The first argument specifies the scalar type and/or shape. The second argument is the array to be validated.
     /// If successfully validated, the second argument will be returned unchanged. Failure to validate throws an error.
     ///
     /// [validate] is more useful when used in conjunction with [type checking](https://www.uiua.org/docs/experimental#type-checking).
@@ -2797,6 +2797,26 @@ primitive!(
     ///   : ⯾0 [1 2 3]
     /// ex! # Experimental!
     ///   : ⯾1 [1 2 3]
+    /// For more clarity and/or specificity, you can also use a scalar character in the form of a built-in constant. These constants all format from a name.
+    /// - `ℝ` - `num` - Real numbers
+    /// - `ℤ` - `int` - Integers
+    /// - `ℕ` - `nat` - Natural numbers
+    /// - `𝔹` - `bool` - Booleans
+    /// - `𝕌` - `char` - Unicode characters
+    /// In addition, there are some type specifier characters which do not have aliases but which can still be used in their character form.
+    /// - `@ℂ` - Complex numbers
+    /// - `@@` - ASCII-only characters
+    /// - `@□` - Boxes with anything in them
+    /// ex: # Experimental!
+    ///   : ⯾ℕ [5 3 2]
+    /// ex! # Experimental!
+    ///   : ⯾ℕ [5 ¯3 2]
+    /// ex! # Experimental!
+    ///   : ⯾ℕ [5 3 2.1]
+    /// ex: # Experimental!
+    ///   : ⯾ @@ "hello!"
+    /// ex! # Experimental!
+    ///   : ⯾ @@ "⭐Wow!⭐"
     /// If the first argument is a list of numbers, it will validate the shape of the array.
     /// ex: # Experimental!
     ///   : ⯾[] 5
@@ -2813,13 +2833,9 @@ primitive!(
     /// ex: # Experimental!
     ///   : ⯾∞ [0 1 1 0 1 0 0 1 0 1 1]
     ///   : ⯾∞ "neat"
-    /// Shape and type can both be validated by called [validate] twice.
+    /// Shape and type can both be validated by using a box array where the type is the first item and the rest of the items are axis sizes.
     /// ex: # Experimental!
-    ///   : ⯾1⯾[∞ 2] ["ab""cd"]
-    /// These can be combined by providing the type as a numeric subscript.
-    /// ex: # Experimental!
-    ///   : ⯾₀∞ [4 8 2 7 1]
-    ///   : ⯾₁[∞ 2] ["ab""cd"]
+    ///   : ⯾{𝕌 ∞ 2} ["ab""cd"]
     /// A sided subscript interprets the shape requirement as a prefix or suffix, rather than an exact match.
     /// ex: # Experimental!
     ///   : ⯾⌞[2] [1 2]
@@ -2837,20 +2853,6 @@ primitive!(
     ///   : ⯾⌞2⯾⌟3 [[1_2_3] [4_5_6]]
     /// ex! # Experimental!
     ///   : ⯾⌞2⯾⌟3 [[1_2 3_5] [5_6 7_8]]
-    /// A [box]ed type or shape specification requires the validated array be parsed.
-    /// ex: # Experimental!
-    ///   : ⯾□1⯾□∞ □"a boxed string"
-    ///   : ⯾□1⯾□∞ {"some" "boxed" "strings"}
-    /// ex! # Experimental!
-    ///   : ⯾□1⯾□∞ {1_2 3_4_5}
-    /// This [box]ed form can also be shortened with a subscript.
-    /// ex: # Experimental!
-    ///   : ⯾₁□∞ □"a boxed string"
-    /// An additional [validate] call can be used to validate the outer shape.
-    /// ex: # Experimental!
-    ///   : ⯾₁□∞ ⯾∞ {"some" "strings"}
-    /// ex! # Experimental!
-    ///   : ⯾₁□∞ ⯾∞ □"a boxed string"
     (2, Validate, Misc, ("validate", '⯾'), { experimental: true }),
     /// Memoize a function
     ///

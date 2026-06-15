@@ -92,60 +92,11 @@ F ← ⊜□⊸≠@\n &fras
 
 This system is meant to often be used in conjunction with [validate](/docs/validate), which can more explicitly verify type/shape information. See its documentation for detail on how to use it.
 
-The lone `ℝ` in this example indicates a scalar number.
-```
-# Experimental!
-#? _×_×_ ? ℝ …
-F ← ↯↯3 ⯾₀[]
-```
-
-```uiua
-# Experimental!
-#? Format me!
-F ← ⊟₃ ∩₃(⯾₀∞)
-```
-
-```uiua
-# Experimental!
-#? _×_@ ? ℝ …@
-F ← ↯ ⊟2 ⊓(⯾₀[]|⯾1)
-```
-
-The `str` alias indicates a list of characters.
-
-```uiua
-# Experimental!
-#? str ? ℝ _□str
-F ← °□⊏ ⊓(⯾₀[]|⯾₁□∞⯾∞)
-```
-
-```uiua
-# Experimental!
-#? _×_□str ? str
-F ← ⊜(⊜□⊸≠@ )⊸≠@\n⯾₁∞
-```
-
-The `ℝ`, `ℤ`, `ℕ`, and `𝔹` constants have values that are their exact characters. These characters can be used to specify scalar types in lieu of numbers. They represent reals, integers, naturals, and booleans respectively. They format from `num`, `int`, `nat`, and `bool` respectively (with a [validate](/docs/validate) in front).
-
-```uiua
-# Experimental!
-#? … ? …ℤ _ℕ
-F ← ⊡ ⊙(⯾ℕ⯾∞)
-```
-
-```uiua
-# Experimental!
-#? Try formatting!
-F ← ⊏ ⊓(boollist|⯾∞_2num)
-```
-
-The `# Type check!` semantic comment will type check all functions below it without generating a comment.
-
 ```uiua should diag
 # Experimental!
 # Type check!
 F ← ↙5 ↯3
-G ← +@0 ⯾₁[]
+G ← +@0 ⯾{𝕌}
 ```
 
 The type system implementation is such that most type information can only flow *forward* through the system, not backward. Except for at the very beginning of a function, type constaints cannot go backward to inform the argument types of the function.

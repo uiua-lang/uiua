@@ -1460,6 +1460,8 @@ impl<'a> Lexer<'a> {
                                 PrimComponent::SubRight => Subscr(SubSide::Right.into()),
                                 PrimComponent::OpenParen => OpenParen.into(),
                                 PrimComponent::CloseParen => CloseParen.into(),
+                                PrimComponent::OpenCurly => OpenCurly.into(),
+                                PrimComponent::CloseCurly => CloseCurly.into(),
                                 PrimComponent::Infinity => Glyph(Primitive::Infinity),
                                 comp => Ident(comp.name().into()),
                             };

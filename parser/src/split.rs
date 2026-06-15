@@ -81,6 +81,10 @@ pub enum PrimComponent {
     OpenParen,
     /// )
     CloseParen,
+    /// {
+    OpenCurly,
+    /// }
+    CloseCurly,
     /// ε
     Epsilon,
     /// ∞
@@ -126,6 +130,8 @@ impl PrimComponent {
             PrimComponent::SubRight => "⌟",
             PrimComponent::OpenParen => "(",
             PrimComponent::CloseParen => ")",
+            PrimComponent::OpenCurly => "{",
+            PrimComponent::CloseCurly => "}",
             PrimComponent::Epsilon => "ε",
             PrimComponent::Infinity => "∞",
             PrimComponent::Real => "ℝ",
@@ -310,10 +316,10 @@ impl Primitive {
             alias!((r, Reduce), (a, Content), (ze, Join)),
             alias!((r, Reduce), (a, Content), (z, Join)),
             alias!(
-                (s, PrimComponent::OpenParen),
+                (s, PrimComponent::OpenCurly),
                 (t, PrimComponent::Char),
                 (r, PrimComponent::Infinity),
-                ( , PrimComponent::CloseParen),
+                ( , PrimComponent::CloseCurly),
             ),
             alias!((num, PrimComponent::Real)),
             alias!((int, PrimComponent::Int)),

@@ -440,7 +440,7 @@ primitive!(
     /// You can get an arccosine function with [un].
     /// ex: °cos [0 1]
     (1, Cos, MonadicPervasive, "cos"),
-    /// Get the cosine of a number
+    /// Get the tangent of a number
     ///
     /// ex: tan [0 1 η]
     /// You can get an arctangent function with [un].
@@ -458,7 +458,7 @@ primitive!(
     /// You can get a hyperbolic arccosine function with [un].
     /// ex: °cosh [0 1]
     (1, CosH, MonadicPervasive, "cosh"),
-    /// Get the hyperbolic cosine of a number
+    /// Get the hyperbolic tangent of a number
     ///
     /// ex: tanh [0 1 η]
     /// You can get a hyperbolic arctangent function with [un].

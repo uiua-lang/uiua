@@ -136,6 +136,11 @@ s ← ∿×τ⊞×f ÷⟜⇡&asr
         <p>"Instead, you must use the "<Prim prim=Sys(SysOp::AudioPlay)/>" system function to play it."</p>
         <p><Prim prim=Sys(SysOp::AudioPlay)/>" should work fine on the website as well, but it is not necessary."</p>
         <Editor example="&ap ÷2×(¬◿1×4)⟜(±∿×τ×55)÷⟜(⇡×2) &asr"/>
+
+        <Hd id="encoding-audio">"Encoding Audio"</Hd>
+        <p>"You can encode an array of audio samples into a byte array using the "<Prim prim=AudioEncode/>" function. It requires a format and a sample rate. Currently, only the "<code>"wav"</code>" format is supported."</p>
+        <p>"You can use "<Prim prim=Un/><Prim prim=AudioEncode/>" to decode audio."</p>
+        <Editor example="÷2 ◿1×220 ÷⟜⇡&asr # Some audio\naudio \"wav\" &asr\n⊸{°audio}"/>
     }
 }
 

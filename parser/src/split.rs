@@ -278,6 +278,7 @@ impl Primitive {
                 (a, Anti),
                 (d, Drop)
             ),
+            alias!((c, Un), (is, Transpose)),
             alias!((p, Dip), (e, Pop), (r, Under), (f, Now)),
             alias!((s, Un), (et, By)),
             alias!((wr, Sub), (en, By), (ch, Not)),

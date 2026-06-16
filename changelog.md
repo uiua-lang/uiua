@@ -37,8 +37,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Add number output rules for some square roots
 - Remove proxy values, which where a hacky solution to maintaining correct types and shapes when iterating over arrays with 0 rows.
   - The type analyzer for these cases has been improved to make them mostly unnecessary
-- Add `raze` alias for `/◇⊂`
-- Add `#exp` alias for `# Experimental!`
+- New aliases
+  - `raze` alias for `/◇⊂`
+  - `cis` alias for `°⍉`
+  - `#exp` alias for `# Experimental!`
 - Allow modules to be unclosed
   - The closing delimiter will be formatted in
 - Uncaught errors in threads now immediately print to stderr

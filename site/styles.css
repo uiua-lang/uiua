@@ -848,6 +848,9 @@ option,
 .output-item,
 .output-report {
     font-family: inherit;
+    text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
 }
 
 #code-buttons {

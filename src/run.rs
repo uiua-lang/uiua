@@ -860,7 +860,7 @@ impl Uiua {
                 )
             };
             #[cfg(debug_assertions)]
-            panic!("{message}");
+            panic!("{message}\nStack:\n{:?}", self.stack());
             #[cfg(not(debug_assertions))]
             return Err(self.error_with_span(self.asm.spans[_call_span].clone(), message));
         }

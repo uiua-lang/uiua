@@ -507,32 +507,65 @@ pub fn switch(
     Ok(())
 }
 
+pub fn try_sig(ops: &[SigNode]) -> (Signature, bool) {
+    let max_outputs = ops.iter().map(|f| f.sig.outputs()).max().unwrap_or(0);
+    let mut max_args = 0;
+    for (i, f) in ops.iter().enumerate() {
+        let args = f.sig.args().saturating_sub((i > 0) as usize);
+        max_args = max_args.max(args);
+    }
+    let any_takes_error = (ops.iter())
+        .any(|f| f.sig.args() + max_outputs.saturating_sub(f.sig.outputs()) >= max_args + 1);
+    let mut max_args = 0;
+    for (i, f) in ops.iter().enumerate() {
+        let args = (f.sig.args() + max_outputs.saturating_sub(f.sig.outputs()))
+            .saturating_sub((i > 0) as usize);
+        max_args = max_args.max(args);
+    }
+    (Signature::new(max_args, max_outputs), any_takes_error)
+}
+
 pub fn try_(ops: Ops, pattern: bool, env: &mut Uiua) -> UiuaResult {
+    let (try_sig, any_takes_error) = try_sig(&ops);
+    let try_args = try_sig.args();
+    env.require_height(try_args)?;
     let mut ops = ops.into_iter();
     let mut f = ops.next().expect("try should have at least 2 args");
     for handler in ops {
-        env.require_height(f.sig.args())?;
         let (f_sig, handler_sig) = (f.sig, handler.sig);
-        let backup = env.clone_stack_top(f.sig.args().min(handler_sig.args()))?;
+        let takes_error = any_takes_error
+            && handler_sig.args() + try_sig.outputs().saturating_sub(handler_sig.outputs())
+                == try_args + 1;
+        let backup = env.clone_stack_top(try_sig.args().min(f.sig.args()))?;
         if let Err(mut err) = env.exec_clean_stack(f) {
-            if !pattern && err.meta.is_case {
-                err.meta.is_case = false;
-                return Err(err);
-            } else if pattern && !err.meta.is_case {
+            if pattern != err.meta.is_case {
+                if !pattern {
+                    err.meta.is_case = false;
+                }
+                _ = env.remove_n(try_args.saturating_sub(f_sig.args()), try_args)?;
                 return Err(err);
             }
-            if handler_sig.args() > f_sig.args() {
+            if takes_error {
                 (env.rt.backend).save_error_color(err.to_string(), err.report().to_string());
-                env.push(err.value());
+                env.insert_stack(try_args.saturating_sub(f_sig.args()), [err.value()])?;
             }
             for val in backup {
                 env.push(val);
             }
             f = handler;
         } else {
+            let df = f_sig.outputs() as isize - f_sig.args() as isize;
+            let dtry = try_sig.outputs() as isize - try_sig.args() as isize;
+            _ = env.remove_n(
+                (df - dtry).max(0) as usize,
+                (try_args + f_sig.outputs()).saturating_sub(f_sig.args()),
+            )?;
             return Ok(());
         }
     }
+    let df = f.sig.outputs() as isize - f.sig.args() as isize;
+    let dtry = try_sig.outputs() as isize - try_sig.args() as isize;
+    _ = env.remove_n((df - dtry).max(0) as usize, try_args)?;
     env.exec(f)
 }
 

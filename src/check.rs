@@ -12,7 +12,7 @@ use std::{
 
 use serde::*;
 
-use crate::{ImplPrimitive, Node, Primitive, SigNode, Signature, SysOp};
+use crate::{ImplPrimitive, Node, Primitive, SigNode, Signature, SysOp, algorithm::try_sig};
 
 impl Node {
     /// Get the signature of this node
@@ -352,13 +352,7 @@ impl VirtualEnv {
                         self.handle_sig(f);
                     }
                 }
-                Try | Pattern => {
-                    let mut f_sig = args[0].sig;
-                    for handler in &args[1..] {
-                        f_sig.update_outputs(|o| o.max(handler.sig.outputs()));
-                    }
-                    self.handle_sig(f_sig);
-                }
+                Try | Pattern => self.handle_sig(try_sig(args).0),
                 Case => {
                     let [f] = get_args(args)?;
                     self.handle_sig(f);

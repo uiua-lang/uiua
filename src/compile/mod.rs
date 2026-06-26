@@ -1086,7 +1086,7 @@ impl Compiler {
                         format!(
                             "Use {}{} instead of {} {}s here",
                             Primitive::Join,
-                            SUBSCRIPT_DIGITS[j + i + 1],
+                            SUBSCRIPT_DIGITS[j - i + 1],
                             j - i,
                             Primitive::Join.format()
                         )

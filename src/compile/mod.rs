@@ -1066,6 +1066,7 @@ impl Compiler {
         words.retain(|word| word.value.is_code());
         // Extract semantic comment
         let mut sem = None;
+        #[allow(clippy::manual_pop_if)]
         if let Some(word) = words.last()
             && let Word::SemanticComment(com) = &word.value
         {

@@ -143,6 +143,7 @@ The `uiua` crate has the following noteable feature flags:
     clippy::mutable_key_type,
     clippy::match_like_matches_macro,
     clippy::manual_checked_ops,
+    clippy::manual_option_zip,
     mismatched_lifetime_syntaxes
 )]
 #![warn(missing_docs)]

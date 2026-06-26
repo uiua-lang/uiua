@@ -514,8 +514,8 @@ pub fn try_sig(ops: &[SigNode]) -> (Signature, bool) {
         let args = f.sig.args().saturating_sub((i > 0) as usize);
         max_args = max_args.max(args);
     }
-    let any_takes_error = (ops.iter())
-        .any(|f| f.sig.args() + max_outputs.saturating_sub(f.sig.outputs()) >= max_args + 1);
+    let any_takes_error =
+        (ops.iter()).any(|f| f.sig.args() + max_outputs.saturating_sub(f.sig.outputs()) > max_args);
     let mut max_args = 0;
     for (i, f) in ops.iter().enumerate() {
         let args = (f.sig.args() + max_outputs.saturating_sub(f.sig.outputs()))

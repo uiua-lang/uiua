@@ -1118,7 +1118,7 @@ primitive!(
     /// ex: °⋯ [[0 1 1]
     ///   :     [1 0 0]
     ///   :     [1 1 0]]
-    /// [un][bits] works on non-boolean arras, multiplying each number by its corresponding 2's place
+    /// [un][bits] works on non-boolean arrays, multiplying each number by its corresponding 2's place
     /// ex: °⋯ [1 5]
     /// ex: °⋯ [1 0 5]
     ///

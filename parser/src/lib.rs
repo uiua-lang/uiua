@@ -1,4 +1,4 @@
-#![allow(clippy::single_match)]
+#![allow(unknown_lints, clippy::single_match, clippy::manual_option_zip)]
 
 pub mod ast;
 mod complex;

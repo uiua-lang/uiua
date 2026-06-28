@@ -91,10 +91,10 @@ impl fmt::Display for TypeError {
             }
             TypeError::RowsShapes(a, b) => write!(f, "shapes {a} and {b} are not compatible"),
             TypeError::ScalarMismatch(expected, found) => {
-                write!(f, "expected {expected} but found {found}")
+                write!(f, "expected {expected:?} but found {found:?}")
             }
             TypeError::ShapeMismatch(expected, found) => {
-                write!(f, "expected shape {expected} but found {found}")
+                write!(f, "expected shape {expected:?} but found {found:?}")
             }
             TypeError::Generic(e) => write!(f, "{e}"),
         }
@@ -128,8 +128,14 @@ impl TypeVal {
         match self {
             TypeVal::Num(_) => Scalar::Num.scalar_type(),
             TypeVal::NumList(list) => Scalar::Num.shaped(list.len()),
-            TypeVal::Val(val) => Type::from(&val),
             TypeVal::Type(ty) => ty.clone(),
+            TypeVal::Val(val) => Type::of_val(&val),
+        }
+    }
+    pub fn spec(self) -> Type {
+        match self {
+            TypeVal::Val(val) => Type::from_spec(&val),
+            tv => tv.ty(),
         }
     }
     pub fn row_count(&self) -> Dim {
@@ -142,7 +148,7 @@ impl TypeVal {
     }
     pub fn shape(&self) -> Cow<DynShape> {
         match self {
-            TypeVal::Num(_) => Cow::Owned(DynShape::scalar()),
+            TypeVal::Num(_) => Cow::Owned(DynShape::SCALAR),
             TypeVal::NumList(items) => Cow::Owned([items.len()].into()),
             TypeVal::Val(value) => Cow::Owned((&value.shape).into()),
             TypeVal::Type(ty) => Cow::Borrowed(&ty.shape),
@@ -152,7 +158,7 @@ impl TypeVal {
         match self {
             TypeVal::Num(n) => slice::from_ref(n).into(),
             TypeVal::NumList(nums) => nums.as_slice().into(),
-            TypeVal::Val(val) => Scalar::from(val),
+            TypeVal::Val(val) => Scalar::of_val(val),
             TypeVal::Type(ty) => ty.scalar.clone(),
         }
     }
@@ -162,7 +168,7 @@ impl TypeVal {
         }
         match (self, scalar) {
             (TypeVal::Num(_) | TypeVal::NumList(_), Scalar::Num) => {}
-            (TypeVal::Val(val), scalar) if Type::from(&*val).scalar == scalar => {}
+            (TypeVal::Val(val), scalar) if Type::of_val(&*val).scalar == scalar => {}
             (tv, scalar) => {
                 let mut ty = take(tv).ty();
                 ty.scalar = scalar;
@@ -270,7 +276,7 @@ impl TypeVal {
     pub fn is_boxed(&self) -> bool {
         match self {
             TypeVal::Type(ty) => matches!(ty.scalar, Scalar::Box(_)) && ty.shape.is_scalar(),
-            TypeVal::Val(val) => TypeVal::Type(val.into()).is_boxed(),
+            TypeVal::Val(Value::Box(arr)) => arr.rank() == 0,
             _ => false,
         }
     }
@@ -288,7 +294,6 @@ impl TypeVal {
     }
     pub fn as_scalar_spec(&self) -> Option<Scalar> {
         match self {
-            TypeVal::Num(n) => Scalar::from_num(*n),
             TypeVal::Val(val) => value_as_scalar_spec(val),
             _ => None,
         }
@@ -481,8 +486,6 @@ impl From<DynShape> for TypeVal {
 
 fn value_as_scalar_spec(val: &Value) -> Option<Scalar> {
     match val {
-        Value::Num(arr) if arr.rank() == 0 => Scalar::from_num(arr.data[0]),
-        Value::Byte(arr) if arr.rank() == 0 => Scalar::from_num(arr.data[0] as f64),
         Value::Complex(arr)
             if arr.data.as_slice() == [Complex::I] || arr.data.as_slice() == [Complex::ONE] =>
         {
@@ -500,7 +503,7 @@ fn value_as_scalar_spec(val: &Value) -> Option<Scalar> {
             'ℂ' => Scalar::Complex,
             _ => return None,
         }),
-        val => Some(Scalar::Box(ScalarBox::All(Type::from(val).into()))),
+        val => Some(Scalar::Box(ScalarBox::All(Type::from_spec(val).into()))),
     }
 }
 
@@ -519,7 +522,7 @@ impl From<Scalar> for Type {
     fn from(scalar: Scalar) -> Self {
         Type {
             scalar,
-            shape: DynShape::scalar(),
+            shape: DynShape::SCALAR,
         }
     }
 }
@@ -547,9 +550,33 @@ impl Type {
         Scalar::Char.shaped(Dim::Dyn)
     }
     pub fn of_val(val: &Value) -> Self {
-        let scalar = Scalar::from(val);
+        let scalar = Scalar::of_val(val);
         let shape = DynShape::from(&val.shape);
         Type { scalar, shape }
+    }
+    pub fn from_spec(val: &Value) -> Self {
+        if let Value::Box(arr) = val
+            && arr.rank() == 1
+            && let Some((first, rest)) = arr.data.split_first()
+            && let Some(scalar) = value_as_scalar_spec(&first.0)
+        {
+            if let Some(dims) = (rest.iter())
+                .map(|Boxed(val)| value_as_dim(val))
+                .collect::<Option<Vec<_>>>()
+            {
+                let shape = DynShape { dims, suffix: None };
+                Type { scalar, shape }
+            } else {
+                let shape = DynShape::from(arr.row_count());
+                let fields = (arr.data.iter())
+                    .map(|Boxed(val)| Type::from_spec(val))
+                    .collect();
+                let scalar = Scalar::Box(ScalarBox::Def(None, fields));
+                Type { scalar, shape }
+            }
+        } else {
+            value_as_scalar_spec(val).map_or_else(|| Type::of_val(val), Scalar::any_shape)
+        }
     }
     pub fn is_any(&self) -> bool {
         self.scalar.is_any() && self.shape.is_any()
@@ -649,16 +676,15 @@ impl Type {
     pub fn as_mut_fields(
         &mut self,
         name_hint: Option<&str>,
-        len_hint: usize,
+        mut len_hint: usize,
     ) -> Option<(&mut Option<EcoString>, &mut [Self])> {
         if let Scalar::Any = self.scalar {
             self.scalar = Scalar::Box(ScalarBox::Any);
         }
         if self.shape.suffix.is_none()
             && let &[Dim::Static(len)] = self.shape.dims.as_slice()
-            && len != len_hint
         {
-            return None;
+            len_hint = len;
         }
         let Scalar::Box(sb) = &self.scalar else {
             return None;
@@ -718,7 +744,7 @@ impl ScalarBox {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub enum Scalar {
     Bool,
     Nat,
@@ -745,15 +771,6 @@ impl Scalar {
     }
     pub fn any_shape(self) -> Type {
         self.shaped(DynShape::any())
-    }
-    fn from_num(n: f64) -> Option<Scalar> {
-        Some(match n {
-            0.0 => Scalar::Num,
-            1.0 => Scalar::Char,
-            2.0 => Scalar::Box(ScalarBox::Any),
-            3.0 => Scalar::Complex,
-            _ => return None,
-        })
     }
     pub fn maybe_scalar_type(self) -> Option<Type> {
         if self.is_any() {
@@ -827,6 +844,37 @@ impl Scalar {
             _ => {}
         }
     }
+    pub fn of_val(val: &Value) -> Self {
+        match val {
+            Value::Num(arr) => arr.data.as_slice().into(),
+            Value::Byte(arr) => {
+                for &n in &arr.data {
+                    if n > 1 {
+                        return Scalar::Nat;
+                    }
+                }
+                Scalar::Bool
+            }
+            Value::Char(arr) => {
+                for c in &arr.data {
+                    if !c.is_ascii() {
+                        return Scalar::Char;
+                    }
+                }
+                Scalar::Ascii
+            }
+            Value::Complex(_) => Scalar::Complex,
+            Value::Box(arr) => Scalar::Box(
+                (arr.data.iter())
+                    .map(|Boxed(v)| Type::of_val(v))
+                    .reduce(BitOr::bitor)
+                    .map(Box::new)
+                    .map_or(ScalarBox::Any, ScalarBox::All),
+            ),
+            #[cfg(feature = "ga")]
+            Value::Mv(_) => Scalar::Multivector,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -882,12 +930,10 @@ impl From<usize> for DynShape {
 }
 
 impl DynShape {
-    pub fn scalar() -> Self {
-        DynShape {
-            dims: Vec::new(),
-            suffix: None,
-        }
-    }
+    pub const SCALAR: Self = DynShape {
+        dims: Vec::new(),
+        suffix: None,
+    };
     pub fn any() -> Self {
         DynShape {
             dims: Vec::new(),
@@ -1089,7 +1135,7 @@ impl fmt::Display for Dim {
 
 impl fmt::Debug for DynShape {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
+        write!(f, "[{self}]")
     }
 }
 
@@ -1188,12 +1234,21 @@ impl fmt::Display for TypeVal {
             TypeVal::Val(val) => {
                 let s = val.grid_string(false);
                 if s.contains("\n") || s.len() > 10 {
-                    Type::from(val).fmt(f)
+                    Type::of_val(val).fmt(f)
                 } else {
                     write!(f, "{s}")
                 }
             }
             TypeVal::Type(ty) => ty.fmt(f),
+        }
+    }
+}
+
+impl fmt::Debug for Scalar {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Scalar::Box(ScalarBox::Def(..)) => write!(f, "{self}"),
+            _ => write!(f, "array of {self}"),
         }
     }
 }
@@ -1212,14 +1267,14 @@ impl fmt::Display for Scalar {
             Scalar::Box(ScalarBox::All(inner)) => write!(f, "□{inner}"),
             Scalar::Box(ScalarBox::Def(Some(name), _)) => write!(f, "{name}"),
             Scalar::Box(ScalarBox::Def(None, fields)) => {
-                write!(f, "□(")?;
+                write!(f, "{{")?;
                 for (i, field) in fields.iter().enumerate() {
                     if i > 0 {
                         write!(f, " ")?;
                     }
                     write!(f, "{field}")?;
                 }
-                write!(f, ")")
+                write!(f, "}}")
             }
             Scalar::Complex => write!(f, "ℂ"),
             Scalar::Stream => write!(f, "stream"),
@@ -1286,31 +1341,6 @@ impl BitOr for TypeVal {
     }
 }
 
-impl From<&Value> for Type {
-    fn from(val: &Value) -> Self {
-        if let Value::Box(arr) = val
-            && arr.rank() == 1
-            && let Some((first, rest)) = arr.data.split_first()
-            && let Some(scalar) = value_as_scalar_spec(&first.0)
-        {
-            if let Some(dims) = (rest.iter())
-                .map(|Boxed(val)| value_as_dim(val))
-                .collect::<Option<Vec<_>>>()
-            {
-                let shape = DynShape { dims, suffix: None };
-                Type { scalar, shape }
-            } else {
-                let shape = DynShape::from(arr.row_count());
-                let fields = arr.data.iter().map(|Boxed(val)| val.into()).collect();
-                let scalar = Scalar::Box(ScalarBox::Def(None, fields));
-                Type { scalar, shape }
-            }
-        } else {
-            Type::of_val(val)
-        }
-    }
-}
-
 impl From<&[f64]> for Scalar {
     fn from(nums: &[f64]) -> Self {
         let mut max = Scalar::Bool;
@@ -1326,40 +1356,6 @@ impl From<&[f64]> for Scalar {
             }
         }
         max
-    }
-}
-
-impl From<&Value> for Scalar {
-    fn from(val: &Value) -> Self {
-        match val {
-            Value::Num(arr) => arr.data.as_slice().into(),
-            Value::Byte(arr) => {
-                for &n in &arr.data {
-                    if n > 1 {
-                        return Scalar::Nat;
-                    }
-                }
-                Scalar::Bool
-            }
-            Value::Char(arr) => {
-                for c in &arr.data {
-                    if !c.is_ascii() {
-                        return Scalar::Char;
-                    }
-                }
-                Scalar::Ascii
-            }
-            Value::Complex(_) => Scalar::Complex,
-            Value::Box(arr) => Scalar::Box(
-                (arr.data.iter())
-                    .map(|Boxed(v)| Type::from(v))
-                    .reduce(BitOr::bitor)
-                    .map(Box::new)
-                    .map_or(ScalarBox::Any, ScalarBox::All),
-            ),
-            #[cfg(feature = "ga")]
-            Value::Mv(_) => Scalar::Multivector,
-        }
     }
 }
 
@@ -2717,7 +2713,7 @@ impl<'a> TypeEnv<'a> {
                 list(arr.data.into_iter().map(Into::into).collect())?.into()
             }
             TypeVal::Val(v) => {
-                let ty = Type::from(&v);
+                let ty = Type::of_val(&v);
                 if let Some(v) = val(v) {
                     TypeVal::Val(v)
                 } else {
@@ -2945,7 +2941,7 @@ pub(crate) fn pervade_dyn_shapes(
     a_fill: bool,
     b_fill: bool,
 ) -> Result<DynShape, TypeError> {
-    let mut shape = DynShape::scalar();
+    let mut shape = DynShape::SCALAR;
     for i in 0..ash.dims.len().max(bsh.dims.len()) {
         let new_dim = match (ash.dims.get(i).copied(), bsh.dims.get(i).copied()) {
             (None, None) => unreachable!(),
@@ -2985,7 +2981,6 @@ fn get_ops<const N: usize>(ops: &[SigNode]) -> &[SigNode; N] {
 }
 
 pub fn validate(spec: TypeVal, ch: &mut Type, side: Option<SubSide>) -> TypeResult {
-    dbg!(&spec, &ch);
     if spec.is_boxed() {
         let spec = spec.unboxed();
         match &mut ch.scalar {
@@ -3004,17 +2999,14 @@ pub fn validate(spec: TypeVal, ch: &mut Type, side: Option<SubSide>) -> TypeResu
         }
         Ok(())
     } else if let Some((spec_name, field_specs)) = spec.as_boxes() {
-        dbg!(&field_specs);
         if let Some((scalar, dims)) = field_specs.split_first().and_then(|(first, rest)| {
             (first.as_scalar_spec())
                 .zip((rest.iter().map(|tv| tv.as_scalar_dim())).collect::<Option<Vec<_>>>())
         }) {
-            dbg!();
             check_scalar(scalar, ch)?;
             check_shape(dims, ch, side)?;
             return Ok(());
         }
-        dbg!();
         let len = field_specs.len();
         let Some((name, fields)) = ch
             .as_mut_fields(spec_name.as_deref(), len)
@@ -3023,11 +3015,17 @@ pub fn validate(spec: TypeVal, ch: &mut Type, side: Option<SubSide>) -> TypeResu
             return Err(TypeError::ScalarMismatch(
                 Scalar::Box(ScalarBox::Def(
                     spec_name,
-                    field_specs.into_iter().map(TypeVal::ty).collect(),
+                    field_specs.into_iter().map(TypeVal::spec).collect(),
                 )),
                 ch.scalar.clone(),
             ));
         };
+        if fields.len() != len {
+            return Err(TypeError::ShapeMismatch(
+                Dim::Static(len).into(),
+                Dim::Static(fields.len()).into(),
+            ));
+        }
         if name.is_none() {
             *name = spec_name;
         }
@@ -3130,18 +3128,17 @@ impl From<Type> for Value {
                 Scalar::Stream => 'ℝ'.into(),
                 #[cfg(feature = "ga")]
                 Scalar::Multivector => '𝕍'.into(),
-                Scalar::Box(ScalarBox::All(ty)) => todo!(),
+                Scalar::Box(ScalarBox::All(ty)) => [Boxed((*ty).into())].into(),
                 Scalar::Box(ScalarBox::Any) => '□'.into(),
                 Scalar::Box(ScalarBox::Def(..)) => unreachable!(),
             }
         }
-
-        if ty.shape.is_scalar() {
-            scalar_to_val(ty.scalar)
-        } else if ty.shape.is_any() {
-            [Boxed(scalar_to_val(ty.scalar))].into()
-        } else if let Scalar::Box(ScalarBox::Def(_, fields)) = ty.scalar {
+        if let Scalar::Box(ScalarBox::Def(_, fields)) = ty.scalar {
             fields.into_iter().map(Value::from).map(Boxed).collect()
+        } else if ty.shape.is_scalar() {
+            [Boxed(scalar_to_val(ty.scalar))].into()
+        } else if ty.shape.is_any() {
+            scalar_to_val(ty.scalar)
         } else {
             let mut items = eco_vec![Boxed(scalar_to_val(ty.scalar))];
             for dim in ty.shape.dims {

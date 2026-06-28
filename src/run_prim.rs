@@ -1373,9 +1373,10 @@ impl ImplPrimitive {
                 env.push(vals);
             }
             &ImplPrimitive::ValidateImpl(side) => {
-                let spec = env.pop(1)?;
+                let spec = Type::from_spec(&env.pop(1)?)
+                    .ok_or_else(|| env.error("Invalid type specification"))?;
                 let val = env.pop(2)?;
-                if let Err(e) = validate(spec.into(), &mut Type::of_val(&val), side) {
+                if let Err(e) = validate(spec, &mut Type::of_val(&val), side) {
                     return Err(env.error(format!("Type error: {e}")));
                 }
                 env.push(val);

@@ -486,7 +486,7 @@ impl Compiler {
                 comment: Some(DocComment::from(comment.as_str())),
                 ..Default::default()
             };
-            self.compile_bind_const(name, local, Some(ty.into()), span, meta);
+            self.compile_bind_const(name, local, Some(ty.spec_val()), span, meta);
         }
         let constructor_name = Ident::from("New");
         let constr_local = LocalIndex {

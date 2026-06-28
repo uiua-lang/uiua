@@ -1,3 +1,5 @@
+use crate::types::{Dim, DynShape, Scalar, ScalarBox, Type, TypeVal, typecheck};
+
 use super::*;
 
 impl Compiler {
@@ -94,6 +96,7 @@ impl Compiler {
             validator: Option<SigNode>,
             validator_inv: Option<Node>,
             init: Option<SigNode>,
+            ty: Type,
         }
         let mut fields = Vec::new();
         // Collect fields
@@ -227,6 +230,7 @@ impl Compiler {
                 {
                     data_field.init = None;
                 }
+                let mut ty = Type::default();
                 let init = if let Some(mut init) = data_field.init {
                     has_initializers = true;
                     // Process comment
@@ -243,30 +247,34 @@ impl Compiler {
                         }
                     }
                     // Compile words
-                    let mut sn = self.words_sig(init.words)?;
+                    let mut init_sn = self.words_sig(init.words)?;
                     if let Some((va_node, _)) = &validator_and_inv {
-                        sn.node.push(va_node.node.clone());
+                        init_sn.node.push(va_node.node.clone());
                     }
-                    if sn.sig.outputs() != 1 {
+                    if init_sn.sig.outputs() == 1 {
+                        ty = (typecheck(&init_sn, &self.asm).ok())
+                            .and_then(|(_, out)| out.into_iter().next())
+                            .map(TypeVal::ty)
+                            .unwrap_or_default();
+                    } else {
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
                                 "Field initializer must have \
                                 1 output, but its signature is {}",
-                                sn.sig
+                                init_sn.sig
                             ),
                         );
                     }
                     if let Some(sem) = sem {
-                        sn = SigNode::new(
-                            sn.sig,
-                            self.semantic_comment(sem.value, sem.span, sn.node),
+                        init_sn = SigNode::new(
+                            init_sn.sig,
+                            self.semantic_comment(sem.value, sem.span, init_sn.node),
                         );
                     }
-                    Some(sn)
+                    Some(init_sn)
                 } else {
-                    validator_and_inv
-                        .as_ref()
+                    (validator_and_inv.as_ref())
                         .map(|(va_node, _)| SigNode::new(Signature::new(1, 1), va_node.clone()))
                 };
                 let (validator, validator_inv) = match validator_and_inv {
@@ -282,6 +290,7 @@ impl Compiler {
                     validator,
                     validator_inv,
                     init,
+                    ty,
                 });
             }
         }
@@ -438,8 +447,8 @@ impl Compiler {
         } else {
             None
         };
-        // Handle variant
         if data.variant {
+            // Handle variant
             for node in no_init_node.as_mut().into_iter().chain([&mut con_node]) {
                 node.push(Node::new_push(variant_index));
                 if let Some(name) = &data.name {
@@ -451,6 +460,33 @@ impl Compiler {
                     node.push(Node::ImplPrim(ImplPrimitive::TagVariant, span));
                 }
             }
+        } else {
+            // Bind type
+            let ty = Type {
+                scalar: Scalar::Box(ScalarBox::Def(
+                    def_name.clone(),
+                    fields.iter().map(|f| f.ty.clone()).collect(),
+                )),
+                shape: DynShape {
+                    dims: vec![Dim::Static(fields.len())],
+                    suffix: None,
+                },
+            };
+            let local = LocalIndex {
+                index: self.next_global,
+                public: true,
+            };
+            self.next_global += 1;
+            let comment = match &def_name {
+                Some(def_name) => format!("{def_name}'s type"),
+                None => "Data definition's type".into(),
+            };
+            let name = Ident::from("t");
+            let meta = BindingMeta {
+                comment: Some(DocComment::from(comment.as_str())),
+                ..Default::default()
+            };
+            self.compile_bind_const(name, local, Some(ty.into()), span, meta);
         }
         let constructor_name = Ident::from("New");
         let constr_local = LocalIndex {

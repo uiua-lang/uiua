@@ -2848,6 +2848,16 @@ primitive!(
     ///   : ⯾{[2 ∞] 3} {[[1][2]] [3_4 5_6] [[][]]}
     /// ex! # Experimental!
     ///   : ⯾{[2 ∞] 3} {[[1][2]] [3_4 5_6] [7 8]}
+    /// A list of boxed type specifications validates a fixed-size box list of those types.
+    /// ex: # Experimental!
+    ///   : ⯾{[3] {𝕌∞}} {[1 2 3] "wow"}
+    ///   : ⯾{[3] {𝕌∞}} {[4 5 6] "Uiua types!"}
+    /// ex! # Experimental!
+    ///   : ⯾{[3] {𝕌∞}} {2_3_4 "a" 5}
+    /// ex! # Experimental!
+    ///   : ⯾{[3] {𝕌∞}} {2_3_4 27}
+    /// ex! # Experimental!
+    ///   : ⯾{[3] {𝕌∞}} {4_2 "bc"}
     /// A sided subscript interprets the shape requirement as a prefix or suffix, rather than an exact match.
     /// ex: # Experimental!
     ///   : ⯾⌞[2] [1 2]

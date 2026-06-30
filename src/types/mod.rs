@@ -47,6 +47,7 @@ pub fn typecheck(sn: &SigNode, asm: &Assembly) -> Result<TypeSig, (TypeError, us
 }
 
 pub fn validate(spec: Type, ch: &mut Type, side: Option<SubSide>) -> TypeResult {
+    // println!("spec: {spec:?}, ch: {ch:?}");
     check_scalar(spec.scalar, ch)?;
     check_shape(spec.shape, ch, side)?;
     Ok(())
@@ -85,6 +86,7 @@ fn check_scalar(spec: Scalar, ch: &mut Type) -> TypeResult {
 }
 
 fn check_shape(shape: DynShape, ch: &mut Type, side: Option<SubSide>) -> TypeResult {
+    // println!("shape: {shape:?}, ch: {ch}");
     let is_any = shape.is_any();
     let dims = shape.dims;
     let ch_dims = &ch.shape.dims;

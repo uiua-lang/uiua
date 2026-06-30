@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
@@ -144,13 +146,28 @@ impl Scalar {
                 Scalar::Ascii
             }
             Value::Complex(_) => Scalar::Complex,
-            Value::Box(arr) => Scalar::Box(
-                (arr.data.iter())
-                    .map(|Boxed(v)| Type::of_val(v))
-                    .reduce(BitOr::bitor)
-                    .map(Box::new)
-                    .map_or(ScalarBox::Any, ScalarBox::All),
-            ),
+            Value::Box(arr) => {
+                let shapes = || {
+                    let ranks: HashSet<_> = (arr.data.iter())
+                        .map(|Boxed(v)| (&v.shape, v.type_id()))
+                        .collect();
+                    ranks.len()
+                };
+                if arr.rank() == 1 && shapes() > 1 {
+                    Scalar::Box(ScalarBox::Def(
+                        None,
+                        arr.data.iter().map(|Boxed(v)| Type::of_val(v)).collect(),
+                    ))
+                } else {
+                    Scalar::Box(
+                        (arr.data.iter())
+                            .map(|Boxed(v)| Type::of_val(v))
+                            .reduce(BitOr::bitor)
+                            .map(Box::new)
+                            .map_or(ScalarBox::Any, ScalarBox::All),
+                    )
+                }
+            }
             #[cfg(feature = "ga")]
             Value::Mv(_) => Scalar::Multivector,
         }

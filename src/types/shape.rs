@@ -288,7 +288,7 @@ impl BitOr for DynShape {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self::Output {
         use Dim::*;
-        let dim_count = self.dims.len().max(rhs.dims.len());
+        let dim_count = self.dims.len().min(rhs.dims.len());
         let mut dims = Vec::with_capacity(dim_count);
         for i in 0..dim_count {
             let a = self.dims.get(i).unwrap_or(&Dyn);
@@ -298,7 +298,7 @@ impl BitOr for DynShape {
                 _ => Dyn,
             });
         }
-        let suffix = self.suffix.zip(rhs.suffix).map(|(a, b)| {
+        let suffix = if let Some((a, b)) = self.suffix.zip(rhs.suffix) {
             let dim_count = a.len().max(b.len());
             let mut dims = Vec::with_capacity(dim_count);
             for i in 0..dim_count {
@@ -313,8 +313,12 @@ impl BitOr for DynShape {
                     _ => Dyn,
                 });
             }
-            dims
-        });
+            Some(dims)
+        } else if self.dims.len() < dim_count || rhs.dims.len() < dim_count {
+            Some(Vec::new())
+        } else {
+            None
+        };
         DynShape { dims, suffix }
     }
 }

@@ -2787,36 +2787,36 @@ primitive!(
     ///
     /// [validate] is more useful when used in conjunction with [type checking](https://www.uiua.org/docs/experimental#type-checking).
     ///
-    /// If the first argument is a scalar number, it will validate the scalar type of the array. The type ids match those returned by [type]:
-    /// - `0`: Numbers
-    /// - `1`: Character
-    /// - `2`: Boxes
-    /// - `3`: Complexes
-    /// ex: # Experimental!
-    ///   : ⯾0 5
-    ///   : ⯾0 [1 2 3]
-    /// ex! # Experimental!
-    ///   : ⯾1 [1 2 3]
-    /// For more clarity and/or specificity, you can also use a scalar character in the form of a built-in constant. These constants all format from a name.
+    /// If the first argument is a scalar character, then a scalar array with the specified scalar type will be validated. You can use a scalar character in the form of a built-in constant. These constants all format from a name.
     /// - `ℝ` - `num` - Real numbers
     /// - `ℤ` - `int` - Integers
     /// - `ℕ` - `nat` - Natural numbers
     /// - `𝔹` - `bool` - Booleans
     /// - `𝕌` - `char` - Unicode characters
+    /// ex: # Experimental!
+    ///   : ⯾ℝ 5.1
+    /// ex! # Experimental!
+    ///   : ⯾ℝ [1 2 3]
+    /// ex! # Experimental!
+    ///   : ⯾ℝ "hey"
+    /// ex: # Experimental!
+    ///   : ⯾𝕌 @A
+    /// ex: # Experimental!
+    ///   : ⯾ℕ 5
+    /// ex! # Experimental!
+    ///   : ⯾ℕ ¯3
+    /// ex! # Experimental!
+    ///   : ⯾ℕ 2.1
     /// In addition, there are some type specifier characters which do not have aliases but which can still be used in their character form.
     /// - `@ℂ` - Complex numbers
     /// - `@@` - ASCII-only characters
     /// - `@□` - Boxes with anything in them
     /// ex: # Experimental!
-    ///   : ⯾ℕ [5 3 2]
+    ///   : ⯾ @@ @h
     /// ex! # Experimental!
-    ///   : ⯾ℕ [5 ¯3 2]
-    /// ex! # Experimental!
-    ///   : ⯾ℕ [5 3 2.1]
+    ///   : ⯾ @@ @⭐
     /// ex: # Experimental!
-    ///   : ⯾ @@ "hello!"
-    /// ex! # Experimental!
-    ///   : ⯾ @@ "⭐Wow!⭐"
+    ///   : ⯾ @□ □[1 2 3]
     /// If the first argument is a list of numbers, it will validate the shape of the array.
     /// ex: # Experimental!
     ///   : ⯾[] 5
@@ -2829,13 +2829,25 @@ primitive!(
     ///   : ⯾[∞ 2] [1_2 3_4 5_6]
     /// ex! # Experimental!
     ///   : ⯾[∞ 2] [1_2_3 4_5_6]
-    /// A scalar [infinity] is always interpreted as a shape. This is a simple way to require a list.
+    /// A scalar numbers is always interpreted as a shape. This is a simple way to require a list.
     /// ex: # Experimental!
     ///   : ⯾∞ [0 1 1 0 1 0 0 1 0 1 1]
     ///   : ⯾∞ "neat"
     /// Shape and type can both be validated by using a box array where the type is the first item and the rest of the items are axis sizes.
     /// ex: # Experimental!
     ///   : ⯾{𝕌 ∞ 2} ["ab""cd"]
+    /// To allow for any shape, specify no axis sizes.
+    /// ex: # Experimental!
+    ///   : ⯾{ℤ} 5
+    ///   : ⯾{ℤ} [3 ¯6 2]
+    ///   : ⯾{ℤ} [1_2 3_4]
+    /// Type specifications can be nested to specify box arrays with given types inside the boxes.
+    /// ex: # Experimental!
+    ///   : ⯾{{ℝ ∞} ∞} {1_2 3_4_5_6 7_8_9}
+    /// ex: # Experimental!
+    ///   : ⯾{[2 ∞] 3} {[[1][2]] [3_4 5_6] [[][]]}
+    /// ex! # Experimental!
+    ///   : ⯾{[2 ∞] 3} {[[1][2]] [3_4 5_6] [7 8]}
     /// A sided subscript interprets the shape requirement as a prefix or suffix, rather than an exact match.
     /// ex: # Experimental!
     ///   : ⯾⌞[2] [1 2]

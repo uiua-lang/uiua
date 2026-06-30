@@ -52,16 +52,34 @@ pub fn validate(spec: Type, ch: &mut Type, side: Option<SubSide>) -> TypeResult 
     Ok(())
 }
 
-fn check_scalar(expected: Scalar, ch: &mut Type) -> TypeResult {
-    if let Scalar::Any = ch.scalar {
-        ch.scalar = expected;
-    } else {
-        if let Scalar::Box(ScalarBox::Def(Some(name), fields)) = &expected {
-            ch.as_mut_fields(Some(name), fields.len());
+fn check_scalar(spec: Scalar, ch: &mut Type) -> TypeResult {
+    if ch.is_any() {
+        ch.scalar = spec;
+        return Ok(());
+    }
+    if let Scalar::Box(ScalarBox::Def(Some(name), fields)) = &spec {
+        ch.as_mut_fields(Some(name), fields.len());
+    }
+    if let (Scalar::Box(spec), Scalar::Box(ch)) = (spec.clone(), &mut ch.scalar) {
+        match (spec, ch) {
+            (spec, ch @ ScalarBox::Any) => *ch = spec,
+            (ScalarBox::Any, ScalarBox::All(_)) => {}
+            (ScalarBox::Any, ScalarBox::Def(_, _)) => {}
+            (ScalarBox::All(spec), ScalarBox::All(ch)) => validate(*spec, ch, None)?,
+            (ScalarBox::All(spec), ScalarBox::Def(_, ch)) => {
+                for ch in ch {
+                    validate((*spec).clone(), ch, None)?;
+                }
+            }
+            (ScalarBox::Def(_, _), ScalarBox::All(_)) => {}
+            (ScalarBox::Def(_, spec), ScalarBox::Def(_, ch)) => {
+                for (spec, ch) in spec.into_iter().zip(ch) {
+                    validate(spec, ch, None)?;
+                }
+            }
         }
-        if !expected.superset_of(&ch.scalar) {
-            return Err(TypeError::ScalarMismatch(expected, ch.scalar.clone()));
-        }
+    } else if !spec.superset_of(&ch.scalar) {
+        return Err(TypeError::ScalarMismatch(spec, ch.scalar.clone()));
     }
     Ok(())
 }
@@ -200,6 +218,9 @@ pub type TypeResult<T = ()> = Result<T, TypeError>;
 
 fn value_as_scalar_spec(val: &Value) -> Option<Scalar> {
     match val {
+        Value::Byte(_) | Value::Num(_) if val.rank() <= 1 => {
+            Some(Scalar::Box(ScalarBox::All(Type::from_spec(val)?.into())))
+        }
         Value::Complex(arr)
             if arr.data.as_slice() == [Complex::I] || arr.data.as_slice() == [Complex::ONE] =>
         {
@@ -217,6 +238,9 @@ fn value_as_scalar_spec(val: &Value) -> Option<Scalar> {
             'ℂ' => Scalar::Complex,
             _ => return None,
         }),
+        Value::Box(arr) if val.rank() == 0 => Some(Scalar::Box(ScalarBox::All(
+            Type::from_spec(&arr.data[0].0)?.into(),
+        ))),
         Value::Box(_) if val.rank() == 1 => {
             Some(Scalar::Box(ScalarBox::All(Type::from_spec(val)?.into())))
         }

@@ -3015,14 +3015,11 @@ impl Compiler {
         })
     }
     fn allow_experimental(&self) -> bool {
-        let take = self
-            .scopes()
+        let take = (self.scopes())
             .position(|sc| matches!(sc.kind, ScopeKind::File(_)))
             .map(|i| i + 1)
             .unwrap_or(usize::MAX);
-        self.scopes()
-            .take(take)
-            .any(|sc| sc.experimental || sc.experimental_error)
+        (self.scopes().take(take)).any(|sc| sc.experimental || sc.experimental_error)
     }
     fn error(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
         UiuaErrorKind::Run {

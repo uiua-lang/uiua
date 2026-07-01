@@ -99,9 +99,10 @@ F ← ↙5 ↯3
 G ← +@0 ⯾{𝕌}
 ```
 
-Data definitions have a built-in item called `t`, which is a [validate](/docs/validate)-compatible type specification.
+Data definitions have a built-in item called `t`, which is a [validate](/docs/validate)-compatible type specification. `t` currently only exists in `# Experimental!` contexts.
 
 ```uiua
+# Experimental!
 ~Foo {A B}
 Foo.t
 ```
@@ -109,6 +110,7 @@ Foo.t
 Data definition field initializers can inform the type system.
 
 ```uiua
+# Experimental!
 ~Foo {A ← ⯾{𝕌∞}|B ← ⯾ℝ}
 Foo.t
 ```

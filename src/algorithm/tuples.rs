@@ -2,16 +2,17 @@ use ecow::EcoVec;
 
 use crate::{
     Array, ArrayValue, Node, Ops, Primitive, SigNode, Uiua, UiuaResult, Value,
-    empty_types::push_empty_rows_value, get_ops, grid_fmt::GridFmt, val_as_arr,
+    algorithm::multi_output, empty_types::push_empty_rows_value, get_ops, grid_fmt::GridFmt,
+    val_as_arr,
 };
 
 use super::{monadic::range, table::table_impl, validate_size};
 
 pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
-    if f.sig.outputs() > 1 {
+    if f.sig.args() > 1 && f.sig.outputs() > 1 {
         return Err(env.error(format!(
-            "{}'s function must have at most 1 output, \
+            "{}'s non-monadic function must have at most 1 output, \
             but its signature is {}",
             Primitive::Tuples.format(),
             f.sig
@@ -40,13 +41,13 @@ pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
 }
 
 fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
-    let has_output = f.sig.outputs() == 1;
+    let outputs = f.sig.outputs();
     let mut xs = env.pop(1)?;
     if xs.rank() == 0 {
         env.push(xs);
         return env.exec(f);
     }
-    let mut results = Vec::new();
+    let mut results = multi_output(f.sig.outputs(), Vec::new());
     let mut per_meta = xs.meta.take_per_meta();
     if xs.row_count() == 0 {
         xs.shape.prepend(0);
@@ -59,13 +60,13 @@ fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
         for n in 1..=xs.row_count() {
             env.push(xs.slice_rows(0, n));
             env.exec(f.clone())?;
-            if has_output {
-                results.push(env.pop("tuples's function result")?);
+            for i in 0..outputs {
+                results[i].push(env.pop("tuples's function result")?);
             }
         }
         Ok(())
     })?;
-    if has_output {
+    for results in results.into_iter().rev() {
         let mut val = env.rows_to_value(results)?;
         if xs.row_count() == 0 {
             val.pop_row();

@@ -12,6 +12,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`cos`](https://uiua.org/docs/cos), [`tan`](https://uiua.org/docs/tan), [`sinh`](https://uiua.org/docs/sinh), [`cosh`](https://uiua.org/docs/cosh) functions, and [`tanh`](https://uiua.org/docs/tanh) functions, with associated inverses
 - Add sided subscripts for [`negate ¯`](https://uiua.org/docs/negate), which get the conjugate or negative conjugate
 - Add numeric subscripts for [`rise ⍏`](https://uiua.org/docs/rise) and [`fall ⍖`](https://uiua.org/docs/fall), which give [`pick ⊡`](https://uiua.org/docs/pick)-compatible indices
+- Allow for multiple outputs from monadic [`tuples ⧅`](https://uiua.org/docs/tuples)
 - Lone numeric subscripts now format to number literals, making it easier to split them off
 - Add `NoInit` constructor to data definitions construct data without running initializers (but still running validators)
 - Allow for function arguments to macros to be indicated in a signature comment

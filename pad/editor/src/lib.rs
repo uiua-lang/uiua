@@ -753,7 +753,9 @@ pub fn Editor<'a>(
                             removal_count = 0;
                             let code = get_code();
                             let chars: Vec<_> = code.chars().skip(end as usize).collect();
-                            let first_char = *chars.first().unwrap();
+                            let Some(&first_char) = chars.first() else {
+                                return;
+                            };
                             let class = char_class(first_char);
                             let mut encountered_space = false;
                             for &c in chars.iter() {

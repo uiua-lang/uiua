@@ -127,6 +127,10 @@ li {
     #header-uiua,
     .spoiler:hover {
         color: #d1daec;
+    }
+    #main-skeleton,
+    #header-uiua,
+    .spoiler:hover {
         color-scheme: dark;
     }
 
@@ -213,6 +217,10 @@ li {
     #header-uiua,
     .spoiler:hover {
         color: #344;
+    }
+    #main-skeleton,
+    #header-uiua,
+    .spoiler:hover {
         color-scheme: light;
     }
 

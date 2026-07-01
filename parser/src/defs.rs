@@ -2811,6 +2811,7 @@ primitive!(
     /// - `@ℂ` - Complex numbers
     /// - `@@` - ASCII-only characters
     /// - `@□` - Boxes with anything in them
+    /// - `@*` - Anything
     /// ex: # Experimental!
     ///   : ⯾ @@ @h
     /// ex! # Experimental!

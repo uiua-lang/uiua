@@ -99,6 +99,20 @@ F ← ↙5 ↯3
 G ← +@0 ⯾{𝕌}
 ```
 
+Data definitions have a built-in item called `t`, which is a [validate](/docs/validate)-compatible type specification.
+
+```uiua
+~Foo {A B}
+Foo.t
+```
+
+Data definition field initializers can inform the type system.
+
+```uiua
+~Foo {A ← ⯾{𝕌∞}|B ← ⯾ℝ}
+Foo.t
+```
+
 The type system implementation is such that most type information can only flow *forward* through the system, not backward. Except for at the very beginning of a function, type constaints cannot go backward to inform the argument types of the function.
 
 ## Data Definitions

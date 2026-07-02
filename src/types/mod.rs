@@ -17,8 +17,9 @@ use ecow::{EcoString, EcoVec, eco_vec};
 use serde::*;
 
 use crate::{
-    Array, ArrayCmp, ArrayValue, Assembly, Boxed, Complex, Context, Exec, HasStack, ImplPrimitive,
-    Node, PrimClass, Primitive, Shape, SigNode, StackArg, SubSide, SysOp, Value, grid_fmt::GridFmt,
+    Array, ArrayCmp, ArrayValue, Assembly, BindingKind, Boxed, Complex, Context, Exec, HasStack,
+    ImplPrimitive, Node, PrimClass, Primitive, Shape, SigNode, StackArg, SubSide, SysOp, Value,
+    grid_fmt::GridFmt,
 };
 
 pub use {scalar::*, shape::*, ty::*, val::*};
@@ -403,6 +404,13 @@ impl<'a> TypeEnv<'a> {
             Call(f, _) => {
                 let sn = SigNode::new(f.sig, self.asm[f].clone());
                 self.exec_no_fill(&sn)?
+            }
+            &CallGlobal(i, _) => {
+                if let BindingKind::Const(Some(val)) = &self.asm.bindings[i].kind {
+                    self.push(TypeVal::from(val.clone()))
+                } else {
+                    return Err(TypeError::Unsupported(None));
+                }
             }
             Push(val) => self.push(val.clone()),
             Prim(prim, _) => match prim {

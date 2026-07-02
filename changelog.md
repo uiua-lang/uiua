@@ -5,6 +5,8 @@ Uiua is not yet stable.
 ## 0.19.0 - 2026-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- **Breaking Change** - Monadic [`tuples ⧅`](https://uiua.org/docs/tuples) now gives the power set rather than prefixes.
+  - Sided [`tuples ⧅`](https://uiua.org/docs/tuples) now gives prefixes or suffixes.
 - Change module member access syntax from `~`/`≈` to `.`/`‥`, which is easier to type and looks nicer
 - Add [`oklch`](https://uiua.org/docs/oklch) function
 - Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape

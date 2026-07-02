@@ -1,4 +1,7 @@
+use std::mem::take;
+
 use ecow::EcoVec;
+use uiua_parser::SubSide;
 
 use crate::{
     Array, ArrayValue, Node, Ops, Primitive, SigNode, Uiua, UiuaResult, Value,
@@ -8,7 +11,7 @@ use crate::{
 
 use super::{monadic::range, table::table_impl, validate_size};
 
-pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
+pub fn tuples(ops: Ops, side: Option<SubSide>, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
     if f.sig.args() > 1 && f.sig.outputs() > 1 {
         return Err(env.error(format!(
@@ -26,7 +29,7 @@ pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
         )));
     }
     match f.sig.args() {
-        1 => tuple1(f, env)?,
+        1 => tuple1(f, side, env)?,
         2 => tuple2(f, env)?,
         _ => {
             return Err(env.error(format!(
@@ -40,15 +43,17 @@ pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
+fn tuple1(f: SigNode, side: Option<SubSide>, env: &mut Uiua) -> UiuaResult {
     let outputs = f.sig.outputs();
     let mut xs = env.pop(1)?;
+    // Trivial scalar case
     if xs.rank() == 0 {
         env.push(xs);
         return env.exec(f);
     }
-    let mut results = multi_output(f.sig.outputs(), Vec::new());
+    let mut results = multi_output(outputs, Vec::new());
     let mut per_meta = xs.meta.take_per_meta();
+    // Empty array case
     if xs.row_count() == 0 {
         xs.shape.prepend(0);
         if push_empty_rows_value(&f, [&xs], false, &mut per_meta, env) {
@@ -56,12 +61,65 @@ fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
         }
         xs.shape.remove(0);
     }
+    // Behavior dispatch
     env.without_fill(|env| -> UiuaResult {
-        for n in 1..=xs.row_count() {
-            env.push(xs.slice_rows(0, n));
-            env.exec(f.clone())?;
-            for i in 0..outputs {
-                results[i].push(env.pop("tuples's function result")?);
+        let r = xs.row_count();
+        match side {
+            Some(SubSide::Left) => {
+                for n in 1..=r {
+                    env.push(xs.slice_rows(0, n));
+                    env.exec(f.clone())?;
+                    for i in 0..outputs {
+                        results[i].push(env.pop("tuples's function result")?);
+                    }
+                }
+            }
+            Some(SubSide::Right) => {
+                for n in 0..r {
+                    env.push(xs.slice_rows(n, r));
+                    env.exec(f.clone())?;
+                    for i in 0..outputs {
+                        results[i].push(env.pop("tuples's function result")?);
+                    }
+                }
+            }
+            None => {
+                let count = 2f64.powi(r as i32);
+                if count.is_nan() {
+                    return Err(env.error("Combinatorial explosion"));
+                }
+                if count > usize::MAX as f64 {
+                    return Err(env.error(format!(
+                        "{} tuples would be too many",
+                        count.grid_string(false)
+                    )));
+                }
+                let count = count as usize;
+                let mut rows = Vec::new();
+                let mut counts: Vec<usize> = (1..count).collect();
+                counts.sort_by_key(|i| i.count_ones());
+                // Special case empty
+                env.push(xs.first_dim_zero());
+                env.exec(f.clone())?;
+                for i in 0..outputs {
+                    results[i].push(env.pop("tuples's function result")?);
+                }
+                // Main loop
+                for mut i in counts {
+                    let mut j = 0;
+                    while i != 0 {
+                        if i & 1 == 1 {
+                            rows.push(xs.row(j));
+                        }
+                        j += 1;
+                        i >>= 1;
+                    }
+                    env.push(Value::from_row_values_infallible(take(&mut rows)));
+                    env.exec(f.clone())?;
+                    for i in 0..outputs {
+                        results[i].push(env.pop("tuples's function result")?);
+                    }
+                }
             }
         }
         Ok(())

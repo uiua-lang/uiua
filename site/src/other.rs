@@ -632,6 +632,12 @@ pub fn Subscripts() -> impl IntoView {
             "# Experimental!\n ⬚0[1_2_3 4_5 6]\n⬚⌟0[1_2_3 4_5 6]\n⬚⌞0[1_2_3 4_5 6]",
         ),
         subscript(
+            Stencil,
+            "Chunks aligned to the left or right",
+            "⧈⌞□ 2 ⇡5\n⧈⌟□ 2 ⇡5",
+        ),
+        subscript(Tuples, "Prefixes or suffixes", r#"⧅⌞□ "abcd"\n⧅⌟□ "abcd""#),
+        subscript(
             EncodeBytes,
             "Choose little or big endian",
             "# Experimental!\nbytes⌞ \"u64\" 1234567890 # Little endian\nbytes⌟ \"u64\" 1234567890 # Big endian",

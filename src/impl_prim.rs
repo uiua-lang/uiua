@@ -273,6 +273,7 @@ impl_primitive!(
     (2, MultiKeep(usize)),
     (2, SidedJoin(SubSide)),
     ([1], SidedStencil(SubSide)),
+    ([1], SidedTuples(SubSide)),
     ((1), MultiJoin(usize)),
     ([2], SidedBracket(SidedSubscript)),
     (1, Json5),

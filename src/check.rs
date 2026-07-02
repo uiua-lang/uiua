@@ -516,6 +516,10 @@ impl VirtualEnv {
                     }
                     self.handle_args_outputs(1, sig.outputs());
                 }
+                SidedTuples(_) => {
+                    let [sig] = get_args(args)?;
+                    self.handle_sig(sig);
+                }
                 UnBracket => {
                     let (args, outputs) = args.iter().fold((0, 0), |(a, o), sn| {
                         (a + sn.sig.args(), o + sn.sig.outputs())

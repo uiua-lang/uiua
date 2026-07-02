@@ -1136,24 +1136,50 @@ impl Compiler {
             Tuples => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
-                let inner_sig = sn.sig;
-                let mut node = Node::Mod(Primitive::Tuples, eco_vec![sn], span);
-                if let Some(n) = subscript.and_then(|sub| {
-                    if inner_sig.args() != 2 {
-                        self.add_error(
-                            modified.modifier.span.clone().merge(sub.span.clone()),
-                            format!(
-                                "{} can only be subscripted if its function \
-                                is dyadic, but the signature is {inner_sig}",
-                                Primitive::Tuples.format()
-                            ),
-                        );
+                let nos = subscript.and_then(|sub| {
+                    self.subscript_int_or_side(&sub, &Tuples.format())
+                        .map(|nos| sub.span.sp(nos))
+                });
+                match nos {
+                    Some(Sp {
+                        value: SubNOrSide::N(n),
+                        span: sub_span,
+                    }) => {
+                        if sn.sig.args() != 2 {
+                            self.add_error(
+                                modified.modifier.span.clone().merge(sub_span),
+                                format!(
+                                    "Numeric subscripted {} requires a dyadic function, \
+                                    but the signature is {}",
+                                    Primitive::Tuples.format(),
+                                    sn.sig
+                                ),
+                            );
+                        }
+                        Node::from([
+                            Node::new_push(n),
+                            Node::Mod(Primitive::Tuples, eco_vec![sn], span),
+                        ])
                     }
-                    self.subscript_int_only(&sub, &Tuples.format())
-                }) {
-                    node.prepend(Node::new_push(n));
+                    Some(Sp {
+                        value: SubNOrSide::Side(side),
+                        span: sub_span,
+                    }) => {
+                        if sn.sig.args() != 1 {
+                            self.add_error(
+                                modified.modifier.span.clone().merge(sub_span),
+                                format!(
+                                    "Sided {} requires a monadic function, \
+                                    but the signature is {}",
+                                    Primitive::Tuples.format(),
+                                    sn.sig
+                                ),
+                            );
+                        }
+                        Node::ImplMod(ImplPrimitive::SidedTuples(side), eco_vec![sn], span)
+                    }
+                    None => Node::Mod(Primitive::Tuples, eco_vec![sn], span),
                 }
-                node
             }
             Stencil => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;

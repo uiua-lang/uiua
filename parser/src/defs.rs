@@ -2159,25 +2159,28 @@ primitive!(
     ///   : ⧅≠ ∞ ⇡4
     ///
     /// If [tuples] is given a monadic function, it takes only one argument.
-    /// The function will be called on all prefixes of the array.
-    /// The full-length prefix will be included, but not the empty prefix, so the output will have the same number of rows as the original array.
-    /// ex: ⧅□ ⇡5
-    /// ex: ⧅□ "Hello!"
-    /// ex: ⧅□ °△5_2
-    /// You can get suffixes with a few [reverse]s.
-    /// ex: ⍜⇌⧅(□⇌) "Hello!"
+    /// The function will be called on the [power set](https://en.wikipedia.org/wiki/Power_set) of the array.
+    /// ex: ⧅□ "abc"
+    /// ex: ⧅/+ [1 1 1 1]
     /// Monadic [tuples] is compatible with [fill].
     /// ex: ⬚@-⧅∘ "Uiua"
+    /// Sided monadic [tuples] will call the function on the prefixes or suffixes of an array.
+    /// The full-length prefix/suffix will be included, but not the empty one, so the output will have the same number of rows as the original array.
+    /// ex: ⧅⌞□ ⇡5
+    /// ex: ⧅⌟□ ⇡5
+    /// ex: ⧅⌞□ "Hello!"
+    /// ex: ⧅⌟□ "Hello!"
+    /// ex: ⧅⌞□ °△5_2
+    ///
+    /// The tuple size may be given as a subscript.
+    /// ex: ⍉ ⧅₂< ⇡5
     ///
     /// With [un][where], we can see where the inspiration for [tuples]'s glyph comes from.
     /// ex: °⊚ ⧅< 2 ⇡50
     ///   : °⊚ ⧅> 2 ⇡50
     ///   : °⊚ ⧅≠ 2 ⇡50
-    /// We can get something similar with the monadic form.
-    /// ex: ⬚0⧅∘ +1⇡50
-    ///
-    /// The tuple size may be given as a subscript.
-    /// ex: ⍉ ⧅₂< ⇡5
+    /// We can get something similar with the monadic prefixes form.
+    /// ex: ⬚0⧅⌞∘ +1⇡50
     ([1], Tuples, MappingModifier, ("tuples", '⧅')),
     /// Call a function on windows of an array
     ///

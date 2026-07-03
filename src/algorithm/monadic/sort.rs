@@ -278,7 +278,8 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         if depth == 0 {
-            self.meta.mark_sorted_up(true);
+            self.meta
+                .mark_sorted_up(!self.data.iter().any(T::has_wildcard));
             self.meta.mark_sorted_down(false);
         } else {
             self.meta.take_sorted_flags();
@@ -323,7 +324,8 @@ impl<T: ArrayValue> Array<T> {
         }
         if depth == 0 {
             self.meta.mark_sorted_up(false);
-            self.meta.mark_sorted_down(true);
+            self.meta
+                .mark_sorted_down(!self.data.iter().any(T::has_wildcard));
         } else {
             self.meta.take_sorted_flags();
         }

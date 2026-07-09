@@ -785,11 +785,7 @@ impl Uiua {
     pub(crate) fn exec_clean_stack(&mut self, sn: SigNode) -> UiuaResult {
         let sig = sn.sig;
         let bottom = self.stack_height().saturating_sub(sig.args());
-        let under_bottom = self
-            .rt
-            .under_stack
-            .len()
-            .saturating_sub(sn.sig.under_args());
+        let under_bottom = (self.rt.under_stack.len()).saturating_sub(sn.sig.under_args());
         let res = self.exec(sn.node);
         if res.is_err() {
             self.truncate_stack(bottom);
@@ -1106,7 +1102,7 @@ impl Uiua {
         depth: usize,
     ) -> UiuaResult<impl DoubleEndedIterator<Item = Value> + '_> {
         debug_assert!(depth >= n);
-        let start = self.require_height(depth)?;
+        let start = self.require_height(if n == 0 { 0 } else { depth })?;
         Ok(self.rt.stack.drain(start..start + n).rev())
     }
     /// Rotate the stack up at some depth

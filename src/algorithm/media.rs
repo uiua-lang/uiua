@@ -934,6 +934,7 @@ fn encode_gif_impl<C, E>(
         let pallete: Vec<u8> = (0..=255).flat_map(|c| [c, c, c]).collect();
         let mut encoder = Encoder::new(&mut bytes, width as u16, height as u16, &pallete)
             .map_err(|e| error(ctx, e.to_string()))?;
+        (encoder.set_repeat(gif::Repeat::Infinite)).map_err(|e| error(ctx, e.to_string()))?;
         let mut write_frame = |i: usize, frame: GrayImage, ctx: &mut C| -> Result<(), E> {
             let mut frame =
                 Frame::from_indexed_pixels(width as u16, height as u16, frame.into_raw(), None);

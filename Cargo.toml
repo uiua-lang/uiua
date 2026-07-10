@@ -108,7 +108,7 @@ num_cpus = "1.16.0"
 open = {version = "5", optional = true}
 palette = {version = "0.7.6", default-features = false, features = ["std"]}
 parking_lot = "0.12.1"
-paste = "1.0.14"
+pastey = "0.2.3"
 pathdiff = "0.2.1"
 rand.workspace = true
 rapidhash = "4"

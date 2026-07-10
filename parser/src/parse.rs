@@ -580,6 +580,7 @@ impl Parser<'_> {
                     chars.extend(' '..='~');
                     chars.extend(SUBSCRIPT_DIGITS);
                     chars.extend(OTHER_SUBSCRIPT_NUMBERS);
+                    chars.extend("ℝℤℕ𝔹𝕌".chars());
                     chars.extend("←↚‼′″‴₋⌞⌟ₙ↓".chars());
                     chars.sort_unstable();
                     debug_assert!(chars.len() < 256);

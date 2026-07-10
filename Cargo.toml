@@ -175,7 +175,7 @@ num-complex = {version = ">=0.4.1", optional = true, default-features = false, f
 ]}
 png = {version = "0.17.16", optional = true}
 rustfft = {version = "6.2.0", optional = true}
-rustls-pemfile = {version = "2.1.2", optional = true}
+rustls-pki-types = {version = "1.15.0", optional = true}
 simple_excel_writer = {version = "0.2.0", optional = true}
 sys-locale = {version = "0.3.1", optional = true}
 vorbis_rs = {workspace = true, optional = true}
@@ -258,7 +258,7 @@ profile = ["serde_yaml"]
 raw_mode = ["rawrrr", "native_sys"]
 stand = ["native_sys"]
 terminal_image = ["viuer", "image", "icy_sixel"]
-tls = ["rustls", "webpki-roots", "rustls-pemfile"]
+tls = ["rustls", "webpki-roots", "rustls-pki-types"]
 web = ["wasm-bindgen", "js-sys", "web-sys"]
 webcam = ["image", "nokhwa"]
 window = ["eframe", "rmp-serde", "image", "native-dialog"]

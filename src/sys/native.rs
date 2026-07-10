@@ -888,14 +888,20 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "tls")]
     fn tls_listen(&self, addr: &str, cert: &[u8], key: &[u8]) -> Result<Handle, String> {
+        use rustls_pki_types::pem::PemObject;
+
         let handle = NATIVE_SYS.new_handle();
         let listener = TcpListener::bind(addr).map_err(|e| e.to_string())?;
-        let certs = rustls_pemfile::certs(&mut BufReader::new(cert))
+        let certs = rustls_pki_types::CertificateDer::pem_slice_iter(cert)
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| e.to_string())?;
-        let private_key = rustls_pemfile::private_key(&mut BufReader::new(key))
-            .map_err(|e| e.to_string())?
-            .ok_or("No private key found")?;
+        let private_key =
+            rustls_pki_types::PrivateKeyDer::from_pem_slice(key).map_err(|e| match e {
+                rustls_pki_types::pem::Error::NoItemsFound => Cow::Borrowed("No private key found"),
+                e => Cow::Owned(e.to_string()),
+            })?;
+        // .map_err(|e| e.to_string())?
+        // .ok_or("No private key found")?;
         let config = rustls::ServerConfig::builder()
             .with_no_client_auth()
             .with_single_cert(certs, private_key)

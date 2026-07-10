@@ -8,7 +8,7 @@ keywords = ["uiua", "array", "stack", "language", "apl"]
 license = "MIT"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
-rust-version = "1.88.0"
+rust-version = "1.92.0"
 version = "0.19.0-dev.4"
 
 [dependencies.uiua_parser]
@@ -44,7 +44,7 @@ unicode-segmentation = "1.10"
 urlencoding = "2"
 vorbis_rs = "0.5.5"
 # NOTE: if you change the wasm-bindgen version, remember to change it in nix/site.nix as well
-wasm-bindgen = "=0.2.100"
+wasm-bindgen = "=0.2.108"
 
 [workspace.dependencies.web-sys]
 features = [
@@ -186,7 +186,7 @@ wasm-bindgen = {workspace = true, optional = true}
 web-sys = {version = "0.3.60", optional = true}
 
 # Window dependencies
-eframe = {version = "0.33.0", optional = true, features = ["persistence"]}
+eframe = {version = "0.34.0", optional = true, features = ["persistence"]}
 native-dialog = {version = "0.7.0", optional = true}
 rmp-serde = {version = "1.3.0", optional = true}
 

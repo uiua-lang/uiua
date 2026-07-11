@@ -169,7 +169,7 @@ pub fn run_window() {
                 .send_viewport_cmd(ViewportCommand::RequestUserAttention(
                     UserAttentionType::Informational,
                 ));
-            cc.egui_ctx.style_mut(|style| {
+            cc.egui_ctx.global_style_mut(|style| {
                 style.interaction.show_tooltips_only_when_still = false;
                 style.interaction.tooltip_delay = 0.2;
             });
@@ -285,17 +285,17 @@ impl App {
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &Context, _: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut Ui, _: &mut eframe::Frame) {
         let mut scroll = false;
         while let Ok(req) = self.recv.try_recv() {
             if self.clear_before_next {
                 self.clear_before_next = false;
                 for item in self.items.drain(..) {
                     match item {
-                        OutputItem::Image { tex_id, .. } => ctx.tex_manager().write().free(tex_id),
+                        OutputItem::Image { tex_id, .. } => ui.tex_manager().write().free(tex_id),
                         OutputItem::Gif { frames, .. } => {
                             for (tex_id, _) in frames {
-                                ctx.tex_manager().write().free(tex_id);
+                                ui.tex_manager().write().free(tex_id);
                             }
                         }
                         _ => {}
@@ -310,14 +310,14 @@ impl eframe::App for App {
                 Request::Ping => {}
                 Request::ShowText(text) => self.items.push(OutputItem::Text(text)),
                 Request::Show(so) => {
-                    let item = self.convert_smart_output(so, ctx);
+                    let item = self.convert_smart_output(so, ui);
                     self.items.push(item);
                     self.clear_before_next = false;
                     scroll = true;
                 }
                 Request::ShowAll(sos) => {
                     for so in sos.into_iter().rev() {
-                        let item = self.convert_smart_output(so, ctx);
+                        let item = self.convert_smart_output(so, ui);
                         self.items.push(item);
                     }
                     self.clear_before_next = false;
@@ -329,12 +329,11 @@ impl eframe::App for App {
                     }
                 }
                 Request::ClearBeforeNext => self.clear_before_next = self.clear,
-                Request::Shutdown => ctx.send_viewport_cmd(ViewportCommand::Close),
+                Request::Shutdown => ui.send_viewport_cmd(ViewportCommand::Close),
             }
         }
-
         // Top bar
-        TopBottomPanel::top("top bar").show(ctx, |ui| {
+        Panel::top("top bar").show_inside(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 ComboBox::new("ppp", "🔍")
                     .width(60.0)
@@ -421,7 +420,7 @@ impl eframe::App for App {
         });
 
         // Main content
-        CentralPanel::default().show(ctx, |ui| {
+        CentralPanel::default().show_inside(ui, |ui| {
             ScrollArea::both()
                 .auto_shrink([false; 2])
                 .show(ui, |ui| self.inner(ui, scroll))
@@ -435,7 +434,7 @@ impl eframe::App for App {
                 if self.cache.errors.len() > 1 { "s" } else { "" }
             ))
             .open(&mut open)
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 for error in &self.cache.errors {
                     ui.label(RichText::new(error.as_str()).color(Color32::RED));
                 }
@@ -445,15 +444,15 @@ impl eframe::App for App {
             }
         }
 
-        if ctx.input(|input| input.viewport().close_requested()) {
-            ctx.data_mut(|data| {
+        if ui.input(|input| input.viewport().close_requested()) {
+            ui.data_mut(|data| {
                 data.clear();
                 data.insert_persisted(Id::new("ppp"), self.cache.ppp);
                 data.insert_persisted(Id::new("clear"), self.clear);
                 data.insert_persisted(Id::new("autplay"), self.autoplay);
             });
         }
-        ctx.request_repaint_after_secs(0.1);
+        ui.request_repaint_after_secs(0.1);
         self.cache.last_frame = Instant::now();
     }
 }

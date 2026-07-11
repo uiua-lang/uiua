@@ -1864,7 +1864,7 @@ fn layout_text_impl(
         let mut buffer = buffer.borrow_with(system);
         buffer.set_size(width, height);
         let attrs = Attrs::new();
-        buffer.set_text(&string, attrs, Shaping::Advanced);
+        buffer.set_text(&string, &attrs, Shaping::Advanced, None);
         buffer.shape_until_scroll(true);
 
         // Get canvas size

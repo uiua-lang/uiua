@@ -8,7 +8,7 @@ keywords = ["uiua", "array", "stack", "language", "apl"]
 license = "MIT"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
-rust-version = "1.88.0"
+rust-version = "1.92.0"
 version = "0.19.0-dev.4"
 
 [dependencies.uiua_parser]
@@ -44,7 +44,7 @@ unicode-segmentation = "1.10"
 urlencoding = "2"
 vorbis_rs = "0.5.5"
 # NOTE: if you change the wasm-bindgen version, remember to change it in nix/site.nix as well
-wasm-bindgen = "=0.2.100"
+wasm-bindgen = "=0.2.108"
 
 [workspace.dependencies.web-sys]
 features = [
@@ -108,7 +108,7 @@ num_cpus = "1.16.0"
 open = {version = "5", optional = true}
 palette = {version = "0.7.6", default-features = false, features = ["std"]}
 parking_lot = "0.12.1"
-paste = "1.0.14"
+pastey = "0.2.3"
 pathdiff = "0.2.1"
 rand.workspace = true
 rapidhash = "4"
@@ -140,7 +140,7 @@ clap = {version = "4", optional = true, features = ["derive"]}
 color-backtrace = {version = "0.6.1", optional = true}
 ctrlc = {version = "3.4.6", optional = true}
 icy_sixel = {version = "0.5.0", optional = true}
-notify = {version = "7", optional = true}
+notify = {version = "8", optional = true}
 rustyline = {version = "15.0.0", optional = true}
 terminal-light = {version = "1.4.0", optional = true}
 tokio = {version = "1", optional = true, features = ["io-std", "rt"]}
@@ -151,8 +151,8 @@ serde_yaml = {version = "0.9.33", optional = true}
 
 # Feature dependencies
 arboard = {version = "3", optional = true}
-calamine = {version = "0.28.0", optional = true}
-cosmic-text = {version = "0.12.1", optional = true}
+calamine = {version = "0.36.0", optional = true}
+cosmic-text = {version = "0.15.0", optional = true}
 csv = {version = "1", optional = true}
 flate2 = {workspace = true, optional = true}
 gif = {version = "0.13.1", optional = true, default-features = false, features = ["std"]}
@@ -175,7 +175,7 @@ num-complex = {version = ">=0.4.1", optional = true, default-features = false, f
 ]}
 png = {version = "0.17.16", optional = true}
 rustfft = {version = "6.2.0", optional = true}
-rustls-pemfile = {version = "2.1.2", optional = true}
+rustls-pki-types = {version = "1.15.0", optional = true}
 simple_excel_writer = {version = "0.2.0", optional = true}
 sys-locale = {version = "0.3.1", optional = true}
 vorbis_rs = {workspace = true, optional = true}
@@ -186,7 +186,7 @@ wasm-bindgen = {workspace = true, optional = true}
 web-sys = {version = "0.3.60", optional = true}
 
 # Window dependencies
-eframe = {version = "0.33.0", optional = true, features = ["persistence"]}
+eframe = {version = "0.34.0", optional = true, features = ["persistence"]}
 native-dialog = {version = "0.7.0", optional = true}
 rmp-serde = {version = "1.3.0", optional = true}
 
@@ -258,7 +258,7 @@ profile = ["serde_yaml"]
 raw_mode = ["rawrrr", "native_sys"]
 stand = ["native_sys"]
 terminal_image = ["viuer", "image", "icy_sixel"]
-tls = ["rustls", "webpki-roots", "rustls-pemfile"]
+tls = ["rustls", "webpki-roots", "rustls-pki-types"]
 web = ["wasm-bindgen", "js-sys", "web-sys"]
 webcam = ["image", "nokhwa"]
 window = ["eframe", "rmp-serde", "image", "native-dialog"]

@@ -14,7 +14,7 @@ use std::{
 };
 
 use ecow::EcoString;
-use paste::paste;
+use pastey::paste;
 use uiua_parser::SubscriptToken;
 use unicode_segmentation::UnicodeSegmentation;
 

@@ -1174,7 +1174,11 @@ impl Formatter<'_> {
                     self.subscript(&sub.script);
                 }
             },
-            Word::Spaces => self.push(&word.span, " "),
+            Word::Spaces => {
+                if !self.output.ends_with(' ') {
+                    self.push(&word.span, " ")
+                }
+            }
             Word::Comment(comment) => {
                 let beginning_of_line = self
                     .output
@@ -2182,6 +2186,9 @@ Abc  by
 @\\Z
 \"\\B\\N\\R\"
 bacdi
+(
+; 1
+;2)
 ";
     let output = "\
 F₁
@@ -2198,6 +2205,7 @@ Abc ⊸
 @ℤ
 \"𝔹ℕℝ\"
 ˜⊙∘
+(2 1)
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     assert_eq!(formatted, output);

@@ -1837,10 +1837,7 @@ value_mon_impl!(
     [Complex, com],
     #[cfg(feature = "ga")]
     (Mv, mv),
-    (Char, char),
-    |val, flags| if val.rank() < 2 && !matches!(val, Value::Complex(_)) {
-        val.meta.or_sorted_flags(flags)
-    }
+    (Char, char)
 );
 value_mon_impl!(
     recip,

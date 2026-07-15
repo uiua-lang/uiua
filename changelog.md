@@ -44,7 +44,7 @@ This version is not yet released. If you are reading this on the website, then t
   - `raze` alias for `/◇⊂`
   - `cis` alias for `°⍉`
   - `#exp` alias for `# Experimental!`
-  - `kbm` alias for `▽⊸∊`
+  - `kbm` and `knbm` aliases for `▽⊸∊` and `▽¬⊸∊`
 - Allow modules to be unclosed
   - The closing delimiter will be formatted in
 - Uncaught errors in threads now immediately print to stderr

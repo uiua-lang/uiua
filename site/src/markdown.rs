@@ -300,7 +300,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                         {
                             frags.push(view!(<Prim prim=prim glyph_only=true/>).into_view())
                         }
-                        Token::Subscr(sub) if !text.contains(',') => {
+                        Token::Subscr(sub) if !(text.contains(',') || text.contains("__")) => {
                             frags.push(view!(<code>{sub.to_string()}</code>).into_view())
                         }
                         _ => {
@@ -487,7 +487,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                         {
                             s.push_str(&prim_html(prim, true, false))
                         }
-                        Token::Subscr(sub) if !text.contains(',') => {
+                        Token::Subscr(sub) if !(text.contains(',') || text.contains("__")) => {
                             s.push_str(&format!("<code>{sub}</code>"))
                         }
                         _ => return format!("<code>{}</code>", code.literal),

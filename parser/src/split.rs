@@ -366,7 +366,7 @@ impl Primitive {
             ),
             alias!((p, Add), (g, PrimComponent::E), (a, PrimComponent::Sub0)),
             alias!((k, Keep), (b, By), (m, MemberOf)),
-	    alias!((k, Keep), (n, Not), (b, By), (m, MemberOf)),
+            alias!((k, Keep), (n, Not), (b, By), (m, MemberOf)),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

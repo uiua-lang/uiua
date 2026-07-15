@@ -46,7 +46,7 @@ The fact that Uiua functions can both take and return multiple values also makes
 Most of Uiua's glyphs were chosen for one of a few reasons:
 
 - It is a common mathematical symbol, such as [`add`](/docs/add), [`subtract`](/docs/subtract), and [`pi`](/docs/pi).
-- It is a very commonly used function and should create little line noise, such as [`duplicate`](/docs/duplicate) and [`backward`](/docs/backward).
+- It is a very commonly used function and should create little line noise, such as [`self`](/docs/self) and [`backward`](/docs/backward).
 - It is used in other array languages, such as [`reduce`](/docs/reduce), [`scan`](/docs/scan), and [`transpose`](/docs/transpose).
 - It kind of reminds me of what it does. Some of my favorites are [`table`](/docs/table), [`reshape`](/docs/reshape), [`rotate`](/docs/rotate), [`deshape`](/docs/deshape), and [`find`](/docs/find).
 - Its function is kind of abstract, but there are other related functions, so they all use related glyphs. For example, [`fold`](/docs/fold) has this nice symmetry with [`reduce`](/docs/reduce) and [`scan`](/docs/scan). The indexing/finding/grouping functions like[`classify`](/docs/classify), [`group`](/docs/group), [`deduplicate`](/docs/deduplicate), etc are all circles.

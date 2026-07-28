@@ -900,7 +900,7 @@ pub struct DocCommentArg {
 }
 
 fn is_sig_line(s: &str) -> bool {
-    if !s.contains(['?', '$']) {
+    if !(s.trim_end().ends_with(['?', '$']) || s.contains("? ") || s.contains("$ ")) {
         return false;
     }
     let s = s.trim_end();
@@ -954,7 +954,7 @@ impl FromStr for DocCommentSig {
                     tokens.push(Ident(ident))
                 }
                 c if c.chars().all(char::is_whitespace) => {}
-                c => return Err(Some(format!("Unexpected character `{c}`"))),
+                c => return Err(Some(format!("Unexpected character `{c}` in doc comment"))),
             }
         }
         let mut tokens = tokens.as_slice();

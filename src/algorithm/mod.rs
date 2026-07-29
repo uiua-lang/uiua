@@ -514,8 +514,8 @@ pub fn try_sig(ops: &[SigNode]) -> (Signature, bool) {
         let args = f.sig.args().saturating_sub((i > 0) as usize);
         max_args = max_args.max(args);
     }
-    let any_takes_error =
-        (ops.iter()).any(|f| f.sig.args() + max_outputs.saturating_sub(f.sig.outputs()) > max_args);
+    let any_takes_error = (ops.iter().skip(1))
+        .any(|f| f.sig.args() + max_outputs.saturating_sub(f.sig.outputs()) > max_args);
     let mut max_args = 0;
     for (i, f) in ops.iter().enumerate() {
         let args = (f.sig.args() + max_outputs.saturating_sub(f.sig.outputs()))
@@ -531,13 +531,18 @@ pub fn try_(ops: Ops, pattern: bool, env: &mut Uiua) -> UiuaResult {
     env.require_height(try_args)?;
     let mut ops = ops.into_iter();
     let mut f = ops.next().expect("try should have at least 2 args");
+    let mut takes_error = false;
     for handler in ops {
         let (f_sig, handler_sig) = (f.sig, handler.sig);
-        let takes_error = any_takes_error
-            && handler_sig.args() + try_sig.outputs().saturating_sub(handler_sig.outputs())
-                == try_args + 1;
         let backup = env.clone_stack_top(try_sig.args().min(f.sig.args()))?;
         if let Err(mut err) = env.exec_clean_stack(f) {
+            if takes_error {
+                env.pop("error")?;
+            }
+            takes_error = any_takes_error
+                && handler_sig.args() + try_sig.outputs().saturating_sub(handler_sig.outputs())
+                    == try_args + 1;
+            // Handle case
             if pattern != err.meta.is_case {
                 if !pattern {
                     err.meta.is_case = false;
@@ -554,19 +559,16 @@ pub fn try_(ops: Ops, pattern: bool, env: &mut Uiua) -> UiuaResult {
             }
             f = handler;
         } else {
-            let df = f_sig.outputs() as isize - f_sig.args() as isize;
-            let dtry = try_sig.outputs() as isize - try_sig.args() as isize;
             _ = env.remove_n(
-                (df - dtry).max(0) as usize,
+                (f_sig.net() - try_sig.net()).max(0) as usize,
                 (try_args + f_sig.outputs()).saturating_sub(f_sig.args()),
             )?;
             return Ok(());
         }
     }
-    let df = f.sig.outputs() as isize - f.sig.args() as isize;
-    let dtry = try_sig.outputs() as isize - try_sig.args() as isize;
-    _ = env.remove_n((df - dtry).max(0) as usize, try_args)?;
-    env.exec(f)
+    _ = env.remove_n((f.sig.net() - try_sig.net()).max(0) as usize, try_args)?;
+    env.exec(f)?;
+    Ok(())
 }
 
 pub fn format(parts: &[EcoString], env: &mut Uiua) -> UiuaResult {

@@ -95,9 +95,13 @@ impl Signature {
         self.args = args as u16;
         self.outputs = outputs as u16;
     }
+    /// The net stack change
+    pub fn net(&self) -> isize {
+        self.outputs as isize - self.args as isize
+    }
     /// Check if this signature changes the stack size by the same amount as another signature
     pub fn is_compatible_with(self, other: Self) -> bool {
-        self.args as isize - self.outputs as isize == other.args as isize - other.outputs as isize
+        self.net() == other.net()
     }
     /// Check if this [`Signature::is_compatible_with`] another signature and has at least as many arguments
     pub fn is_superset_of(self, other: Self) -> bool {

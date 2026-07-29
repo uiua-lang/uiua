@@ -3,6 +3,10 @@
     src: url(Uiua386.ttf) format("truetype");
 }
 
+:root {
+    color-scheme: light dark;
+}
+
 html * {
     font-family: "Segoe UI", "Arial", sans-serif;
 }
@@ -397,7 +401,7 @@ li {
     border-radius: 0.25em;
     display: block;
     text-align: center;
-    background-color: light-dark(#fff8, #0004);
+    background-color: light-dark(#fff8, #2d3c4a);
     width: fit-content;
     position: absolute;
     right: 2.5em;

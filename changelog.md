@@ -20,6 +20,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Allow for function arguments to macros to be indicated in a signature comment
   - Put signature comments for each function between `()`s at the beginning of the macro's signature comment
 - Allow for subfolder imports from Git repos specified like `~ "git: example.com/user/repo subfolder"`
+- Format left `⌞` and right `⌟` subscripts from `,,` and `,.` respectively
 - Add experimental `ᵢ` and `ᵣ` subscripts, which format from `,i` and `,r` respectively
   - Only currently compatible with dyadic pervasives and custom subscripts, but may be used for other things in the future
 - Rework experimental [Geometric Algebra](https://uiua.org/docs/experimental#geometric-algebra) system

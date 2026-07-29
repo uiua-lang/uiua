@@ -1663,7 +1663,9 @@ impl<'a> Lexer<'a> {
                 *num = new_num;
                 *can_parse_ascii = false;
                 s.push_str(c);
-            } else if self.next_chars_exact(["_"; 2]) || self.next_char_exact(",") {
+            } else if self.next_chars_exact(["_"; 2])
+                || !*can_parse_ascii && self.next_char_exact(",")
+            {
                 *can_parse_ascii = true;
             } else {
                 break;
@@ -1719,9 +1721,9 @@ impl<'a> Lexer<'a> {
                 side = Some(SubSide::Left);
             } else if self.next_char_exact("⌟") {
                 side = Some(SubSide::Right);
-            } else if can_parse_ascii && self.next_char_exact("<") {
+            } else if can_parse_ascii && (self.next_char_exact("<") || self.next_char_exact(",")) {
                 side = Some(SubSide::Left);
-            } else if can_parse_ascii && self.next_char_exact(">") {
+            } else if can_parse_ascii && (self.next_char_exact(">") || self.next_char_exact(".")) {
                 side = Some(SubSide::Right);
             }
         }

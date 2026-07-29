@@ -381,7 +381,7 @@ primitive!(
     /// ex: ¯₂ 5
     /// ex: ¯₄ 5
     /// ex: ⁅₃ ¯₃ 5
-    /// ex: [⍥₄⊸¯₄ ℂ1 2]
+    /// ex: ⍥₄⊸¯₄ ℂ1 2
     (
         1,
         Neg,
@@ -2393,7 +2393,7 @@ primitive!(
     /// But if we actually had a list of matrices, adding a matrix to each list item correctly would require going back to a single [fix].
     /// ex: + ¤[0_1 1_0] [[1_2 2_0] [3_4 0_0] [10_0 5_1]]
     /// The problem here is that the number of times we need to [fix] is highly dependent on the rank and interpretation of the arguments.
-    /// This is because because dyadic pervasive functions in Uiua operate on the leading axes of their arguments rather than the trailing ones.
+    /// This is because dyadic pervasive functions in Uiua operate on the leading axes of their arguments rather than the trailing ones.
     /// [evert] reverses a function's arguments' axes so that the leading axes are the trailing ones. It reverses them back when the function is done.
     /// With this, we can use a single function for all of our shift operations!
     /// ex: ⧋+ 2_4 [1_2 2_0 3_4]

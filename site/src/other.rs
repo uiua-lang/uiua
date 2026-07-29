@@ -636,7 +636,7 @@ pub fn Subscripts() -> impl IntoView {
             "Chunks aligned to the left or right",
             "⧈⌞□ 2 ⇡5\n⧈⌟□ 2 ⇡5",
         ),
-        subscript(Tuples, "Prefixes or suffixes", r#"⧅⌞□ "abcd"\n⧅⌟□ "abcd""#),
+        subscript(Tuples, "Prefixes or suffixes", "⧅⌞□ \"abcd\"\n⧅⌟□ \"abcd\""),
         subscript(
             EncodeBytes,
             "Choose little or big endian",

@@ -536,7 +536,7 @@ pub fn try_(ops: Ops, pattern: bool, env: &mut Uiua) -> UiuaResult {
         let (f_sig, handler_sig) = (f.sig, handler.sig);
         let backup = env.clone_stack_top(try_sig.args().min(f.sig.args()))?;
         if let Err(mut err) = env.exec_clean_stack(f) {
-            if takes_error {
+            if takes_error && handler_sig.outputs() < try_sig.outputs() {
                 env.pop("error")?;
             }
             takes_error = any_takes_error

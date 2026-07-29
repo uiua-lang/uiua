@@ -38,12 +38,10 @@ impl Multivector {
                 self.coefs
                     .extend(repeat_n(0.0, (1 << new_dims) - (1 << dims)));
                 let slice = self.coefs.make_mut();
-                let mut left = 0;
-                for d in 0..=dims {
-                    let ai = grade_size(dims, d);
-                    let bi = grade_size(new_dims, d);
-                    slice[left + ai..].rotate_right(bi - ai);
-                    left += bi;
+                let (mask_table, _) = mask_tables(dims);
+                let (_, inv_mask_table) = mask_tables(new_dims);
+                for i in (0..(1 << dims)).rev() {
+                    slice.swap(i, inv_mask_table[mask_table[i]]);
                 }
                 if dims == 3 {
                     self.set_blade(0b101, -self.get_blade(0b101))

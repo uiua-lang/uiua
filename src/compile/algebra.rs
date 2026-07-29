@@ -137,7 +137,14 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<
         }
     } else if b == ZERO {
         // Constant
-        Node::from_iter([Prim(Pop, span), Node::new_push(c)])
+        Node::from_iter([
+            Prim(Pop, span),
+            if c.im == 0.0 {
+                Node::new_push(c.re)
+            } else {
+                Node::new_push(c)
+            },
+        ])
     } else if c == ZERO {
         // Linear origin
         if b == ONE {

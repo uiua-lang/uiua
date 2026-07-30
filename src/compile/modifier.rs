@@ -1049,9 +1049,8 @@ impl Compiler {
                 sn.node
             }
             Evert => {
-                let mut sn = self.monadic_modifier_op(modified)?.0;
+                let sn = self.monadic_modifier_op(modified)?.0;
                 let span = self.add_span(modified.modifier.span.clone());
-
                 // Some eversions can be implemented by fixing the arguments to match ranks
                 fn fixable(node: &Node) -> bool {
                     match node {
@@ -1071,29 +1070,55 @@ impl Compiler {
                         _ => false,
                     }
                 }
-
-                if let Node::Mod(Reduce, ref args, span) = sn.node
-                    && let [f] = args.as_slice()
-                    && f.node
-                        .as_primitive()
-                        .is_some_and(|p| p.class() == PrimClass::DyadicPervasive)
-                {
-                    Node::ImplMod(
-                        ImplPrimitive::RowsSub(1i32.into(), false),
-                        eco_vec![sn],
-                        span,
-                    )
-                } else if fixable(&sn.node) {
-                    Node::ImplMod(ImplPrimitive::FixMatchRanks, eco_vec![sn], span)
-                } else {
-                    let retropose = Node::ImplPrim(ImplPrimitive::Retropose, span)
-                        .sig_node()
-                        .unwrap();
-                    sn.node
-                        .prepend(retropose.clone().on_all(sn.sig.args(), span).node);
-                    sn.node.push(retropose.on_all(sn.sig.outputs(), span).node);
-                    sn.node
+                // Some eversions can be implemented as ≡₁
+                fn rows1able(node: &Node) -> Option<usize> {
+                    if let Node::Mod(Reduce, args, span) = node
+                        && let [f] = args.as_slice()
+                        && f.node
+                            .as_primitive()
+                            .is_some_and(|p| p.class() == PrimClass::DyadicPervasive)
+                    {
+                        Some(*span)
+                    } else {
+                        None
+                    }
                 }
+                let mut nodes = EcoVec::new();
+                let mut iter = sn.node.into_iter().peekable();
+                while let Some(node) = iter.next() {
+                    if let Some(span) = rows1able(&node) {
+                        nodes.push(Node::ImplMod(
+                            ImplPrimitive::RowsSub(1i32.into(), false),
+                            eco_vec![node.sig_node().unwrap()],
+                            span,
+                        ));
+                    } else {
+                        let is_fixable = fixable(&node);
+                        let mut inner_nodes = vec![node];
+                        while let Some(node) =
+                            iter.next_if(|n| fixable(n) == is_fixable && rows1able(n).is_none())
+                        {
+                            inner_nodes.push(node);
+                        }
+                        let sn = Node::from_iter(inner_nodes).sig_node().unwrap();
+                        if is_fixable {
+                            nodes.push(Node::ImplMod(
+                                ImplPrimitive::FixMatchRanks,
+                                eco_vec![sn],
+                                span,
+                            ))
+                        } else {
+                            let retropose = Node::ImplPrim(ImplPrimitive::Retropose, span)
+                                .sig_node()
+                                .unwrap();
+                            let sig = sn.sig;
+                            nodes.push(retropose.clone().on_all(sig.args(), span).node);
+                            nodes.push(sn.node);
+                            nodes.push(retropose.on_all(sig.outputs(), span).node);
+                        }
+                    }
+                }
+                Node::from_iter(nodes)
             }
             Repeat => {
                 let (sn, span) = self.monadic_modifier_op(modified)?;

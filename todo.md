@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.19
-- Optimize `evert reduce`
 
 ## Planned Features
 Features that are planned to be implemented in the future.

@@ -2,7 +2,11 @@
 <description>Blog of the Uiua Programming Language</description>
 <link>https://uiua.org/blog</link>
 <atom:link href="https://uiua.org/blog/feed.rss" rel="self" type="application/rss+xml"></atom:link>
-<lastBuildDate>Thu, 12 Feb 2026 21:39:23 +0000</lastBuildDate>
+<lastBuildDate>Sat, 1 Aug 2026 22:34:14 +0000</lastBuildDate>
+<item><link>https://uiua.org/blog/a-uiua-type-system</link>
+<guid isPermaLink="false">428a4746-cd88-4efe-a0ce-a2cba5e25744</guid>
+<pubDate>Sat, 1 Aug 2026 00:00:00 +0000</pubDate>
+<title>A Uiua Type System</title></item>
 <item><link>https://uiua.org/blog/uiua-0.18.0</link>
 <guid isPermaLink="false">9764b956-97e4-4d37-9f87-e51d1a3e7e09</guid>
 <pubDate>Thu, 5 Feb 2026 00:00:00 +0000</pubDate>

@@ -362,11 +362,7 @@ impl Parser<'_> {
                 self.index = start;
                 return None;
             }
-            if let Some(words) = self.words() {
-                Item::Words(words)
-            } else {
-                return None;
-            }
+            Item::Words(self.words()?)
         };
         Some(item)
     }
@@ -1285,6 +1281,7 @@ impl Parser<'_> {
         }
         too_deep
     }
+    #[allow(clippy::question_mark)]
     fn term(&mut self) -> Option<Sp<Word>> {
         if self.too_deep() {
             return None;

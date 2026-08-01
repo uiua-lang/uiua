@@ -598,6 +598,12 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                     Err(e) => line.push_str(&format!("# {e}")),
                 }
             }
+            for line in &mut lines {
+                if line.contains("{{") || line.contains("{%") || line.contains("{#") {
+                    line.insert_str(0, "{% raw %}");
+                    line.push_str("{% endraw %}");
+                }
+            }
             let text = lines.join("\n");
             format!("<code class=\"code-block\">{text}</code>")
         }

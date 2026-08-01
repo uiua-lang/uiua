@@ -32,7 +32,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [custom subscript functions](<https://www.uiua.org/docs/experimental#custom-subscript-functions>)
   - Remove previously deprecated `log ₙ` function, which syntactically conflicted
 - Add experimental [Type Checking](https://uiua.org/docs/experimental#type-checking)
-- Add experimental [`validate ⯾`](https://uiua.org/docs/validate) function to help with type checking
+- Add experimental [`validate ⊨`](https://uiua.org/docs/validate) function to help with type checking
 - Add experimental [`pattern ⍡`](https://uiua.org/docs/pattern) modifier, which makes big pattern match lists easier to debug and maintain
 - Remove the previously deprecated `indexof ⊗` function
   - As planned, [`indexin ⊗`](https://uiua.org/docs/indexin)'s glyph has been changed, and the old one will format to `⊗`.

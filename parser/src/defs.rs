@@ -2797,89 +2797,89 @@ primitive!(
     /// - `𝔹` - `bool` - Booleans
     /// - `𝕌` - `char` - Unicode characters
     /// ex: # Experimental!
-    ///   : ⯾ℝ 5.1
+    ///   : ⊨ℝ 5.1
     /// ex! # Experimental!
-    ///   : ⯾ℝ [1 2 3]
+    ///   : ⊨ℝ [1 2 3]
     /// ex! # Experimental!
-    ///   : ⯾ℝ "hey"
+    ///   : ⊨ℝ "hey"
     /// ex: # Experimental!
-    ///   : ⯾𝕌 @A
+    ///   : ⊨𝕌 @A
     /// ex: # Experimental!
-    ///   : ⯾ℕ 5
+    ///   : ⊨ℕ 5
     /// ex! # Experimental!
-    ///   : ⯾ℕ ¯3
+    ///   : ⊨ℕ ¯3
     /// ex! # Experimental!
-    ///   : ⯾ℕ 2.1
+    ///   : ⊨ℕ 2.1
     /// In addition, there are some type specifier characters which do not have aliases but which can still be used in their character form.
     /// - `@ℂ` - Complex numbers
     /// - `@@` - ASCII-only characters
     /// - `@□` - Boxes with anything in them
     /// - `@*` - Anything
     /// ex: # Experimental!
-    ///   : ⯾ @@ @h
+    ///   : ⊨ @@ @h
     /// ex! # Experimental!
-    ///   : ⯾ @@ @⭐
+    ///   : ⊨ @@ @⭐
     /// ex: # Experimental!
-    ///   : ⯾ @□ □[1 2 3]
+    ///   : ⊨ @□ □[1 2 3]
     /// If the first argument is a list of numbers, it will validate the shape of the array.
     /// ex: # Experimental!
-    ///   : ⯾[] 5
-    ///   : ⯾[3] [1 2 3]
-    ///   : ⯾[2 3] ["abc" "def"]
+    ///   : ⊨[] 5
+    ///   : ⊨[3] [1 2 3]
+    ///   : ⊨[2 3] ["abc" "def"]
     /// [infinity] can be used as a wildcard axis length in the shape requirement.
     /// ex: # Experimental!
-    ///   : ⯾[∞ 2] [1_2]
-    ///   : ⯾[∞ 2] [1_2 3_4]
-    ///   : ⯾[∞ 2] [1_2 3_4 5_6]
+    ///   : ⊨[∞ 2] [1_2]
+    ///   : ⊨[∞ 2] [1_2 3_4]
+    ///   : ⊨[∞ 2] [1_2 3_4 5_6]
     /// ex! # Experimental!
-    ///   : ⯾[∞ 2] [1_2_3 4_5_6]
+    ///   : ⊨[∞ 2] [1_2_3 4_5_6]
     /// A scalar numbers is always interpreted as a shape. This is a simple way to require a list.
     /// ex: # Experimental!
-    ///   : ⯾∞ [0 1 1 0 1 0 0 1 0 1 1]
-    ///   : ⯾∞ "neat"
+    ///   : ⊨∞ [0 1 1 0 1 0 0 1 0 1 1]
+    ///   : ⊨∞ "neat"
     /// Shape and type can both be validated by using a box array where the type is the first item and the rest of the items are axis sizes.
     /// ex: # Experimental!
-    ///   : ⯾{𝕌 ∞ 2} ["ab""cd"]
+    ///   : ⊨{𝕌 ∞ 2} ["ab""cd"]
     /// To allow for any shape, specify no axis sizes.
     /// ex: # Experimental!
-    ///   : ⯾{ℤ} 5
-    ///   : ⯾{ℤ} [3 ¯6 2]
-    ///   : ⯾{ℤ} [1_2 3_4]
+    ///   : ⊨{ℤ} 5
+    ///   : ⊨{ℤ} [3 ¯6 2]
+    ///   : ⊨{ℤ} [1_2 3_4]
     /// Type specifications can be nested to specify box arrays with given types inside the boxes.
     /// ex: # Experimental!
-    ///   : ⯾{{ℝ ∞} ∞} {1_2 3_4_5_6 7_8_9}
+    ///   : ⊨{{ℝ ∞} ∞} {1_2 3_4_5_6 7_8_9}
     /// ex: # Experimental!
-    ///   : ⯾{[2 ∞] 3} {[[1][2]] [3_4 5_6] [[][]]}
+    ///   : ⊨{[2 ∞] 3} {[[1][2]] [3_4 5_6] [[][]]}
     /// ex! # Experimental!
-    ///   : ⯾{[2 ∞] 3} {[[1][2]] [3_4 5_6] [7 8]}
+    ///   : ⊨{[2 ∞] 3} {[[1][2]] [3_4 5_6] [7 8]}
     /// A list of boxed type specifications validates a fixed-size box list of those types.
     /// ex: # Experimental!
-    ///   : ⯾{[3] {𝕌∞}} {[1 2 3] "wow"}
-    ///   : ⯾{[3] {𝕌∞}} {[4 5 6] "Uiua types!"}
+    ///   : ⊨{[3] {𝕌∞}} {[1 2 3] "wow"}
+    ///   : ⊨{[3] {𝕌∞}} {[4 5 6] "Uiua types!"}
     /// ex! # Experimental!
-    ///   : ⯾{[3] {𝕌∞}} {2_3_4 "a" 5}
+    ///   : ⊨{[3] {𝕌∞}} {2_3_4 "a" 5}
     /// ex! # Experimental!
-    ///   : ⯾{[3] {𝕌∞}} {2_3_4 27}
+    ///   : ⊨{[3] {𝕌∞}} {2_3_4 27}
     /// ex! # Experimental!
-    ///   : ⯾{[3] {𝕌∞}} {4_2 "bc"}
+    ///   : ⊨{[3] {𝕌∞}} {4_2 "bc"}
     /// A sided subscript interprets the shape requirement as a prefix or suffix, rather than an exact match.
     /// ex: # Experimental!
-    ///   : ⯾⌞[2] [1 2]
-    ///   : ⯾⌞[2] [1_2_3 4_5_6]
-    ///   : ⯾⌞∞ "abcdef"
-    ///   : ⯾⌞∞ [12_4 90_91 6_2]
+    ///   : ⊨⌞[2] [1 2]
+    ///   : ⊨⌞[2] [1_2_3 4_5_6]
+    ///   : ⊨⌞∞ "abcdef"
+    ///   : ⊨⌞∞ [12_4 90_91 6_2]
     /// ex: # Experimental!
-    ///   : ⯾⌟2 "xy"
-    ///   : ⯾⌟2 ["ab" "cd" "ef"]
+    ///   : ⊨⌟2 "xy"
+    ///   : ⊨⌟2 ["ab" "cd" "ef"]
     /// ex! # Experimental!
-    ///   : ⯾⌟2 ["abc" "def"]
+    ///   : ⊨⌟2 ["abc" "def"]
     /// These can be combined to require a prefix *and* a suffix.
     /// ex: # Experimental!
-    ///   : ⯾⌞2⯾⌟3 [1_2_3 4_5_6]
-    ///   : ⯾⌞2⯾⌟3 [[1_2_3] [4_5_6]]
+    ///   : ⊨⌞2⊨⌟3 [1_2_3 4_5_6]
+    ///   : ⊨⌞2⊨⌟3 [[1_2_3] [4_5_6]]
     /// ex! # Experimental!
-    ///   : ⯾⌞2⯾⌟3 [[1_2 3_5] [5_6 7_8]]
-    (2, Validate, Misc, ("validate", '⯾'), { experimental: true }),
+    ///   : ⊨⌞2⊨⌟3 [[1_2 3_5] [5_6 7_8]]
+    (2, Validate, Misc, ("validate", '⊨'), { experimental: true }),
     /// Memoize a function
     ///
     /// If a function is [memo]ized, then its results are cached.

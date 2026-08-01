@@ -1562,7 +1562,7 @@
     "description": "Convert a string to UTF-8 bytes"
   },
   "validate": {
-    "glyph": "⯾",
+    "glyph": "⊨",
     "args": 2,
     "outputs": 1,
     "class": "Misc",

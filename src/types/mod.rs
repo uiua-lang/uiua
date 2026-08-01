@@ -296,7 +296,7 @@ impl<'a> Exec<&SigNode> for TypeEnv<'a> {
 impl<'a> TypeEnv<'a> {
     fn type_hint(&mut self, tys: impl IntoIterator<Item = Type>) {
         for (tv, ty) in self.stack.iter_mut().rev().zip(tys) {
-            if ty.scalar.superset_of(&ty.scalar) {
+            if tv.scalar().superset_of(&ty.scalar) {
                 tv.set_scalar(ty.scalar);
             }
             if tv.shape().is_any() {
@@ -1545,6 +1545,7 @@ impl<'a> TypeEnv<'a> {
         f: impl Fn(Scalar, Scalar, bool, bool) -> Result<Scalar, TypeError>,
         f64: impl Fn(f64, f64) -> N,
     ) -> TypeResult {
+        dbg!(&self.stack);
         if let Ok(a) = self.pop(1) {
             if a.is_any() {
                 self.push(a);

@@ -1417,7 +1417,7 @@ impl Uiua {
                 "Expected at least {} value(s) on the stack, but there are {}",
                 f.sig.args(),
                 self.rt.stack.len()
-            )))?;
+            )));
         }
         let (this_send, child_recv) = crossbeam_channel::unbounded();
         let (child_send, this_recv) = crossbeam_channel::unbounded();

@@ -608,83 +608,89 @@ impl<'a> TypeEnv<'a> {
                         Some(val)
                     },
                 )?,
-                Reshape => self.dyadic(
-                    |sh, mut ty| {
-                        let dims = if let Some(suf) = sh.shape.suffix {
-                            if !sh.shape.dims.is_empty() {
-                                return Err(TypeError::Unsupported(None));
+                Reshape => {
+                    self.type_hint([Scalar::Int.any_shape()]);
+                    self.dyadic(
+                        |sh, mut ty| {
+                            if !Scalar::Int.superset_of(&sh.scalar) {
+                                return Err(TypeError::ScalarMismatch(Scalar::Int, sh.scalar));
                             }
-                            suf
-                        } else {
-                            sh.shape.dims
-                        };
-                        if dims.len() > 1 {
-                            return Err(format!(
-                                "{} must be rank 0 or 1, but it is rank {}",
-                                Reshape.format(),
-                                dims.len()
-                            )
-                            .into());
-                        }
-                        match *dims.as_slice() {
-                            [] => ty.shape.dims.insert(0, Dim::Dyn),
-                            [Dim::Dyn] => ty.shape = DynShape::ANY,
-                            [Dim::Static(n)] => ty.shape = vec![Dim::Dyn; n].into(),
-                            _ => unreachable!(),
-                        }
-                        Ok(ty)
-                    },
-                    |n, mut ty| {
-                        ty.shape.dims.insert(0, Dim::Static(n.abs() as usize));
-                        Ok(ty)
-                    },
-                    |list, mut ty| {
-                        let has_suffix = ty.shape.suffix.take().is_some();
-                        let inf_count = list.iter().filter(|&&n| n == f64::INFINITY).count();
-                        if inf_count > 1 {
-                            return Err(format!(
-                                "{} list can have at most one ∞, but it has {inf_count}",
-                                Reshape.format()
-                            )
-                            .into());
-                        }
-                        if inf_count == 1 {
-                            if has_suffix {
-                                ty.shape = DynShape::ANY;
+                            let dims = if let Some(suf) = sh.shape.suffix {
+                                if !sh.shape.dims.is_empty() {
+                                    return Err(TypeError::Unsupported(None));
+                                }
+                                suf
                             } else {
-                                let elem_count =
-                                    ty.shape.dims.into_iter().fold(Dim::Static(1), Dim::mul);
-                                let target_count = Dim::Static(
-                                    list.iter()
-                                        .filter(|&&n| n != f64::INFINITY)
-                                        .product::<f64>()
-                                        .abs() as usize,
-                                );
-                                ty.shape.dims = list
-                                    .into_iter()
-                                    .map(|n| {
-                                        if n == f64::INFINITY {
-                                            elem_count / target_count
-                                        } else {
-                                            Dim::Static(n.abs() as usize)
-                                        }
-                                    })
-                                    .collect();
+                                sh.shape.dims
+                            };
+                            if dims.len() > 1 {
+                                return Err(format!(
+                                    "{} must be rank 0 or 1, but it is rank {}",
+                                    Reshape.format(),
+                                    dims.len()
+                                )
+                                .into());
                             }
-                        } else {
-                            ty.shape.dims =
-                                list.into_iter().map(|n| Dim::Static(n as usize)).collect();
-                        }
-                        Ok(ty)
-                    },
-                    |n, x| {
-                        Ok(if n.abs() <= 1000.0 {
-                            Value::from(eco_vec![x; n.abs() as usize]).into()
-                        } else {
-                            TypeVal::Type(Type::new(Scalar::Num, n.abs() as usize))
-                        })
-                    },
-                )?,
+                            match *dims.as_slice() {
+                                [] => ty.shape.dims.insert(0, Dim::Dyn),
+                                [Dim::Dyn] => ty.shape = DynShape::ANY,
+                                [Dim::Static(n)] => ty.shape = vec![Dim::Dyn; n].into(),
+                                _ => unreachable!(),
+                            }
+                            Ok(ty)
+                        },
+                        |n, mut ty| {
+                            ty.shape.dims.insert(0, Dim::Static(n.abs() as usize));
+                            Ok(ty)
+                        },
+                        |list, mut ty| {
+                            let has_suffix = ty.shape.suffix.take().is_some();
+                            let inf_count = list.iter().filter(|&&n| n == f64::INFINITY).count();
+                            if inf_count > 1 {
+                                return Err(format!(
+                                    "{} list can have at most one ∞, but it has {inf_count}",
+                                    Reshape.format()
+                                )
+                                .into());
+                            }
+                            if inf_count == 1 {
+                                if has_suffix {
+                                    ty.shape = DynShape::ANY;
+                                } else {
+                                    let elem_count =
+                                        ty.shape.dims.into_iter().fold(Dim::Static(1), Dim::mul);
+                                    let target_count = Dim::Static(
+                                        list.iter()
+                                            .filter(|&&n| n != f64::INFINITY)
+                                            .product::<f64>()
+                                            .abs() as usize,
+                                    );
+                                    ty.shape.dims = list
+                                        .into_iter()
+                                        .map(|n| {
+                                            if n == f64::INFINITY {
+                                                elem_count / target_count
+                                            } else {
+                                                Dim::Static(n.abs() as usize)
+                                            }
+                                        })
+                                        .collect();
+                                }
+                            } else {
+                                ty.shape.dims =
+                                    list.into_iter().map(|n| Dim::Static(n as usize)).collect();
+                            }
+                            Ok(ty)
+                        },
+                        |n, x| {
+                            Ok(if n.abs() <= 1000.0 {
+                                Value::from(eco_vec![x; n.abs() as usize]).into()
+                            } else {
+                                TypeVal::Type(Type::new(Scalar::Num, n.abs() as usize))
+                            })
+                        },
+                    )?
+                }
                 Sort => {
                     self.type_hint([Type::listy()]);
                     self.monadic(
@@ -1035,6 +1041,10 @@ impl<'a> TypeEnv<'a> {
                     let ty = self.pop(1)?.ty();
                     self.push(parse(ty)?);
                 }
+                Json | Csv => {
+                    _ = self.pop(1)?;
+                    self.push(Type::string());
+                }
                 Args => {}
                 // TODO (descending priority):
                 // - Input type suggestion
@@ -1285,6 +1295,9 @@ impl<'a> TypeEnv<'a> {
                     val.set_scalar(ch.scalar);
                     val.set_shape(ch.shape);
                     self.update_arg_types();
+                }
+                UnJson | UnCsv => {
+                    self.type_hint([Type::string()]);
                 }
                 _ => return Err(TypeError::Unsupported(Some(format!("{prim:?}")))),
             },
@@ -1545,7 +1558,6 @@ impl<'a> TypeEnv<'a> {
         f: impl Fn(Scalar, Scalar, bool, bool) -> Result<Scalar, TypeError>,
         f64: impl Fn(f64, f64) -> N,
     ) -> TypeResult {
-        dbg!(&self.stack);
         if let Ok(a) = self.pop(1) {
             if a.is_any() {
                 self.push(a);

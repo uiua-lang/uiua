@@ -61,6 +61,12 @@ impl DynShape {
         dims: Vec::new(),
         suffix: Some(Vec::new()),
     };
+    pub fn list() -> Self {
+        DynShape {
+            dims: vec![Dim::Dyn],
+            suffix: None,
+        }
+    }
     pub fn prefix(prefix: impl Into<Vec<Dim>>) -> Self {
         DynShape {
             dims: prefix.into(),

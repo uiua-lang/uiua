@@ -8,7 +8,7 @@ This blog post explains the rational and design of Uiua's `# Experimental!` new 
 
 ## A Dynamic Language
 
-Uiua, like most array languages, is dynamically-typed. While the shape and the scalar type of an array can oftne be known at compile-time, the language is not designed in a way that makes this *always* possible. Anything that involves shapes or scalar types derived from user input, the environment, or randomness can necessarily only be know at run time. Consider these examples:
+Uiua, like most array languages, is dynamically-typed. While the shape and the scalar type of an array can often be known at compile-time, the language is not designed in a way that makes this *always* possible. Anything that involves shapes or scalar types derived from user input, the environment, or randomness can necessarily only be know at run time. Consider these examples:
 
 Runtime variable scalar type:
 ```uiua
@@ -35,7 +35,7 @@ However, this dynamism can be a double-edged sword, especially in larger and/or 
 
 ## Prior Art
 
-This is not a new problem in dynamically-typed languages. Many of the prominent dynamic languages have systems for *gradual* types: opt-in type checking for the parts of the code that really need it. This generally comes in the form of either some tooling-supported type specification stynax (JSDoc, Python types, LDoc, etc) or a full superset language (TypeScript, Luau, etc).
+This is not a new problem in dynamically-typed languages. Many of the prominent dynamic languages have systems for *gradual* types: opt-in type checking for the parts of the code that really need it. This generally comes in the form of either some tooling-supported type specification syntax (JSDoc, Python types, LDoc, etc) or a full super-set language (TypeScript, Luau, etc).
 
 While the specifics of each of these systems can vary, the user interacts with most type systems in a similar way: they specify input and/or output types, and the compiler/interpreter/tooling uses that information to check types and compile/runtime and/or show the types in documentation. This is a useful mode of interaction, and any potential Uiua type system should support both type checking and type documentation.
 
@@ -47,11 +47,11 @@ The actual semantics of these systems vary widely, but the goal is generally for
 
 Array languages are slightly different in that while we do model our domains in our data, basically every value is some kind of array. This could make an array language's type system potentially very simple. Simply specify the scalar type and the shape of each value. Something so simple might not even need to be implemented as a type system, as it might be so little cognitive overhead as to be manageable by the user themselves.
 
-But of course, even array types are not so simple. The most common variance in an array value is its shape. Some axes may be a static, known size, but other can be dynamic. The rank of the array itself may even be unknown at compile time; this is one of the consequences of rank polymorphism. On top of this shape variability is managing the types of nested arrays, which in Uiua come in the form of boxes. Do all the boxed items have the same inner type? Do they vary because we are using the box array as a way to group heterogenous data, as in a [data definition](https://www.uiua.org/tutorial/Data%20Definitions)? All of these should be encodable in a type system.
+But of course, even array types are not so simple. The most common variance in an array value is its shape. Some axes may be a static, known size, but other can be dynamic. The rank of the array itself may even be unknown at compile time; this is one of the consequences of rank polymorphism. On top of this shape variability is managing the types of nested arrays, which in Uiua come in the form of boxes. Do all the boxed items have the same inner type? Do they vary because we are using the box array as a way to group heterogeneous data, as in a [data definition](https://www.uiua.org/tutorial/Data%20Definitions)? All of these should be encodable in a type system.
 
 If Uiua were to take a similar approach to the languages referenced above, it may have some type sub-language that can be added to existing doc signature comments.
 
-```
+```not uiua
 # Magnitude:Real ? Numbers:Real[_]
 Mag ← ⍜˙×/+
 ```
@@ -70,17 +70,19 @@ There is also a Uiua-specific reason that I did not ultimately choose a system l
 
 ## Formatting
 
-Uiua's formatter does more than *any* language that is even semi-popular. Not only does it turn words into glyphs and align brackets and things, but it also includes [Line Manipulation](https://www.uiua.org/tutorial/codetactility#line-manipulation), comment-rewriting ([Output Comments](https://www.uiua.org/tutorial/Basic%20Data%20Manipulation%20and%20Formatting#output-comments)), rich unicode demlimiters (as in [Modules](https://www.uiua.org/tutorial/Modules)), and snippet-like [multi-glyph aliases](https://www.uiua.org/docs/idioms#multi-aliases).
+Uiua's formatter does more than *any* language that is even semi-popular. Not only does it turn words into glyphs and align brackets and things, but it also includes [line manipulation](https://www.uiua.org/tutorial/codetactility#line-manipulation), comment-rewriting ([Output Comments](https://www.uiua.org/tutorial/Basic%20Data%20Manipulation%20and%20Formatting#output-comments)), rich unicode delimiters ([Modules](https://www.uiua.org/tutorial/Modules)), and snippet-like [multi-glyph aliases](https://www.uiua.org/docs/idioms#multi-aliases).
 
 The Uiua formatter is a fundamental part of how the language is meant to be used, and indeed it can be leveraged by a type system to do things other languages can't or don't.
 
-Some strongly typed languages like OCaml or TypeScript have very powerful type systems that can figure out a *lot* for you. You often don't even need to provide types anotations for certain things. However, this can cause problems when, for example, the type of the value you return from a function is not what you think it is. This can then bubble up through multiple functions and the resulting type error is attatched to code far from where the actual problem is. So people write the type anotation even when they don't strictly have to. But if they write the annotations anyway, what was the point of making the type systems so powerful in the first place?
+Some strongly typed languages like OCaml or TypeScript have very powerful type systems that can figure out a *lot* for you. You often don't even need to provide types annotations for certain things. However, this can cause problems when, for example, the type of the value you return from a function is not what you think it is. This can then bubble up through multiple functions and the resulting type error is attached to code far from where the actual problem is. So people write the type annotation even when they don't strictly have to. But if they write the annotations anyway, what was the point of making the type systems so powerful in the first place?
 
-Uiua's new type system can figure out some argument and output types and then *insert them* into the code itself, allowing the user to verify the correctness of their function without having to explictely specify return types themselves. Other languages may have LSP inmplementations that provide this as a code action, but Uiua can give it first-class support and closely integrate it into the language.
+Uiua's new type system can figure out some argument and output types and then *insert them* into the code itself, allowing the user to verify the correctness of their function without having to explicitly specify return types themselves. Other languages may have LSP implementations that provide this as a code action, but Uiua can give it first-class support and closely integrate it into the language.
+
+We'll see further down how Uiua can take advantage of the formatter to insert types.
 
 ## [`⊨ validate`](https://uiua.org/docs/validate)
 
-[`⊨ validate`](https://uiua.org/docs/validate) is a new function that takes both a *type specification* and a value and either returns the value unchanged or errors if the type specification does not match the value. Like everything else in Uiua, the type specification is just an array.
+[`⊨ validate`](https://uiua.org/docs/validate) is a new function that takes both a *type specification* and a value and either returns the value unchanged or errors if the type specification does not match the value. Like everything else in Uiua, the type specification is just an array. This is so that while you have to know how to construct a type specification for the type you want, you still write it in normal Uiua rather than a separate language.
 
 You can read the specifics of type specifications in [`⊨ validate`](https://uiua.org/docs/validate)'s documentation, but in short, it is either a scalar character representing the scalar type, a list of numbers representing the shape, or a box list containing both the scalar type and the axis lengths. `∞ infinity` serves as a wildcard axis length. Most of the scalar characters specifying types have single-glyph [constants](https://www.uiua.org/docs/constants) that format from an alias, such as `nat` -> `ℕ` for natural numbers.
 
@@ -145,4 +147,31 @@ The `…` in this next example indicates some number of unknown axes between the
 F ← +@a+¤ ⊓(⊨[3]|⊨⌞[2])
 F [0 1 2] [0_0_0 0_1_0]
 ```
-If a function has a type error, it is shown as a warning
+If a function with a signature comment has a type error, it is shown as a warning.
+```uiua should diag
+# Experimental!
+#?
+F ← + ∩(⊨𝕌)
+```
+Sometimes [`⊨ validate`](https://uiua.org/docs/validate) is not even necessary, like when a primitive used in a function has single possible output type.
+```uiua
+# Experimental!
+#? ℝ ? str
+SumFile ← /+⊜⋕¬⊸∊" \t\n\r" &fras
+```
+You can type check all function in a scope with the `# Type check!` semantic comment.
+```uiua should diag
+# Experimental!
+# Type check!
+F ← + °⊟↙3
+G ← ≡↻°⊏
+H ← ↯⊓json⋕
+```
+
+## Type Checking
+
+The type checker analyzes Uiua code at compile time when a type signature comment or `# Type check!` is present. It is a kind of runtime that runs the code on types instead of concrete values. Which built-in functions are fully or partially supported is best-effort and will gradually be added to over time. Currently, [`⊨ validate`](https://uiua.org/docs/validate) informs the compile-time type checker, but it also always runs at runtime as well, as the type system can't catch everything. In addition, while compile-time validation occurs, the type system does not currently inform optimizations.
+
+[`⊨ validate`](https://uiua.org/docs/validate) serves as an input to this type system while type signature comments and warnings provide output. These both remain `# Experimental!` for the time being as there is a lot of design that could be tweaked or overhauled. It's possible we (or I) decide that a Uiua type system is not even necessary at all. That said, the original motivation for a type system was verbose code I saw of people writing their own versions of [`⊨ validate`](https://uiua.org/docs/validate), and this well-integrated system is surely better than that.
+
+While the type system isn't expected to be used on even the majority of Uiua code, it may be useful for large codebases or public-facing library functions. Uiua will stick with the array paradigm's dynamically-typed roots. I'll leave the creation of a fully statically typed array language to someone else.

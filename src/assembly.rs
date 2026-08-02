@@ -14,6 +14,9 @@ use ecow::{EcoString, EcoVec, eco_vec};
 use indexmap::IndexMap;
 use rapidhash::quality::RapidHasher;
 use serde::*;
+use uiua_parser::{
+    OTHER_SUBSCRIPT_NUMBERS, PRIME_CHARS, SIDED_SUBSCRIPTS, SUBSCRIPT_DIGITS, is_custom_glyph,
+};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
@@ -945,10 +948,19 @@ impl FromStr for DocCommentSig {
                 ":" => tokens.push(Colon),
                 c if c.chars().all(is_ident_char) => {
                     let mut ident = EcoString::from(c);
-                    while graphemes
-                        .peek()
-                        .is_some_and(|c| c.chars().all(is_ident_char))
+                    while (graphemes.peek())
+                        .is_some_and(|c| c.chars().all(is_ident_char) || is_custom_glyph(c))
                     {
+                        ident.push_str(graphemes.next().unwrap());
+                    }
+                    while (graphemes.peek()).is_some_and(|c| {
+                        c.chars().all(|c| {
+                            SUBSCRIPT_DIGITS.contains(&c)
+                                || SIDED_SUBSCRIPTS.contains(&c)
+                                || PRIME_CHARS.contains(&c)
+                                || OTHER_SUBSCRIPT_NUMBERS.contains(&c)
+                        })
+                    }) {
                         ident.push_str(graphemes.next().unwrap());
                     }
                     tokens.push(Ident(ident))

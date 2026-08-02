@@ -107,9 +107,9 @@ Here are some examples of the error messages.
 Type specifications can be nested to validate structure-like box arrays.
 ```uiua
 # Experimental!
-⊨{ {𝕌∞} ℕ} {"Dan" 31}
-⍣⊨⋅⋅∘ { {𝕌∞} ℕ} {"Dan"}
-⍣⊨⋅⋅∘ { {𝕌∞} ℕ} {[1 2 3] 10}
+⊨{{𝕌∞} ℕ} {"Dan" 31}
+⍣⊨⋅⋅∘ {{𝕌∞} ℕ} {"Dan"}
+⍣⊨⋅⋅∘ {{𝕌∞} ℕ} {[1 2 3] 10}
 ```
 Structure-like type specifications are built into data definitions as a `t` item. Use [`⊨ validate`](https://uiua.org/docs/validate) in the initializer to specify a field's type.
 ```uiua

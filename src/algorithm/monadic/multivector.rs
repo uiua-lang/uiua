@@ -32,6 +32,7 @@ impl Value {
         let n = new_shape.pop();
         let elem_count = new_shape.elements();
         Ok(match (n, mode.dims, mode.side) {
+            #[cfg(feature = "ga")]
             (Some(0), None, _) | (_, Some(0), _) => arr.convert::<Mv>().into(),
             (Some(0), Some(2), _) => {
                 Array::<Complex>::new(new_shape, eco_vec![Complex::ZERO; elem_count]).into()

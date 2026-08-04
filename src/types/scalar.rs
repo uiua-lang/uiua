@@ -33,6 +33,7 @@ pub enum Scalar {
     Int,
     Num,
     Complex,
+    #[cfg(feature = "ga")]
     Multivector,
     Ascii,
     Char,

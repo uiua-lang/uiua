@@ -1278,7 +1278,14 @@ impl<'a> TypeEnv<'a> {
                     {
                         Scalar::Complex
                     } else {
-                        Scalar::Multivector
+                        #[cfg(feature = "ga")]
+                        {
+                            Scalar::Multivector
+                        }
+                        #[cfg(not(feature = "ga"))]
+                        {
+                            Scalar::Complex
+                        }
                     };
                     if let Some(suf) = &mut ty.shape.suffix {
                         suf.pop();

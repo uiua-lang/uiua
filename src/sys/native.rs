@@ -10,10 +10,7 @@ use std::{
     path::{Path, PathBuf},
     process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
     slice,
-    sync::{
-        Arc, LazyLock,
-        atomic::{self, AtomicBool, AtomicU64},
-    },
+    sync::{Arc, LazyLock},
     thread::sleep,
     time::Duration,
 };
@@ -22,6 +19,7 @@ use colored::Colorize;
 #[cfg(feature = "webcam")]
 use crossbeam_channel as channel;
 use dashmap::DashMap;
+use portable_atomic::{self as atomic, AtomicBool, AtomicU64}; // add support for targets that don't support 64-bit atomics
 
 use crate::{
     BigConstant, GitTarget, Handle, MetaPtr, ReadLinesFn, ReadLinesReturnFn, Span, SysBackend,

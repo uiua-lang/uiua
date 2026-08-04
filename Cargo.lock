@@ -6864,6 +6864,7 @@ dependencies = [
  "pastey 0.2.3",
  "pathdiff",
  "png 0.17.16",
+ "portable-atomic",
  "rand 0.10.2",
  "rapidhash",
  "rawrrr",

@@ -91,6 +91,13 @@ impl Value {
             "Shape should be a single integer \
             or a list of integers or infinity",
         )?;
+        if target_shape.len() >= 100 {
+            return Err(env.error(format!(
+                "Array of length {} is too many dimensions for {}",
+                target_shape.len(),
+                Primitive::Reshape.format()
+            )));
+        }
         if shape.rank() == 0 {
             let n = target_shape[0];
             val_as_arr!(self, |a| a.reshape_scalar(n, true, env.ctx()))

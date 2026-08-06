@@ -372,6 +372,12 @@ pub fn switch(
         args.push(selector);
         for i in 0..sig.args() {
             let arg = env.pop(i + 1)?;
+            if (new_shape.iter().zip(&arg.shape)).any(|(&s, &a)| s != 1 && a != 1 && s != a) {
+                return Err(env.error(format!(
+                    "Selector shape {new_shape} is not compatible with array shape {}",
+                    arg.shape
+                )));
+            }
             args.push(arg);
         }
         args[1..].reverse();
@@ -401,6 +407,7 @@ pub fn switch(
             all_scalar,
             ..
         } = fixed_rows("switch", sig.outputs(), args, env)?;
+        // println!("row_count: {row_count}");
         // Collect functions
         let args: Vec<usize> = branches
             .iter()

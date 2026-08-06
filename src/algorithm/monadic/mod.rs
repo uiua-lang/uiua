@@ -767,6 +767,13 @@ impl Value {
             "Range max should be a single integer \
             or a list of integers",
         )?;
+        if ishape.len() >= 100 {
+            return Err(env.error(format!(
+                "Array of length {} is too many dimensions for {}",
+                ishape.len(),
+                Primitive::Range.format()
+            )));
+        }
         if self.rank() == 0 {
             let max = ishape[0] - inclusive as isize * (start - 1);
             if inclusive && max < 0 {

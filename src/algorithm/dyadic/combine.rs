@@ -930,6 +930,8 @@ impl<T: ArrayValue> Array<T> {
         self
     }
     fn couple_impl(&mut self, mut other: Self, allow_ext: bool, ctx: Context) -> UiuaResult {
+        self.validate();
+        other.validate();
         crate::profile_function!();
         let map_keys = self.meta.take_map_keys().zip(other.meta.take_map_keys());
         self.meta.combine(&other.meta);
@@ -958,6 +960,10 @@ impl<T: ArrayValue> Array<T> {
                             .fill())
                     };
                     if allow_ext {
+                        validate_size_of::<T>(self.shape.iter().copied().chain([2]))
+                            .map_err(|e| ctx.error(e))?;
+                        validate_size_of::<T>(other.shape.iter().copied().chain([2]))
+                            .map_err(|e| ctx.error(e))?;
                         if self.shape.ends_with(&other.shape) {
                             for &a_dim in self.shape[0..self.rank() - other.rank()].iter().rev() {
                                 other

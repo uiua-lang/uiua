@@ -1302,6 +1302,7 @@ impl<T: ArrayValue> Array<T> {
             }
             Ok(arr)
         } else {
+            let fill = env.ctx().scalar_fill::<T>().map(|fv| fv.value);
             let indices_sorted_up =
                 indices_shape.len() == 1 && indices.is_sorted() && indices.iter().all(|&i| i >= 0);
             let indices_sorted_down = indices_shape.len() == 1
@@ -1313,7 +1314,6 @@ impl<T: ArrayValue> Array<T> {
             let mut selected = CowSlice::with_capacity(self.row_len() * indices.len());
             let row_len = self.row_len();
             let row_count = self.row_count();
-            let fill = env.ctx().scalar_fill::<T>().map(|fv| fv.value);
             let map_keys = self
                 .is_map()
                 .then(|| {
@@ -1384,12 +1384,14 @@ impl<T: ArrayValue> Array<T> {
                 array.map(map_keys, env.ctx()).unwrap();
             }
             array.meta.mark_sorted_up(
-                indices_sorted_up && selected_sorted_up
-                    || indices_sorted_down && selected_sorted_down,
+                fill.is_err()
+                    && (indices_sorted_up && selected_sorted_up
+                        || indices_sorted_down && selected_sorted_down),
             );
             array.meta.mark_sorted_down(
-                indices_sorted_up && selected_sorted_down
-                    || indices_sorted_down && selected_sorted_up,
+                fill.is_err()
+                    && (indices_sorted_up && selected_sorted_down
+                        || indices_sorted_down && selected_sorted_up),
             );
             array.validate();
             Ok(array)

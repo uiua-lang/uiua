@@ -105,6 +105,7 @@ pub fn Editor<'a>(
             .max()
             .unwrap_or(6)
     };
+    logging::log!("code max lines: {code_max_lines}");
     let code_height_em = code_max_lines as f32 * 1.25;
 
     let editor_wrapper_id = move || format!("editor{id}");

@@ -1,7 +1,4 @@
-# ---
-# title: Uiua Logo
-# category: Image
-# ---
+# Uiua Logo :: Image :: 0
 U ← /=⊞<0.2_0.7 /+×⟜ⁿ1_2
 I ← <⊙(⌵/ℂ) # Circle
 u ← +0.1⧋↧ ⊃(I0.95|⊂⊙0.5⇌˙×)

@@ -1,7 +1,4 @@
-# ---
-# title: Primes
-# category: Basics
-# ---
+# Primes :: Basics :: 3
 # Click Run to format!
 range,2 40          # Range 2 to 40
 deshapebyselftable* # List of products

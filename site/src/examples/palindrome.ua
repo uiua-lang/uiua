@@ -1,6 +1,3 @@
-# ---
-# title: Palindrome
-# category: Basics
-# ---
+# Palindrome :: Basics :: 5
 $ uiua racecar wow cool!
 ≡⊂ ˜⊏"❌✅" ⬚@ ⊜⊸(≍⊸⇌)⊸≠@ 

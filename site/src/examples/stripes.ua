@@ -1,6 +1,3 @@
-# ---
-# title: Stripes
-# category: Image
-# ---
+# Stripes :: Image :: 1
 ⍉ ˙[⊞⊃⊃+↥-] ⇡300
 ÷2 +1.2 ∿ ÷10

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 #[derive(Clone, Debug)]
 pub struct PadExampleCategory {
     pub title: String,
@@ -12,42 +10,46 @@ pub struct PadExample {
     pub title: String,
     pub category: String,
     pub content: String,
+    /// Order within a category
+    pub precedence: u16,
 }
 
-pub struct ExampleFile {
-    pub metadata: HashMap<String, String>,
-    pub content: String,
-}
+pub fn parse_example(path: String, original_content: &str) -> PadExample {
+    let mut content = original_content.replace("\r\n", "\n");
+    let mut lines = content.lines();
+    let title;
+    let mut category = "Misc".into();
+    let mut precedence = u16::MAX;
 
-pub fn parse_example(original_content: &str) -> ExampleFile {
-    let full_content = original_content.replace("\r\n", "\n");
-    let mut metadata = HashMap::new();
-    let mut lines = full_content.lines();
-    let mut content_start = 0;
-
-    if let Some(first) = lines.next()
-        && first.trim() == "# ---"
+    if let Some(line) = lines.next()
+        && let Some(first_com) = line.strip_prefix("# ")
     {
-        let mut offset = first.len() + 1;
-        for line in lines {
-            offset += line.len() + 1;
-            let trimmed = line.trim();
-
-            if trimmed == "# ---" {
-                content_start = offset.min(full_content.len());
-                break;
-            }
-
-            if let Some(rest) = trimmed.strip_prefix('#') {
-                if let Some((key, value)) = rest.split_once(':') {
-                    metadata.insert(key.trim().to_string(), value.trim().to_string());
+        title = if let Some((ti, cat)) = first_com.split_once(" :: ") {
+            if let Some((cat, prec)) = cat.split_once(" :: ") {
+                category = cat.into();
+                if let Ok(prec) = prec.parse() {
+                    precedence = prec;
                 }
+            } else {
+                category = cat.into();
             }
-        }
+            ti.into()
+        } else {
+            first_com.into()
+        };
+        content.drain(0..=line.len());
+    } else {
+        panic!("Example file missing title:\n{original_content}");
+    }
+    if content.ends_with('\n') {
+        content.pop();
     }
 
-    ExampleFile {
-        metadata,
-        content: full_content[content_start..].to_string(),
+    PadExample {
+        path,
+        title,
+        category,
+        content,
+        precedence,
     }
 }

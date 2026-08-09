@@ -20,6 +20,7 @@ console_error_panic_hook = "0.1.7"
 enum-iterator.workspace = true
 flate2.workspace = true
 getrandom = {version = "=0.4.1", features = ["wasm_js"]}
+include_dir = "0.7.4"
 js-sys.workspace = true
 leptos.workspace = true
 leptos_meta.workspace = true

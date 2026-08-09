@@ -1,4 +1,5 @@
 pub mod backend;
+pub mod examples;
 pub mod utils;
 
 use std::{
@@ -62,10 +63,19 @@ pub fn Editor<'a>(
     #[prop(optional)] challenge: Option<ChallengeDef>,
     #[prop(optional)] nonprogressive: bool,
     #[prop(optional)] examples: Option<Vec<String>>,
+    #[prop(optional)] showcase_examples: Option<Vec<examples::PadExampleCategory>>,
     #[prop(optional)] kala: &'a str,
     #[prop(optional)] format_hint: bool,
 ) -> impl IntoView {
     START_TIME.get_or_init(|| Date::now() / 1000.0);
+
+    let showcase_examples = showcase_examples.unwrap_or_default();
+    let showcase_examples_flattened: Rc<Vec<examples::PadExample>> = Rc::new(
+        showcase_examples
+            .iter()
+            .flat_map(|category| category.items.iter().cloned())
+            .collect(),
+    );
 
     let no_run = no_run
         || mode == EditorMode::Pad && !get_autorun()
@@ -93,7 +103,7 @@ pub fn Editor<'a>(
             .iter()
             .map(|e| e.lines().filter(|line| !line.is_empty()).count())
             .max()
-            .unwrap()
+            .unwrap_or(6)
     };
     let code_height_em = code_max_lines as f32 * 1.25;
 
@@ -116,6 +126,8 @@ pub fn Editor<'a>(
 
     let initial_code_str = if mode == EditorMode::Example && !nonprogressive {
         examples.last()
+    } else if let Some(showcase) = showcase_examples_flattened.first() {
+        Some(&showcase.content)
     } else {
         examples.first()
     }
@@ -1539,7 +1551,7 @@ pub fn Editor<'a>(
 
     // Select a class for the next example button
     let next_button_class = move || {
-        if example.get() == examples_len - 1 {
+        if example.get() == examples_len.saturating_sub(1) {
             "code-button"
         } else {
             "code-button important-button"
@@ -1970,8 +1982,105 @@ pub fn Editor<'a>(
         listener.remove();
     });
 
+    let (showcase_example_index, set_showcase_example_index) = create_signal(0usize);
+
+    let select_showcase = {
+        let examples = Rc::clone(&showcase_examples_flattened);
+        move |index: usize| {
+            if let Some(example) = examples.get(index) {
+                set_showcase_example_index.set(index);
+                state.update(|state| {
+                    state.set_code(&example.content, Cursor::Ignore);
+                    state.clear_history();
+                });
+                run(false, false);
+            }
+        }
+    };
+
+    let select_previous_showcase = select_showcase.clone();
+    let previous_showcase_example = move |_: MouseEvent| {
+        if let Some(index) = showcase_example_index.get().checked_sub(1) {
+            select_previous_showcase(index);
+        }
+    };
+
+    let select_next_showcase = select_showcase.clone();
+    let next_showcase_example = move |_: MouseEvent| {
+        if let Some(index) = showcase_example_index.get().checked_add(1) {
+            select_next_showcase(index);
+        }
+    };
+
+    let has_previous_showcase_example = move || showcase_example_index.get() > 0;
+    let has_next_showcase_example = {
+        let examples = Rc::clone(&showcase_examples_flattened);
+        move || showcase_example_index.get() + 1 < examples.len()
+    };
+
+    let showcase_select_view = (!showcase_examples_flattened.is_empty()).then(|| {
+        let mut index = 0;
+        let options = showcase_examples
+            .iter()
+            .map(|category| {
+                let label = category.title.clone();
+                let options = category
+                    .items
+                    .iter()
+                    .map(|example| {
+                        let value = index;
+                        index += 1;
+                        let title = example.title.clone();
+                        view! { <option value=value>{title}</option> }
+                    })
+                    .collect_view();
+                view! { <optgroup label=label>{options}</optgroup> }
+            })
+            .collect_view();
+
+        let on_showcase_change = move |event: Event| {
+            let select: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
+            if let Ok(index) = select.value().parse::<usize>() {
+                select_showcase(index);
+            }
+        };
+
+        view! {
+            <div class="showcase-selector-wrapper">
+                <div class="showcase-selector">
+                    <button
+                        class="code-button"
+                        aria-label="Previous showcase example"
+                        disabled=move || !has_previous_showcase_example()
+                        on:click=previous_showcase_example
+                    >
+                        <span class="material-symbols-rounded">chevron_backward</span>
+                    </button>
+
+                    <select
+                        id="showcase-example-select"
+                        prop:value=move || showcase_example_index.get().to_string()
+                        on:change=on_showcase_change
+                    >
+                        {options}
+                    </select>
+
+                    <button
+                        class="code-button"
+                        aria-label="Next showcase example"
+                        disabled=move || !has_next_showcase_example()
+                        on:click=next_showcase_example
+                    >
+                        <span class="material-symbols-rounded">chevron_forward</span>
+                    </button>
+                </div>
+            </div>
+        }
+    });
+
     // Render
     view! { <div id="editor-wrapper">
+        {showcase_select_view}
         <div>
             <div id=editor_wrapper_id class=editor_class style=editor_style>
                 {glyph_buttons_container}

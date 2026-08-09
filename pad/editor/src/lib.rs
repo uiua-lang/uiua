@@ -1475,7 +1475,7 @@ pub fn Editor<'a>(
     };
 
     // Hide the example arrows if there is only one example
-    let example_arrow_style = if examples.len() <= 1 || !showcase_examples.is_empty() {
+    let example_arrow_style = if examples.len() <= 1 || matches!(mode, EditorMode::Showcase) {
         "display:none"
     } else {
         ""
@@ -1542,7 +1542,7 @@ pub fn Editor<'a>(
     // Show the example number if there are multiple examples
     let examples_len = examples.len();
     let example_tracker_element = move || {
-        (examples_len > 1)
+        (examples_len > 1 && !matches!(mode, EditorMode::Showcase))
             .then(|| format!("{}/{}", example.get() + 1, examples_len))
             .map(|text| view! { <span id="example-tracker">{text}</span> })
     };

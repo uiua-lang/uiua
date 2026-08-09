@@ -318,22 +318,7 @@ pub fn MainPage() -> impl IntoView {
         </div>
         <Editor
             mode=EditorMode::Showcase
-            examples=examples::EXAMPLES
-                .iter()
-                .map(|&ex|
-                    if its_called_weewuh() {
-                        match ex {
-                            examples::UIUA => examples::WEEWUH,
-                            examples::LOGO => examples::WEEWUH_LOGO,
-                            examples::PALINDROME => examples::WEEWUH_PALINDROME,
-                            _ => ex,
-                        }
-                    } else{
-                        ex
-                    }
-                )
-                .map(ToString::to_string)
-                .collect()
+            showcase_examples=examples::get_categorized_examples()
             help={&help_text}/>
         <br/>
         <div class="what-is-uiua">

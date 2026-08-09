@@ -1,95 +1,63 @@
-const AVG: &str = "\
-[1 5 8 2]
-⟜/+ # Sum
-⧻   # Length
-÷   # Divide";
-const X_MATRIX: &str = "\
-⇡5  # 0 through 4
-˙⊞= # Identity matrix
-⊸⇌  # Reverse
-↥   # Max";
-pub const UIUA: &str = "\
-\"Unabashedly I utilize arrays\"
-⊸≠@  # Mask of non-spaces
-⊜⊢   # All first letters";
-pub const WEEWUH: &str = "\
-\"We each eat whole ugly hams\"
-⊸≠@  # Mask of non-spaces
-⊜⊢   # All first letters";
-const PRIMES: &str = "\
-# Click Run to format!
-range,2 40          # Range 2 to 40
-deshapebyselftable* # List of products
-keepnotbymember     # Keep not in list";
-pub const LOGO: &str = "\
-U ← /=⊞<0.2_0.7 /+×⟜ⁿ1_2
-I ← <⊙(⌵/ℂ) # Circle
-u ← +0.1⧋↧ ⊃(I0.95|⊂⊙0.5⇌˙×)
-A ← ×⊃U(I1) # Alpha
-⧋(⊂⊃u A) ˙⊞⊟-⊸¬÷⟜⇡200";
-pub const WEEWUH_LOGO: &str = "\
-Wee ← =∩⌟<¯0.5¯0.1 /+⍜⊣(+⊃(×4ⁿ4|×¯3ⁿ2))
-w   ← <⊙(⌵/ℂ) # Circle
-u   ← +0.1↧¤ ⊃(w0.95|⊂⊙0.5⇌˙×)
-h   ← ×⊃Wee(w1) # Alpha
-⍜°⍉(⊂⊃u h) ˙⊞⊟-⊸¬÷⟜⇡200";
-const CHORD: &str = "\
-[0 4 7 10]     # Notes
-×220 ˜ⁿ2÷12    # Freqs
-∿×τ ⊞× ÷⟜⇡&asr # Generate
-÷⧻⟜/+⍉         # Mix";
-const SPIRAL: &str = "\
-↯⟜(×20-⊸¬÷⟜⇡)200 # Xs
--⊃∠(⌵ℂ)⊸⍉        # Spiral field
--π◿τ⊞-×τ÷⟜⇡20    # Animate";
-const QUADRATIC: &str = "\
-Disc ← -⊃(××4⊙⋅∘)⋅°√
-Quad ← ÷⊃(×2|-⊃⋅∘(⊟⊸¯ √ℂ0 Disc))
-Quad 1 ¯3 2";
-const STRIPES: &str = "\
-⍉ ˙[⊞⊃⊃+↥-] ⇡300
-÷2 +1.2 ∿ ÷10";
-pub const PALINDROME: &str = r#"$ uiua racecar wow cool!
-≡⊂ ˜⊏"❌✅" ⬚@ ⊜⊸(≍⊸⇌)⊸≠@ "#;
-pub const WEEWUH_PALINDROME: &str = r#"$ weewuh racecar wow cool!
-≡⊂ ˜⊏"❌✅" ⬚@ ⊜⊸(≍⊸⇌)⊸≠@ "#;
-const AUTOMATA: &str = "\
-Rule ← ˜⊏⊓⋯₈(°⋯⧈⇌3⊂⊂⊃⊣⟜⊢)
-=⌊⊃÷₂⇡ 500        # Init
-⍥⟜⊸Rule ⌊÷2◡⋅⧻ 30 # Run";
-const ROMAN: &str = r#"K ← "IVXLCDM"
-N ← [1 5 10 50 100 500 1000]
-F ← /+-⊃(↻1×|×¬)⊸(⧈>⊂⊙0) ⊏⊙N ⊗K
-F "LVII"
-F "MCMXCIV""#;
-const MANDELBROT: &str = "\
-×2 ⊞ℂ⤙-1/4 -1/2÷⟜⇡300 # Init
->2⌵ ⍥⟜⊸(+⊙°√) 50 ⟜∘   # Run
-÷⧻⟜/+                 # Normalize";
-const LIFE: &str = "\
-Life ← ↥∩=₃⟜+⊸(/+↻⊂A₂C₂)
-⁅×0.6 gen⊙⚂ ˙⊟30 # Init
-⍥⊸Life100        # Run
-≡▽₂ 4            # Upscale";
+use std::collections::HashMap;
 
-pub const EXAMPLES: &[&str] = &[
-    AVG, X_MATRIX, UIUA, PRIMES, LOGO, CHORD, SPIRAL, QUADRATIC, STRIPES, PALINDROME, AUTOMATA,
-    ROMAN, MANDELBROT, LIFE,
-];
+use include_dir::{Dir, include_dir};
+use uiua_editor::examples::{PadExample, PadExampleCategory, parse_example};
+
+pub const LOGO: &str = include_str!("examples/logo.ua");
+static EXAMPLES_DIRECTORY: Dir = include_dir!("site/src/examples");
+
+const EXAMPLE_CATEGORY_ORDER: &[&str] = &["Basics", "Image", "Animation", "Audio"];
+
+pub fn get_examples() -> Vec<PadExample> {
+    EXAMPLES_DIRECTORY
+        .files()
+        .map(|file| {
+            let file_path = file.path().to_string_lossy();
+            let content = file
+                .contents_utf8()
+                .unwrap_or_else(|| panic!("Invalid example file {file_path}"));
+            parse_example(file_path.into(), content)
+        })
+        .collect()
+}
+
+pub fn get_categorized_examples() -> Vec<PadExampleCategory> {
+    let mut categories: HashMap<String, Vec<PadExample>> = HashMap::new();
+    for example in get_examples() {
+        categories
+            .entry(example.category.clone())
+            .or_default()
+            .push(example);
+    }
+    let mut categories: Vec<PadExampleCategory> = categories
+        .into_iter()
+        .map(|(title, items)| PadExampleCategory { title, items })
+        .collect();
+    categories.sort_by_key(|cat| {
+        (EXAMPLE_CATEGORY_ORDER.iter())
+            .position(|&title| title == cat.title)
+            .unwrap_or(usize::MAX)
+    });
+    for category in &mut categories {
+        (category.items)
+            .sort_by(|a, b| (a.precedence.cmp(&b.precedence)).then_with(|| a.title.cmp(&b.title)));
+    }
+    categories
+}
 
 #[cfg(test)]
 #[test]
 fn test_examples() {
     use uiua_editor::backend::WebBackend;
-
-    for example in EXAMPLES {
-        match uiua::Uiua::with_backend(WebBackend::default()).run_str(example) {
+    for example in get_examples() {
+        let PadExample { path, content, .. } = example;
+        match uiua::Uiua::with_backend(WebBackend::default()).run_str(&content) {
             Ok(mut comp) => {
                 if let Some(diag) = comp.take_diagnostics().into_iter().next() {
-                    panic!("Example failed:\n{example}\n{diag}");
+                    panic!("Example failed:\n{path}\n{content}\n{diag}");
                 }
             }
-            Err(e) => panic!("Example failed:\n{example}\n{e}"),
+            Err(e) => panic!("Example failed:\n{path}\n{content}\n{e}"),
         }
     }
 }

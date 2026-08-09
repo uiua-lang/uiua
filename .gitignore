@@ -22,8 +22,7 @@ profile.yaml
 uiua.tmLanguage.json
 !/tests*/*
 !/examples/*
-!/site/*.ua
-!/site/text/*.ua
+!/site/**/*.ua
 !/site/assets/**
 
 # symlink created by `nix build`

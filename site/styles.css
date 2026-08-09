@@ -164,7 +164,11 @@ li {
         background-color: #1d2c3a;
     }
 
-    button:hover {
+    button:disabled {
+        color: #d1daec45;
+    }
+
+    button:not(:disabled):hover {
         background-color: #2d3c4a;
     }
 
@@ -254,7 +258,11 @@ li {
         background-color: #f6f8f8;
     }
 
-    button:hover {
+    button:disabled {
+        color: #33444445;
+    }
+
+    button:not(:disabled):hover {
         background-color: #fdffff;
     }
 
@@ -2190,5 +2198,63 @@ a.clean {
 
     .editor-area {
         overflow: hidden;
+    }
+}
+
+.showcase-selector-wrapper {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 0.1em !important;
+
+    & + div .editor {
+        border-top-left-radius: 0;
+    }
+}
+
+.showcase-selector {
+    display: flex;
+    font-size: 1.4em;
+    outline: 0.1em solid #606468;
+    border-radius: 0.3em;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    overflow: hidden;
+
+    select {
+        margin: 0;
+        padding: 0.5rem 1rem;
+        font-size: 0.75em;
+    }
+
+    button {
+        margin: 0;
+        border-radius: 0;
+    }
+
+    button:first-child {
+        border-right: 0.05em solid #606468;
+    }
+
+    button:last-child {
+        border-left: 0.05em solid #606468;
+    }
+
+    button:enabled:active {
+        transform: unset;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .showcase-selector-wrapper + div .editor {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+
+    .showcase-selector {
+        width: 100%;
+
+        select {
+            flex: 1;
+        }
     }
 }

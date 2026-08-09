@@ -40,10 +40,7 @@ pub fn parse_example(original_content: &str) -> ExampleFile {
 
             if let Some(rest) = trimmed.strip_prefix('#') {
                 if let Some((key, value)) = rest.split_once(':') {
-                    metadata.insert(
-                        key.trim().to_string(),
-                        value.trim().to_string(),
-                    );
+                    metadata.insert(key.trim().to_string(), value.trim().to_string());
                 }
             }
         }

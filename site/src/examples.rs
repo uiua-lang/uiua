@@ -7,27 +7,31 @@ static EXAMPLES_DIRECTORY: Dir = include_dir!("site/src/examples");
 const EXAMPLE_CATEGORY_ORDER: &[&str] = &["Basics", "Image", "Audio", "Animation"];
 
 pub fn get_examples() -> Vec<PadExample> {
-    EXAMPLES_DIRECTORY.files().map(|file| {
-        let file_path = file.path().to_string_lossy();
-        let content = file.contents_utf8()
-            .unwrap_or_else(|| panic!("Invalid example file {file_path}"));
+    EXAMPLES_DIRECTORY
+        .files()
+        .map(|file| {
+            let file_path = file.path().to_string_lossy();
+            let content = file
+                .contents_utf8()
+                .unwrap_or_else(|| panic!("Invalid example file {file_path}"));
 
-        let parsed = parse_example(content);
-        let meta = |key: &str| {
-            parsed
-                .metadata
-                .get(key)
-                .unwrap_or_else(|| panic!("Missing `{key}` in example {file_path}"))
-                .to_string()
-        };
+            let parsed = parse_example(content);
+            let meta = |key: &str| {
+                parsed
+                    .metadata
+                    .get(key)
+                    .unwrap_or_else(|| panic!("Missing `{key}` in example {file_path}"))
+                    .to_string()
+            };
 
-        PadExample {
-            path: file_path.to_string(),
-            title: meta("title"),
-            category: meta("category"),
-            content: parsed.content
-        }
-    }).collect()
+            PadExample {
+                path: file_path.to_string(),
+                title: meta("title"),
+                category: meta("category"),
+                content: parsed.content,
+            }
+        })
+        .collect()
 }
 
 pub fn get_categorized_examples() -> Vec<PadExampleCategory> {

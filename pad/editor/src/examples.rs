@@ -41,7 +41,7 @@ pub fn parse_example(path: String, original_content: &str) -> PadExample {
     } else {
         panic!("Example file missing title:\n{original_content}");
     }
-    if content.ends_with('\n') {
+    while content.ends_with('\n') {
         content.pop();
     }
 

@@ -62,7 +62,7 @@ pub fn Editor<'a>(
     #[prop(optional)] no_run: bool,
     #[prop(optional)] challenge: Option<ChallengeDef>,
     #[prop(optional)] nonprogressive: bool,
-    #[prop(optional)] examples: Option<Vec<String>>,
+    #[prop(optional)] mut examples: Option<Vec<String>>,
     #[prop(optional)] showcase_examples: Option<Vec<examples::PadExampleCategory>>,
     #[prop(optional)] kala: &'a str,
     #[prop(optional)] format_hint: bool,
@@ -76,6 +76,14 @@ pub fn Editor<'a>(
             .flat_map(|category| category.items.iter().cloned())
             .collect(),
     );
+    if examples.is_none() && !showcase_examples.is_empty() {
+        examples = Some(
+            showcase_examples_flattened
+                .iter()
+                .map(|ex| ex.content.clone())
+                .collect(),
+        )
+    }
 
     let no_run = no_run
         || mode == EditorMode::Pad && !get_autorun()
@@ -99,13 +107,11 @@ pub fn Editor<'a>(
     } else if let Some(chal) = &challenge {
         chal.intended_answer.lines().count()
     } else {
-        examples
-            .iter()
+        (examples.iter())
             .map(|e| e.lines().filter(|line| !line.is_empty()).count())
             .max()
             .unwrap_or(6)
     };
-    logging::log!("code max lines: {code_max_lines}");
     let code_height_em = code_max_lines as f32 * 1.25;
 
     let editor_wrapper_id = move || format!("editor{id}");
@@ -1469,7 +1475,7 @@ pub fn Editor<'a>(
     };
 
     // Hide the example arrows if there is only one example
-    let example_arrow_style = if examples.len() <= 1 {
+    let example_arrow_style = if examples.len() <= 1 || !showcase_examples.is_empty() {
         "display:none"
     } else {
         ""

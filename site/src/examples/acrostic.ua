@@ -1,4 +1,4 @@
 # Acrostic :: Basics :: 2
-"unabashedly i utilize arrays"
+"Unabashedly I utilize arrays"
 ⊸≠@  # Mask of non-spaces
 ⊜⊢   # Take first letters

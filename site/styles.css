@@ -2222,8 +2222,8 @@ a.clean {
 
     select {
         margin: 0;
-        padding: .5rem 1rem;
-        font-size: 18px;
+        padding: 0.5rem 1rem;
+        font-size: 0.75em;
     }
 
     button {
@@ -2232,11 +2232,11 @@ a.clean {
     }
 
     button:first-child {
-        border-right: 0.1em solid #606468;
+        border-right: 0.05em solid #606468;
     }
 
     button:last-child {
-        border-left: 0.1em solid #606468;
+        border-left: 0.05em solid #606468;
     }
 
     button:enabled:active {
@@ -2245,7 +2245,7 @@ a.clean {
 }
 
 @media screen and (max-width: 768px) {
-    .showcase-selector-wrapper  + div .editor {
+    .showcase-selector-wrapper + div .editor {
         border-top-left-radius: 0;
         border-top-right-radius: 0;
     }

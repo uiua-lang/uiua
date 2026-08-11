@@ -612,6 +612,7 @@ impl Formatter<'_> {
                     line.extend(repeat_n(' ', spaces));
                     line.extend(repeat_n('#', octos));
                     if self.config.comment_space_after_hash
+                        && !comment.is_empty()
                         // Shebang
                         && !comment.starts_with('!')
                     {
@@ -1303,20 +1304,25 @@ impl Formatter<'_> {
                     .trim()
                     .is_empty();
                 if beginning_of_line || !self.config.align_comments {
+                    s.extend(repeat_n('#', n + 1));
                     for (i, line) in lines.into_iter().enumerate() {
                         if i > 0 {
                             s.push('\n');
                             for _ in 0..start_line_pos {
                                 s.push(' ');
                             }
+                            s.extend(repeat_n('#', n + 1));
                         }
-                        s.extend(repeat_n('#', n + 1));
                         s.push(' ');
                         s.push_str(&line);
                     }
                     self.push(&word.span, &s);
                 } else {
                     let start_line = self.output.split('\n').count();
+                    if lines.is_empty() {
+                        self.end_of_line_comments
+                            .push((start_line, n + 1, String::new()))
+                    }
                     for (i, line) in lines.into_iter().enumerate() {
                         if i > 0 {
                             self.output.push('\n');
@@ -1940,7 +1946,10 @@ fn formatter_edge_case_newline_free() {
 #[test]
 #[cfg(test)]
 fn formatter_idempotence() {
-    let input = "\
+    let input = r#"\
+⊃( ## "82:2: Unknown identifier `Dir`"
+|  ##
+)  ##
 ⊃(|)
 ⊃(+|-|×|÷)
 F ← (
@@ -1996,7 +2005,7 @@ G ← (
 ) (
   5
 )
-( 1
+( 1"2:1: Missing argument 1"
   2
   3
 )
@@ -2081,10 +2090,10 @@ F ← (|2
 )
 +,
 ∘ M! =
-~ \"x\" ~ A B
-~ \"x\"
+~ "x" ~ A B
+~ "x"
   ~ A B
-~ \"x\"
+~ "x"
   ~ A B
   ~ C D
 ┌─╴A
@@ -2097,7 +2106,7 @@ F ← (|2
 
   G ← 3
 └─╴
-~ \"example\"
+~ "example"
 
 F ← 5
 
@@ -2143,7 +2152,7 @@ F ← (
 }
 #   spaces before
 ∘ #   spaces before
-";
+"#;
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {
         const N: usize = 50;

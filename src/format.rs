@@ -1221,11 +1221,6 @@ impl Formatter<'_> {
             &Word::OutputComment { i, n } => {
                 let stacks = self.eval_output_comment(i);
                 let mut s = String::new();
-                if stacks.is_empty() {
-                    for _ in 0..=n {
-                        s.push('#');
-                    }
-                }
                 let start_line_pos = self.curr_line_pos();
                 // Build grid
                 const MAX_HEIGHT: usize = 100;

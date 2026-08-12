@@ -208,6 +208,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &DeshapeSubPat,
     &ReduceJoinPat,
     &JoinPat,
+    &MultiJoinPat,
     &MaybeVal((
         Rerank,
         (Over, Shape, Over, PushUnd(2), Rerank),
@@ -996,6 +997,21 @@ under!(JoinPat, input, g_sig, inverse, asm, {
     }
     Ok((input, before, after))
 });
+
+under!(
+    MultiJoinPat,
+    input,
+    g_sig,
+    inverse,
+    asm,
+    ImplPrim(MultiJoin(n), span),
+    {
+        let mut new_input = eco_vec![Prim(Join, span); n - 1];
+        new_input.extend(input.iter().cloned());
+        under_inverse(&new_input, g_sig, inverse, asm)
+            .map(|(before, after)| (Default::default(), before, after))
+    }
+);
 
 under!(StencilPat, input, _, _, _, Stencil, span, [f], {
     if !matches!(f.node, Prim(Identity, _)) {

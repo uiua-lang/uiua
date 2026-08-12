@@ -205,6 +205,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &InnerAnti,
     &InnerContraDip,
     &JoinPat,
+    &MultiJoinPat,
     &SidedJoinPat,
     &ArrayPat,
     &NoUnder(UnpackPat),
@@ -956,6 +957,12 @@ inverse!(AntiJoinPat, input, _, {
         }
         _ => return generic(),
     })
+});
+
+inverse!(MultiJoinPat, input, asm, ImplPrim(MultiJoin(n), span), {
+    let mut new_input = eco_vec![Prim(Join, span); n - 1];
+    new_input.extend(input.iter().cloned());
+    un_inverse(&new_input, asm).map(|node| (Default::default(), node))
 });
 
 inverse!(CustomPat, input, _, ref, CustomInverse(cust, span), {

@@ -53,6 +53,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Uncaught errors in threads now immediately print to stderr
 - Optimize `⧋/` on pervasive dyadic functions
 - Improve some behavior of primitive name splitting
+### Website
+- Add an example selector to the showcase pad on the main page
 
 ## 0.18.1 - 2026-02-14
 ### Interpreter

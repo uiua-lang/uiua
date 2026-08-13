@@ -2395,7 +2395,7 @@ pub fn Editor<'a>(
                                 ></textarea>
                                 // ///////////////////////
                                 <div id=overlay_id class="code-overlay">
-                                    {move || gen_code_view(&code_id(), &overlay.get(), &hidden)}
+                                    {move || gen_code_view(&overlay.get(), &hidden)}
                                 </div>
                             </div>
                         </div>

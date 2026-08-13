@@ -21,8 +21,8 @@ use time::UtcOffset;
 #[cfg(feature = "native_sys")]
 pub use self::native::*;
 use crate::{
-    Array, BigConstant, Boxed, FfiArg, FfiType, MetaPtr, Ops, Primitive, SysOp, Uiua,
-    UiuaErrorKind, UiuaResult, Value,
+    Array, BigConstant, Boxed, FfiArg, FfiType, MetaPtr, Ops, Primitive, SysOp, Uiua, UiuaResult,
+    Value,
     algorithm::{multi_output, validate_size},
     cowslice::cowslice,
     get_ops,
@@ -43,7 +43,7 @@ Bar ← \"bar\"";
 
 /// The text of Uiua's example text file
 pub const EXAMPLE_TXT: &str = "\
-This is a simple text file for 
+This is a simple text file for
 use in example Uiua code ✨";
 
 /// Access the built-in `example.ua` file
@@ -632,12 +632,6 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         o += m as f64 / 60.0;
         o += s as f64 / 3600.0;
         Ok(o)
-    }
-    /// Hit a breakpoint
-    ///
-    /// Returns whether to continue the program
-    fn breakpoint(&self, env: &Uiua) -> Result<bool, String> {
-        Err("Breakpoints are not supported in this environment".into())
     }
     /// Resolve a big constant
     fn big_constant(&self, key: BigConstant) -> Result<Cow<'static, [u8]>, String> {
@@ -1473,11 +1467,6 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 .mem_allocate(size)
                 .map_err(|e| env.error(e))?;
             env.push(val);
-        }
-        SysOp::Breakpoint => {
-            if !env.rt.backend.breakpoint(env).map_err(|e| env.error(e))? {
-                return Err(UiuaErrorKind::Interrupted.into());
-            }
         }
         prim => {
             return Err(env.error(if prim.modifier_args().is_some() {

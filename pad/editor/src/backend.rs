@@ -3,12 +3,11 @@ use std::{
     borrow::Cow,
     cell::RefCell,
     collections::{BTreeSet, HashMap, HashSet},
-    hash::{DefaultHasher, Hash, Hasher},
     io::Cursor,
     path::{Path, PathBuf},
     sync::{
         Mutex,
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, Ordering},
     },
 };
 
@@ -16,9 +15,7 @@ use crate::{START_TIME, get_ast_time};
 use futures::future::join_all;
 use js_sys::{Date, Uint8Array};
 use leptos::*;
-use uiua::{
-    BigConstant, EXAMPLE_TXT, EXAMPLE_UA, GitTarget, Handle, Report, Span, SysBackend, Uiua, now,
-};
+use uiua::{BigConstant, EXAMPLE_TXT, EXAMPLE_UA, GitTarget, Handle, Report, SysBackend, now};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{HtmlAudioElement, Request, RequestInit, RequestMode, Response};
@@ -28,8 +25,6 @@ pub struct WebBackend {
     pub stderr: Mutex<String>,
     pub trace: Mutex<String>,
     streams: Mutex<HashMap<Handle, VirtualStream>>,
-    id: u64,
-    breakpoint: AtomicUsize,
     output_enabled: AtomicBool,
 }
 
@@ -72,49 +67,21 @@ pub fn delete_file(path: &PathBuf) {
     FILES.with(|files| files.borrow_mut().remove(path));
 }
 
-thread_local! {
-    static BREAKPOINTS: RefCell<HashMap<u64, (u64, usize)>> = Default::default();
-}
-
 impl Default for WebBackend {
     fn default() -> Self {
-        Self::new(0, "")
+        Self::new()
     }
 }
 
 impl WebBackend {
-    pub fn new(id: impl Hash, code: impl Hash) -> Self {
-        let mut hasher = DefaultHasher::new();
-        id.hash(&mut hasher);
-        let id = hasher.finish();
-        let mut hasher = DefaultHasher::new();
-        code.hash(&mut hasher);
-        let code = hasher.finish();
-        BREAKPOINTS.with(|map| {
-            let mut map = map.borrow_mut();
-            let (old_code, bp) = map.entry(id).or_insert((code, 0));
-            if *old_code != code {
-                *old_code = code;
-                *bp = 0;
-            }
-        });
+    pub fn new() -> Self {
         Self {
             stdout: Vec::new().into(),
             stderr: String::new().into(),
             trace: String::new().into(),
             streams: HashMap::new().into(),
-            id,
-            breakpoint: AtomicUsize::new(0),
             output_enabled: AtomicBool::new(true),
         }
-    }
-    pub fn finish(&self) {
-        BREAKPOINTS.with(|map| {
-            let mut map = map.borrow_mut();
-            if let Some((_, bp)) = map.get_mut(&self.id) {
-                *bp = 0;
-            }
-        });
     }
 }
 
@@ -635,32 +602,6 @@ impl SysBackend for WebBackend {
             return Ok(0.0);
         }
         Ok(-Date::new_0().get_timezone_offset() / 60.0)
-    }
-    fn breakpoint(&self, env: &Uiua) -> Result<bool, String> {
-        let breakpoint = self.breakpoint.fetch_add(1, Ordering::Relaxed);
-        let reached = BREAKPOINTS.with(|map| {
-            let mut map = map.borrow_mut();
-            if let Some((_, bp)) = map.get_mut(&self.id) {
-                let reached = breakpoint >= *bp;
-                if reached {
-                    *bp += 1;
-                }
-                reached
-            } else {
-                false
-            }
-        });
-
-        if !reached {
-            return Ok(true);
-        }
-
-        let message = match env.span() {
-            Span::Code(span) => format!("Break at {span}"),
-            Span::Builtin => "Breakpoint".into(),
-        };
-        self.trace.lock().unwrap().push_str(&message);
-        Ok(false)
     }
     fn big_constant(&self, key: BigConstant) -> Result<Cow<'static, [u8]>, String> {
         #[cfg(not(target_arch = "wasm32"))]

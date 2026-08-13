@@ -22,8 +22,8 @@ use dashmap::DashMap;
 use portable_atomic::{self as atomic, AtomicBool, AtomicU64}; // add support for targets that don't support 64-bit atomics
 
 use crate::{
-    BigConstant, GitTarget, Handle, MetaPtr, ReadLinesFn, ReadLinesReturnFn, Span, SysBackend,
-    Uiua, Value,
+    BigConstant, GitTarget, Handle, MetaPtr, ReadLinesFn, ReadLinesReturnFn, SysBackend, Uiua,
+    Value,
     grid_fmt::{GridFmt, GridFmtParams},
     terminal_size,
 };
@@ -1325,25 +1325,6 @@ impl SysBackend for NativeSys {
         }
         NATIVE_SYS.git_paths.insert(key, res.clone());
         res
-    }
-    #[allow(clippy::print_stdout)]
-    fn breakpoint(&self, env: &Uiua) -> Result<bool, String> {
-        if !self.output_enabled() {
-            return Ok(true);
-        }
-        match env.span() {
-            Span::Code(span) => eprintln!(
-                "{} at {span} {}",
-                "&b".truecolor(237, 94, 106),
-                "(press enter to continue)".bright_black()
-            ),
-            Span::Builtin => {}
-        }
-        eprintln!();
-        print_stack(env.stack(), true);
-        eprintln!();
-        _ = stdin().read_line(&mut String::new());
-        Ok(true)
     }
     fn big_constant(&self, key: BigConstant) -> Result<Cow<'static, [u8]>, String> {
         Ok(Cow::Borrowed(match key {

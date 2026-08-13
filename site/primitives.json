@@ -30,13 +30,6 @@
     "class": "Media",
     "description": "Synthesize and stream audio"
   },
-  "&b": {
-    "args": 0,
-    "outputs": 0,
-    "class": "Misc",
-    "description": "Pause the execution and print the argument list",
-    "experimental": true
-  },
   "&camcap": {
     "args": 1,
     "outputs": 1,

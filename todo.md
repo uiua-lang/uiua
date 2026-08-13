@@ -2,7 +2,9 @@
 
 # 0.19
 - Extending array syntax
-- Remove `&b`
+
+# 0.20
+- Non-decimal numeric literals
 
 ## Planned Features
 Features that are planned to be implemented in the future.

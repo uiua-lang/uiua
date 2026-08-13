@@ -36,6 +36,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [`pattern ⍡`](https://uiua.org/docs/pattern) modifier, which makes big pattern match lists easier to debug and maintain
 - Remove the previously deprecated `indexof ⊗` function
   - As planned, [`indexin ⊗`](https://uiua.org/docs/indexin)'s glyph has been changed, and the old one will format to `⊗`.
+- Remove experimental `&b` (breakpoint)
+  - It was half-baked and poorly implemented
 ### Interpreter
 - Tweak the formatter to make indentation always a multiple of 2
 - Add number output rules for some square roots

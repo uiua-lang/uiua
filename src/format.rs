@@ -1887,9 +1887,6 @@ impl SysBackend for FormatterBackend {
     fn timezone(&self) -> Result<f64, String> {
         self.sys().timezone()
     }
-    fn breakpoint(&self, _: &Uiua) -> Result<bool, String> {
-        Ok(true)
-    }
     fn audio_sample_rate(&self) -> u32 {
         self.sys().audio_sample_rate()
     }

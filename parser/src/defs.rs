@@ -3924,18 +3924,6 @@ macro_rules! sys_op {
 }
 
 sys_op! {
-    /// Pause the execution and print the argument list
-    ///
-    /// This is useful for debugging.
-    /// On the website, each [&b], in the same editor, with the same input code, will end execution and print the argument list.
-    /// Running the code multiple times will allow the code to advance to the next [&b].
-    /// Try it out!
-    /// ex: # Experimental!
-    ///   : ≡(&b⇌&b) &b °△ &b 3_3 &b
-    /// Once the execution has completed, the final argument state will be shown as normal. Running again will start from the beginning.
-    ///
-    /// In the native interpreter, [&b] pauses execution, prints the argument list, and waits for the user to press enter.
-    (0(0), Breakpoint, Misc, "&b", "breakpoint", Mutating, { experimental: true }),
     /// Print a nicely formatted representation of a value to stdout
     ///
     /// [&s] will print the value the same way it would appear at the end of a program, or from [?].

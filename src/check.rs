@@ -12,7 +12,10 @@ use std::{
 
 use serde::*;
 
-use crate::{ImplPrimitive, Node, Primitive, SigNode, Signature, SysOp, algorithm::try_sig};
+use crate::{
+    ImplPrimitive, Node, Primitive, SigNode, Signature, SysOp,
+    algorithm::{reduce::fold_while_counts, try_sig},
+};
 
 impl Node {
     /// Get the signature of this node
@@ -485,13 +488,9 @@ impl VirtualEnv {
                     self.handle_sig(sig);
                 }
                 FoldWhile => {
-                    let [f, _g] = get_args(args)?;
-                    if f == (0, 0) {
-                    } else if f.outputs() >= f.args() {
-                        self.handle_args_outputs(f.args(), f.outputs() + 1 - f.args());
-                    } else {
-                        self.handle_sig(f);
-                    }
+                    let [f, g] = get_args(args)?;
+                    let (comp_sig, _) = fold_while_counts(f, g);
+                    self.handle_sig(comp_sig);
                 }
                 RepeatWithInverse => {
                     let [f, inv] = get_args_nodes(args)?;

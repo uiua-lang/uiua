@@ -1240,17 +1240,20 @@ pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+/// Gives overall signature and number of copied args
+pub(crate) fn fold_while_counts(f: Signature, g: Signature) -> (Signature, usize) {
+    let copy_count = (g.args()).saturating_sub(g.outputs().saturating_sub(1));
+    let cond_sub_sig = Signature::new(g.args(), (g.outputs() + copy_count).saturating_sub(1));
+    let comp_sig = f.compose(cond_sub_sig);
+    (comp_sig, copy_count)
+}
+
 pub fn fold_while(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let [f, g] = get_ops(ops, env)?;
 
-    let copy_count = (g.sig.args()).saturating_sub(g.sig.outputs().saturating_sub(1));
-    let cond_sub_sig = Signature::new(
-        g.sig.args(),
-        (g.sig.outputs() + copy_count).saturating_sub(1),
-    );
-    let comp_sig = f.sig.compose(cond_sub_sig);
-    // dbg!(cond_sub_sig, comp_sig);
+    let (comp_sig, copy_count) = fold_while_counts(f.sig, g.sig);
+    // dbg!(comp_sig);
     let FoldState {
         mut arrays,
         excess_count,
@@ -1261,7 +1264,14 @@ pub fn fold_while(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let mut excess_rows = vec![Vec::new(); excess_count];
     let mut copies = Vec::with_capacity(copy_count);
     let mut g_args = Vec::with_capacity(g.sig.args());
-    // dbg!(copy_count, excess_count, iterated_count, acc_count, row_count);
+    // dbg!(
+    //     copy_count,
+    //     excess_count,
+    //     iterated_count,
+    //     acc_count,
+    //     row_count
+    // );
+    let mut condition = false;
     for _ in 0..row_count {
         let mut arr_iter = arrays.iter_mut().map(|array| match array {
             Ok(arr) => arr.next().unwrap(),
@@ -1286,7 +1296,7 @@ pub fn fold_while(ops: Ops, env: &mut Uiua) -> UiuaResult {
         }
         // println!("stack before condition: {:?}", env.stack());
         env.exec(g.clone())?;
-        let condition = env
+        condition = env
             .pop("condition")?
             .as_bool(env, "Condition must be a boolean")?;
         // println!("stack after condition: {:?}", env.stack());
@@ -1316,7 +1326,9 @@ pub fn fold_while(ops: Ops, env: &mut Uiua) -> UiuaResult {
         }
     }
     // Clean up
-    env.pop_n(acc_count.saturating_sub(copy_count))?;
+    if !condition {
+        env.pop_n(acc_count.saturating_sub(copy_count))?;
+    }
     // Remove preserved/excess values
     if excess_count > 0 {
         _ = env.remove_n(acc_count, acc_count)?;

@@ -1,6 +1,8 @@
 # Uiua Todo
 
 # 0.19
+- Extending array syntax
+- Remove `&b`
 
 ## Planned Features
 Features that are planned to be implemented in the future.

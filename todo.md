@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.19
-- Extending array syntax
 
 # 0.20
 - Non-decimal numeric literals

@@ -1329,12 +1329,19 @@ impl ImplPrimitive {
                 } else {
                     let mut vals = env.pop_n(n)?;
                     'outer: while vals.len() > 2 {
-                        for i in 0..vals.len() - 1 {
-                            if vals[i].rank() == max_rank {
-                                let (b, a) = (vals.remove(i), vals.remove(i));
-                                let joined = a.join(b, true, env)?;
-                                vals.insert(i, joined);
-                                continue 'outer;
+                        for use_max_rank in [true, false] {
+                            for i in 0..vals.len() - 1 {
+                                if (!use_max_rank
+                                    || vals[i].rank() == max_rank
+                                    || vals[i + 1].rank() == max_rank)
+                                    && (vals[i].shape.ends_with(&vals[i + 1].shape)
+                                        || vals[i + 1].shape.ends_with(&vals[i].shape))
+                                {
+                                    let (b, a) = (vals.remove(i), vals.remove(i));
+                                    let joined = a.join(b, true, env)?;
+                                    vals.insert(i, joined);
+                                    continue 'outer;
+                                }
                             }
                         }
                         let mut iter = vals.drain(vals.len() - 2..);

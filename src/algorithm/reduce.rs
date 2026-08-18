@@ -1326,8 +1326,9 @@ pub fn fold_while(ops: Ops, env: &mut Uiua) -> UiuaResult {
         }
     }
     // Clean up
+    // println!("stack before cleanup: {:?}", env.stack());
     if !condition {
-        env.pop_n(acc_count.saturating_sub(copy_count))?;
+        env.pop_n(f.sig.args().saturating_sub(f.sig.outputs() + copy_count))?;
     }
     // Remove preserved/excess values
     if excess_count > 0 {

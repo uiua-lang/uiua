@@ -2,7 +2,7 @@
 
 Uiua is not yet stable.
 
-## 0.19.0 - 2026-??-??
+## 0.19.0 - 2026-08-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - **Breaking Change** - Monadic [`tuples ⧅`](https://uiua.org/docs/tuples) now gives the power set rather than prefixes.

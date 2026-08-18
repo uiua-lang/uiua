@@ -846,13 +846,13 @@ impl Uiua {
         if height_diff != sig_diff {
             let message = if let Some(id) = &frame.id {
                 format!(
-                    "{id} modified the stack by {height_diff} values, but its \
-                    signature of {sig} implies a change of {sig_diff}"
+                    "{id} modified the argument list by {height_diff} values, \
+                    but its signature of {sig} implies a change of {sig_diff}"
                 )
             } else {
                 format!(
-                    "Function ({node:?}) modified the stack by {height_diff} values, but its \
-                    signature of {sig} implies a change of {sig_diff}"
+                    "Function ({node:?}) modified the argument list by {height_diff} values, \
+                    but its signature of {sig} implies a change of {sig_diff}"
                 )
             };
             #[cfg(debug_assertions)]

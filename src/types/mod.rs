@@ -241,6 +241,7 @@ fn value_as_scalar_spec(val: &Value) -> Option<Scalar> {
             'ℂ' => Scalar::Complex,
             _ => return None,
         }),
+        Value::Box(arr) if arr.shape == [0] => Some(Scalar::Box(ScalarBox::Any)),
         Value::Box(arr) if val.rank() == 0 => Some(Scalar::Box(ScalarBox::All(
             Type::from_spec(&arr.data[0].0)?.into(),
         ))),

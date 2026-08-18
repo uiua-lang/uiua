@@ -295,13 +295,13 @@ impl<'a> Exec<&SigNode> for TypeEnv<'a> {
 }
 
 impl<'a> TypeEnv<'a> {
-    fn type_hint(&mut self, tys: impl IntoIterator<Item = Type>) {
-        for (tv, ty) in self.stack.iter_mut().rev().zip(tys) {
-            if tv.scalar().superset_of(&ty.scalar) {
-                tv.set_scalar(ty.scalar);
+    fn type_hint(&mut self, hints: impl IntoIterator<Item = Type>) {
+        for (tv, hint) in self.stack.iter_mut().rev().zip(hints) {
+            if tv.scalar().is_any() {
+                tv.set_scalar(hint.scalar);
             }
             if tv.shape().is_any() {
-                tv.set_shape(ty.shape);
+                tv.set_shape(hint.shape);
             }
         }
         self.update_arg_types();

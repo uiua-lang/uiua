@@ -3471,7 +3471,7 @@ primitive!(
     /// ex: °csv "1,2,3\n4\n5,6"
     /// This can be changed with [fill].
     /// ex: ⬚"x"°csv "1,2,3\n4\n5,6"
-    /// The default delimiter is (of course) a comma. However, [fill] can be used to change it.
+    /// The default delimiter is (of course) a comma. However, [fill] can be used to change it. The delimeter must be a scalar character.
     /// ex: °⬚@;csv "1;2;3\n4\n5,6;7"
     /// [fill] outside the [un] pads rows of different lengths. [fill] inside the [un] chooses the delimiter.
     /// ex: ⬚"x"°⬚@;csv "1;2;3\n4\n5,6;7"

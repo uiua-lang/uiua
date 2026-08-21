@@ -2311,6 +2311,13 @@ impl Value {
             value => Err(env.error(format!("Cannot get primes of {} array", value.type_name()))),
         }
     }
+    pub(crate) fn pseudo_is_prime(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        match self {
+            Value::Num(n) => n.pseudo_is_prime(env),
+            Value::Byte(b) => b.convert_ref::<f64>().pseudo_is_prime(env),
+            value => Err(env.error(format!("Cannot get primes of {} array", value.type_name()))),
+        }
+    }
 }
 
 impl Array<Complex> {
@@ -2363,30 +2370,67 @@ impl Array<crate::Multivector> {
     }
 }
 
+fn check_number(x: f64, env: &Uiua, upper_bound: f64) -> UiuaResult {
+    if x <= 0.0 {
+        return Err(env.error(format!(
+            "Cannot get primes of non-positive number {}",
+            x.grid_string(true)
+        )));
+    }
+    if x.fract() != 0.0 {
+        return Err(env.error(format!(
+            "Cannot get primes of non-integer number {}",
+            x.grid_string(true)
+        )));
+    }
+    if x > upper_bound {
+        return Err(env.error(format!(
+            "Cannot get primes of {} because it is too large",
+            x.grid_string(true)
+        )));
+    }
+    Ok(())
+}
+
 impl Array<f64> {
-    pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        fn check_number(x: f64, env: &Uiua, upper_bound: f64) -> UiuaResult {
-            if x <= 0.0 {
-                return Err(env.error(format!(
-                    "Cannot get primes of non-positive number {}",
-                    x.grid_string(true)
-                )));
-            }
-            if x.fract() != 0.0 {
-                return Err(env.error(format!(
-                    "Cannot get primes of non-integer number {}",
-                    x.grid_string(true)
-                )));
-            }
-            if x > upper_bound {
-                return Err(env.error(format!(
-                    "Cannot get primes of {} because it is too large",
-                    x.grid_string(true)
-                )));
-            }
-            Ok(())
+    pub(crate) fn pseudo_is_prime(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        if self.data.is_empty() || self.data.iter().all(|x| *x == 1.0) {
+            return Err(env.error("Cannot take last of an empty array"));
         }
 
+        for x in &self.data {
+            check_number(*x, env, u64::MAX as f64)?;
+        }
+
+        let max = *self
+            .data
+            .iter()
+            .max_by(|a, b| a.total_cmp(b))
+            .expect("Empty case already checked");
+
+        let mut primes = vec![2u32];
+        for n in 3..=max.sqrt().floor() as u32 {
+            if primes.iter().all(|p| n % p != 0) {
+                primes.push(n);
+            }
+        }
+
+        Ok(Array::new(
+            self.shape.clone(),
+            self.data.iter().map(|n| {
+                for prime in &primes {
+                    if (*n as u32).is_multiple_of(*prime) {
+                        if *n as u32 == *prime {
+                            return 1u8;
+                        }
+                        return 0u8;
+                    }
+                }
+                1u8
+            }),
+        ))
+    }
+    pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         if self.data.len() == 1 {
             // When "scalar" (i.e. length-one), allow reaching u64 instead of usize
             let n = self.data[0];

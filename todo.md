@@ -5,6 +5,7 @@
 # 0.20
 - Non-decimal numeric literals
 - `switch` subscripts
+- `fold` subscripts
 
 ## Planned Features
 Features that are planned to be implemented in the future.

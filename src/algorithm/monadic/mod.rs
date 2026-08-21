@@ -2394,7 +2394,7 @@ fn check_number(x: f64, env: &Uiua, upper_bound: f64) -> UiuaResult {
 
 impl Array<f64> {
     pub(crate) fn pseudo_is_prime(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
-        if self.data.len() == 0 || self.data.iter().all(|x| *x == 1.0) {
+        if self.data.is_empty() || self.data.iter().all(|x| *x == 1.0) {
             return Err(env.error("Cannot take last of an empty array"));
         }
 
@@ -2419,14 +2419,14 @@ impl Array<f64> {
             self.shape.clone(),
             self.data.iter().map(|n| {
                 for prime in &primes {
-                    if *n as u32 % prime == 0 {
+                    if (*n as u32).is_multiple_of(*prime) {
                         if *n as u32 == *prime {
                             return 1u8;
                         }
                         return 0u8;
                     }
                 }
-                return 1u8;
+                1u8
             }),
         ))
     }

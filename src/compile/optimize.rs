@@ -101,6 +101,7 @@ impl Node {
 }
 
 static UNSORTED_OPTS: &[&dyn Optimization] = &[
+    &((Dup, Primes, Last, Eq), PseudoIsPrime),
     &((Reverse, First), Last),
     &((Reverse, Last), First),
     &((Rise, First), FirstMinIndex),

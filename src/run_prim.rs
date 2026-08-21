@@ -772,6 +772,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnStack => stack(env, true)?,
             ImplPrimitive::GradeDecompose => env.monadic_env(Value::grade_decompose)?,
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
+            ImplPrimitive::PseudoIsPrime => env.monadic_ref_env(Value::pseudo_is_prime)?,
             ImplPrimitive::UnBox => {
                 let val = env.pop(1)?;
                 env.push(val.unboxed());

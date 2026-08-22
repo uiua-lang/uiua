@@ -1361,6 +1361,14 @@ impl InvertPattern for AntiEncodings {
                 ]);
                 Ok((input, inv))
             }
+            [Prim(ApngEncode, span), input @ ..] => {
+                let inv = Node::from_iter([
+                    Prim(Pop, *span),
+                    ImplPrim(ApngDecode, *span),
+                    Prim(Pop, *span),
+                ]);
+                Ok((input, inv))
+            }
             _ => generic(),
         }
     }
@@ -1405,6 +1413,7 @@ inverse!(PrimPat, input, _, Prim(prim, span), {
         Take => ImplPrim(UnTake, span),
         Sort => ImplPrim(UnSort, span),
         GifEncode => ImplPrim(GifDecode, span),
+        ApngEncode => ImplPrim(ApngDecode, span),
         AudioEncode => ImplPrim(AudioDecode, span),
         ImageEncode => ImplPrim(ImageDecode, span),
         Sys(SysOp::Clip) => ImplPrim(UnClip, span),
@@ -1478,6 +1487,7 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         UnFft => Prim(Fft, span),
         ImageDecode => Prim(ImageEncode, span),
         GifDecode => Prim(GifEncode, span),
+        ApngDecode => Prim(ApngEncode, span),
         AudioDecode => Prim(AudioEncode, span),
         UnDatetime => Prim(DateTime, span),
         UnRawMode => Prim(Sys(SysOp::RawMode), span),

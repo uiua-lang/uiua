@@ -173,6 +173,7 @@ impl_primitive!(
     (2, MatchGe),
     (1(2), ImageDecode),
     (1(2), GifDecode),
+    (1(2), ApngDecode),
     (1(3), AudioDecode),
     (0, UnRawMode, Impure),
     (0, UnChangeDirectory, Impure),

@@ -818,6 +818,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnDatetime => env.monadic_ref_env(Value::undatetime)?,
             ImplPrimitive::ImageDecode => media::image_decode(env)?,
             ImplPrimitive::GifDecode => media::gif_decode(env)?,
+            ImplPrimitive::ApngDecode => media::apng_decode(env)?,
             ImplPrimitive::AudioDecode => media::audio_decode(env)?,
             ImplPrimitive::UnRawMode => {
                 let raw_mode = env.rt.backend.get_raw_mode().map_err(|e| env.error(e))?;

@@ -244,6 +244,16 @@ pub(crate) fn apng_encode(env: &mut Uiua) -> UiuaResult {
     Err(env.error("APNG encoding is not supported in this environment"))
 }
 
+pub(crate) fn apng_decode(env: &mut Uiua) -> UiuaResult {
+    let bytes = env.pop(1)?;
+    let bytes = bytes.as_bytes(env, "APNG bytes must be a byte array")?;
+    let (frame_rate, value) =
+        crate::media::apng_bytes_to_value(&bytes).map_err(|e| env.error(e))?;
+    env.push(value);
+    env.push(frame_rate);
+    Ok(())
+}
+
 pub(crate) fn audio_encode(env: &mut Uiua) -> UiuaResult {
     #[cfg(feature = "audio_encode")]
     {
@@ -1151,7 +1161,6 @@ pub fn gif_bytes_to_value_impl(
     Ok((frame_rate, num))
 }
 
-#[doc(hidden)]
 #[cfg(feature = "apng")]
 pub(crate) fn value_to_apng_bytes(value: &Value, frame_rate: f64) -> Result<EcoVec<u8>, String> {
     use png::{ColorType, Encoder};
@@ -1181,6 +1190,35 @@ pub(crate) fn value_to_apng_bytes(value: &Value, frame_rate: f64) -> Result<EcoV
     }
     writer.finish().map_err(err("finishing encoding"))?;
     Ok(buffer)
+}
+
+#[cfg(not(feature = "apng"))]
+pub(crate) fn apng_bytes_to_value(_bytes: &[u8]) -> Result<(f64, Value), png::DecodingError> {
+    Err("APNG decoding is not supported in this environment".into())
+}
+
+#[cfg(feature = "apng")]
+pub(crate) fn apng_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), png::DecodingError> {
+    use png::Decoder;
+    let mut reader = Decoder::new(bytes).read_info()?;
+    let info = reader.info();
+    let (width, height) = (info.width as usize, info.height as usize);
+    let bytes_per_pixel = info.bytes_per_pixel();
+    let frame_count = info
+        .animation_control()
+        .map_or(1, |ac| ac.num_frames as usize);
+    let frame_rate =
+        (info.frame_control()).map_or(24.0, |fc| fc.delay_den as f64 / fc.delay_num as f64);
+    let frame_size = width * height * bytes_per_pixel;
+    let mut data = vec![0; frame_count * frame_size];
+    for i in 0..frame_count {
+        reader.next_frame(&mut data[i * frame_size..][..frame_size])?;
+    }
+    let data = (data.into_iter())
+        .map(|f| f as f64 / 255.0)
+        .collect::<EcoVec<_>>();
+    let arr = Array::new([frame_count, height, width, bytes_per_pixel], data);
+    Ok((frame_rate, arr.into()))
 }
 
 /// Create optional parameters that can be passed in to primitives

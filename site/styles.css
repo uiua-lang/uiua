@@ -206,8 +206,7 @@ li {
         background-color: #0001;
     }
 
-    .glyph-button:hover,
-    .combinator-diagram {
+    .glyph-button:hover {
         background-color: #0003;
     }
 
@@ -300,8 +299,7 @@ li {
         background-color: #fff1;
     }
 
-    .glyph-button:hover,
-    .combinator-diagram {
+    .glyph-button:hover {
         background-color: #fffa;
     }
 
@@ -1218,6 +1216,7 @@ option,
 .combinator-diagram {
     border-radius: 0.5em;
     height: 8em;
+    background-color: light-dark(#fffa, #0003);
 }
 
 @media (prefers-color-scheme: dark) {

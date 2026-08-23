@@ -11,18 +11,16 @@ Working with regular sequences of numbers is a common task in programming. Many 
 ⇡12
 ```
 
-If you want to include the end value to get the range `[0, n]`, you can [`add`]()`1` first.
+If you want to include the end value to get the range `[0, n]`, you can use a numeric [subscript](/docs/subscripts). This makes the range inclusive and sets the starting value.
 
 ```uiua
-⇡+1 5
-⇡+1 12
+⇡₀ 5
+⇡₀ 12
 ```
 
-[`add`]()`1` afterward to get the range `[1, n]`.
-
 ```uiua
-+1⇡ 5
-+1⇡ 12
+⇡₁ 5
+⇡₁ 12
 ```
 
 The [`range`]() of a negative number gives the range `(0, n]`.

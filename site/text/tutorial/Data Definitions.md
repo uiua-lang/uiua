@@ -350,7 +350,7 @@ However, this is not the case for boxing data definitions. Notice here how there
 Person {"Alice" "Bob" "Carol"} [21 54 49]
 ```
 
-We can use the idiom `/⍚⊂≡` to properly initialize lists of default fields as well as repeat items.
+We can use the idiom `/⍚⊂≡` to properly initialize lists of default fields as well as repeat items. This idiom has the alias `soa`.
 
 ```uiua
 ~Person {Name Age Score ← 0}

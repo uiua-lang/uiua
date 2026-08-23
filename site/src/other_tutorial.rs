@@ -52,7 +52,12 @@ impl OtherTutorialPage {
                 title_markdown("Ranges", "/text/other_tutorial/ranges.md", View::default())
                     .into_view()
             }
-            Self::EvenMoreArgument => EvenMoreArgument().into_view(),
+            Self::EvenMoreArgument => title_markdown(
+                "Even More Argument Manipulation",
+                "/text/other_tutorial/even_more_argument.md",
+                View::default(),
+            )
+            .into_view(),
         }
     }
     pub fn title(&self) -> &'static str {
@@ -271,103 +276,5 @@ pub fn Documentation() -> impl IntoView {
         <p>"Calling an "<code>"# External!"</code>" function that hasn't been bound will throw an error."</p>
         <Editor example="F ← |2 # External!\nF 1 2"/> // Should fail
         <p>"To be compatible with "<code>"# External!"</code>", Rust functions should be bound via "<a href="https://docs.rs/uiua/latest/uiua/struct.Compiler.html#method.create_bind_function"><code>"Compiler::create_bind_function"</code></a>"."</p>
-    }
-}
-
-#[component]
-fn EvenMoreArgument() -> impl IntoView {
-    use Primitive::*;
-    view! {
-        <Title text=format!("Even More Argument Manipulation - {} Docs", lang())/>
-        <h1>"Even More Argument Manipulation"</h1>
-        <p>"In the "<A href="/tutorial/More Argument Manipulation">"More Argument Manipulation"</A>" tutorial, we learned about various ways of working with arguments including "<Prim prim=Fork/>", "<Prim prim=Bracket/>" and "<Prim prim=Both/>". At the beginning of this tutorial, we touched briefly on "<Prim prim=On/>" and "<Prim prim=By/>"."</p>
-        <p>"But "<Prim prim=On/>" and "<Prim prim=By/>" are just two modifiers in a larger category."</p>
-
-        <Hd id="more-modifiers">"More Modifiers"</Hd>
-        <p>"Consider that "<Prim prim=On/>" keeps the "<strong>"first"</strong>" argument "<strong>"before"</strong>" the outputs of a function, and "<Prim prim=By/>" keeps the "<strong>"last"</strong>" argument "<strong>"after"</strong>" the outputs of a function. We can then conceive of similar modifiers that fill in other possible combinations."</p>
-        <p><Prim prim=With/>" keeps the "<strong>"last"</strong>" argument "<strong>"before"</strong>" the outputs of a function, and "<Prim prim=Off/>" keeps the "<strong>"first"</strong>" argument "<strong>"after"</strong>" the outputs of a function."</p>
-        <p><Prim prim=Below/>" and the "<code>"# Experimental!"</code>" "<Prim prim=Above/>" do something similar, but with "<em>"every"</em>" argument instead of just the first or last."</p>
-        <p>"This table shows how these six modifiers are related:"</p>
-        <table class="bordered-table header-centered-table">
-            <tr>
-                <td colspan="2">"Keep __ argument"</td>
-                <th></th>
-                <th></th>
-            </tr>
-            <tr>
-                <th>"the first"</th>
-                <th>"the last"</th>
-                <th>"every"</th>
-                <th></th>
-                <th></th>
-            </tr>
-            <tr>
-                <td><Prim prim=On/></td>
-                <td><Prim prim=With/></td>
-                <td></td>
-                <th>"above"</th>
-                <td rowspan="2">"__ the outputs"</td>
-            </tr>
-            <tr>
-                <td><Prim prim=Off/></td>
-                <td><Prim prim=By/></td>
-                <td><Prim prim=Below/></td>
-                <th>"below"</th>
-            </tr>
-        </table>
-        <p>"That's the theory, but how should we actually use and think about these modifiers?"</p>
-
-        <Hd id="on"><Prim prim=On/></Hd>
-        <p>"Use "<Prim prim=On/>" when you want to transform an array with some other array, but reuse the first."</p>
-        <p>"One common example of this is in upscaling an image. We want to use "<Prim prim=Keep/>" to scale the array along 2 different axes, so we can use "<Prim prim=On/>" preserve the scale to be reused."</p>
-        <Editor example="▽⟜≡▽ 3 [1_2 3_4]"/>
-        <Editor example="▽⟜≡▽ 0.2 Logo"/>
-        <p>"Another common example is getting N numbers between 0 and 1. We want to "<Prim prim=Div/>" a "<Prim prim=Range/>" by its length, so we use "<Prim prim=On/>" to reuse the N."</p>
-        <Editor example="÷⟜⇡5"/>
-
-        <Hd id="by"><Prim prim=By/></Hd>
-        <p>"Use "<Prim prim=By/>" when you want to operate on an array based on some value "<em>"derived"</em>" from that array."</p>
-        <p>"For example, if we want to "<Prim prim=Keep/>" only odd numbers in an array, we derive the mask while preserving the array with "<Prim prim=By/>"."</p>
-        <Editor example="▽⊸◿2 [2 3 8 4 9 1]"/>
-        <p>"This works the same if we wanted to keep all numbers above or below a certain value."</p>
-        <Editor example="▽⊸≥4 [2 3 8 4 9 1]"/>
-
-        <Hd id="off"><Prim prim=Off/></Hd>
-        <p>"Use "<Prim prim=Off/>" in similar situations to "<Prim prim=By/>", but when the derived calculation also relies on later arguments."</p>
-        <p>"For example, if we wanted to keep all indices in an array that have "<code>"1"</code>"s in some mask, we can use "<Prim prim=Off/>" to make sure everything ends up where we want it."</p>
-        <Editor example="▽⤚⊏ [1 2 3 4 5] [0 1 0 0 1 1 0 1]"/>
-
-        <Hd id="with"><Prim prim=With/></Hd>
-        <p><Prim prim=With/>" has fewer common patterns that come up often, (other than "<Prims prims=[Assert, With, Match]/>" for "<A href="/tutorial/Testing">"testing"</A>"), but it can still be useful in some situations."</p>
-        <p>"Its name was chosen because after using it, you end up with an array "<em>"with"</em>" a transformed version of it."</p>
-        <Editor example="⊟⤙↻1 [1 2 3 4 5] # Couple *with* rotation"/>
-
-        <Hd id="below"><Prim prim=Below/></Hd>
-        <p>"Use "<Prim prim=Below/>" when you want to call a function without disturbing the argument list "<em>"at all"</em>"."</p>
-        <p><Prim prim=By/>" is generally prefered for monadic functions on a single argument, but "<Prim prim=Below/>" is useful for the more general case."</p>
-        <p>"For example, here, we use "<Prim prim=Below/>" to retrieve the "<Prim prim=Shape/>"s of two arrays so that we can scale one array to the size of the other."</p>
-        <Editor example="∧(⍉▽)÷◡∩△ [1_2 3_4] °△4_6"/>
-        <p>"For a simpler example, we can use "<Prim prim=Below/>" with "<Prim prim=Gap/>" to call a function on a later argument."</p>
-        <Editor example="◡⋅⧻ 1_2_3 \"hello!\""/>
-        <p>"This leaves the output of the function at the "<em>"beginning"</em>" of the arguments, and leaves the input to the function alone, unlike "<Prim prim=Dip/>" would."</p>
-
-        <br/>
-        <hr/>
-
-        <p>"Mastering these argument manipulation modifiers takes time and practice. When you end up with a convoluted bit of argument manipulation code, try to see if you can simplify it by using one of these modifiers."</p>
-        <p>"Often, even simple patterns can be simplified further. For example, "<Prim prim=Backward/>"near"<Prim prim=On/>" is often just "<Prim prim=Off/>"."</p>
-        <Editor example="˜(▽<2)⟜⊡ [1_2 0_1] [0_1_2 3_4_5]\n  ▽<2 ⤚⊡ [1_2 0_1] [0_1_2 3_4_5]"/>
-        <p>"When you reduce a pattern to its simplest form, you can often gain a better view of the flow of data through the program."</p>
-
-        <Hd id="sided-subscripts">"Sided Subscripts"</Hd>
-        <p>"Normal "<A href="/docs/subscripts">"numeric subscripts"</A>" change the behavior of a function or modifier based on a number. There is another kind of subscripts that captures the idea of an operation having a certain \"orientation\" to the left or right."</p>
-        <p>"These "<em>"sided"</em>" subscripts use "<code>"⌞"</code>" to denote \"leftness\" or "<code>"⌟"</code>" to denote \"rightness\". They are formatted from the normal subscript "<code>","</code>" followed by a "<code>"<"</code>" or "<code>">"</code>"."</p>
-        <p>"Currently, the only modifiers that support sided subscripts are "<Prim prim=Both/>" and "<Prim prim=Bracket/>". Instead of passing two separate sets of arguments to the modifier's function(s), one of the arguments will be passed to both function calls. Let's see some examples to get a better idea of how this works."</p>
-        <p>"Normal "<Prim prim=Both/>" calls its function on two sets of arguments."</p>
-        <Editor example="{∩⊟ 1 2 3 4}"/>
-        <p>"Sided "<Prim prim=Both/>" uses either the first or last argument in both calls."</p>
-        <Editor example="{∩⌞⊟ 1 2 3}\n{∩⌟⊟ 1 2 3}"/>
-        <p>"Sided "<Prim prim=Bracket/>" has similar behavior."</p>
-        <Editor example="{⊓⌞⊟+ 100 20 3}\n{⊓⌟⊟+ 100 20 3}"/>
     }
 }

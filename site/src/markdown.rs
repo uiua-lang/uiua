@@ -241,6 +241,36 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                     </div>)
                     .into_view();
                 }
+                "ARG MODIFIER TABLE" => {
+                    return view!(<table class="bordered-table header-centered-table">
+                        <tr>
+                            <td colspan="2">"Keep __ argument"</td>
+                            <th></th>
+                            <th></th>
+                        </tr>
+                        <tr>
+                            <th>"the first"</th>
+                            <th>"the last"</th>
+                            <th>"every"</th>
+                            <th></th>
+                            <th></th>
+                        </tr>
+                        <tr>
+                            <td><Prim prim=Primitive::On/></td>
+                            <td><Prim prim=Primitive::With/></td>
+                            <td><Prim prim=Primitive::Above/>"🧪"</td>
+                            <th>"above"</th>
+                            <td rowspan="2">"__ the outputs"</td>
+                        </tr>
+                        <tr>
+                            <td><Prim prim=Primitive::Off/></td>
+                            <td><Prim prim=Primitive::By/></td>
+                            <td><Prim prim=Primitive::Below/></td>
+                            <th>"below"</th>
+                        </tr>
+                    </table>)
+                    .into_view();
+                }
                 "<dropdown>" => return view!(<code>"⌵"</code>).into_view(),
                 "\\" => return view!(<code>"\\"</code>).into_view(),
                 lit => {

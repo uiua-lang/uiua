@@ -316,6 +316,10 @@ impl Primitive {
             alias!((epsilon, PrimComponent::Epsilon)),
             alias!((r, Reduce), (a, Content), (ze, Join)),
             alias!((r, Reduce), (a, Content), (z, Join)),
+            alias!((p, Add), (g, PrimComponent::E), (a, PrimComponent::Sub0)),
+            alias!((k, Keep), (b, By), (m, MemberOf)),
+            alias!((k, Keep), (n, Not), (b, By), (m, MemberOf)),
+            alias!((s, Reduce), (,Inventory), (o, Join), (a, Rows)),
             alias!(
                 (s, PrimComponent::OpenCurly),
                 (t, PrimComponent::Char),
@@ -327,9 +331,6 @@ impl Primitive {
             alias!((nat, PrimComponent::Nat)),
             alias!((bool, PrimComponent::Bool)),
             alias!((char, PrimComponent::Char)),
-            // alias!((co, Multivector), (mp, PrimComponent::SubI)),
-            // alias!((com, Multivector), (pl, PrimComponent::SubI)),
-            // alias!((comp, Multivector), (plex, PrimComponent::SubI)),
             alias!((co, Neg), (nj, PrimComponent::SubRight)),
             alias!((conju, Neg), (gate, PrimComponent::SubRight)),
             alias!((du, Neg), (al, PrimComponent::Sub4)),
@@ -364,9 +365,6 @@ impl Primitive {
                 (i, Backward),
                 (ch, Mul)
             ),
-            alias!((p, Add), (g, PrimComponent::E), (a, PrimComponent::Sub0)),
-            alias!((k, Keep), (b, By), (m, MemberOf)),
-            alias!((k, Keep), (n, Not), (b, By), (m, MemberOf)),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

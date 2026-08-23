@@ -6,6 +6,8 @@
 - Non-decimal numeric literals
 - `switch` subscripts
 - `fold` subscripts
+- Useful behavior for noadic functions in `rows`, `inventory`, `table`, and `stencil`
+- Chained access rework
 
 ## Planned Features
 Features that are planned to be implemented in the future.

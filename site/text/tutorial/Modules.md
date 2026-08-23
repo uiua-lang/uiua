@@ -12,7 +12,7 @@ Both delimiters format from `---`.
 
 The `┌─╴` should be immediately followed by a name for the module. Module names follow the same rules as other bindings.
 
-Names from inside the module can be referenced by following the module name with a `~`.
+Names from inside the module can be referenced by following the module name with a `.`.
 
 ```uiua kala arms help(Try formatting!)
 ---Mod
@@ -20,7 +20,7 @@ Names from inside the module can be referenced by following the module name with
   F ← +1
   G ← F F
 ---
-Mod~G Mod~A
+Mod.G Mod.A
 ```
 
 Bindings defined inside a scoped module are only visible inside the module.
@@ -53,7 +53,7 @@ With a normal `~`, these names are brought into the module's parent's scope as p
     X ← 5
   └─╴
 └─╴
-Mod~X
+Mod.X
 ```
 
 You can use a `≁`, which formats from `~~` to make them private instead.
@@ -64,7 +64,7 @@ You can use a `≁`, which formats from `~~` to make them private instead.
     X ← 5
   └─╴
 └─╴
-Mod~X
+Mod.X
 ```
 
 Names defined above the module can be referenced inside it.
@@ -74,7 +74,7 @@ B ← 5
 ┌─╴Mod
   C ← ×2 B
 └─╴
-Mod~C
+Mod.C
 ```
 
 ## Module Import Macros
@@ -141,7 +141,7 @@ We can then reference items from that module anywhere using a `~`.
 ```uiua
 Ex ~ "example.ua"
 
-Ex~Increment 10
+Ex.Increment 10
 ```
 
 This can be mixed and matched with the other import syntax.
@@ -149,9 +149,9 @@ This can be mixed and matched with the other import syntax.
 ```uiua
 Ex ~ "example.ua" ~ Increment Square
 
-Ex~Double Square 3
-Ex~Mac!×
-Increment Ex~Bar
+Ex.Double Square 3
+Ex.Mac!×
+Increment Ex.Bar
 ```
 
 ## Aliasing Modules
@@ -160,8 +160,8 @@ If you want to be able to refer to an item from a module with a different name, 
 
 ```uiua
 Ex ~ "example.ua"
-Sqr ← Ex~Square
-Sp ← Ex~Span
+Sqr ← Ex.Square
+Sp ← Ex.Span
 
 Sp⟜Sqr 3
 ```
@@ -173,7 +173,7 @@ You can also re-bind the module itself.
 ```uiua
 Ex ~ "example.ua"
 LocalEx ← Ex
-LocalEx~Square 7
+LocalEx.Square 7
 ```
 
 ## Visibility
@@ -210,7 +210,7 @@ Imports can be made private by using a `≁` instead of the first `~`. `≁` for
 ┌─╴M
   Ex ~~ "example"
 └─╴
-M~Ex~Foo
+M.Ex.Foo
 ```
 
 `≁` can also be used to make imported items private to the importing module.
@@ -232,7 +232,7 @@ Scoped modules can be made private with special delimiters `┌╶╶` and `└�
     C ← 5
   └╶╶
 └─╴
-A~B~C
+A.B.C
 ```
 
 ```uiua should fail
@@ -242,7 +242,7 @@ A~B~C
     F = +1
   ---
 ---
-A~M~F 5
+A.M.F 5
 ```
 
 The formatter will automatically change the closing delimiter to match its corresponding opening delimiter.

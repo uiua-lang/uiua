@@ -24,7 +24,10 @@ use smallvec::SmallVec;
 
 use crate::{
     Complex, Context, Primitive, RNG, Shape, Uiua, UiuaResult,
-    algorithm::pervade::{self, InfalliblePervasiveFn, bin_pervade_recursive},
+    algorithm::{
+        pervade::{self, InfalliblePervasiveFn, bin_pervade_recursive},
+        validate_size_impl,
+    },
     array::*,
     boxed::Boxed,
     context::FillValue,
@@ -370,6 +373,7 @@ impl Value {
                 }
             })
             .collect();
+        validate_size_impl(self.elem_size(), shape.iter().copied()).map_err(|e| env.error(e))?;
         val_as_arr!(self, |a| a.undo_shape(shape, reversed_axes, env))
     }
 }

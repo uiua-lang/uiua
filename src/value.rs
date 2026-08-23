@@ -289,7 +289,8 @@ impl Value {
     pub(crate) fn pop_row(&mut self) -> Option<Self> {
         val_as_arr!(self, |array| array.pop_row().map(Value::from))
     }
-    pub(crate) fn elem_size(&self) -> usize {
+    /// The number of bytes used by one of this value's elements
+    pub fn elem_size(&self) -> usize {
         match self {
             Self::Num(_) => size_of::<f64>(),
             Self::Byte(_) => size_of::<u8>(),

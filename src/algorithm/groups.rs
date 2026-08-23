@@ -719,26 +719,45 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
     }
 
     // Ungroup
-    let mut ungrouped_rows: Vec<_> = ungrouped_rows
-        .into_rows()
-        .map(|row| row.unboxed().into_rows())
-        .collect();
-    let mut ungrouped = Vec::with_capacity(indices.element_count() * original.row_len());
+    let mut ungrouped = Vec::with_capacity(ungrouped_rows.row_count());
+    for row in ungrouped_rows.into_rows() {
+        let mut row = row.unboxed();
+        ungrouped.push(
+            if row.rank() + indices.rank().saturating_sub(1) >= original.rank() {
+                Ok(row.into_rows())
+            } else {
+                if original.rank() - row.rank() > indices.rank() {
+                    for &d in (original.shape.iter().skip(indices.rank()))
+                        .take(original.rank() - row.rank() - indices.rank())
+                        .rev()
+                    {
+                        row.reshape_scalar(Ok(d as isize), false, env.ctx())?;
+                    }
+                }
+                Err(row)
+            },
+        )
+    }
+    let mut assembled = Vec::with_capacity(indices.element_count() * original.row_len());
     let depth = indices.rank().saturating_sub(1);
     for (i, &index) in indices.data.iter().enumerate() {
         let original_row = original.depth_row(depth, i);
         if index >= 0 {
-            ungrouped.push(ungrouped_rows[index as usize].next().ok_or_else(|| {
-                env.error("A group's length was modified between grouping and ungrouping")
-            })?);
+            let ungrouped_row = match &mut ungrouped[index as usize] {
+                Ok(rows) => rows.next().ok_or_else(|| {
+                    env.error("A group's length was modified between grouping and ungrouping")
+                })?,
+                Err(row) => row.clone(),
+            };
+            assembled.push(ungrouped_row);
         } else {
-            ungrouped.push(original_row);
+            assembled.push(original_row);
         }
     }
-    if ungrouped_rows.iter_mut().any(|row| row.next().is_some()) {
+    if (ungrouped.into_iter()).any(|row| row.is_ok_and(|mut row| row.next().is_some())) {
         return Err(env.error("A group's length was modified between grouping and ungrouping"));
     }
-    let mut val = env.rows_to_value(ungrouped)?;
+    let mut val = env.rows_to_value(assembled)?;
     val.shape.remove(0);
     for &dim in indices.shape.iter().rev() {
         val.shape.prepend(dim);

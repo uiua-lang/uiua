@@ -48,7 +48,7 @@
 ⍤⤙≍ [10 2 30 4 50] ⍜▽(×10) ⊸◿2 [1 2 3 4 5]
 ⍤⤙≍ [0 9 2 7 4 5 6 3 8 1] ⍜⬚0_1▽⇌ [] ⇡10
 ⍤⤙≍ [1 7 18] ⍜▽\+ 5 [1 2 3]
-⍤⤙≍ ["a bc" "b cd" "c de" "d ef"] ⍜▽(⊞+⇡4) ⊸≠@  "a bc"
+⍤⤙≍ ["a bc" "b cd" "c de" "d ef"] ⍜▽(⊞+⇡4) ⊸≠@ "a bc"
 ⍤⤙≍ [1_5_2 3_5_4] ⍜▽⋅[1_2 3_4] 1_0_1 1_5_3
 
 ⍤⤙≍ {⊸(⇡⧻)}⟜{°⊏} "Hello"
@@ -349,19 +349,20 @@ X ← ⚂
 ⍤⤙≍ [2 1 0 5 4 3 8 7 6] ⍜⧈⌟∘≡⇌3⇡9
 
 # Partition
-⍤⤙≍ "World! Hello" ⍜⊜□⇌ ⊸≠@  "Hello World!"
-⍤⤙≍ "Just A Little Guy" ⍜⊜⊢⌵ ⊸≠@  "Just a little guy"
+⍤⤙≍ "World! Hello" ⍜⊜□⇌ ⊸≠@ "Hello World!"
+⍤⤙≍ "Just A Little Guy" ⍜⊜⊢⌵ ⊸≠@ "Just a little guy"
 ⍤⤙≍ {"Hello" "World!"} {⍜∩⊜□∘ ∩(⊸≠@l) "Hello" "World!"}
 ⍤⤙≍ ⤙⍜⊜□∘ [1] "a"
 ⍤⤙≍ ⤙⍜⊜□∘ [] ""
-⍤⤙≍ {"Hey" @  "buddy"} ⍜⊜⌅□∘⊸≠@ "Hey buddy"
+⍤⤙≍ {"Hey" @ "buddy"} ⍜⊜⌅□∘⊸≠@ "Hey buddy"
 
 # Group
-⍤⤙≍ "sdrow emo sera esehT" ⍜⊕□≡⍜°□⇌ ⊸≠@  $ These are some words
+⍤⤙≍ "sdrow emo sera esehT" ⍜⊕□≡⍜°□⇌ ⊸≠@ $ These are some words
 ⍜⊕∘(↧0) -1[1_0_0 0_1_1 1_0_1] [1_2_∞ 3_∞_4 ∞_5_6]
 ⍤⤙≍ [0_2_∞ 3_0_0 0_5_0]
 ⍤⤙≍ ⤙⍜⊕□∘ [1] "a"
 ⍤⤙≍ ⤙⍜⊕□∘ [] ""
+⍤⤙≍ "abcdcaa" ⍜⊕□⍚⊢ [0 1 2 ¯1 2 0 0] "abcdefg"
 
 # Rows
 ⍤⤙≍ [0_¯1_2 3_¯4_5 6_¯7_8] ⍜≡⊡¯ 1 °△3_3

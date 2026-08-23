@@ -12,9 +12,11 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`un °`](https://uiua.org/docs/un)[`reshape ↯`](https://uiua.org/docs/reshape) to output the deshaped array alongside its shape
 - Add `$_` syntax to remove labels
 - Add [`cos`](https://uiua.org/docs/cos), [`tan`](https://uiua.org/docs/tan), [`sinh`](https://uiua.org/docs/sinh), [`cosh`](https://uiua.org/docs/cosh) functions, and [`tanh`](https://uiua.org/docs/tanh) functions, with associated inverses
+- Add [`un °`](https://uiua.org/docs/un)[`apng`](https://uiua.org/docs/apng) for APNG decoding
 - Add sided subscripts for [`negate ¯`](https://uiua.org/docs/negate), which get the conjugate or negative conjugate
 - Add numeric subscripts for [`rise ⍏`](https://uiua.org/docs/rise) and [`fall ⍖`](https://uiua.org/docs/fall), which give [`pick ⊡`](https://uiua.org/docs/pick)-compatible indices
 - Allow for multiple outputs from monadic [`tuples ⧅`](https://uiua.org/docs/tuples)
+- [`under ⍜`](https://uiua.org/docs/under)[`group ⊕`](https://uiua.org/docs/group) now promotes low-rank groups like [`keep ▽`](https://uiua.org/docs/keep) and others do.
 - Lone numeric subscripts now format to number literals, making it easier to split them off
 - Add `NoInit` constructor to data definitions construct data without running initializers (but still running validators)
 - Allow for function arguments to macros to be indicated in a signature comment

@@ -1209,19 +1209,8 @@ impl Compiler {
             Stencil => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
-                let inner_sig = sn.sig;
                 let (mut n, mut side) = (None, None);
                 if let Some(sub) = subscript {
-                    if inner_sig.args() != 1 {
-                        self.add_error(
-                            modified.modifier.span.clone().merge(sub.span.clone()),
-                            format!(
-                                "{} can only be subscripted if its function \
-                                is monadic, but the signature is {inner_sig}",
-                                Stencil.format()
-                            ),
-                        );
-                    }
                     let sub = self.validate_subscript_int(sub, &Stencil.format());
                     n = sub.value.num;
                     if let Some(ss) = sub.value.side {

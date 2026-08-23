@@ -28,7 +28,7 @@ pub fn stencil(ops: Ops, side: Option<SubSide>, env: &mut Uiua) -> UiuaResult {
         )));
     }
     // Adjacent stencil
-    if f.sig.args() > 1 && side.is_none() {
+    if f.sig.args() > 1 {
         let mut xs = env.pop(1)?;
         xs.match_fill(env.ctx());
         let n = f.sig.args();
@@ -37,25 +37,65 @@ pub fn stencil(ops: Ops, side: Option<SubSide>, env: &mut Uiua) -> UiuaResult {
             && push_empty_rows_value(&f, [&xs, &xs], false, &mut Default::default(), env)
         {
             Ok(())
-        } else if f.sig == (2, 1) {
+        } else if f.sig == (2, 1) && side.is_none() {
             adjacent_impl(f, xs, n, env)
         } else {
-            val_as_arr!(&mut xs, |arr| pad_adjacent_fill(arr, n, env));
-            if xs.row_count() < n {
+            if side.is_none() {
+                val_as_arr!(&mut xs, |arr| pad_adjacent_fill(arr, n, env));
+            }
+            if xs.row_count() < n && (side.is_none() || xs.row_count() == 0) {
                 for _ in 0..f.sig.outputs() {
                     env.push(xs.first_dim_zero());
                 }
                 return Ok(());
             }
-            let win_count = xs.row_count() - (n - 1);
+            let win_count = match side {
+                Some(_) => (xs.row_count() + env.value_fill().is_some() as usize * (n - 1)) / n,
+                None => xs.row_count() - (n - 1),
+            };
             let mut new_rows = multi_output(f.sig.outputs(), Vec::with_capacity(win_count));
-            for w in 0..win_count {
-                for i in (0..n).rev() {
-                    env.push(xs.row(w + i));
+            match side {
+                None => {
+                    for w in 0..win_count {
+                        for i in (0..n).rev() {
+                            env.push(xs.row(w + i));
+                        }
+                        env.exec(f.clone())?;
+                        for i in 0..f.sig.outputs() {
+                            new_rows[i].push(env.pop("stencil's function result")?);
+                        }
+                    }
                 }
-                env.exec(f.clone())?;
-                for i in 0..f.sig.outputs() {
-                    new_rows[i].push(env.pop("stencil's function result")?);
+                Some(side) => {
+                    let fill = env.value_fill().map(|fv| fv.value.clone());
+                    let offset = xs.row_count() % n;
+                    let skip = match side {
+                        SubSide::Left => 0,
+                        SubSide::Right => offset * fill.is_none() as usize,
+                    };
+                    let mut rows = xs.into_rows().skip(skip);
+                    let arg_bottom = env.stack_height().saturating_sub(n);
+                    let mut start = 0;
+                    // Handle left padding for right side
+                    if let Some(fill) = &fill
+                        && let SubSide::Right = side
+                    {
+                        for _ in 0..n - offset {
+                            env.push(fill.clone());
+                        }
+                        start = n - offset;
+                    }
+                    for _ in 0..win_count {
+                        for _ in start..n {
+                            env.push(rows.next().unwrap_or_else(|| fill.clone().unwrap()))
+                        }
+                        start = 0; // start is only not 0 for the first iteration
+                        env.stack_mut()[arg_bottom..].reverse();
+                        env.exec(f.clone())?;
+                        for i in 0..f.sig.outputs() {
+                            new_rows[i].push(env.pop("stencil's function result")?);
+                        }
+                    }
                 }
             }
             for new_rows in new_rows.into_iter().rev() {

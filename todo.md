@@ -3,6 +3,7 @@
 # 0.19
 
 # 0.20
+- `uiua shell`
 - Non-decimal numeric literals
 - `switch` subscripts
 - `fold` subscripts

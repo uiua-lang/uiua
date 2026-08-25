@@ -29,7 +29,7 @@ fn idioms() -> impl IntoView {
             }
         }
         idioms.push(view!(<tr>
-            <td style="text-wrap: wrap">{comment}</td>
+            <td style="white-space: pre-wrap">{comment}</td>
             <td><Editor example={&code}/></td>
         </tr>));
     }
@@ -40,10 +40,10 @@ fn aliases() -> impl IntoView {
     Primitive::non_deprecated()
         .filter(|p| !p.aliases().is_empty())
         .map(|p| {
-            view!(<tr><td><Prim prim=p/></td><td>{ 
+            view!(<tr><td><Prim prim=p/></td><td>{
                 (p.aliases().iter())
                     .map(|&s| view!(<code>{s}</code>" "))
-                    .collect::<Vec<_>>() 
+                    .collect::<Vec<_>>()
             }{
                 (p.aliases().iter().any(|a| a.contains("&")) || matches!(p, Primitive::Sys(_)))
                     .then(|| view!(<span style="opacity: 0.7">"Temporary"</span>))

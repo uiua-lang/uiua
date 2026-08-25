@@ -14,13 +14,56 @@ Uiua is a general-purpose array-oriented programming language with a focus on ta
 
 All the biggest features added in Uiua 0.19.0 are still `# Experimental!`, but there are also many smaller stable changes.
 
+## Notable Small Stable Features
+
+### New Module Access Syntax
+
+Accessing items through from now uses `.` rather than `~`. This is easier to type and nicer to read. Imports and data definitions still use `~`. [Chained field access](<https://uiua.org/tutorial/Data Definitions#chained-access>) now uses `‥` instead of `≈`.
+
+```uiua
+~Date {Year Month Day}
+~Stats {Str ← 10|Dex ← 10|Con ← 10}
+~Person {Name Dob ← Date|Stats ← Stats}
+Person "Dan" 1396 2 29
+⊃(Person.Name
+| Date.Year Person.Dob
+| Person.Stats‥Dex)
+```
+
+### All Trig Functions
+
+[`sine ∿`](https://uiua.org/docs/sine) and [`atangent ∠`](https://uiua.org/docs/atangent) have been in the language since the beginning, but all trigonometric and hyperbolic functions are now present as glyphless primitive `monadic` functions. They also have properly implemented inverses, and work on both real and [`complex ℂ`](https://uiua.org/docs/complex) numbers.
+
+The new functions are [`cos`](https://uiua.org/docs/cos), [`tan`](https://uiua.org/docs/tan), [`sinh`](https://uiua.org/docs/sinh), [`cosh`](https://uiua.org/docs/cosh), and [`tanh`](https://uiua.org/docs/tanh).
+
+### Power Set [`tuples ⧅`](https://uiua.org/docs/tuples)
+
+This is a **breaking change** for `monadic` [`tuples ⧅`](https://uiua.org/docs/tuples). It now gives the power set rather than prefixes. Sided subscripts give prefixes or suffixes.
+
+```uiua
+⧅□  ⇡3
+⧅⌞□ ⇡4
+⧅⌟□ ⇡4
+```
+
+### [`rise ⍏`](https://uiua.org/docs/rise) and [`fall ⍖`](https://uiua.org/docs/fall) Subscripts
+
+Numeric subscripts for [`rise ⍏`](https://uiua.org/docs/rise) and [`fall ⍖`](https://uiua.org/docs/fall) give a list of multi-dimensional indices that would sort each rank-n subarray if indexed with [`pick ⊡`](https://uiua.org/docs/pick).
+
+```uiua
+[3_1_5 2_0_4]
+◡⊡⊸⍏₀
+```
+
+This makes it easy to work with multidimensional ordered data.
+
 ## A Note on the Purpose of `# Experimental!`
 
 From its inception, Uiua has been a testing ground for tacit array programming language design concepts. This has since expanded to include trying out things that most languages do not provide out of the box, but which are nice to have at hand, well-integrated into the language. Currently stabilized instances of this include [`json`](https://uiua.org/docs/json), [`hsv`](https://uiua.org/docs/hsv), [`image`](https://uiua.org/docs/image)/[`audio`](https://uiua.org/docs/audio)/[`gif`](https://uiua.org/docs/gif) encoding, and one of my personal favorites, [`path`](https://uiua.org/docs/path). Most of these features exist baked into the language because they are either commonly used and simple enough to be a lightweight addition, or complex enough to implement on one's own that having a simple, fast version at hand makes the language much more powerful.
 
 However, there are some other features that most languages do not include out of the box that are currently still `# Experimental!`. This is because they often push the limits of what a language should include out of the box. [`layout`](https://uiua.org/docs/layout) is really useful for text rendering, and is espeicially nice to have because images already have such good support, but does a *language* really need to include a font parser and layout engine? [`voxels`](https://uiua.org/docs/voxels) is great for multidimensional visualizations, but absent context, I think most people would say that the need to render voxel scenes should probably be the responsibility of a library. I will call these types of features *boundary* features.
 
-This boundary-pushing is not the case for all `# Experimental!` features. Some are more Uiua-specific, like [`reach`](https://uiua.org/docs/reach) or [`pattern`](https://uiua.org/docs/reach). Whether they are stabilized is less a question of what belongs in a language and more a question of how Uiua should work. I will call these types of features *Uiua-specific* features.
+This boundary-pushing is not the case for all `# Experimental!` features. Some are more Uiua-specific, like [`reach ∪`](https://uiua.org/docs/reach) or [`pattern ⍡`](https://uiua.org/docs/reach). Whether they are stabilized is less a question of what belongs in a language and more a question of how Uiua should work. I will call these types of features *Uiua-specific* features.
 
 Some other `# Experimental!` features are essentially certain to be eventually stabilized, with the only thing delaying that being whether their API and behavior is the best it can be. These are things like [`recur`](https://uiua.org/docs/recur) and [`&ffi`](https://uiua.org/docs/&ffi) (and related memory functions). I will call these types of features *necessary* features.
 
@@ -60,7 +103,7 @@ Custom subscripts are currently limited to numeric subscripts. Sided subscripts 
 
 Uiua 0.19.0 adds an `# Experimental!` type system! I've already detailed its design philosphy and functionality in [this blog post](https://www.uiua.org/blog/a-uiua-type-system), so I won't go into a ton of detail here.
 
-For the basics, you can read the documentation for [`validate`](https://uiua.org/docs/validate) and [type signature comments](https://www.uiua.org/docs/experimental#type-checking).
+For the basics, you can read the documentation for [`validate ⊨`](https://uiua.org/docs/validate) and [type signature comments](https://www.uiua.org/docs/experimental#type-checking).
 
 This is somewhere between the three kinds of `# Experimental!` features detailed above. Many languages have static type systems, and many do not. This new system is meant to see whether a type system is appropriate for Uiua.
 
@@ -68,7 +111,7 @@ This is somewhere between the three kinds of `# Experimental!` features detailed
 
 Uiua 0.19.0 includes a complete rewrite and overhaul of the `# Experimental!` [Geometric Algebra](https://en.wikipedia.org/wiki/Geometric_algebra) system by adding a multivector scalar type for arrays. Multivectors are algebraic objects which are useful for doing geoemtric operations in multiple dimensions. This includes things like rotations, intersections, and projections. Multivectors can be thought of as a sort of superset of complex numbers, but they are also much more.
 
-Multivector arrays can be created with the [`multivector`](https://uiua.org/docs/multivector) functions. There is also a full Uiua [Geometric Algebra tutorial](https://www.uiua.org/docs/experimental#geometric-algebra). It's end result is this gif of a rotating tesseract!
+Multivector arrays can be created with the [`multivector 𝕍`](https://uiua.org/docs/multivector) functions. There is also a full Uiua [Geometric Algebra tutorial](https://www.uiua.org/docs/experimental#geometric-algebra). It's end result is this gif of a rotating tesseract!
 
 ```uiua
 # Experimental!

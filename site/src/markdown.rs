@@ -325,8 +325,9 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                     let text = token.span.as_str(&inputs, |s| s.to_string());
                     match token.value {
                         Token::Glyph(prim)
-                            if prim.name() == text
-                                || prim.glyph().is_some_and(|c| c.to_string() == text) =>
+                            if !prim.is_deprecated()
+                                && (prim.name() == text
+                                    || prim.glyph().is_some_and(|c| c.to_string() == text)) =>
                         {
                             frags.push(view!(<Prim prim=prim glyph_only=true/>).into_view())
                         }
@@ -512,8 +513,9 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                     let text = token.span.as_str(&inputs, |s| s.to_string());
                     match token.value {
                         Token::Glyph(prim)
-                            if prim.name() == text
-                                || prim.glyph().is_some_and(|c| c.to_string() == text) =>
+                            if !prim.is_deprecated()
+                                && (prim.name() == text
+                                    || prim.glyph().is_some_and(|c| c.to_string() == text)) =>
                         {
                             s.push_str(&prim_html(prim, true, false))
                         }

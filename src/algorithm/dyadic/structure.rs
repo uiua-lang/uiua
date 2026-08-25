@@ -143,11 +143,7 @@ impl Value {
             index.as_shaped_indices(env.ctx().is_scalar_filled(&self), env)?;
         if idx_shape.len() > 1 {
             let last_axis_len = *idx_shape.last().unwrap();
-            if last_axis_len == 0 {
-                if idx_shape[..idx_shape.len() - 1].iter().any(|&n| n > 1) {
-                    return Err(env.error("Cannot undo pick with duplicate indices"));
-                }
-            } else {
+            if let Some(capacity) = index_data.len().checked_div(last_axis_len) {
                 if idx_shape[..index.rank() - 1] != self.shape[..self.rank().min(index.rank() - 1)]
                 {
                     return Err(env.error(format!(
@@ -156,7 +152,7 @@ impl Value {
                         index.shape, self.shape
                     )));
                 }
-                let mut sorted_indices = Vec::with_capacity(index_data.len() / last_axis_len);
+                let mut sorted_indices = Vec::with_capacity(capacity);
                 for (i, index) in index_data.chunks(last_axis_len).enumerate() {
                     sorted_indices.push((i, index));
                 }
@@ -184,6 +180,10 @@ impl Value {
                         "Cannot undo pick with duplicate \
                         indices but different values",
                     ));
+                }
+            } else {
+                if idx_shape[..idx_shape.len() - 1].iter().any(|&n| n > 1) {
+                    return Err(env.error("Cannot undo pick with duplicate indices"));
                 }
             }
         }
@@ -525,8 +525,9 @@ impl<T: ArrayValue> Array<T> {
                             Ok(fill) => {
                                 filled = true;
                                 let fill_elems = fill.value.element_count();
-                                if fill_elems > 0 {
-                                    let reps = (abs_taking - row_count) * row_len / fill_elems;
+                                if let Some(reps) =
+                                    ((abs_taking - row_count) * row_len).checked_div(fill_elems)
+                                {
                                     self.data.extend_repeat_slice_fill(
                                         fill.map_ref(|arr| arr.data.as_slice()),
                                         reps,
@@ -555,8 +556,7 @@ impl<T: ArrayValue> Array<T> {
                             filled = true;
                             let fill_elems = fill.value.element_count();
                             let diff = abs_taking - row_count;
-                            if fill_elems > 0 {
-                                let reps = diff * row_len / fill_elems;
+                            if let Some(reps) = (diff * row_len).checked_div(fill_elems) {
                                 self.data.extend_repeat_slice_fill(
                                     fill.map_ref(|arr| arr.data.as_slice()),
                                     reps,
@@ -627,8 +627,9 @@ impl<T: ArrayValue> Array<T> {
                                     .map(|(&i, &s)| i.map_or(s, isize::unsigned_abs))
                                     .product();
                                 let fill_elems = fill.value.element_count();
-                                if fill_elems > 0 {
-                                    let reps = (abs_taking - row_count) * row_len / fill_elems;
+                                if let Some(reps) =
+                                    ((abs_taking - row_count) * row_len).checked_div(fill_elems)
+                                {
                                     arr.data.extend_repeat_slice_fill(
                                         fill.map_ref(|arr| arr.data.as_slice()),
                                         reps,
@@ -668,8 +669,7 @@ impl<T: ArrayValue> Array<T> {
                                     .product();
                                 let fill_elems = fill.value.element_count();
                                 let diff = abs_taking - row_count;
-                                if fill_elems > 0 {
-                                    let reps = diff * row_len / fill_elems;
+                                if let Some(reps) = (diff * row_len).checked_div(fill_elems) {
                                     arr.data.extend_repeat_slice_fill(
                                         fill.map_ref(|arr| arr.data.as_slice()),
                                         reps,
@@ -969,11 +969,7 @@ impl<T: ArrayValue> Array<T> {
             }
             let n = index[0];
             let fill_elems = fill.shape.elements();
-            let reps = if fill_elems == 0 {
-                0
-            } else {
-                row_shape.elements() / fill_elems
-            };
+            let reps = row_shape.elements().checked_div(fill_elems).unwrap_or(0);
             self.data
                 .extend_repeat_slice(&fill.data, n.unsigned_abs() * reps);
             if n > 0 {

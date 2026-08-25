@@ -1,9 +1,15 @@
-# Enumerate an array, but keep it on the stack
+# Enumerate an array, but keep it as an argument
 °⊏ "Hello"
 
 # Create an incrementing array with the given shape
 # Useful for testing
 °△3_4
+
+# Get a range from 0 to 1
+÷⟜⇡ 5
+
+# Get a multidimensional grid from 0 to 1
+⧋÷⟜⇡ 2_4
 
 # Remove a row at an index
 ⍜↻↘₁ 2 "abcde"

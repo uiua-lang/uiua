@@ -41,6 +41,7 @@ This version is not yet released. If you are reading this on the website, then t
   - As planned, [`indexin ⊗`](https://uiua.org/docs/indexin)'s glyph has been changed, and the old one will format to `⊗`.
 - Remove experimental `&b` (breakpoint)
   - It was half-baked and poorly implemented
+- Remove old version of [`reach ∪`](https://uiua.org/docs/reach) that used the `𝄐` glyph
 ### Interpreter
 - Tweak the formatter to make indentation always a multiple of 2
 - Add number output rules for some square roots

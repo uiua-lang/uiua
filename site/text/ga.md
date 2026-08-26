@@ -262,7 +262,7 @@ What if we used a sum of different bivectors? Here we use [sign]() to normalize 
 ⬚0≡(⍉°⊚) ⁅×30 ⧋-/↧⊸♭₂          # Render
 ```
 
-Without much additional effort, we can even rotate a tesseract, the 4D analog to a cube! All it requires is an additional projection step from 4D to 3D.
+Without much additional effort, we can even rotate a tesseract, the 4D analogue to a cube! All it requires is an additional projection step from 4D to 3D.
 
 ```uiua
 # Experimental!

@@ -18,7 +18,7 @@ All the biggest features added in Uiua 0.19.0 are still `# Experimental!`, but t
 
 ### New Module Access Syntax
 
-Accessing items through from now uses `.` rather than `~`. This is easier to type and nicer to read. Imports and data definitions still use `~`. [Chained field access](<https://uiua.org/tutorial/Data Definitions#chained-access>) now uses `‥` instead of `≈`.
+Accessing module items now uses `.` rather than `~`. This is easier to type and nicer to read. Imports and data definitions still use `~`. [Chained field access](<https://uiua.org/tutorial/Data Definitions#chained-access>) now uses `‥` instead of `≈`.
 
 ```uiua
 ~Date {Year Month Day}
@@ -61,7 +61,7 @@ This makes it easy to work with multidimensional ordered data.
 
 From its inception, Uiua has been a testing ground for tacit array programming language design concepts. This has since expanded to include trying out things that most languages do not provide out of the box, but which are nice to have at hand, well-integrated into the language. Currently stabilized instances of this include [`json`](https://uiua.org/docs/json), [`hsv`](https://uiua.org/docs/hsv), [`image`](https://uiua.org/docs/image)/[`audio`](https://uiua.org/docs/audio)/[`gif`](https://uiua.org/docs/gif) encoding, and one of my personal favorites, [`path`](https://uiua.org/docs/path). Most of these features exist baked into the language because they are either commonly used and simple enough to be a lightweight addition, or complex enough to implement on one's own that having a simple, fast version at hand makes the language much more powerful.
 
-However, there are some other features that most languages do not include out of the box that are currently still `# Experimental!`. This is because they often push the limits of what a language should include out of the box. [`layout`](https://uiua.org/docs/layout) is really useful for text rendering, and is espeicially nice to have because images already have such good support, but does a *language* really need to include a font parser and layout engine? [`voxels`](https://uiua.org/docs/voxels) is great for multidimensional visualizations, but absent context, I think most people would say that the need to render voxel scenes should probably be the responsibility of a library. I will call these types of features *boundary* features.
+However, there are some other features that most languages do not include out of the box that are currently still `# Experimental!`. This is because they often push the limits of what a language should include out of the box. [`layout`](https://uiua.org/docs/layout) is really useful for text rendering, and is especially nice to have because images already have such good support, but does a *language* really need to include a font parser and layout engine? [`voxels`](https://uiua.org/docs/voxels) is great for multidimensional visualizations, but absent context, I think most people would say that rendering voxel scenes should probably be the responsibility of a library. I will call these types of features *boundary* features.
 
 This boundary-pushing is not the case for all `# Experimental!` features. Some are more Uiua-specific, like [`reach ∪`](https://uiua.org/docs/reach) or [`pattern ⍡`](https://uiua.org/docs/reach). Whether they are stabilized is less a question of what belongs in a language and more a question of how Uiua should work. I will call these types of features *Uiua-specific* features.
 
@@ -130,3 +130,11 @@ Multivector arrays can be created with the [`multivector 𝕍`](https://uiua.org
 ```
 
 Multivectors are very much a *boundary* feature,
+
+## 🙏🏻 Thank You! 
+
+You can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.19.0---2026-08-??).
+
+This is the longest it has even been between Uiua releases. Thanks to everyone in the Uiua community for being patient! And of course a huge thank you as always to Uiua's generous [sponsors](https://github.com/sponsors/uiua-lang) ❤️!
+
+You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the language, ask questions, or get help. We also do code challenges and discuss language features!

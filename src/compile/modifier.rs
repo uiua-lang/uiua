@@ -1328,23 +1328,28 @@ impl Compiler {
                     // TODO: sanity check under sigs match
                     let sig_g_b = self.sig_of(&g_before, &g_span)?;
                     let sig_g_a = self.sig_of(&g_after, &g_span)?;
+                    let spangled = self.add_span(g_span);
                     let dipped_b = Node::ImplMod(
                         ImplPrimitive::DipUnderN(dip_by), 
                         eco_vec![SigNode::new(sig_g_b, g_before)],
-                        g_span);
+                        spangled);
                     let dipped_a = Node::ImplMod(
                         ImplPrimitive::DipUnderN(dip_by),
                         eco_vec![SigNode::new(sig_g_a, g_after)],
-                        g_span);
+                        spangled);
                     let mut before = f_b_before.node;
                     before.push(dipped_b);
                     before.push(f_b_after.node);
                     let mut after = f_a_before.node;
                     after.push(dipped_a);
                     after.push(f_a_after.node);
-                    let span = self.add_span(modified.modifier.span.clone());
-                    let sig_b = self.sig_of(&before, &span)?;
-                    let sig_a = self.sig_of(&after, &span)?;
+                    let span = modified.modifier.span.clone();
+                    let sig_b = f_b_before.sig
+                        .compose(sig_g_b)
+                        .compose(f_b_after.sig);
+                    let sig_a = f_a_before.sig
+                        .compose(sig_g_a)
+                        .compose(f_a_after.sig);
                     Some((
                         SigNode::new(sig_b, before),
                         SigNode::new(sig_a, after),

@@ -45,7 +45,7 @@ impl Value {
             (Some(2), None | Some(2), Some(SubSide::Left)) | (Some(2), Some(2), None) => {
                 Array::new(
                     new_shape,
-                    arr.data.chunks_exact(2).map(|n| Complex::new(n[0], n[1])),
+                    (arr.data.as_chunks::<2>().0.iter()).map(|n| Complex::new(n[0], n[1])),
                 )
                 .into()
             }

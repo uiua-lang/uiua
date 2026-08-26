@@ -486,7 +486,7 @@ impl Value {
         let slice = data.make_mut();
         fn read<const N: usize>(src: &[u8], dst: &mut [f64], f: impl Fn([u8; N]) -> f64) {
             let mut curr = [0; N];
-            for (i, src) in src.chunks_exact(N).enumerate() {
+            for (i, src) in src.as_chunks::<N>().0.iter().enumerate() {
                 curr.copy_from_slice(src);
                 dst[i] = f(curr);
             }

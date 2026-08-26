@@ -560,3 +560,9 @@ H ← "Hello,   world!!"
 ⍤⤙≍ "Ello" ⍜⍜⊢(¯⌵)(↘1) "Hello"
 ⍤⤙≍ ["359" "WNS" "1E7"] ⍜⍜♭⍆⍉ ["7N9" "W5E" "1S3"]
 ⍤⤙≍ ⟜⍜⍜◴⍆∘ "Mints and cola!"
+⍤⤙≍ "acborrw" ⍜⍜(↙4)⍆⍆ "crowbar"
+$ baboon
+$ Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo
+$ Never gonna give you up
+$ ⍤⤙≍ ⍚⊃⍜⍜◴⊛⇌⍜⊛⇌ °/$"_\n_" 
+⍤⤙≍ ⍚⊃⍜⍜◴⊛⇌⍜⊛⇌ °/$"_\n_" 

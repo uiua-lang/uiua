@@ -1276,7 +1276,7 @@ impl Compiler {
                     self.subscript_side_only(&sub, &Under.format())
                         .map(|side| sub.span.sp(side))
                 });
-                let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
+                let (f, g, f_span, g_span) = self.dyadic_modifier_ops(modified)?;
                 invert::dbgln!("\n/////////////////\n// begin UNDER //\n/////////////////");
                 let normal = {
                     let (f_before, mut f_after) = f
@@ -1314,7 +1314,42 @@ impl Compiler {
                         .transpose()?;
                     un.filter(|un_sn| un_sn.sig == normal.sig.inverse())
                 };
-                let under = if normal.sig.args() == normal.sig.outputs() {
+                // TODO: either not dummy the g_sig or explain it I guess
+                let under = if let Ok((g_before, g_after)) =
+                    g.node.under_inverse(Signature::default(), false, &self.asm)
+                {
+                    let (f_b_before, f_b_after) = f
+                        .under_inverse(g.sig, false, &self.asm)
+                        .map_err(|e| self.error(f_span.clone(), e))?;
+                    let (f_a_before, f_a_after) = f
+                        .under_inverse(g.sig, true, &self.asm)
+                        .map_err(|e| self.error(f_span.clone(), e))?;
+                    let dip_by = f_b_before.sig.under_outputs();
+                    // TODO: sanity check under sigs match
+                    let sig_g_b = self.sig_of(&g_before, &g_span)?;
+                    let sig_g_a = self.sig_of(&g_after, &g_span)?;
+                    let dipped_b = Node::ImplMod(
+                        ImplPrimitive::DipUnderN(dip_by), 
+                        eco_vec![SigNode::new(sig_g_b, g_before)],
+                        g_span);
+                    let dipped_a = Node::ImplMod(
+                        ImplPrimitive::DipUnderN(dip_by),
+                        eco_vec![SigNode::new(sig_g_a, g_after)],
+                        g_span);
+                    let mut before = f_b_before.node;
+                    before.push(dipped_b);
+                    before.push(f_b_after.node);
+                    let mut after = f_a_before.node;
+                    after.push(dipped_a);
+                    after.push(f_a_after.node);
+                    let span = self.add_span(modified.modifier.span.clone());
+                    let sig_b = self.sig_of(&before, &span)?;
+                    let sig_a = self.sig_of(&after, &span)?;
+                    Some((
+                        SigNode::new(sig_b, before),
+                        SigNode::new(sig_a, after),
+                    ))
+                } else if normal.sig.args() == normal.sig.outputs() {
                     un.clone().map(|un| (normal.clone(), un))
                 } else {
                     None

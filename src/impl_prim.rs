@@ -301,6 +301,8 @@ impl_primitive!(
     (3, LayoutArgs),
     (2, VoxelsArgs),
     ([1], FoldGif),
+    /// Dip in the under stack for nested unders
+    ([1], DipUnderN(usize)),
 );
 
 #[doc(hidden)]

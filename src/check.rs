@@ -583,6 +583,12 @@ impl VirtualEnv {
                     let [f] = get_args(args)?;
                     self.handle_args_outputs(f.args() + 1, f.outputs());
                 }
+                &DipUnderN(n) => {
+                    let [mut sig] = get_args(args)?;
+                    sig.update_under_args(|a| a + n);
+                    sig.update_under_outputs(|o| o + n);
+                    self.handle_sig(sig);
+                }
                 prim => {
                     let args = prim
                         .args()

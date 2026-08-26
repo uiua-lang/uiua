@@ -1344,12 +1344,8 @@ impl Compiler {
                     after.push(dipped_a);
                     after.push(f_a_after.node);
                     let span = modified.modifier.span.clone();
-                    let sig_b = f_b_before.sig
-                        .compose(sig_g_b)
-                        .compose(f_b_after.sig);
-                    let sig_a = f_a_before.sig
-                        .compose(sig_g_a)
-                        .compose(f_a_after.sig);
+                    let sig_b = self.sig_of(&before, &span)?;
+                    let sig_a = self.sig_of(&after, &span)?;
                     Some((
                         SigNode::new(sig_b, before),
                         SigNode::new(sig_a, after),

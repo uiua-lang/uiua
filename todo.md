@@ -9,6 +9,7 @@
 - `fold` subscripts
 - Useful behavior for noadic functions in `rows`, `inventory`, `table`, and `stencil`
 - Chained access rework
+- Constrained non-tacit bindings
 
 # 1.0 - 202?-??-??
 - Proofread and update all docs and tutorial

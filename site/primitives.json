@@ -1100,15 +1100,6 @@
     "class": "Algorithm",
     "description": "Convert a color array from RGB to Oklch"
   },
-  "old reach": {
-    "glyph": "𝄐",
-    "outputs": 1,
-    "modifier_args": 1,
-    "class": "Arguments",
-    "description": "Old reach",
-    "experimental": true,
-    "deprecated": true
-  },
   "on": {
     "glyph": "⟜",
     "outputs": 1,

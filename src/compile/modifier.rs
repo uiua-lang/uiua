@@ -1324,24 +1324,24 @@ impl Compiler {
                     let (f_a_before, f_a_after) = f
                         .under_inverse(g.sig, true, &self.asm)
                         .map_err(|e| self.error(f_span.clone(), e))?;
+                    let g_sn_before = SigNode::new(
+                        self.sig_of(&g_before, &g_span)?,
+                        g_before);
+                    let g_sn_after = SigNode::new(
+                        self.sig_of(&g_after, &g_span)?,
+                        g_after);
                     let dip_by = f_b_before.sig.under_outputs();
                     // TODO: sanity check under sigs match
-                    let sig_g_b = self.sig_of(&g_before, &g_span)?;
-                    let sig_g_a = self.sig_of(&g_after, &g_span)?;
                     let spangled = self.add_span(g_span);
-                    let dipped_b = Node::ImplMod(
-                        ImplPrimitive::DipUnderN(dip_by), 
-                        eco_vec![SigNode::new(sig_g_b, g_before)],
-                        spangled);
-                    let dipped_a = Node::ImplMod(
-                        ImplPrimitive::DipUnderN(dip_by),
-                        eco_vec![SigNode::new(sig_g_a, g_after)],
-                        spangled);
                     let mut before = f_b_before.node;
-                    before.push(dipped_b);
+                    before.push(Node::PopUnder(dip_by, spangled));
+                    before.push(g_sn_before.dipped(dip_by, spangled).into());
+                    before.push(Node::PushUnder(dip_by, spangled));
                     before.push(f_b_after.node);
                     let mut after = f_a_before.node;
-                    after.push(dipped_a);
+                    after.push(Node::PopUnder(dip_by, spangled));
+                    after.push(g_sn_after.dipped(dip_by, spangled).into());
+                    after.push(Node::PushUnder(dip_by, spangled));
                     after.push(f_a_after.node);
                     let span = modified.modifier.span.clone();
                     let sig_b = self.sig_of(&before, &span)?;

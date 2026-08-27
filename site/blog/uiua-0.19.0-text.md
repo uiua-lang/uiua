@@ -1,12 +1,12 @@
 # Announcing Uiua 0.19.0
 
-2026-08-??
+2026-08-26
 
 ---
 
 **🥳 Uiua 0.19.0 is now available! ✨**
 
-You can find the full changelog [here](https://uiua.org/docs/changelog#0.19.0---2026-08-??).
+You can find the full changelog [here](https://uiua.org/docs/changelog#0.19.0---2026-08-26).
 
 You can download pre-built binaries [here](https://github.com/uiua-lang/uiua/releases).
 
@@ -133,7 +133,7 @@ Multivectors are very much a *boundary* feature,
 
 ## 🙏🏻 Thank You! 
 
-You can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.19.0---2026-08-??).
+You can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.19.0---2026-08-26).
 
 This is the longest it has even been between Uiua releases. Thanks to everyone in the Uiua community for being patient! And of course a huge thank you as always to Uiua's generous [sponsors](https://github.com/sponsors/uiua-lang) ❤️!
 

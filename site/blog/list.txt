@@ -1,4 +1,4 @@
-#uiua-0.19.0(7d50d5cc-9540-4311-9c23-fa571197bdf9): 2026-08-?? - Announcing Uiua 0.19
+uiua-0.19.0(7d50d5cc-9540-4311-9c23-fa571197bdf9): 2026-08-26 - Announcing Uiua 0.19
 a-uiua-type-system(428a4746-cd88-4efe-a0ce-a2cba5e25744): 2026-08-01 - A Uiua Type System
 uiua-0.18.0(9764b956-97e4-4d37-9f87-e51d1a3e7e09): 2026-02-05 - Announcing Uiua 0.18
 uiuas-official-mascot(136f50c2-a212-40ee-8062-0c4530830a27): 2025-11-15 - Uiua's Official Mascot

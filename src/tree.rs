@@ -42,7 +42,9 @@ node!(
     /// Bind an immutable
     BindImmutable { kind: ImmutableKind, span: usize },
     /// Get an immutable
-    GetImmutable { index: usize, span: usize},
+    GetImmutable { index: usize, span: usize },
+    /// Pop multiple immutables
+    PopImmutables { n: usize },
     /// Set a value's label
     Label(label(EcoString), span(usize)),
     /// Remove a value's label
@@ -849,6 +851,7 @@ impl fmt::Debug for Node {
             }
             Node::BindImmutable { kind, .. } => write!(f, "bind-im-{kind}"),
             Node::GetImmutable { index, .. } => write!(f, "get-im-{index}"),
+            Node::PopImmutables { n, .. } => write!(f, "pop-im-{n}"),
         }
     }
 }

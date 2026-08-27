@@ -527,7 +527,7 @@ impl Compiler {
         &mut self,
         kind: ScopeKind,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
-    ) -> UiuaResult<(Module, T)> {
+    ) -> UiuaResult<(Module, T, Node)> {
         let mut new_scope = Scope::default();
         if matches!(
             kind,
@@ -536,11 +536,24 @@ impl Compiler {
             new_scope.type_check = self.scope.type_check;
         }
         self.higher_scopes.push(replace(&mut self.scope, new_scope));
+        let immutables_height = self.immutables.len();
+        let immutables_escape = match kind {
+            ScopeKind::File(_) | ScopeKind::Module(_) | ScopeKind::Binding | ScopeKind::Test => {
+                false
+            }
+            _ => true,
+        };
         self.scope.kind = kind;
 
         let res = f(self);
 
+        let mut post_node = Node::empty();
         let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
+        if !immutables_escape && self.immutables.len() > immutables_height {
+            let n = self.immutables.len() - immutables_height;
+            post_node = Node::PopImmutables { n };
+            self.immutables.truncate(immutables_height);
+        }
 
         let res = res?;
         let module = Module {
@@ -550,7 +563,7 @@ impl Compiler {
             data_func: scope.is_data_func,
             experimental: scope.experimental,
         };
-        Ok((module, res))
+        Ok((module, res, post_node))
     }
     fn load_impl(&mut self, input: &str, src: InputSrc) -> UiuaResult<&mut Self> {
         let node_start = self.asm.root.len();

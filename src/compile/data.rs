@@ -46,11 +46,12 @@ impl Compiler {
                     public: data.public,
                 };
 
-                let (module, ()) =
+                let (module, (), post) =
                     self.in_scope(ScopeKind::Module(name.value.clone()), |comp| {
                         comp.scope.is_data_func = data.func.is_some();
                         comp.data_def(data, false, prelude)
                     })?;
+                self.asm.root.push(post);
 
                 // Add global
                 self.asm.add_binding_at(
@@ -558,10 +559,11 @@ impl Compiler {
                     };
                     (field.name.clone(), local)
                 });
-                let (_, mut sn) = comp.in_scope(ScopeKind::AllInModule, move |comp| {
+                let (_, mut sn, post) = comp.in_scope(ScopeKind::AllInModule, move |comp| {
                     comp.scope.names.extend(names);
                     comp.words_sig(words)
                 })?;
+                sn.node.push(post);
 
                 // Make with args function
                 if !fields.iter().any(|field| field.name == "Args") {

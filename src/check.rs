@@ -198,6 +198,7 @@ impl VirtualEnv {
             Node::Dynamic(dy) => self.handle_sig(dy.sig),
             Node::BindImmutable { .. } => self.handle_args_outputs(1, 0),
             Node::GetImmutable { .. } => self.handle_args_outputs(0, 1),
+            Node::PopImmutables { .. } => {}
             &Node::Switch {
                 sig, under_cond, ..
             } => {

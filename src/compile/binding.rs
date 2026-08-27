@@ -367,12 +367,13 @@ impl Compiler {
             global_index: local.index,
         });
         // Compile the words
-        let (_, mut node) = self.in_scope(ScopeKind::Binding, |comp| {
+        let (_, mut node, post) = self.in_scope(ScopeKind::Binding, |comp| {
             comp.line(binding.words).inspect_err(|_| {
                 comp.asm
                     .add_binding_at(local, BindingKind::Error, Some(span.clone()), meta.clone())
             })
         })?;
+        node.push(post);
         let self_referenced = self.current_bindings.pop().unwrap().recurses > 0;
         if self_referenced && binding.signature.is_none() {
             self.add_error(
@@ -616,11 +617,12 @@ impl Compiler {
             ModuleKind::Test => (ScopeKind::Test, None),
         };
         // Compile items
-        let (module, ()) = self.in_scope(scope_kind, |comp| {
+        let (module, (), post) = self.in_scope(scope_kind, |comp| {
             comp.items(m.items, ItemCompMode::TopLevel)?;
             comp.end_enum()?;
             Ok(())
         })?;
+        self.asm.root.push(post);
         if let Some((name, local)) = name_and_local {
             // Named module
             // Add local imports

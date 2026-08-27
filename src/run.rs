@@ -752,6 +752,18 @@ impl Uiua {
                 env.push(val);
                 Ok(())
             }),
+            Node::PopImmutables { n } => {
+                if self.rt.immutables.len() < n {
+                    Err(self.error(format!(
+                        "Can't pop {n} immutables when there are only {}. \
+                        This is a bug in the interpreter.",
+                        self.rt.immutables.len()
+                    )))
+                } else {
+                    self.rt.immutables.truncate(self.rt.immutables.len() - n);
+                    Ok(())
+                }
+            }
         };
         #[allow(clippy::print_stdout)]
         if self.rt.time_instrs {

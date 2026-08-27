@@ -947,7 +947,16 @@ impl Parser<'_> {
         }
         Some(Ok(Ref { name, path }))
     }
-    fn chained_ref(&mut self) -> Option<Sp<Word>> {
+    fn immutable_kind(&mut self) -> Option<Sp<ImmutableKind>> {
+        self.exact(Colon.into())
+            .map(|span| span.sp(ImmutableKind::Small))
+            .or_else(|| {
+                self.exact(DoubleColon.into())
+                    .or_else(|| self.exact(Circle))
+                    .map(|span| span.sp(ImmutableKind::Affine))
+            })
+    }
+    fn ref_like(&mut self) -> Option<Sp<Word>> {
         let first = match self.ref_inner()? {
             Ok(r) => r,
             Err(path) => {
@@ -956,6 +965,37 @@ impl Parser<'_> {
                 return Some(span.sp(Word::IncompleteRef(path)));
             }
         };
+        // Immutables
+        if first.path.is_empty()
+            && let Some(kind) = self.immutable_kind()
+        {
+            let start_span = first.name.span.clone();
+            let mut end_span = start_span.clone();
+            let mut immutables = vec![first.name.span.merge(kind.span).sp(Immutable {
+                name: first.name.value,
+                kind: kind.value,
+            })];
+            loop {
+                let reset = self.index;
+                self.spaces();
+                if let Some(name) = self.ident() {
+                    if let Some(kind) = self.immutable_kind() {
+                        end_span = kind.span.clone();
+                        immutables.push(name.span.merge(kind.span).sp(Immutable {
+                            name: name.value,
+                            kind: kind.value,
+                        }))
+                    } else {
+                        self.index = reset;
+                        break;
+                    }
+                } else {
+                    self.index = reset;
+                    break;
+                }
+            }
+            return Some(start_span.merge(end_span).sp(Word::Immutables(immutables)));
+        }
         let mut chained = Vec::new();
         while let Some(dot_span) = self
             .exact(DoubleTilde.into())
@@ -1288,7 +1328,7 @@ impl Parser<'_> {
         }
         let mut word = if let Some(n) = self.num() {
             n.map(|(n, s)| Word::Number(n, s))
-        } else if let Some(refer) = self.chained_ref() {
+        } else if let Some(refer) = self.ref_like() {
             refer
         } else if let Some(prim) = self.prim() {
             prim.map(Word::Primitive)

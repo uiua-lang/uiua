@@ -17,6 +17,7 @@ use ecow::EcoVec;
 use parking_lot::Mutex;
 use thread_local::ThreadLocal;
 use threadpool::ThreadPool;
+use uiua_parser::ImmutableKind;
 
 use crate::{
     Array, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, Compiler, Function, FunctionId,
@@ -48,7 +49,7 @@ pub(crate) struct Runtime {
     /// The call stack
     pub(crate) call_stack: Vec<StackFrame>,
     /// The local stack
-    pub(crate) local_stack: EcoVec<(usize, Value)>,
+    pub(crate) immutable_frames: EcoVec<Vec<Option<(Value, ImmutableKind)>>>,
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
@@ -196,7 +197,7 @@ impl Default for Runtime {
                 id: Some(FunctionId::Main),
                 ..Default::default()
             }],
-            local_stack: EcoVec::new(),
+            immutable_frames: EcoVec::new(),
             recur_stack: Vec::new(),
             fill_stack: Vec::new(),
             fill_boundary_stack: Vec::new(),
@@ -718,6 +719,46 @@ impl Uiua {
             Node::TrackCaller(inner) => self.require_height(inner.sig.args()).and_then(|_| {
                 self.rt.call_stack.last_mut().unwrap().track_caller = true;
                 self.exec(inner)
+            }),
+            Node::ImmutableFrame { inner } => {
+                self.rt.immutable_frames.push(Vec::new());
+                let res = self.exec(inner);
+                self.rt.immutable_frames.pop();
+                res
+            }
+            Node::BindImmutable { index, span, kind } => self.with_span(span, |env| {
+                if env.rt.immutable_frames.is_empty() {
+                    return Err(env
+                        .error("No immutable frame available. This is a bug in the interpreter."));
+                }
+                let val = env.pop(1)?;
+                let frame = env.rt.immutable_frames.make_mut().last_mut().unwrap();
+                if frame.len() <= index {
+                    frame.resize_with(index + 1, || None);
+                }
+                frame[index] = Some((val, kind));
+                Ok(())
+            }),
+            Node::GetImmutable { index, span } => self.with_span(span, |env| {
+                if env.rt.immutable_frames.is_empty() {
+                    return Err(env
+                        .error("No immutable frame available. This is a bug in the interpreter."));
+                }
+                let frame = env.rt.immutable_frames.make_mut().last_mut().unwrap();
+                let val = match frame.get_mut(index) {
+                    Some(slot @ Some((_, ImmutableKind::Affine))) => slot.take().unwrap().0,
+                    Some(Some((val, ImmutableKind::Small))) => val.clone(),
+                    Some(None) => {
+                        return Err(env.error(format!(
+                            "Immutable slot {index} is empty. This is a bug in the interpreter."
+                        )));
+                    }
+                    None => return Err(env.error(format!(
+                        "Immutable slot {index} is not preset. This is a bug in the interpreter."
+                    ))),
+                };
+                env.push(val);
+                Ok(())
             }),
         };
         #[allow(clippy::print_stdout)]
@@ -1435,7 +1476,7 @@ impl Uiua {
                     .drain(self.rt.stack.len() - f.sig.args()..)
                     .collect(),
                 under_stack: Vec::new(),
-                local_stack: self.rt.local_stack.clone(),
+                immutable_frames: self.rt.immutable_frames.clone(),
                 fill_stack: Vec::new(),
                 fill_boundary_stack: Vec::new(),
                 unfill_stack: Vec::new(),

@@ -363,6 +363,7 @@ pub enum Word {
     OutputComment { i: usize, n: usize },
     Subscripted(Box<Subscripted>),
     InlineMacro(Box<InlineMacro>),
+    Immutables(Vec<Sp<Immutable>>),
 }
 
 impl PartialEq for Word {
@@ -389,6 +390,7 @@ impl PartialEq for Word {
             }
             (Self::Placeholder(_), Self::Placeholder(_)) => false,
             (Self::Comment(a), Self::Comment(b)) => a == b,
+            (Self::Immutables(a), Self::Immutables(b)) => a == b,
             _ => discriminant(self) == discriminant(other),
         }
     }
@@ -489,6 +491,12 @@ impl fmt::Debug for Word {
             Word::Subscripted(sub) => sub.fmt(f),
             Word::InlineMacro(mac) => {
                 write!(f, "inline_macro({:?}{}))", mac.func.value, mac.ident.value)
+            }
+            Word::Immutables(ims) => {
+                for im in ims {
+                    write!(f, "{:?}", im.value)?;
+                }
+                Ok(())
             }
         }
     }
@@ -836,28 +844,6 @@ impl Modifier {
     }
 }
 
-/// An argument setter
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ArgSetter {
-    /// The name of the field
-    pub ident: Sp<Ident>,
-    /// The span of the colon
-    pub colon_span: CodeSpan,
-}
-
-impl fmt::Debug for ArgSetter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:", self.ident.value)
-    }
-}
-
-impl ArgSetter {
-    /// Get the full span
-    pub fn span(&self) -> CodeSpan {
-        self.ident.span.clone().merge(self.colon_span.clone())
-    }
-}
-
 /// A subscripted word
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Subscripted {
@@ -1001,6 +987,34 @@ impl fmt::Display for NumWord {
             #[cfg(feature = "multivector")]
             NumWord::Blade(mv) => write!(f, "{mv}"),
             NumWord::Err(e) => write!(f, "error({e})"),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct Immutable {
+    pub name: Ident,
+    pub kind: ImmutableKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ImmutableKind {
+    Small,
+    Affine,
+}
+
+impl fmt::Debug for Immutable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)?;
+        write!(f, "{}", self.kind)
+    }
+}
+
+impl fmt::Display for ImmutableKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ImmutableKind::Small => write!(f, ":"),
+            ImmutableKind::Affine => write!(f, "○"),
         }
     }
 }

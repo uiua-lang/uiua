@@ -651,6 +651,7 @@ pub enum Token {
     AlmostEqual,
     DownArrow,
     Ellipses,
+    Circle,
     OpenAngle,
     CloseAngle,
     OpenModule,
@@ -772,6 +773,7 @@ impl fmt::Display for Token {
             Token::AlmostEqual => write!(f, "≈"),
             Token::DownArrow => write!(f, "↓"),
             Token::Ellipses => write!(f, "‥"),
+            Token::Circle => write!(f, "○"),
             Token::OpenAngle => write!(f, "⟨"),
             Token::CloseAngle => write!(f, "⟩"),
             Token::Newline => write!(f, "newline"),
@@ -800,6 +802,7 @@ pub enum AsciiToken {
     Underscore,
     Bar,
     Colon,
+    DoubleColon,
     Semicolon,
     DoubleSemicolon,
     Star,
@@ -824,6 +827,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::Underscore => write!(f, "_"),
             AsciiToken::Bar => write!(f, "|"),
             AsciiToken::Colon => write!(f, ":"),
+            AsciiToken::DoubleColon => write!(f, "::"),
             AsciiToken::Semicolon => write!(f, ";"),
             AsciiToken::DoubleSemicolon => write!(f, ";;"),
             AsciiToken::Star => write!(f, "*"),
@@ -1107,6 +1111,7 @@ impl<'a> Lexer<'a> {
                 "|" => self.end(Bar, start),
                 "↓" => self.end(DownArrow, start),
                 "‥" => self.end(Ellipses, start),
+                ":" if self.next_char_exact(":") => self.end(DoubleColon, start),
                 ":" => self.end(Colon, start),
                 ";" if self.next_char_exact(";") => self.end(DoubleSemicolon, start),
                 ";" => self.end(Semicolon, start),
@@ -1149,6 +1154,7 @@ impl<'a> Lexer<'a> {
                 "←" if self.next_char_exact("~") => self.end(LeftStrokeArrow, start),
                 "←" => self.end(LeftArrow, start),
                 "↚" => self.end(LeftStrokeArrow, start),
+                "○" => self.end(Circle, start),
                 "┌" if self.next_char_exact("─") && self.next_char_exact("╴")
                     || self.next_char_exact("-") && self.next_char_exact("-") =>
                 {

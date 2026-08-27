@@ -293,6 +293,8 @@ pub(crate) struct Scope {
     comment: Option<EcoString>,
     /// Map local names to global indices
     names: LocalNames,
+    /// Immutables for this scope
+    immutables: IndexMap<Ident, (ImmutableKind, CodeSpan)>,
     /// Whether the scope has a data def defined
     has_data_def: bool,
     /// Whether the scope's data def is a data function
@@ -338,6 +340,15 @@ struct MacroLocal {
     expansion_index: Option<usize>,
 }
 
+impl ScopeKind {
+    fn holds_immutables(&self) -> bool {
+        matches!(
+            self,
+            ScopeKind::File(_) | ScopeKind::Module(_) | ScopeKind::Binding | ScopeKind::Test
+        )
+    }
+}
+
 impl Default for Scope {
     fn default() -> Self {
         Self {
@@ -345,6 +356,7 @@ impl Default for Scope {
             file_path: None,
             comment: None,
             names: LocalNames::default(),
+            immutables: IndexMap::new(),
             has_data_def: false,
             is_data_func: false,
             data_variants: IndexSet::new(),
@@ -1359,6 +1371,23 @@ impl Compiler {
                 }
                 Node::empty()
             }
+            Word::Immutables(ims) => {
+                let mut nodes = EcoVec::new();
+                for im in ims.into_iter().rev() {
+                    let (im, span) = im.into();
+                    nodes.push(Node::BindImmutable {
+                        index: self.scope.immutables.len(),
+                        span: self.add_span(span.clone()),
+                        kind: im.kind,
+                    });
+                    self.scopes_mut()
+                        .find(|scope| scope.kind.holds_immutables())
+                        .unwrap()
+                        .immutables
+                        .insert(im.name.clone(), (im.kind, span));
+                }
+                Node::from(nodes)
+            }
             Word::Strand(items) => {
                 // Diagnostic for strand of characters
                 if (items.iter()).all(|w| !w.value.is_code() || matches!(w.value, Word::Char(_))) {
@@ -1989,6 +2018,19 @@ impl Compiler {
             self.code_meta.completions.insert(span.clone(), completions);
         }
 
+        // Look in immutables
+        let index = self
+            .scopes_mut()
+            .find_map(|scope| scope.immutables.get_full(&ident))
+            .map(|(index, _, _)| index);
+        if let Some(index) = index {
+            return Node::GetImmutable {
+                index,
+                span: self.add_span(span),
+            };
+        }
+
+        // Normal name lookup
         if let Some(local) = self.find_name_impl(&ident, &span, LookupPreference::Function, true) {
             // Name exists in binding scope
             self.validate_local(&ident, local, &span);

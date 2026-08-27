@@ -1111,6 +1111,11 @@ impl Formatter<'_> {
                 }
             }
             Word::IncompleteRef(path) => self.format_ref_path(path, true),
+            Word::Immutables(ims) => {
+                for im in ims {
+                    self.push(&im.span, &format!("{:?}", im.value));
+                }
+            }
             Word::Strand(items) => {
                 for (i, item) in items.iter().enumerate() {
                     if i > 0 {
@@ -1756,6 +1761,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::SemanticComment(_) => true,
         Word::TypeSigComment { .. } => true,
         Word::OutputComment { .. } => true,
+        Word::Immutables(_) => false,
     }
 }
 

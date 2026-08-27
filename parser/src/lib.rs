@@ -20,8 +20,8 @@ pub use ga::Flavor as GaFlavor;
 #[cfg(feature = "multivector")]
 pub use multivector::Multivector;
 pub use {
-    complex::*, defs::*, error::*, inputs::*, lex::*, parse::parse, primitive::*, signature::*,
-    split::*, subscript::*,
+    ast::ImmutableKind, complex::*, defs::*, error::*, inputs::*, lex::*, parse::parse,
+    primitive::*, signature::*, split::*, subscript::*,
 };
 
 /// A Uiua identifier

@@ -14,7 +14,7 @@ use std::{
     str::FromStr,
     time::Duration,
 };
-use uiua::{PrimDoc, UiuaErrorKind};
+use uiua::{ImmutableKind, PrimDoc, UiuaErrorKind};
 
 use uiua::{
     Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
@@ -707,7 +707,7 @@ pub fn gen_code_view(code: &str, hidden: &str) -> View {
                         SpanKind::Strand => "strand-span",
                         SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, n.as_ref()),
                         SpanKind::MacroDelim(margs) => modifier_class(*margs),
-                        SpanKind::ArgSetter(_) => sig_class((1, 0).into()),
+                        SpanKind::Immutable(_) => sig_class((1, 0).into()),
                         _ => "",
                     };
                     match kind {
@@ -1055,19 +1055,14 @@ pub fn gen_code_view(code: &str, hidden: &str) -> View {
                                 .into_view(),
                             )
                         }
-                        SpanKind::ArgSetter(comment) => {
+                        SpanKind::Immutable(kind) => {
                             let class = format!("code-span {color_class}");
+                            let text = match kind {
+                                ImmutableKind::Small => "bind small immutable",
+                                ImmutableKind::Affine => "bind affine immutable",
+                            };
                             frag_views.push(
-                                if let Some(comment) = comment.map(|com| com.to_string()) {
-                                    view! {
-                                        <span class=class data-title=comment>
-                                            {text}
-                                        </span>
-                                    }
-                                    .into_view()
-                                } else {
                                     view!(<span class=class>{text}</span>).into_view()
-                                },
                             )
                         }
                         _ => {

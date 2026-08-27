@@ -1339,7 +1339,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             | SpanKind::TypeSigComment
             | SpanKind::Strand => Some(Color::BrightBlack),
             SpanKind::MacroDelim(margs) => Some(color_mod(margs)),
-            SpanKind::ArgSetter(_) => Some(MONADIC),
+            SpanKind::Immutable(_) => Some(MONADIC),
             SpanKind::Ident { .. }
             | SpanKind::Label
             | SpanKind::Signature

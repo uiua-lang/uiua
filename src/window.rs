@@ -777,10 +777,7 @@ impl App {
             SmartOutput::Png(bytes, label) => {
                 let img = image::load_from_memory_with_format(&bytes, ImageFormat::Png).unwrap();
                 let (width, height) = img.dimensions();
-                let pixels: Vec<Color32> = img
-                    .into_rgba8()
-                    .into_raw()
-                    .chunks_exact(4)
+                let pixels: Vec<Color32> = (img.into_rgba8().into_raw().as_chunks::<4>().0)
                     .map(|w| Color32::from_rgba_unmultiplied(w[0], w[1], w[2], w[3]))
                     .collect();
                 let color_image = ColorImage {

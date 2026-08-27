@@ -51,11 +51,11 @@ impl Value {
             }
             #[cfg(not(feature = "ga"))]
             (Some(4), Some(2), None)
-                if arr.data.chunks_exact(4).all(|w| w[1] == 0.0 && w[2] == 0.0) =>
+                if (arr.data.as_chunks::<4>().0).all(|w| w[1] == 0.0 && w[2] == 0.0) =>
             {
                 Array::new(
                     new_shape,
-                    arr.data.chunks_exact(4).map(|n| Complex::new(n[0], n[3])),
+                    (arr.data.as_chunks::<4>().0).map(|n| Complex::new(n[0], n[3])),
                 )
                 .into()
             }

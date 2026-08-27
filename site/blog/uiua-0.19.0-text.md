@@ -129,7 +129,7 @@ Multivector arrays can be created with the [`multivector 𝕍`](https://uiua.org
 ⬚0≡(⍉°⊚) ⁅×100 ⧋-/↧⊸♭₂ # Render
 ```
 
-Multivectors are very much a *boundary* feature,
+Multivectors are very much a *boundary* feature.
 
 ## 🙏🏻 Thank You! 
 

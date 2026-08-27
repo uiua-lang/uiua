@@ -101,7 +101,7 @@ Custom subscripts are currently limited to numeric subscripts. Sided subscripts 
 
 ## A Type System
 
-Uiua 0.19.0 adds an `# Experimental!` type system! I've already detailed its design philosphy and functionality in [this blog post](https://www.uiua.org/blog/a-uiua-type-system), so I won't go into a ton of detail here.
+Uiua 0.19.0 adds an `# Experimental!` type system! I've already detailed its design philosophy and functionality in [this blog post](https://www.uiua.org/blog/a-uiua-type-system), so I won't go into a ton of detail here.
 
 For the basics, you can read the documentation for [`validate ⊨`](https://uiua.org/docs/validate) and [type signature comments](https://www.uiua.org/docs/experimental#type-checking).
 
@@ -109,9 +109,9 @@ This is somewhere between the three kinds of `# Experimental!` features detailed
 
 ## Multivector Scalars
 
-Uiua 0.19.0 includes a complete rewrite and overhaul of the `# Experimental!` [Geometric Algebra](https://en.wikipedia.org/wiki/Geometric_algebra) system by adding a multivector scalar type for arrays. Multivectors are algebraic objects which are useful for doing geoemtric operations in multiple dimensions. This includes things like rotations, intersections, and projections. Multivectors can be thought of as a sort of superset of complex numbers, but they are also much more.
+Uiua 0.19.0 includes a complete rewrite and overhaul of the `# Experimental!` [Geometric Algebra](https://en.wikipedia.org/wiki/Geometric_algebra) system by adding a multivector scalar type for arrays. Multivectors are algebraic objects which are useful for doing geometric operations in multiple dimensions. This includes things like rotations, intersections, and projections. Multivectors can be thought of as a sort of superset of complex numbers, but they are also much more.
 
-Multivector arrays can be created with the [`multivector 𝕍`](https://uiua.org/docs/multivector) functions. There is also a full Uiua [Geometric Algebra tutorial](https://www.uiua.org/docs/experimental#geometric-algebra). It's end result is this gif of a rotating tesseract!
+Multivector arrays can be created with the [`multivector 𝕍`](https://uiua.org/docs/multivector) functions. There is also a full Uiua [Geometric Algebra tutorial](https://www.uiua.org/docs/experimental#geometric-algebra). Its end result is this gif of a rotating tesseract!
 
 ```uiua
 # Experimental!

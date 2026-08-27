@@ -68,7 +68,7 @@ This system can catch some errors at compile time. They are currently emitted as
 F ← ↙10↯3_4
 ```
 
-Attempting to call the function will fail an runtime.
+Attempting to call the function will fail at runtime.
 
 ```uiua should fail
 # Experimental!

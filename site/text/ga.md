@@ -16,7 +16,7 @@ Vectors are a core objects in most geometric algebra spaces, so we will represen
 -⊸¬ ÷⟜⇡₀ 4
 ```
 
-These are points along a 1-dimensional square, but we need 2 dimensions. To increase the number of dimenions, we start by [join]()ing every number with `¯1` and `1`.
+These are points along a 1-dimensional square, but we need 2 dimensions. To increase the number of dimensions, we start by [join]()ing every number with `¯1` and `1`.
 
 ```uiua
 -⊸¬ ÷⟜⇡₀ 4
@@ -101,7 +101,7 @@ We will then normalize the numbers to be all positive, scale them to nice intege
 
 Rotating a square is cool, but we actually could have done this animation even more easily using just [complex]() numbers! However, geometric algebra's strength comes in its ability to work with more than 2 dimenions. In Uiua, multivectors may have up to 10 dimensions!
 
-To make this example more interesting, lets rotate a cube instead of a square! First, we'll modify the generation of our square points to add an extra dimensions using [repeat](). The number of points has been reduced here so that the output doesn't look too long, but we'll increase it again later.
+To make this example more interesting, lets rotate a cube instead of a square! First, we'll modify the generation of our square points to add an extra dimension using [repeat](). The number of points has been reduced here so that the output doesn't look too long, but we'll increase it again later.
 
 ```uiua
 # Experimental!
@@ -147,14 +147,14 @@ In 3D PGA, points are actually represented by trivectors, a multivector made onl
 ¯₄+e₀
 ```
 
-Now that we have our PGA points, we need simulate a camera to be able to render them in 2D. We'll place our camera at the point `(-4, 0, 0)`. The point can be constructed in a similar way as before.
+Now that we have our PGA points, we need to simulate a camera to be able to render them in 2D. We'll place our camera at the point `(-4, 0, 0)`. The point can be constructed in a similar way as before.
 
 ```uiua
 # Experimental!
 ¯₄+e₀𝕍[¯4 0 0]
 ```
 
-We can then construct multivectors reprenting lines from each cube point to the camera point. This operaiton is sometimes called the *join*. In PGA, it is done with the *regressive product* `⍜∩¯₄⨱`, with Uiua alias `regr`.
+We can then construct multivectors representing lines from each cube point to the camera point. This operation is sometimes called the *join*. In PGA, it is done with the *regressive product* `⍜∩¯₄⨱`, with Uiua alias `regr`.
 
 ```uiua
 # Experimental!

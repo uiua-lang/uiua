@@ -4,7 +4,7 @@
 
 ---
 
-This blog post explains the rational and design of Uiua's `# Experimental!` new type system.
+This blog post explains the rationale and design of Uiua's `# Experimental!` new type system.
 
 ## A Dynamic Language
 

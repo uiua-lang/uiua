@@ -1508,6 +1508,29 @@ impl Value {
             .unwrap_or(0)
             + 1
     }
+    /// Get the amount of memory this value takes up in bytes
+    pub fn mem_size(&self) -> usize {
+        match self {
+            Value::Byte(arr) => arr.element_count() * size_of::<u8>(),
+            Value::Num(arr) => arr.element_count() * size_of::<f64>(),
+            Value::Complex(arr) => arr.element_count() * size_of::<Complex>(),
+            Value::Char(arr) => arr.element_count() * size_of::<char>(),
+            Value::Box(arr) => {
+                // Box size is hard-coded to match the size on 64-bit architectures
+                arr.element_count() * 64
+                    + (arr.data.iter())
+                        .map(|Boxed(val)| val.mem_size())
+                        .sum::<usize>()
+            }
+            #[cfg(feature = "ga")]
+            Value::Mv(arr) => {
+                arr.element_count()
+                    + (arr.data.iter())
+                        .map(|mv| (1 << mv.dims()) * size_of::<f64>())
+                        .sum::<usize>()
+            }
+        }
+    }
 }
 
 macro_rules! value_from {

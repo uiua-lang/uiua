@@ -727,6 +727,18 @@ impl Uiua {
             }),
             Node::BindImmutable { kind, span } => self.with_span(span, |env| {
                 let val = env.pop(1)?;
+                const MAX_SMALL_BYTES: usize = 64;
+                if let ImmutableKind::Small = kind {
+                    let mem_size = val.mem_size();
+                    if mem_size > MAX_SMALL_BYTES {
+                        return Err(env.error(format!(
+                            "Small immutables may be at most {MAX_SMALL_BYTES} bytes, \
+                            but the array of shape {} {} is {mem_size} bytes.",
+                            val.shape,
+                            val.type_name_plural()
+                        )));
+                    }
+                }
                 env.rt.immutables.push(StackedImmutable {
                     value: Some(val),
                     kind,

@@ -1384,6 +1384,9 @@ impl Compiler {
                 Node::empty()
             }
             Word::Immutables(ims) => {
+                if let Some(im) = ims.first() {
+                    self.experimental_error_them(&im.span, || "Immutables");
+                }
                 let mut nodes = EcoVec::new();
                 for im in ims {
                     let (im, span) = im.into();

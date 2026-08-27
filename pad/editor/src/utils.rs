@@ -1057,12 +1057,12 @@ pub fn gen_code_view(code: &str, hidden: &str) -> View {
                         }
                         SpanKind::Immutable(kind) => {
                             let class = format!("code-span {color_class}");
-                            let text = match kind {
+                            let title = match kind {
                                 ImmutableKind::Small => "bind small immutable",
                                 ImmutableKind::Affine => "bind affine immutable",
                             };
                             frag_views.push(
-                                    view!(<span class=class>{text}</span>).into_view()
+                                    view!(<span class=class data-title=title>{text}</span>).into_view()
                             )
                         }
                         _ => {

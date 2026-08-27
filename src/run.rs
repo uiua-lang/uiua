@@ -13,7 +13,6 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
-use ecow::EcoVec;
 use parking_lot::Mutex;
 use thread_local::ThreadLocal;
 use threadpool::ThreadPool;
@@ -48,8 +47,8 @@ pub(crate) struct Runtime {
     pub(crate) under_stack: Vec<Value>,
     /// The call stack
     pub(crate) call_stack: Vec<StackFrame>,
-    /// The local stack
-    pub(crate) immutable_frames: EcoVec<Vec<Option<(Value, ImmutableKind)>>>,
+    /// The immutable stack
+    pub(crate) immutables: Vec<StackedImmutable>,
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
@@ -125,6 +124,12 @@ pub(crate) struct StackFrame {
 }
 
 #[derive(Debug, Clone)]
+pub(crate) struct StackedImmutable {
+    pub value: Option<Value>,
+    pub kind: ImmutableKind,
+}
+
+#[derive(Debug, Clone)]
 struct Channel {
     pub send: Sender<Value>,
     pub recv: Receiver<Value>,
@@ -197,7 +202,7 @@ impl Default for Runtime {
                 id: Some(FunctionId::Main),
                 ..Default::default()
             }],
-            immutable_frames: EcoVec::new(),
+            immutables: Vec::new(),
             recur_stack: Vec::new(),
             fill_stack: Vec::new(),
             fill_boundary_stack: Vec::new(),
@@ -720,42 +725,29 @@ impl Uiua {
                 self.rt.call_stack.last_mut().unwrap().track_caller = true;
                 self.exec(inner)
             }),
-            Node::ImmutableFrame { inner } => {
-                self.rt.immutable_frames.push(Vec::new());
-                let res = self.exec(inner);
-                self.rt.immutable_frames.pop();
-                res
-            }
-            Node::BindImmutable { index, span, kind } => self.with_span(span, |env| {
-                if env.rt.immutable_frames.is_empty() {
-                    return Err(env
-                        .error("No immutable frame available. This is a bug in the interpreter."));
-                }
+            Node::BindImmutable { kind, span } => self.with_span(span, |env| {
                 let val = env.pop(1)?;
-                let frame = env.rt.immutable_frames.make_mut().last_mut().unwrap();
-                if frame.len() <= index {
-                    frame.resize_with(index + 1, || None);
-                }
-                frame[index] = Some((val, kind));
+                env.rt.immutables.push(StackedImmutable {
+                    value: Some(val),
+                    kind,
+                });
                 Ok(())
             }),
             Node::GetImmutable { index, span } => self.with_span(span, |env| {
-                if env.rt.immutable_frames.is_empty() {
-                    return Err(env
-                        .error("No immutable frame available. This is a bug in the interpreter."));
+                let len = env.rt.immutables.len();
+                if len <= index {
+                    return Err(env.error(format!(
+                        "No immutable for index {index}. This is a bug in the interpreter."
+                    )));
                 }
-                let frame = env.rt.immutable_frames.make_mut().last_mut().unwrap();
-                let val = match frame.get_mut(index) {
-                    Some(slot @ Some((_, ImmutableKind::Affine))) => slot.take().unwrap().0,
-                    Some(Some((val, ImmutableKind::Small))) => val.clone(),
-                    Some(None) => {
-                        return Err(env.error(format!(
-                            "Immutable slot {index} is empty. This is a bug in the interpreter."
-                        )));
-                    }
-                    None => return Err(env.error(format!(
-                        "Immutable slot {index} is not preset. This is a bug in the interpreter."
-                    ))),
+                let im = &mut env.rt.immutables[len - index - 1];
+                let val = match im.kind {
+                    ImmutableKind::Small => im.value.as_ref().unwrap().clone(),
+                    ImmutableKind::Affine => im.value.take().ok_or_else(|| {
+                        env.error(
+                            "Affine immutable was already used. This is a bug in the interpreter.",
+                        )
+                    })?,
                 };
                 env.push(val);
                 Ok(())
@@ -1476,7 +1468,7 @@ impl Uiua {
                     .drain(self.rt.stack.len() - f.sig.args()..)
                     .collect(),
                 under_stack: Vec::new(),
-                immutable_frames: self.rt.immutable_frames.clone(),
+                immutables: self.rt.immutables.clone(),
                 fill_stack: Vec::new(),
                 fill_boundary_stack: Vec::new(),
                 unfill_stack: Vec::new(),

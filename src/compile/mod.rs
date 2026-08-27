@@ -63,6 +63,8 @@ pub struct Compiler {
     pub(crate) scope: Scope,
     /// Ancestor scopes of the current one
     higher_scopes: Vec<Scope>,
+    /// Immutables stack
+    immutables: Vec<ImmutableSlot>,
     /// Determines which How test scopes are run
     mode: RunMode,
     /// The paths of files currently being imported (used to detect import cycles)
@@ -107,6 +109,7 @@ impl Default for Compiler {
             current_bindings: Vec::new(),
             next_global: 0,
             scope: Scope::default(),
+            immutables: Vec::new(),
             higher_scopes: Vec::new(),
             mode: RunMode::All,
             current_imports: EcoVec::new(),
@@ -283,6 +286,14 @@ struct CurrentBinding {
     global_index: usize,
 }
 
+#[derive(Clone)]
+struct ImmutableSlot {
+    name: Ident,
+    kind: ImmutableKind,
+    span: CodeSpan,
+    used: Option<CodeSpan>,
+}
+
 /// A scope where names are defined
 #[derive(Debug, Clone)]
 pub(crate) struct Scope {
@@ -293,8 +304,6 @@ pub(crate) struct Scope {
     comment: Option<EcoString>,
     /// Map local names to global indices
     names: LocalNames,
-    /// Immutables for this scope
-    immutables: IndexMap<Ident, (ImmutableKind, CodeSpan)>,
     /// Whether the scope has a data def defined
     has_data_def: bool,
     /// Whether the scope's data def is a data function
@@ -340,15 +349,6 @@ struct MacroLocal {
     expansion_index: Option<usize>,
 }
 
-impl ScopeKind {
-    fn holds_immutables(&self) -> bool {
-        matches!(
-            self,
-            ScopeKind::File(_) | ScopeKind::Module(_) | ScopeKind::Binding | ScopeKind::Test
-        )
-    }
-}
-
 impl Default for Scope {
     fn default() -> Self {
         Self {
@@ -356,7 +356,6 @@ impl Default for Scope {
             file_path: None,
             comment: None,
             names: LocalNames::default(),
-            immutables: IndexMap::new(),
             has_data_def: false,
             is_data_func: false,
             data_variants: IndexSet::new(),
@@ -1373,18 +1372,18 @@ impl Compiler {
             }
             Word::Immutables(ims) => {
                 let mut nodes = EcoVec::new();
-                for im in ims.into_iter().rev() {
+                for im in ims {
                     let (im, span) = im.into();
                     nodes.push(Node::BindImmutable {
-                        index: self.scope.immutables.len(),
                         span: self.add_span(span.clone()),
                         kind: im.kind,
                     });
-                    self.scopes_mut()
-                        .find(|scope| scope.kind.holds_immutables())
-                        .unwrap()
-                        .immutables
-                        .insert(im.name.clone(), (im.kind, span));
+                    self.immutables.push(ImmutableSlot {
+                        name: im.name,
+                        kind: im.kind,
+                        span,
+                        used: None,
+                    });
                 }
                 Node::from(nodes)
             }
@@ -2019,11 +2018,33 @@ impl Compiler {
         }
 
         // Look in immutables
-        let index = self
-            .scopes_mut()
-            .find_map(|scope| scope.immutables.get_full(&ident))
-            .map(|(index, _, _)| index);
-        if let Some(index) = index {
+        if let Some((index, im)) =
+            (self.immutables.iter_mut().rev().enumerate()).find(|(_, im)| im.name == ident)
+        {
+            if let Some(used_span) = &im.used {
+                // Validate affine use
+                if im.kind == ImmutableKind::Affine {
+                    self.errors.push(
+                        Self::error_impl(
+                            &self.asm,
+                            span.clone(),
+                            format!("Affine immutable {} was already used.", im.name),
+                        )
+                        .with_info([
+                            (
+                                format!("{} was already used here.", im.name),
+                                Some(used_span.clone().into()),
+                            ),
+                            (
+                                format!("{} was defined as affine here.", im.name),
+                                Some(im.span.clone().into()),
+                            ),
+                        ]),
+                    );
+                }
+            } else {
+                im.used = Some(span.clone());
+            }
             return Node::GetImmutable {
                 index,
                 span: self.add_span(span),
@@ -3063,13 +3084,16 @@ impl Compiler {
             .unwrap_or(usize::MAX);
         (self.scopes().take(take)).any(|sc| sc.experimental || sc.experimental_error)
     }
-    fn error(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
+    fn error_impl(asm: &Assembly, span: impl Into<Span>, message: impl ToString) -> UiuaError {
         UiuaErrorKind::Run {
             message: span.into().sp(message.to_string()),
             info: Vec::new(),
-            inputs: self.asm.inputs.clone().into(),
+            inputs: asm.inputs.clone().into(),
         }
         .into()
+    }
+    fn error(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
+        Self::error_impl(&self.asm, span.into(), message)
     }
     fn error_with_info<S, M>(
         &self,

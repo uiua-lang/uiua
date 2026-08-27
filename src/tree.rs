@@ -39,10 +39,8 @@ node!(
     CallMacro { index: usize, sig: Signature, span: usize },
     /// Bind a global value
     BindGlobal { index: usize, span: usize },
-    /// Start an immutable frame
-    ImmutableFrame { inner: Arc<Node> },
     /// Bind an immutable
-    BindImmutable { index: usize, span: usize, kind: ImmutableKind },
+    BindImmutable { kind: ImmutableKind, span: usize },
     /// Get an immutable
     GetImmutable { index: usize, span: usize},
     /// Set a value's label
@@ -849,12 +847,7 @@ impl fmt::Debug for Node {
             Node::TrackCaller(inner) => {
                 f.debug_tuple("track-caller").field(inner.as_ref()).finish()
             }
-            Node::ImmutableFrame { inner } => {
-                write!(f, "immutable-frame(")?;
-                inner.fmt(f)?;
-                write!(f, ")")
-            }
-            Node::BindImmutable { index, kind, .. } => write!(f, "bind-im-{index}{kind}"),
+            Node::BindImmutable { kind, .. } => write!(f, "bind-im-{kind}"),
             Node::GetImmutable { index, .. } => write!(f, "get-im-{index}"),
         }
     }
@@ -920,6 +913,7 @@ impl Node {
                 Node::TrackCaller(sn) => recurse(&sn.node, purity, asm, visited),
                 Node::NoInline(n) => recurse(n, purity, asm, visited),
                 Node::Dynamic(_) => false,
+                Node::BindImmutable { .. } => false,
                 _ => true,
             };
             visited.truncate(len);

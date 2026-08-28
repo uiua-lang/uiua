@@ -2,6 +2,8 @@
 #[cfg(not(feature = "binary"))]
 compile_error!("To compile the uiua interpreter binary, you must enable the `binary` feature flag");
 
+mod shell;
+
 use std::{
     borrow::Cow,
     env,
@@ -382,6 +384,7 @@ fn main() {
             }
             repl(rt, compiler, true, persist, config);
         }
+        Some(Comm::Shell) => shell::shell(),
         #[cfg(not(feature = "no_self_update"))]
         Some(Comm::Update {
             main,
@@ -929,6 +932,8 @@ enum Comm {
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },
+    #[clap(about = "Run the Uiua shell")]
+    Shell,
     #[clap(about = "Update Uiua by installing with Cargo")]
     #[cfg(not(feature = "no_self_update"))]
     Update {

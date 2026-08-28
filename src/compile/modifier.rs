@@ -1315,12 +1315,8 @@ impl Compiler {
                     let (f_a_before, f_a_after) = f
                         .under_inverse(g.sig, true, &self.asm)
                         .map_err(|e| self.error(f_span.clone(), e))?;
-                    let g_sn_before = SigNode::new(
-                        self.sig_of(&g_before, &g_span)?,
-                        g_before);
-                    let g_sn_after = SigNode::new(
-                        self.sig_of(&g_after, &g_span)?,
-                        g_after);
+                    let g_sn_before = SigNode::new(self.sig_of(&g_before, &g_span)?, g_before);
+                    let g_sn_after = SigNode::new(self.sig_of(&g_after, &g_span)?, g_after);
                     // g must be able to push and pop its context values
                     // without conflicting with f's use of the under stack;
                     // each half of g is performed modified by under f
@@ -1350,10 +1346,7 @@ impl Compiler {
                     let span = modified.modifier.span.clone();
                     let sig_b = self.sig_of(&before, &span)?;
                     let sig_a = self.sig_of(&after, &span)?;
-                    Some((
-                        SigNode::new(sig_b, before),
-                        SigNode::new(sig_a, after),
-                    ))
+                    Some((SigNode::new(sig_b, before), SigNode::new(sig_a, after)))
                 } else if normal.sig.args() == normal.sig.outputs() {
                     un.clone().map(|un| (normal.clone(), un))
                 } else {

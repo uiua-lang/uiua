@@ -960,28 +960,9 @@ impl Parser<'_> {
         if first.path.is_empty()
             && let Some(span) = self.exact(Colon.into())
         {
-            let start_span = first.name.span.clone();
-            let mut end_span = span.clone();
-            let mut immutables = vec![first.name.span.merge(span).sp(Immutable {
+            return Some((first.name.span.merge(span)).sp(Word::Immutable(Immutable {
                 name: first.name.value,
-            })];
-            loop {
-                let reset = self.index;
-                self.spaces();
-                if let Some(name) = self.ident() {
-                    if let Some(span) = self.exact(Colon.into()) {
-                        end_span = span.clone();
-                        immutables.push(name.span.merge(span).sp(Immutable { name: name.value }))
-                    } else {
-                        self.index = reset;
-                        break;
-                    }
-                } else {
-                    self.index = reset;
-                    break;
-                }
-            }
-            return Some(start_span.merge(end_span).sp(Word::Immutables(immutables)));
+            })));
         }
         let mut chained = Vec::new();
         while let Some(dot_span) = self

@@ -363,7 +363,7 @@ pub enum Word {
     OutputComment { i: usize, n: usize },
     Subscripted(Box<Subscripted>),
     InlineMacro(Box<InlineMacro>),
-    Immutables(Vec<Sp<Immutable>>),
+    Immutable(Immutable),
 }
 
 impl PartialEq for Word {
@@ -390,7 +390,7 @@ impl PartialEq for Word {
             }
             (Self::Placeholder(_), Self::Placeholder(_)) => false,
             (Self::Comment(a), Self::Comment(b)) => a == b,
-            (Self::Immutables(a), Self::Immutables(b)) => a == b,
+            (Self::Immutable(a), Self::Immutable(b)) => a == b,
             _ => discriminant(self) == discriminant(other),
         }
     }
@@ -492,12 +492,7 @@ impl fmt::Debug for Word {
             Word::InlineMacro(mac) => {
                 write!(f, "inline_macro({:?}{}))", mac.func.value, mac.ident.value)
             }
-            Word::Immutables(ims) => {
-                for im in ims {
-                    write!(f, "{:?}", im.value)?;
-                }
-                Ok(())
-            }
+            Word::Immutable(im) => write!(f, "{im:?}"),
         }
     }
 }

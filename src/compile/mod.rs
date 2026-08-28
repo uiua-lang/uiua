@@ -476,7 +476,7 @@ impl Compiler {
         let input: EcoString = fs::read_to_string(path)
             .map_err(|e| UiuaErrorKind::Load(path.into(), e.into()))?
             .into();
-        // _ = crate::lsp::Spans::from_input(&input);
+        // dbg!(crate::lsp::Spans::from_input(&input).spans);
         self.asm.inputs.files.insert(path.into(), input.clone());
         self.load_impl(&input, InputSrc::File(path.into()))
     }
@@ -1371,23 +1371,17 @@ impl Compiler {
                 }
                 Node::empty()
             }
-            Word::Immutables(ims) => {
-                if let Some(im) = ims.first() {
-                    self.experimental_error_them(&im.span, || "Immutables");
+            Word::Immutable(im) => {
+                self.experimental_error_them(&word.span, || "Immutables");
+                self.immutables.push(ImmutableSlot {
+                    name: im.name,
+                    span: word.span.clone(),
+                    used: false,
+                });
+                self.code_meta.immutable_uses.insert(word.span.clone(), 0);
+                Node::BindImmutable {
+                    span: self.add_span(word.span),
                 }
-                let mut nodes = EcoVec::new();
-                for im in ims {
-                    let (im, span) = im.into();
-                    nodes.push(Node::BindImmutable {
-                        span: self.add_span(span.clone()),
-                    });
-                    self.immutables.push(ImmutableSlot {
-                        name: im.name,
-                        span,
-                        used: false,
-                    });
-                }
-                Node::from(nodes)
             }
             Word::Strand(items) => {
                 // Diagnostic for strand of characters
@@ -2024,6 +2018,8 @@ impl Compiler {
             (self.immutables.iter_mut().rev().enumerate()).find(|(_, im)| im.name == ident)
         {
             im.used = true;
+            (self.code_meta.immutable_references).insert(span.clone(), im.span.clone());
+            *self.code_meta.immutable_uses.get_mut(&im.span).unwrap() += 1;
             return Node::GetImmutable {
                 index,
                 span: self.add_span(span),

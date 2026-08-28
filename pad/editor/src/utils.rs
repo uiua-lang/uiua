@@ -691,8 +691,12 @@ pub fn gen_code_view(code: &str, hidden: &str) -> View {
                     }
                     .into_view(),
                 ),
-                CodeFragment::Ghost(short, None) => frag_views
-                    .push(view! { <span class="code-span value-hint"><span inert=true>{short}</span></span> }.into_view()),
+                CodeFragment::Ghost(short, None) => frag_views.push(
+                    view! { <span class="code-span value-hint">
+                        <span inert=true>{short}</span>
+                    </span> }
+                    .into_view(),
+                ),
                 CodeFragment::Br => frag_views.push(view! { <br /> }.into_view()),
                 CodeFragment::Span(text, kind) => {
                     let color_class = match &kind {
@@ -703,11 +707,13 @@ pub fn gen_code_view(code: &str, hidden: &str) -> View {
                         SpanKind::Obverse(_) => prim_sig_class(Primitive::Obverse, None),
                         SpanKind::Number | SpanKind::Subscript(None, _) => number_class(),
                         SpanKind::String | SpanKind::ImportSrc(_) => string_class(),
-                        SpanKind::Comment | SpanKind::OutputComment | SpanKind::TypeSigComment => comment_class(),
+                        SpanKind::Comment | SpanKind::OutputComment | SpanKind::TypeSigComment => {
+                            comment_class()
+                        }
                         SpanKind::Strand => "strand-span",
                         SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, n.as_ref()),
                         SpanKind::MacroDelim(margs) => modifier_class(*margs),
-                        SpanKind::Immutable => sig_class((1, 0).into()),
+                        SpanKind::Immutable { bind: true, .. } => sig_class((1, 0).into()),
                         _ => "",
                     };
                     match kind {
@@ -1014,8 +1020,10 @@ pub fn gen_code_view(code: &str, hidden: &str) -> View {
                                     _ => {}
                                 }
                             }
-                            if docs.meta.comment.as_ref().is_none_or(|com| com.sig.is_none()) && let Some((args, outputs)) = &docs.meta.types
-                                && !(args.is_empty() && outputs.is_empty()) {
+                            if (docs.meta.comment.as_ref()).is_none_or(|com| com.sig.is_none())
+                                && let Some((args, outputs)) = &docs.meta.types
+                                && !(args.is_empty() && outputs.is_empty())
+                            {
                                 if !title.ends_with('\n') {
                                     title.push('\n');
                                 }
@@ -1055,11 +1063,15 @@ pub fn gen_code_view(code: &str, hidden: &str) -> View {
                                 .into_view(),
                             )
                         }
-                        SpanKind::Immutable => {
+                        SpanKind::Immutable { bind, uses } => {
                             let class = format!("code-span {color_class}");
-                            let title = "bind immutable";
+                            let title = format!(
+                                "{}immutable\n{uses} use{}",
+                                if bind { "bind " } else { "" },
+                                if uses == 1 { "" } else { "s" }
+                            );
                             frag_views.push(
-                                    view!(<span class=class data-title=title>{text}</span>).into_view()
+                                view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
                         _ => {
@@ -1304,7 +1316,10 @@ fn run_code_single(code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaError>) {
             output[0] = vec![OutputItem::String("Previous output truncated...".into())];
         }
         let report = error.report();
-        let execution_limit_reached = report.fragments.iter().any(|frag| matches!(frag, ReportFragment::Plain(s) if s.contains("Maximum execution time exceeded")));
+        let execution_limit_reached = report.fragments.iter().any(|frag| {
+            matches!(frag, ReportFragment::Plain(s)
+                if s.contains("Maximum execution time exceeded"))
+        });
         output.push(vec![OutputItem::Report(report)]);
         if execution_limit_reached {
             output.push(vec![OutputItem::String(
@@ -1349,7 +1364,12 @@ pub fn report_view(report: &Report, state: WriteSignal<State>) -> impl IntoView 
                 let omitted_count = newline_indices.len() - 20;
                 frags.push(view! { <br /> }.into_view());
                 frags.push(view! { <br /> }.into_view());
-                frags.push(view! { <span class="output-report">{format!("     ...{omitted_count} omitted...")}</span> }.into_view());
+                frags.push(
+                    view! { <span class="output-report">
+                        {format!("     ...{omitted_count} omitted...")
+                    }</span> }
+                    .into_view(),
+                );
                 frags.push(view! { <br /> }.into_view());
             }
             continue;

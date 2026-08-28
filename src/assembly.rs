@@ -73,6 +73,7 @@ pub struct Function {
 }
 
 impl Function {
+    /// Unique hash of this function
     pub fn hash(&self) -> u64 {
         self.hash
     }

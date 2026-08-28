@@ -1508,7 +1508,7 @@ impl Parser<'_> {
                     }
                 }
                 Ok(_) if s.contains(',') => {
-                    let (whole, frac) = s.split_once('.').map_or((s, ""), |pair| pair);
+                    let (whole, frac) = s.split_once('.').unwrap_or((s, ""));
                     if let Some(sec) = (whole.split(',').skip(1).find(|sec| sec.len() <= 1))
                         .filter(|_| whole.contains(','))
                         .or_else(|| {

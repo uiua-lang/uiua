@@ -8,6 +8,7 @@ pub extern "C" fn add(a: c_int, b: c_int) -> c_int {
 }
 
 #[unsafe(no_mangle)]
+#[allow(suspicious_runtime_symbol_definitions)]
 pub unsafe extern "C" fn strlen(s: *const c_char) -> c_int {
     let mut len = 0;
     while unsafe { *s.offset(len) } != 0 {

@@ -1976,7 +1976,7 @@ impl Compiler {
             };
             let subcompletions = self.completions(prefix, subnames, true);
             completions.extend(subcompletions.into_iter().map(|c| Completion {
-                text: format!("{name}~{}", c.text),
+                text: format!("{name}.{}", c.text),
                 ..c
             }));
         }

@@ -1444,9 +1444,11 @@ impl Formatter<'_> {
     }
     fn format_modifier(&mut self, modifier: &Sp<Modifier>, depth: usize) {
         match &modifier.value {
-            Modifier::Primitive(prim) => {
-                self.format_primitive_impl(*prim, &modifier.span, prim.glyph().is_none())
-            }
+            Modifier::Primitive(prim) => self.format_primitive_impl(
+                *prim,
+                &modifier.span,
+                prim.modifier_args().is_none() && prim.glyph().is_none(),
+            ),
             Modifier::Ref(r) => self.format_ref(r),
             Modifier::Macro(mac) => {
                 self.func(&mac.func.value, depth);

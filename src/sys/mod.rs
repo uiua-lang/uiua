@@ -1557,7 +1557,7 @@ pub(crate) fn run_sys_op_mod(op: &SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult
                     [_] => Ok(samples.data.iter().map(|&x| [x, x]).collect()),
                     &[n, 2] => {
                         let mut samps: Vec<[f64; 2]> = Vec::with_capacity(n);
-                        for samp in samples.data.chunks_exact(2) {
+                        for samp in samples.data.as_chunks::<2>().0 {
                             samps.push([samp[0], samp[1]]);
                         }
                         Ok(samps)

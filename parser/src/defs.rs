@@ -2446,8 +2446,6 @@ primitive!(
     ///   : ∪⌞⊟⊟₃ 1 2 3 4 5
     ///   : ∪⌟⊟⊟₃ 1 2 3 4 5
     ([1], Reach, Arguments, ("reach", '∪'), { experimental: true }),
-    /// Old reach
-    ([1], OldReach, Arguments,  ("old reach", '𝄐'), { experimental: true }),
     /// Define the various inverses of a function
     ///
     /// [obverse] defines how a function should interact with [un], [anti], and [under].

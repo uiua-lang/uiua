@@ -1,9 +1,9 @@
 # Uiua Changelog
 
 Uiua is not yet stable.
+<!--This version is not yet released. If you are reading this on the website, then these changes are live here.-->
 
-## 0.19.0 - 2026-08-??
-This version is not yet released. If you are reading this on the website, then these changes are live here.
+## 0.19.0 - 2026-08-26
 ### Language
 - **Breaking Change** - Monadic [`tuples ⧅`](https://uiua.org/docs/tuples) now gives the power set rather than prefixes.
   - Sided [`tuples ⧅`](https://uiua.org/docs/tuples) now gives prefixes or suffixes.
@@ -41,6 +41,7 @@ This version is not yet released. If you are reading this on the website, then t
   - As planned, [`indexin ⊗`](https://uiua.org/docs/indexin)'s glyph has been changed, and the old one will format to `⊗`.
 - Remove experimental `&b` (breakpoint)
   - It was half-baked and poorly implemented
+- Remove old version of [`reach ∪`](https://uiua.org/docs/reach) that used the `𝄐` glyph
 ### Interpreter
 - Tweak the formatter to make indentation always a multiple of 2
 - Add number output rules for some square roots

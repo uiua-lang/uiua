@@ -468,7 +468,7 @@ impl fmt::Debug for Word {
                 write!(f, ")")
             }
             Word::IncompleteRef(path) => {
-                write!(f, "incomplete_ref({}~...)", path[0].module.value)
+                write!(f, "incomplete_ref({}.)", path[0].module.value)
             }
             Word::Array(arr) => arr.fmt(f),
             Word::Strand(items) => write!(f, "strand({items:?})"),
@@ -575,7 +575,7 @@ impl Eq for Ref {}
 impl fmt::Debug for Ref {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for comp in &self.path {
-            write!(f, "{}~", comp.module.value)?;
+            write!(f, "{}.", comp.module.value)?;
         }
         write!(f, "{}", self.name.value)
     }
@@ -584,7 +584,7 @@ impl fmt::Debug for Ref {
 impl fmt::Display for Ref {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for comp in &self.path {
-            write!(f, "{}~", comp.module.value)?;
+            write!(f, "{}.", comp.module.value)?;
         }
         write!(f, "{}", self.name.value)
     }

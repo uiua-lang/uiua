@@ -277,7 +277,7 @@ impl Primitive {
             | (Repeat | Tuples | Stencil) => 1,
             Bracket | Under | Fill => 2,
             Reach if sub.side.is_some() => 2,
-            Reach | OldReach => 1,
+            Reach => 1,
             _ => return None,
         })
     }
@@ -296,7 +296,6 @@ impl Primitive {
                 )
             },
             Flip => || format!("use {} instead", Backward.format()),
-            OldReach => || format!("use {} instead", Reach.format()),
             Rerank => || {
                 format!(
                     "use subscripted {} or {Un}{By}({Len}{Shape}) instead",

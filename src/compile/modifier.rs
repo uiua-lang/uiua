@@ -606,15 +606,6 @@ impl Compiler {
                     Node::Mod(By, eco_vec![sn], span)
                 }
             }
-            OldReach => func!({
-                let (sn, _) = self.monadic_modifier_op(modified)?;
-                let span = self.add_span(modified.modifier.span.clone());
-                let mut node = sn.node;
-                node.prepend(Node::Prim(Pop, span));
-                node = Node::Mod(Off, eco_vec![node.sig_node().unwrap()], span);
-                node.prepend(Node::Prim(Flip, span));
-                node
-            }),
             Reach => func!({
                 let (f, g) = if (subscript.as_ref()).is_some_and(|sub| sub.value.side.is_some()) {
                     let (f, g, ..) = self.dyadic_modifier_ops(modified)?;

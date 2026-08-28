@@ -454,10 +454,14 @@ under!(BothPat, input, g_sig, inverse, asm, {
     let rest_before_sig = rest_before.sig()?;
     let rest_after_sig = rest_after.sig()?;
     let other_sig = rest_after_sig.compose(g_sig.compose(rest_before_sig));
+    // Number of sets of context values that need to be discarded
     let n_reduction = if sub.side.is_some() && other_sig.outputs() == 0 {
         0
     } else {
-        other_sig.args().saturating_sub(other_sig.outputs())
+        // n reduction cannot be greater or equal to the number of times
+        // both's function is called
+        (other_sig.args().saturating_sub(other_sig.outputs()))
+            .min(sub.num.unwrap_or(2).saturating_sub(1) as usize)
     };
     // Make before
     let mut before = val.unwrap_or_default();
@@ -479,6 +483,8 @@ under!(BothPat, input, g_sig, inverse, asm, {
         }
         node
     });
+    // dbg!(n_reduction);
+    // dbg!(f_after.sig, f_after.sig.under());
     // Make after
     let mut after = if inverse || n_reduction == 0 {
         let sub = Subscript { side: None, ..sub };
@@ -488,6 +494,7 @@ under!(BothPat, input, g_sig, inverse, asm, {
             .saturating_sub(n_reduction)
             .max(1);
         let to_discard = f_after.sig.under_args() * n_reduction;
+        // dbg!(to_discard);
         if undo_n > 1 {
             let num = Some(undo_n as u32);
             let sub = Subscript { num, side: None };

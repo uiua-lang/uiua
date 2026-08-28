@@ -1114,9 +1114,8 @@ pub fn gif_bytes_to_value_impl(
         // Some frames may have different dimensions than the GIF
         if frame_width == gif_width && frame_height == gif_height {
             if frame.dispose == gif::DisposalMethod::Keep && mode == gif::ColorOutput::RGBA {
-                for (data_pixel, frame_pixel) in frame_data
-                    .chunks_exact_mut(4)
-                    .zip(frame.buffer.chunks_exact(4))
+                for (data_pixel, frame_pixel) in (frame_data.as_chunks_mut::<4>().0.iter_mut())
+                    .zip(frame.buffer.as_chunks::<4>().0)
                 {
                     if frame_pixel[3] > 0 {
                         data_pixel.copy_from_slice(frame_pixel);
@@ -2164,7 +2163,7 @@ impl Value {
                         *prod /= grad_sqr_sum.sqrt();
                     }
                     // Apply coefficients to product
-                    for (x, cs) in scaled.iter().zip(coefs.chunks_exact_mut(2)) {
+                    for (x, cs) in scaled.iter().zip(coefs.as_chunks_mut::<2>().0) {
                         let fract = x.rem_euclid(1.0).fract();
                         cs[0] = smoothstep(1.0 - fract);
                         cs[1] = smoothstep(fract);

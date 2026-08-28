@@ -1,10 +1,10 @@
 # A Uiua Type System
 
-2025-08-01
+2026-08-01
 
 ---
 
-This blog post explains the rational and design of Uiua's `# Experimental!` new type system.
+This blog post explains the rationale and design of Uiua's `# Experimental!` new type system.
 
 ## A Dynamic Language
 

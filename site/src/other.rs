@@ -77,7 +77,6 @@ pub fn Install() -> impl IntoView {
         <p>"For Vim, 0racle maintains a "<a href="https://github.com/0racle/uiua.vim">{lang}" plugin"</a>"."</p>
         <p>"Language support in Neovim is easy with "<a href="https://github.com/neovim/nvim-lspconfig">"nvim-lspconfig"</a>"."</p>
         <p>"For Emacs, crmsnbleyd maintains a "<a href="https://github.com/crmsnbleyd/uiua-ts-mode">{lang}" mode"</a>"."</p>
-        <p>"For Kakoune, ThaCuber maintains a "<a href="https://github.com/thacuber2a03/highlighters.kak/blob/main/uiua.kak">"syntax highlighting module"</a>"."</p>
         <p>"For Nano, cqn-brwpna9 manatins a "<a href="https://github.com/cqn-brwpna9/uiua-nano-config">"nanorc for uiua"</a>"."</p>
         <p>"These require "{lang}" to be installed and in your "<code>"PATH"</code>"."</p>
 

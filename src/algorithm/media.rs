@@ -1198,25 +1198,111 @@ pub(crate) fn apng_bytes_to_value(_bytes: &[u8]) -> Result<(f64, Value), png::De
 
 #[cfg(feature = "apng")]
 pub(crate) fn apng_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), png::DecodingError> {
-    use png::Decoder;
+    use png::{BlendOp, ColorType, Decoder, DisposeOp};
     let mut reader = Decoder::new(bytes).read_info()?;
     let info = reader.info();
     let (width, height) = (info.width as usize, info.height as usize);
-    let bytes_per_pixel = info.bytes_per_pixel();
+    let color_type = info.color_type;
+    let bytes_per_pixel = match color_type {
+        ColorType::Indexed => 3,
+        _ => info.bytes_per_pixel(),
+    };
     let frame_count = info
         .animation_control()
-        .map_or(1, |ac| ac.num_frames as usize);
+        .map_or(1, |ac| ac.num_frames as usize)
+        .min(100);
+    let mut frame_info = info.frame_control.unwrap_or_default();
+    dbg!(frame_count, width, height);
     let frame_rate =
         (info.frame_control()).map_or(24.0, |fc| fc.delay_den as f64 / fc.delay_num as f64);
     let frame_size = width * height * bytes_per_pixel;
     let mut data = vec![0; frame_count * frame_size];
+    let mut buf = vec![0; frame_size];
+    let palette = (info.palette.as_ref()).map_or(Vec::new(), |pal| pal.clone().into_owned());
+    let alpha = (info.trns.as_ref()).map_or(Vec::new(), |a| a.clone().into_owned());
+    let mut alpha_buf = vec![0; reader.output_buffer_size() / info.bytes_per_pixel()];
+    let background = (info.bkgd.as_ref()).map_or_else(|| vec![0; 3], |bg| bg.clone().into_owned());
+    dbg!(palette.len() / 3);
     for i in 0..frame_count {
-        reader.next_frame(&mut data[i * frame_size..][..frame_size])?;
+        let frame = &mut data[i * frame_size..][..frame_size];
+        reader.next_frame(&mut buf).unwrap();
+        println!(
+            "frame {i}, rect: {} {} {} {}, dispose: {:?}, blend: {:?}",
+            frame_info.x_offset,
+            frame_info.y_offset,
+            frame_info.width,
+            frame_info.height,
+            frame_info.dispose_op,
+            frame_info.blend_op
+        );
+        if let ColorType::Indexed = color_type {
+            for i in (0..reader.output_buffer_size()).rev() {
+                let index = buf[i] as usize;
+                for j in 0..3 {
+                    if let Some(c) = palette.get(index * 3 + j) {
+                        buf[i * 3 + j] = *c;
+                    }
+                }
+                if let Some(a) = alpha.get(index) {
+                    alpha_buf[i] = *a;
+                }
+            }
+        }
+        for y in 0..frame_info.height as usize {
+            let frame_y_offset = (frame_info.y_offset as usize + y) * width;
+            let buf_y_offset = y * frame_info.width as usize;
+            for x in 0..frame_info.width as usize {
+                let x_offset = frame_info.x_offset as usize + x;
+                let dest =
+                    &mut frame[(frame_y_offset + x_offset) * bytes_per_pixel..][..bytes_per_pixel];
+                let src = &buf[(buf_y_offset + x) * bytes_per_pixel..][..bytes_per_pixel];
+                dest.copy_from_slice(src);
+                match frame_info.blend_op {
+                    BlendOp::Source => dest.copy_from_slice(src),
+                    BlendOp::Over => {
+                        let t = alpha_buf[buf_y_offset + x_offset] as f64 / 255.0;
+                        for i in 0..bytes_per_pixel {
+                            dest[i] = ((src[i] as f64 / 255.0 * t
+                                + dest[i] as f64 / 255.0 * (1.0 - t))
+                                * 255.0)
+                                .round() as u8;
+                        }
+                    }
+                }
+            }
+        }
+
+        match frame_info.dispose_op {
+            DisposeOp::None => {
+                if i < frame_count - 1 {
+                    data.copy_within(i * frame_size..(i + 1) * frame_size, (i + 1) * frame_size);
+                }
+            }
+            DisposeOp::Background => {
+                for i in 0..frame_size / bytes_per_pixel {
+                    data[(i + 1) * bytes_per_pixel..][..bytes_per_pixel]
+                        .copy_from_slice(&background);
+                }
+            }
+            DisposeOp::Previous => {
+                if i > 0 && i < frame_count - 1 {
+                    data.copy_within((i - 1) * frame_size..i * frame_size, (i + 1) * frame_size);
+                }
+            }
+        }
+        let Ok(&fi) = reader.next_frame_info() else {
+            continue;
+        };
+        frame_info = fi;
     }
     let data = (data.into_iter())
         .map(|f| f as f64 / 255.0)
         .collect::<EcoVec<_>>();
-    let arr = Array::new([frame_count, height, width, bytes_per_pixel], data);
+    let mut shape = Shape::from([frame_count, height, width]);
+    if bytes_per_pixel > 1 {
+        shape.push(bytes_per_pixel);
+    }
+    let arr = Array::new(shape, data);
     Ok((frame_rate, arr.into()))
 }
 

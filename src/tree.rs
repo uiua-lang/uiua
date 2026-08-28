@@ -17,8 +17,8 @@ use rapidhash::quality::RapidHasher;
 use serde::*;
 
 use crate::{
-    AestheticHash, Assembly, BindingKind, DynamicFunction, Function, HasSig, ImmutableKind,
-    ImplPrimitive, Primitive, Purity, Signature, Value,
+    AestheticHash, Assembly, BindingKind, DynamicFunction, Function, HasSig, ImplPrimitive,
+    Primitive, Purity, Signature, Value,
     check::SigCheckError,
     compile::invert::{InversionError, InversionResult},
 };
@@ -40,9 +40,9 @@ node!(
     /// Bind a global value
     BindGlobal { index: usize, span: usize },
     /// Bind an immutable
-    BindImmutable { kind: ImmutableKind, span: usize },
+    BindImmutable { span: usize },
     /// Get an immutable
-    GetImmutable { index: usize, span: usize },
+    GetImmutable { index: usize, span: usize, take: bool },
     /// Pop multiple immutables
     PopImmutables { n: usize },
     /// Set a value's label
@@ -849,8 +849,13 @@ impl fmt::Debug for Node {
             Node::TrackCaller(inner) => {
                 f.debug_tuple("track-caller").field(inner.as_ref()).finish()
             }
-            Node::BindImmutable { kind, .. } => write!(f, "bind-im-{kind}"),
-            Node::GetImmutable { index, .. } => write!(f, "get-im-{index}"),
+            Node::BindImmutable { .. } => write!(f, "bind-im"),
+            Node::GetImmutable {
+                index, take: false, ..
+            } => write!(f, "get-im-{index}"),
+            Node::GetImmutable {
+                index, take: true, ..
+            } => write!(f, "take-im-{index}"),
             Node::PopImmutables { n, .. } => write!(f, "pop-im-{n}"),
         }
     }

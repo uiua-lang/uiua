@@ -387,6 +387,7 @@ impl Compiler {
         let immutables_escape = match &modified.modifier.value {
             Modifier::Primitive(prim) => match prim {
                 Content | Evert | Under | Fill => true,
+                Both => false,
                 prim => prim.class() == PrimClass::Arguments,
             },
             Modifier::Ref(_) => false,
@@ -1787,12 +1788,13 @@ impl Compiler {
         {
             // Module import macro
             let call = names.get_last("Call");
-            let (_, sn, post) = self.in_scope(ScopeKind::AllInModule, move |comp| {
+            let immutables_height = self.immutables.len();
+            let (_, sn) = self.in_scope(ScopeKind::AllInModule, move |comp| {
                 comp.scope.names.extend_from_other(names);
                 comp.words_sig(operands)
             })?;
             let (mut node, sig) = sn.into();
-            node.push(post);
+            self.end_immutables(immutables_height, Some(&mut node));
             if data_func {
                 // Data macro
                 let BindingKind::Func(call_func) =
@@ -1841,7 +1843,7 @@ impl Compiler {
             _ => return Err(self.error(modifier_span, format!("{prim} has no optional arguments"))),
         };
         let span = self.add_span(modifier_span);
-        let (_, mut sn, post) = self.in_scope(ScopeKind::AllInModule, |comp| {
+        let (_, sn) = self.in_scope(ScopeKind::AllInModule, |comp| {
             // Bind field getters
             for (index, arg) in args.iter().enumerate() {
                 let name = Ident::from(arg.name);
@@ -1880,7 +1882,6 @@ impl Compiler {
             // Compile words
             comp.words_sig(operands)
         })?;
-        sn.node.push(post);
         let len = args.len();
         let inner: Node = args
             .into_iter()

@@ -994,27 +994,10 @@ impl fmt::Display for NumWord {
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Immutable {
     pub name: Ident,
-    pub kind: ImmutableKind,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum ImmutableKind {
-    Small,
-    Affine,
 }
 
 impl fmt::Debug for Immutable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)?;
-        write!(f, "{}", self.kind)
-    }
-}
-
-impl fmt::Display for ImmutableKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ImmutableKind::Small => write!(f, ":"),
-            ImmutableKind::Affine => write!(f, "○"),
-        }
+        write!(f, "{}:", self.name)
     }
 }

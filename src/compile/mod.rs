@@ -289,9 +289,8 @@ struct CurrentBinding {
 #[derive(Clone)]
 struct ImmutableSlot {
     name: Ident,
-    kind: ImmutableKind,
     span: CodeSpan,
-    used: Option<CodeSpan>,
+    used: bool,
 }
 
 /// A scope where names are defined
@@ -527,7 +526,7 @@ impl Compiler {
         &mut self,
         kind: ScopeKind,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
-    ) -> UiuaResult<(Module, T, Node)> {
+    ) -> UiuaResult<(Module, T)> {
         let mut new_scope = Scope::default();
         if matches!(
             kind,
@@ -536,24 +535,11 @@ impl Compiler {
             new_scope.type_check = self.scope.type_check;
         }
         self.higher_scopes.push(replace(&mut self.scope, new_scope));
-        let immutables_height = self.immutables.len();
-        let immutables_escape = match kind {
-            ScopeKind::File(_) | ScopeKind::Module(_) | ScopeKind::Binding | ScopeKind::Test => {
-                false
-            }
-            _ => true,
-        };
         self.scope.kind = kind;
 
         let res = f(self);
 
-        let mut post_node = Node::empty();
         let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
-        if !immutables_escape && self.immutables.len() > immutables_height {
-            let n = self.immutables.len() - immutables_height;
-            post_node = Node::PopImmutables { n };
-            self.immutables.truncate(immutables_height);
-        }
 
         let res = res?;
         let module = Module {
@@ -563,7 +549,7 @@ impl Compiler {
             data_func: scope.is_data_func,
             experimental: scope.experimental,
         };
-        Ok((module, res, post_node))
+        Ok((module, res))
     }
     fn load_impl(&mut self, input: &str, src: InputSrc) -> UiuaResult<&mut Self> {
         let node_start = self.asm.root.len();
@@ -630,6 +616,8 @@ impl Compiler {
         if let InputSrc::File(_) = &src {
             self.current_imports.pop();
         }
+        self.end_immutables(0, None);
+
         // Collect errors
         match res {
             Err(e) | Ok(Err(e)) => {
@@ -1392,13 +1380,11 @@ impl Compiler {
                     let (im, span) = im.into();
                     nodes.push(Node::BindImmutable {
                         span: self.add_span(span.clone()),
-                        kind: im.kind,
                     });
                     self.immutables.push(ImmutableSlot {
                         name: im.name,
-                        kind: im.kind,
                         span,
-                        used: None,
+                        used: false,
                     });
                 }
                 Node::from(nodes)
@@ -2037,33 +2023,11 @@ impl Compiler {
         if let Some((index, im)) =
             (self.immutables.iter_mut().rev().enumerate()).find(|(_, im)| im.name == ident)
         {
-            if let Some(used_span) = &im.used {
-                // Validate affine use
-                if im.kind == ImmutableKind::Affine {
-                    self.errors.push(
-                        Self::error_impl(
-                            &self.asm,
-                            span.clone(),
-                            format!("Affine immutable {} was already used.", im.name),
-                        )
-                        .with_info([
-                            (
-                                format!("{} was already used here.", im.name),
-                                Some(used_span.clone().into()),
-                            ),
-                            (
-                                format!("{} was defined as affine here.", im.name),
-                                Some(im.span.clone().into()),
-                            ),
-                        ]),
-                    );
-                }
-            } else {
-                im.used = Some(span.clone());
-            }
+            im.used = true;
             return Node::GetImmutable {
                 index,
                 span: self.add_span(span),
+                take: false,
             };
         }
 
@@ -3253,6 +3217,38 @@ impl Compiler {
                 format!("Cannot infer function signature: {e}"),
             )
         })
+    }
+    fn end_immutables(&mut self, start_height: usize, node: Option<&mut Node>) {
+        if self.immutables.len() <= start_height {
+            return;
+        }
+        let n = self.immutables.len() - start_height;
+        let node = node.unwrap_or(&mut self.asm.root);
+        for i in 0..n {
+            fn recur(node: &mut Node, i: usize) -> bool {
+                match node {
+                    Node::Run(nodes) => {
+                        nodes.make_mut().iter_mut().rev().any(|node| recur(node, i))
+                    }
+                    Node::GetImmutable { index, take, .. } if *index == i => {
+                        *take = true;
+                        true
+                    }
+                    Node::Mod(_, ops, _) | Node::ImplMod(_, ops, _) => {
+                        (ops.make_mut().iter_mut().rev()).any(|sn| recur(&mut sn.node, i))
+                    }
+                    Node::TrackCaller(sn) => recur(&mut Arc::make_mut(sn).node, i),
+                    Node::NoInline(node) => recur(Arc::make_mut(node), i),
+                    Node::Array { inner, .. } => recur(Arc::make_mut(inner), i),
+                    Node::Switch { branches, .. } => {
+                        (branches.make_mut().iter_mut().rev()).any(|sn| recur(&mut sn.node, i))
+                    }
+                    _ => false,
+                }
+            }
+            recur(node, i);
+        }
+        node.push(Node::PopImmutables { n });
     }
 }
 

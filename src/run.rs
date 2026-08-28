@@ -16,7 +16,6 @@ use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use parking_lot::Mutex;
 use thread_local::ThreadLocal;
 use threadpool::ThreadPool;
-use uiua_parser::ImmutableKind;
 
 use crate::{
     Array, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, Compiler, Function, FunctionId,
@@ -126,7 +125,6 @@ pub(crate) struct StackFrame {
 #[derive(Debug, Clone)]
 pub(crate) struct StackedImmutable {
     pub value: Option<Value>,
-    pub kind: ImmutableKind,
 }
 
 #[derive(Debug, Clone)]
@@ -725,27 +723,14 @@ impl Uiua {
                 self.rt.call_stack.last_mut().unwrap().track_caller = true;
                 self.exec(inner)
             }),
-            Node::BindImmutable { kind, span } => self.with_span(span, |env| {
+            Node::BindImmutable { span } => self.with_span(span, |env| {
                 let val = env.pop(1)?;
-                const MAX_SMALL_BYTES: usize = 64;
-                if let ImmutableKind::Small = kind {
-                    let mem_size = val.mem_size();
-                    if mem_size > MAX_SMALL_BYTES {
-                        return Err(env.error(format!(
-                            "Small immutables may be at most {MAX_SMALL_BYTES} bytes, \
-                            but the array of shape {} {} is {mem_size} bytes.",
-                            val.shape,
-                            val.type_name_plural()
-                        )));
-                    }
-                }
-                env.rt.immutables.push(StackedImmutable {
-                    value: Some(val),
-                    kind,
-                });
+                env.rt
+                    .immutables
+                    .push(StackedImmutable { value: Some(val) });
                 Ok(())
             }),
-            Node::GetImmutable { index, span } => self.with_span(span, |env| {
+            Node::GetImmutable { index, take, span } => self.with_span(span, |env| {
                 let len = env.rt.immutables.len();
                 if len <= index {
                     return Err(env.error(format!(
@@ -753,14 +738,14 @@ impl Uiua {
                     )));
                 }
                 let im = &mut env.rt.immutables[len - index - 1];
-                let val = match im.kind {
-                    ImmutableKind::Small => im.value.as_ref().unwrap().clone(),
-                    ImmutableKind::Affine => im.value.take().ok_or_else(|| {
-                        env.error(
-                            "Affine immutable was already used. This is a bug in the interpreter.",
-                        )
-                    })?,
-                };
+                let val = if take {
+                    im.value.take()
+                } else {
+                    im.value.as_ref().cloned()
+                }
+                .ok_or_else(|| {
+                    env.error("Immutable was already used. This is a bug in the interpreter.")
+                })?;
                 env.push(val);
                 Ok(())
             }),

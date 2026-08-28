@@ -14,7 +14,7 @@ use std::{
     str::FromStr,
     time::Duration,
 };
-use uiua::{ImmutableKind, PrimDoc, UiuaErrorKind};
+use uiua::{PrimDoc, UiuaErrorKind};
 
 use uiua::{
     Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
@@ -707,7 +707,7 @@ pub fn gen_code_view(code: &str, hidden: &str) -> View {
                         SpanKind::Strand => "strand-span",
                         SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, n.as_ref()),
                         SpanKind::MacroDelim(margs) => modifier_class(*margs),
-                        SpanKind::Immutable(_) => sig_class((1, 0).into()),
+                        SpanKind::Immutable => sig_class((1, 0).into()),
                         _ => "",
                     };
                     match kind {
@@ -1055,12 +1055,9 @@ pub fn gen_code_view(code: &str, hidden: &str) -> View {
                                 .into_view(),
                             )
                         }
-                        SpanKind::Immutable(kind) => {
+                        SpanKind::Immutable => {
                             let class = format!("code-span {color_class}");
-                            let title = match kind {
-                                ImmutableKind::Small => "bind small immutable",
-                                ImmutableKind::Affine => "bind affine immutable",
-                            };
+                            let title = "bind immutable";
                             frag_views.push(
                                     view!(<span class=class data-title=title>{text}</span>).into_view()
                             )

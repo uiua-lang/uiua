@@ -50,7 +50,7 @@ pub enum SpanKind {
     Subscript(Option<Primitive>, Option<SubscriptToken>),
     /// `obverse` primitive. Contains which inverses are set.
     Obverse(SetInverses),
-    Immutable(ImmutableKind),
+    Immutable,
 }
 
 /// Documentation information for a binding
@@ -631,7 +631,7 @@ impl Spanner {
                 Word::IncompleteRef(path) => spans.extend(self.ref_path_spans(path)),
                 Word::Immutables(ims) => {
                     for im in ims {
-                        spans.push(im.span.clone().sp(SpanKind::Immutable(im.value.kind)))
+                        spans.push(im.span.clone().sp(SpanKind::Immutable))
                     }
                 }
                 Word::Strand(items) => {
@@ -1706,7 +1706,7 @@ mod server {
                         stt
                     }
                     SpanKind::Placeholder(_) => SemanticTokenType::PARAMETER,
-                    SpanKind::Immutable(_) => MONADIC_FUNCTION_STT,
+                    SpanKind::Immutable => MONADIC_FUNCTION_STT,
                     _ => continue,
                 };
                 let mut token_type = UIUA_SEMANTIC_TOKEN_TYPES

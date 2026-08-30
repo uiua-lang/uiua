@@ -72,6 +72,13 @@ pub struct Function {
     pub(crate) origin: FunctionOrigin,
 }
 
+impl Function {
+    /// Unique hash of this function
+    pub fn hash(&self) -> u64 {
+        self.hash
+    }
+}
+
 impl fmt::Debug for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} ← {}", self.id, self.sig)

@@ -1267,7 +1267,7 @@ impl Compiler {
                     self.subscript_side_only(&sub, &Under.format())
                         .map(|side| sub.span.sp(side))
                 });
-                let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
+                let (f, g, f_span, g_span) = self.dyadic_modifier_ops(modified)?;
                 invert::dbgln!("\n/////////////////\n// begin UNDER //\n/////////////////");
                 let normal = {
                     let (f_before, mut f_after) = f
@@ -1305,7 +1305,49 @@ impl Compiler {
                         .transpose()?;
                     un.filter(|un_sn| un_sn.sig == normal.sig.inverse())
                 };
-                let under = if normal.sig.args() == normal.sig.outputs() {
+                // TODO: either not dummy the g_sig or explain it I guess
+                let under = if let Ok((g_before, g_after)) =
+                    g.node.under_inverse(Signature::default(), false, &self.asm)
+                {
+                    let (f_b_before, f_b_after) = f
+                        .under_inverse(g.sig, false, &self.asm)
+                        .map_err(|e| self.error(f_span.clone(), e))?;
+                    let (f_a_before, f_a_after) = f
+                        .under_inverse(g.sig, true, &self.asm)
+                        .map_err(|e| self.error(f_span.clone(), e))?;
+                    let g_sn_before = SigNode::new(self.sig_of(&g_before, &g_span)?, g_before);
+                    let g_sn_after = SigNode::new(self.sig_of(&g_after, &g_span)?, g_after);
+                    // g must be able to push and pop its context values
+                    // without conflicting with f's use of the under stack;
+                    // each half of g is performed modified by under f
+                    // including the under stack effects of g
+                    // while the under stack effects of f
+                    // remain an implementation detail.
+                    let dip_by = f_b_before.sig.under_outputs();
+                    // TODO: sanity check under sigs match
+                    let spangled = self.add_span(g_span);
+                    let mut before = f_b_before.node;
+                    // In order to keep direct under stack manipulation
+                    // contained to PushUnder and PopUnder,
+                    before.push(Node::PopUnder(dip_by, spangled));
+                    // f's context values are stored "above"
+                    // g's inputs and outputs,
+                    before.push(g_sn_before.dipped(dip_by, spangled).into());
+                    // which is to say, inside DipN with only
+                    // brief jaunts through the main stack.
+                    before.push(Node::PushUnder(dip_by, spangled));
+                    before.push(f_b_after.node);
+                    let mut after = f_a_before.node;
+                    // The same is done for the inverse.
+                    after.push(Node::PopUnder(dip_by, spangled));
+                    after.push(g_sn_after.dipped(dip_by, spangled).into());
+                    after.push(Node::PushUnder(dip_by, spangled));
+                    after.push(f_a_after.node);
+                    let span = modified.modifier.span.clone();
+                    let sig_b = self.sig_of(&before, &span)?;
+                    let sig_a = self.sig_of(&after, &span)?;
+                    Some((SigNode::new(sig_b, before), SigNode::new(sig_a, after)))
+                } else if normal.sig.args() == normal.sig.outputs() {
                     un.clone().map(|un| (normal.clone(), un))
                 } else {
                     None

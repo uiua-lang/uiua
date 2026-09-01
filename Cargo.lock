@@ -725,6 +725,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
+name = "base64"
+version = "0.23.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
+
+[[package]]
 name = "bindgen"
 version = "0.65.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3568,7 +3574,7 @@ version = "0.6.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4161acbf80f59219d8d14182371f57302bc7ff81ee41aba8ba1ff7295727f23"
 dependencies = [
- "base64",
+ "base64 0.22.1",
  "cfg-if 1.0.0",
  "futures",
  "indexmap",
@@ -6167,7 +6173,7 @@ checksum = "8ee5873ec9cce0195efcb7a4e9507a04cd49aec9c83d0389df45b1ef7ba2e649"
 name = "site"
 version = "0.1.0"
 dependencies = [
- "base64",
+ "base64 0.23.1",
  "comrak",
  "console_error_panic_hook",
  "enum-iterator",
@@ -6922,7 +6928,7 @@ dependencies = [
 name = "uiua-editor"
 version = "0.1.0"
 dependencies = [
- "base64",
+ "base64 0.23.1",
  "flate2",
  "futures",
  "hound",
@@ -7149,7 +7155,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3f25eeadaacb5253b24f4b576fecad471b07107e552e2a631a6d7ab5e1e49e0"
 dependencies = [
  "ansi_colours",
- "base64",
+ "base64 0.22.1",
  "console",
  "crossterm",
  "image",

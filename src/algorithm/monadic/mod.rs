@@ -2408,10 +2408,17 @@ impl Array<f64> {
             .max_by(|a, b| a.total_cmp(b))
             .expect("Empty case already checked");
 
+        let limit = max.sqrt().floor() as usize;
+
+        let mut is_prime = vec![true; limit + 1];
+
         let mut primes = vec![2u32];
-        for n in 3..=max.sqrt().floor() as u32 {
-            if primes.iter().all(|p| n % p != 0) {
-                primes.push(n);
+        for n in (3..=limit).step_by(2) {
+            if is_prime[n] {
+                primes.push(n as u32);
+                for m in (n * n..=limit).step_by(2 * n) {
+                    is_prime[m] = false;
+                }
             }
         }
 
@@ -2419,8 +2426,8 @@ impl Array<f64> {
             self.shape.clone(),
             self.data.iter().map(|n| {
                 for prime in &primes {
-                    if (*n as u32).is_multiple_of(*prime) {
-                        if *n as u32 == *prime {
+                    if (*n as u64).is_multiple_of(*prime as u64) {
+                        if *n as u64 == *prime as u64 {
                             return 1u8;
                         }
                         return 0u8;

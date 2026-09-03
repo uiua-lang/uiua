@@ -2419,8 +2419,8 @@ impl Array<f64> {
             self.shape.clone(),
             self.data.iter().map(|n| {
                 for prime in &primes {
-                    if (*n as u32).is_multiple_of(*prime) {
-                        if *n as u32 == *prime {
+                    if (*n as u64).is_multiple_of(*prime as u64) {
+                        if *n as u64 == *prime as u64 {
                             return 1u8;
                         }
                         return 0u8;

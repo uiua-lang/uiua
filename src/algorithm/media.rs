@@ -1192,7 +1192,7 @@ pub(crate) fn value_to_apng_bytes(value: &Value, frame_rate: f64) -> Result<EcoV
 }
 
 #[cfg(not(feature = "apng"))]
-pub(crate) fn apng_bytes_to_value(_bytes: &[u8]) -> Result<(f64, Value), png::DecodingError> {
+pub(crate) fn apng_bytes_to_value(_bytes: &[u8]) -> Result<(f64, Value), String> {
     Err("APNG decoding is not supported in this environment".into())
 }
 

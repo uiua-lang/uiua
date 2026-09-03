@@ -2600,6 +2600,7 @@ impl Array<f64> {
             rgb[2] = v;
         }
         self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
         self.validate();
         Ok(self)
     }

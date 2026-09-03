@@ -176,8 +176,8 @@ F ← /◇⊂
 ⍤⤙≍ [5_4 ¯1_0] [⊸+°⊟] [6_4 ¯1_0]
 
 # Split by
-⍤⤙≍ ⊃(⊜(□∘)⊸≠|⊜□⊸≠) @  " Hey    there buddy  "
-⍤⤙≍ ⊃(⊜(□∘)¬⊸⦷|⊜□¬⊸⦷) @  " Hey    there buddy  "
+⍤⤙≍ ⊃(⊜(□∘)⊸≠|⊜□⊸≠) @ " Hey    there buddy  "
+⍤⤙≍ ⊃(⊜(□∘)¬⊸⦷|⊜□¬⊸⦷) @ " Hey    there buddy  "
 ⍤⤙≍ ⊃(⊜(□∘)⊸≠|⊜□⊸≠) 5 ◿20 ⇡100
 ⍤⤙≍ ⊃(⊜(□∘)¬⊸⦷|⊜□¬⊸⦷) " - " " - Hey - there - buddy - "
 ⍤⤙≍ ⊃(⊜(□∘)¬⊸⦷|⊜□¬⊸⦷) +5⇡5 ◿20 ⇡100
@@ -406,6 +406,13 @@ F ← ⬚10(/+◌1⊞(×¯))
 ⍤⤙≍ [1 5] ⊃[/↧|/↥] [3 1 5 W 4]
 ⍤⤙≍ [1 5] ⊃[/↧|/↥] ⍆[3 1 5 W 3]
 ⍤⤙≍ [¯1 0] ⍆±".a"
+
+# Boolean flag
+X               ← [1 4 7 5 6 1 4 8 2]
+PrefixXorParity ← ◿2/+⍉◿2\+⍉⇌⍉⋯X
+OddPrefixCnt    ← \+PrefixXorParity
+EvenPrefixCnt   ← \+¬PrefixXorParity
+⍤⤙≍ [0 0 1 1 1 0 2 0 3] × EvenPrefixCnt PrefixXorParity
 
 # Rows extraction
 ⍤⤙≍ ⊃⬚0≡◇(∘=@i)⬚0≡◇(=@i) {"uiua" "is"}

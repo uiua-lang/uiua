@@ -6,8 +6,8 @@ use std::{convert::identity, mem::take};
 use ecow::{EcoVec, eco_vec};
 
 use crate::{
-    Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Signature,
-    Uiua, UiuaResult, Value,
+    Array, ArrayFlags, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode,
+    Signature, Uiua, UiuaResult, Value,
     algorithm::{get_ops, loops::flip, pervade::*, validate_size},
     check::{nodes_clean_sig, nodes_sig},
     cowslice::cowslice,
@@ -112,7 +112,8 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                         )?
                         .into()
                     } else {
-                        fast_reduce(bytes, 1, byte_fill, depth, mul::bool_bool, env)?.into()
+                        fast_reduce_keep_bool(bytes, 1, byte_fill, depth, mul::bool_bool, env)?
+                            .into()
                     }
                 }
                 Primitive::Mul => fast_reduce_different(
@@ -139,7 +140,8 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                         )?
                         .into()
                     } else if bytes.meta.flags.is_boolean() {
-                        fast_reduce(bytes, 0, byte_fill, depth, or::bool_bool, env)?.into()
+                        fast_reduce_keep_bool(bytes, 0, byte_fill, depth, or::bool_bool, env)?
+                            .into()
                     } else {
                         fast_reduce(bytes, 0, byte_fill, depth, or::byte_byte, env)?.into()
                     }
@@ -176,7 +178,8 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                         )?
                         .into()
                     } else {
-                        fast_reduce(bytes, 0, byte_fill, depth, min::byte_byte, env)?.into()
+                        fast_reduce_keep_bool(bytes, 0, byte_fill, depth, min::byte_byte, env)?
+                            .into()
                     }
                 }
                 Primitive::Max => {
@@ -211,7 +214,8 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                         )?
                         .into()
                     } else {
-                        fast_reduce(bytes, 0, byte_fill, depth, max::byte_byte, env)?.into()
+                        fast_reduce_keep_bool(bytes, 0, byte_fill, depth, max::byte_byte, env)?
+                            .into()
                     }
                 }
                 _ => return generic_reduce(f, Value::Byte(bytes), depth, env),
@@ -492,6 +496,40 @@ where
 }
 
 fn fast_reduce<T>(
+    arr: Array<T>,
+    identity: T,
+    default: Option<T>,
+    depth: usize,
+    f: impl Fn(T, T) -> T,
+    env: &Uiua,
+) -> UiuaResult<Array<T>>
+where
+    T: ArrayValue + Copy,
+{
+    fast_reduce_impl(arr, identity, default, depth, f, env)
+}
+
+fn fast_reduce_keep_bool<T>(
+    arr: Array<T>,
+    identity: T,
+    default: Option<T>,
+    depth: usize,
+    f: impl Fn(T, T) -> T,
+    env: &Uiua,
+) -> UiuaResult<Array<T>>
+where
+    T: ArrayValue + Copy,
+{
+    let bool = arr.meta.flags.is_boolean();
+    let mut arr = fast_reduce_impl(arr, identity, default, depth, f, env)?;
+    if bool {
+        arr.meta.flags.set(ArrayFlags::BOOLEAN, true);
+        arr.validate();
+    }
+    Ok(arr)
+}
+
+fn fast_reduce_impl<T>(
     mut arr: Array<T>,
     identity: T,
     default: Option<T>,
@@ -594,6 +632,7 @@ where
         }
     };
     arr.meta.take_sorted_flags();
+    arr.meta.take_value_flags();
     arr.validate();
     Ok(arr)
 }
@@ -857,18 +896,18 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
             let mut sorted_up = false;
             let mut sorted_down = false;
             let mut val: Value = match prim {
-                Primitive::Eq => fast_scan(bytes, is_eq::generic).into(),
-                Primitive::Ne => fast_scan(bytes, is_ne::generic).into(),
-                Primitive::Lt => fast_scan(bytes, other_is_lt::generic).into(),
-                Primitive::Le => fast_scan(bytes, other_is_le::generic).into(),
-                Primitive::Gt => fast_scan(bytes, other_is_gt::generic).into(),
-                Primitive::Ge => fast_scan(bytes, other_is_ge::generic).into(),
+                Primitive::Eq => fast_scan_keep_bool(bytes, is_eq::generic).into(),
+                Primitive::Ne => fast_scan_keep_bool(bytes, is_ne::generic).into(),
+                Primitive::Lt => fast_scan_keep_bool(bytes, other_is_lt::generic).into(),
+                Primitive::Le => fast_scan_keep_bool(bytes, other_is_le::generic).into(),
+                Primitive::Gt => fast_scan_keep_bool(bytes, other_is_gt::generic).into(),
+                Primitive::Ge => fast_scan_keep_bool(bytes, other_is_ge::generic).into(),
                 Primitive::Add => fast_scan::<f64>(bytes.convert(), add::num_num).into(),
                 Primitive::Sub if flipped => {
                     fast_scan::<f64>(bytes.convert(), flip(sub::num_num)).into()
                 }
                 Primitive::Sub => fast_scan::<f64>(bytes.convert(), sub::num_num).into(),
-                Primitive::Mul => fast_scan::<f64>(bytes.convert(), mul::num_num).into(),
+                Primitive::Mul => fast_scan_keep_bool::<f64>(bytes.convert(), mul::num_num).into(),
                 Primitive::Div if flipped => {
                     fast_scan::<f64>(bytes.convert(), flip(div::num_num)).into()
                 }
@@ -886,7 +925,7 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
                     if bytes.rank() == 1 && bytes.meta.is_sorted_down() {
                         bytes
                     } else {
-                        fast_scan(bytes, u8::min)
+                        fast_scan_keep_bool(bytes, u8::min)
                     }
                     .into()
                 }
@@ -895,7 +934,7 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
                     if bytes.rank() == 1 && bytes.meta.is_sorted_up() {
                         bytes
                     } else {
-                        fast_scan(bytes, u8::max)
+                        fast_scan_keep_bool(bytes, u8::max)
                     }
                     .into()
                 }
@@ -911,7 +950,27 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn fast_scan<T>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T>
+fn fast_scan<T>(arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T>
+where
+    T: ArrayValue + Copy,
+{
+    fast_scan_impl(arr, f)
+}
+
+fn fast_scan_keep_bool<T>(arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T>
+where
+    T: ArrayValue + Copy,
+{
+    let bool = arr.meta.flags.is_boolean();
+    let mut arr = fast_scan_impl(arr, f);
+    if bool {
+        arr.meta.flags.set(ArrayFlags::BOOLEAN, true);
+        arr.validate();
+    }
+    arr
+}
+
+fn fast_scan_impl<T>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T>
 where
     T: ArrayValue + Copy,
 {
@@ -921,6 +980,7 @@ where
             if arr.row_count() == 0 {
                 return arr;
             }
+            arr.meta.take_value_flags();
             let mut acc = arr.data[0];
             for val in arr.data.as_mut_slice()[1..].iter_mut() {
                 acc = f(acc, *val);

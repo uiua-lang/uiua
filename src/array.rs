@@ -1089,6 +1089,14 @@ impl ArrayValue for f64 {
     fn is_sortable(&self) -> bool {
         !self.is_nan()
     }
+    #[track_caller]
+    fn dbg_validate(arr: &Array<Self>) {
+        if arr.meta.flags.is_boolean()
+            && let Some(b) = arr.data.iter().find(|&b| ![0.0, 1.0].contains(b))
+        {
+            panic!("Array marked as boolean contains {b}")
+        }
+    }
 }
 
 #[cfg(test)]

@@ -2408,10 +2408,17 @@ impl Array<f64> {
             .max_by(|a, b| a.total_cmp(b))
             .expect("Empty case already checked");
 
+        let limit = max.sqrt().floor() as usize;
+
+        let mut is_prime = vec![true; limit + 1];
+
         let mut primes = vec![2u32];
-        for n in 3..=max.sqrt().floor() as u32 {
-            if primes.iter().all(|p| n % p != 0) {
-                primes.push(n);
+        for n in (3..=limit).step_by(2) {
+            if is_prime[n] {
+                primes.push(n as u32);
+                for m in (n * n..=limit).step_by(2 * n) {
+                    is_prime[m] = false;
+                }
             }
         }
 

@@ -77,6 +77,10 @@ impl Function {
     pub fn hash(&self) -> u64 {
         self.hash
     }
+    /// The function's index in the bindings list
+    pub fn index(&self) -> usize {
+        self.index
+    }
 }
 
 impl fmt::Debug for Function {

@@ -403,11 +403,11 @@ impl Compiler {
                     node.push(Node::Prim(Primitive::Pop, span));
                 }
                 for _ in 0..sig.outputs() {
-                    node.push(Node::Push(zero.clone(), 0));
+                    node.push(Node::Push(zero.clone(), span));
                 }
                 node.prepend(Node::Prim(Primitive::Assert, span));
                 node.prepend(Node::new_push("Unbound external function", span));
-                node.prepend(Node::Push(zero, 0));
+                node.prepend(Node::Push(zero, span));
             } else {
                 node = Node::NoInline(node.into());
             }

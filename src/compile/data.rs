@@ -311,13 +311,13 @@ impl Compiler {
             let span = field.span;
             let mut node = Node::empty();
             if data.variant {
-                node.push(Node::new_push(variant_index));
+                node.push(Node::new_push(variant_index, span));
                 if let Some(name) = &data.name {
                     node.push(Node::Label(name.value.clone(), span));
                 }
                 node.push(Node::ImplPrim(ImplPrimitive::ValidateVariant, span));
             }
-            node.push(Node::new_push(i));
+            node.push(Node::new_push(i, span));
             node.push(Node::Prim(Primitive::Pick, span));
             node = Node::TrackCaller(node.sig_node().unwrap().into());
             if boxed {
@@ -450,7 +450,7 @@ impl Compiler {
         if data.variant {
             // Handle variant
             for node in no_init_node.as_mut().into_iter().chain([&mut con_node]) {
-                node.push(Node::new_push(variant_index));
+                node.push(Node::new_push(variant_index, span));
                 if let Some(name) = &data.name {
                     node.push(Node::Label(name.value.clone(), span));
                 } else {

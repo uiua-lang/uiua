@@ -30,7 +30,7 @@ const MAX_PRE_EVAL_RANK: usize = 4;
 impl PreEvalMode {
     #[allow(unused)]
     fn matches_nodes(&self, nodes: &[Node], asm: &Assembly) -> bool {
-        if nodes.iter().all(|node| matches!(node, Node::Push(_))) {
+        if nodes.iter().all(|node| matches!(node, Node::Push(_, _))) {
             return false;
         }
         if let PreEvalMode::Lazy = self {
@@ -45,7 +45,7 @@ impl PreEvalMode {
             if nodes.iter().any(|node| {
                 matches!(
                     node,
-                    Node::Push(val)
+                    Node::Push(val, _)
                         if val.shape.elements() > MAX_PRE_EVAL_ELEMS
                         || val.rank() > MAX_PRE_EVAL_RANK
                 )
@@ -89,7 +89,7 @@ impl Compiler {
     pub(super) fn pre_eval(&self, node: &Node) -> Option<(Node, Vec<UiuaError>)> {
         let mut errors = Vec::new();
         if self.pre_eval_mode == PreEvalMode::Lazy
-            || node.iter().all(|node| matches!(node, Node::Push(_)))
+            || node.iter().all(|node| matches!(node, Node::Push(_, _)))
         {
             return None;
         }
@@ -113,7 +113,8 @@ impl Compiler {
                                 val.validate();
                             }
                             let new = new.get_or_insert_with(|| node[..start].into());
-                            new.extend(values.into_iter().map(Node::Push));
+                            let span = node.span().unwrap_or(0);
+                            new.extend(values.into_iter().map(|val| Node::Push(val, span)));
                             success = true;
                         }
                         Ok(None) => {}
@@ -138,11 +139,11 @@ impl Compiler {
         new.map(|new| (new, errors))
     }
     pub(super) fn comptime_node(&self, node: &Node) -> UiuaResult<Option<Vec<Value>>> {
-        if node.iter().all(|node| matches!(node, Node::Push(_))) {
+        if node.iter().all(|node| matches!(node, Node::Push(_, _))) {
             return Ok(Some(
                 node.iter()
                     .map(|node| match node {
-                        Node::Push(val) => val.clone(),
+                        Node::Push(val, _) => val.clone(),
                         _ => unreachable!(),
                     })
                     .collect(),

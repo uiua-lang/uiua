@@ -187,7 +187,7 @@ impl TypeRt<'_> {
         use Primitive::*;
         match node {
             Node::Run(nodes) => nodes.iter().try_for_each(|node| self.node(node))?,
-            Node::Push(val) => self.stack.push(val.row_ty()),
+            Node::Push(val, _) => self.stack.push(val.row_ty()),
             Node::Call(f, _) => self.node(&self.asm[f])?,
             Node::Prim(prim, _) if prim.outputs() == Some(0) && prim.args().is_some() => {
                 for _ in 0..prim.args().unwrap() {

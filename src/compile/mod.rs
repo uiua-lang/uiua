@@ -877,7 +877,7 @@ impl Compiler {
                     && !line_node.is_empty()
                     && self.asm.root.len() >= sig.args()
                     && (self.asm.root.iter().rev().take(sig.args()))
-                        .all(|node| matches!(node, Node::Push(_)))
+                        .all(|node| matches!(node, Node::Push(_, _)))
                 {
                     // The nodes for evaluation are the preceding
                     // push nodes, followed by the current line
@@ -887,12 +887,12 @@ impl Compiler {
                         self.errors.extend(errs);
                         // Track top-level values
                         if !matches!(line_node.last().unwrap(), Node::SetOutputComment { .. })
-                            && node.iter().all(|node| matches!(node, Node::Push(_)))
+                            && node.iter().all(|node| matches!(node, Node::Push(_, _)))
                         {
                             let vals: Vec<_> = node
                                 .iter()
                                 .map(|node| match node {
-                                    Node::Push(val) => val.clone(),
+                                    Node::Push(val, _) => val.clone(),
                                     _ => unreachable!(),
                                 })
                                 .collect();
@@ -1265,18 +1265,26 @@ impl Compiler {
     fn word(&mut self, word: Sp<Word>) -> UiuaResult<Node> {
         self.check_depth(&word.span)?;
         let res = match word.value {
-            Word::Number(NumWord::Real(n), _) => Node::new_push(n),
-            Word::Number(NumWord::Infinity(false), _) => Node::new_push(f64::INFINITY),
-            Word::Number(NumWord::Infinity(true), _) => Node::new_push(f64::NEG_INFINITY),
-            Word::Number(NumWord::Complex(c), _) => Node::new_push(c),
+            Word::Number(NumWord::Real(n), _) => {
+                Node::new_push(n, self.add_span(word.span.clone()))
+            }
+            Word::Number(NumWord::Infinity(false), _) => {
+                Node::new_push(f64::INFINITY, self.add_span(word.span.clone()))
+            }
+            Word::Number(NumWord::Infinity(true), _) => {
+                Node::new_push(f64::NEG_INFINITY, self.add_span(word.span.clone()))
+            }
+            Word::Number(NumWord::Complex(c), _) => {
+                Node::new_push(c, self.add_span(word.span.clone()))
+            }
             #[cfg(feature = "ga")]
             Word::Number(NumWord::Blade(mv), _) => {
                 self.experimental_error_them(&word.span, || "Blade literals");
-                Node::new_push(mv)
+                Node::new_push(mv, self.add_span(word.span.clone()))
             }
             Word::Number(NumWord::Err(s), _) => {
                 self.add_error(word.span.clone(), format!("Invalid number `{s}`"));
-                Node::new_push(0.0)
+                Node::new_push(0.0, self.add_span(word.span.clone()))
             }
             Word::Char(c) => {
                 let val: Value = if c.chars().count() == 1 {
@@ -1284,9 +1292,9 @@ impl Compiler {
                 } else {
                     c.into()
                 };
-                Node::new_push(val)
+                Node::new_push(val, self.add_span(word.span.clone()))
             }
-            Word::String(s) => Node::new_push(s),
+            Word::String(s) => Node::new_push(s, self.add_span(word.span.clone())),
             Word::MultilineString(lines) => {
                 let mut s = EcoVec::new();
                 for (i, line) in lines.into_iter().enumerate() {
@@ -1295,7 +1303,7 @@ impl Compiler {
                     }
                     s.extend(line.value.chars());
                 }
-                Node::new_push(s)
+                Node::new_push(s, self.add_span(word.span.clone()))
             }
             Word::Label(Some(label)) => Node::Label(label.into(), self.add_span(word.span.clone())),
             Word::Label(None) => Node::RemoveLabel(None, self.add_span(word.span.clone())),
@@ -1387,12 +1395,12 @@ impl Compiler {
 
                 let span = self.add_span(word.span.clone());
                 // Inline constant arrays
-                if inner.iter().all(|instr| matches!(instr, Node::Push(_))) {
+                if inner.iter().all(|instr| matches!(instr, Node::Push(_, _))) {
                     let values: Vec<_> = inner
                         .iter()
                         .rev()
                         .map(|instr| match instr {
-                            Node::Push(v) => v.clone(),
+                            Node::Push(v, _) => v.clone(),
                             _ => unreachable!(),
                         })
                         .collect();
@@ -1400,7 +1408,9 @@ impl Compiler {
                         values,
                         Context::from_span(&word.span, &self.asm.inputs),
                     ) {
-                        Ok(val) => return Ok(Node::new_push(val)),
+                        Ok(val) => {
+                            return Ok(Node::new_push(val, span));
+                        }
                         Err(e) if e.meta.is_fill => {}
                         Err(e) => return Err(e),
                     }
@@ -1495,10 +1505,10 @@ impl Compiler {
                 };
                 let span = self.add_span(word.span.clone());
                 // Inline constant arrays
-                if inner.iter().all(|instr| matches!(instr, Node::Push(_))) {
+                if inner.iter().all(|instr| matches!(instr, Node::Push(_, _))) {
                     let empty = inner.is_empty();
                     let values = inner.iter().rev().map(|instr| match instr {
-                        Node::Push(v) => v.clone(),
+                        Node::Push(v, _) => v.clone(),
                         _ => unreachable!(),
                     });
                     let res = if arr.boxes {
@@ -1523,7 +1533,7 @@ impl Compiler {
                             self.code_meta
                                 .array_shapes
                                 .insert(word.span.clone(), val.shape.clone());
-                            return Ok(Node::new_push(val));
+                            return Ok(Node::new_push(val, span));
                         }
                         Err(e) if e.meta.is_fill => {}
                         Err(e) => return Err(e),
@@ -1618,9 +1628,9 @@ impl Compiler {
                 }
                 let diff = (new_delta - delta).unsigned_abs();
                 let spandex = self.add_span(span.clone());
-                let mut extra = Node::from_iter(
-                    (0..diff).map(|i| Node::new_push(Boxed(Value::from(format!("dbg-{}", i + 1))))),
-                );
+                let mut extra = Node::from_iter((0..diff).map(|i| {
+                    Node::new_push(Boxed(Value::from(format!("dbg-{}", i + 1))), spandex)
+                }));
                 for _ in 0..sig.outputs() {
                     extra = Node::Mod(Primitive::Dip, eco_vec![extra.sig_node().unwrap()], spandex);
                 }
@@ -1951,7 +1961,7 @@ impl Compiler {
                 Ok(None) => self.ident(r.name.value, r.name.span),
                 Err(e) => {
                     self.errors.push(e);
-                    Node::new_push(Value::default())
+                    Node::new_push(Value::default(), 0)
                 }
             }
         }
@@ -2051,10 +2061,10 @@ impl Compiler {
             let value = (constant.value)
                 .resolve(self.scope_file_path(), self.backend().clone())
                 .unwrap_or_else(|e| {
-                    self.add_error(span, e);
+                    self.add_error(span.clone(), e);
                     Value::default()
                 });
-            Node::Push(value)
+            Node::Push(value, self.add_span(span))
         } else if let Some(i) = ident
             .find('₋')
             .or_else(|| ident.find(SUBSCRIPT_DIGITS))
@@ -2094,10 +2104,10 @@ impl Compiler {
                     and `{ident}` is not defined as a normal function"
                 ),
             );
-            Node::new_push(Value::default())
+            Node::new_push(Value::default(), 0)
         } else {
             self.add_error(span, format!("Unknown identifier `{ident}`"));
-            Node::new_push(Value::default())
+            Node::new_push(Value::default(), 0)
         }
     }
     fn sub_name(&mut self, name: &str, sub: SubscriptNumber, span: CodeSpan) -> Node {
@@ -2125,7 +2135,7 @@ impl Compiler {
             self.global_index(local.index, span)
         } else {
             self.add_error(span, format!("Unknown identifier `{name}`"));
-            Node::new_push(Value::default())
+            Node::new_push(Value::default(), 0)
         }
     }
     fn scope_file_path(&self) -> Option<&Path> {
@@ -2141,7 +2151,7 @@ impl Compiler {
         binfo.used = true;
         let bkind = binfo.kind.clone();
         match bkind {
-            BindingKind::Const(Some(val)) => Node::new_push(val),
+            BindingKind::Const(Some(val)) => Node::new_push(val, self.add_span(span.clone())),
             BindingKind::Const(None) => Node::CallGlobal(index, Signature::new(0, 1)),
             BindingKind::Func(f) => Node::Call(f, self.add_span(span.clone())),
             global @ (BindingKind::Module(_) | BindingKind::Scope(_)) => {
@@ -2220,8 +2230,8 @@ impl Compiler {
                     (0..end).rev().any(|start| {
                         let sub = node.slice(start..end);
                         match sub.as_slice() {
-                            [Node::Push(val), Node::Prim(Primitive::Dup, _)]
-                            | [Node::Push(val), Node::Push(..)]
+                            [Node::Push(val, _), Node::Prim(Primitive::Dup, _)]
+                            | [Node::Push(val, _), Node::Push(..)]
                                 if val != &Value::from(1) =>
                             {
                                 return true;
@@ -2404,9 +2414,10 @@ impl Compiler {
                     return Ok(self.primitive(prim, span));
                 };
                 match nos {
-                    SubNOrSide::N(n) => {
-                        Node::from_iter([Node::new_push(n), self.primitive(prim, span)])
-                    }
+                    SubNOrSide::N(n) => Node::from_iter([
+                        Node::new_push(n, self.add_span(scr.span)),
+                        self.primitive(prim, span),
+                    ]),
                     SubNOrSide::Side(side) => {
                         self.experimental_error_it(&scr.span, || {
                             format!("Sided {}", prim.format())
@@ -2438,7 +2449,7 @@ impl Compiler {
                 };
                 match nos {
                     SubNOrSide::N(n) => match self.positive_subscript(n, Join, &span) {
-                        0 => Node::new_push(Value::default()),
+                        0 => Node::new_push(Value::default(), self.add_span(span)),
                         1 => Node::Prim(Identity, self.add_span(span)),
                         2 => Node::Prim(Join, self.add_span(span)),
                         n => Node::ImplPrim(ImplPrimitive::MultiJoin(n), self.add_span(span)),
@@ -2502,7 +2513,10 @@ impl Compiler {
                             -4 => return Ok(Node::ImplPrim(UnDual, self.add_span(span))),
                             _ => Complex::from_polar(1.0, std::f64::consts::TAU / n as f64),
                         };
-                        Node::from_iter([Node::new_push(rotation), self.primitive(Mul, span)])
+                        Node::from_iter([
+                            Node::new_push(rotation, self.add_span(span.clone())),
+                            self.primitive(Mul, span),
+                        ])
                     }
                     SubNOrSide::Side(SubSide::Left) => Node::ImplPrim(NegConj, self.add_span(span)),
                     SubNOrSide::Side(SubSide::Right) => Node::ImplPrim(Conj, self.add_span(span)),
@@ -2528,7 +2542,10 @@ impl Compiler {
                             .subscript_sig(Some(&SubscriptToken::numeric(Some(2.into()))))
                             .is_some_and(|sig| sig == (1, 1)) =>
                     {
-                        Node::from_iter([Node::new_push(n), self.primitive(prim, span)])
+                        Node::from_iter([
+                            Node::new_push(n, self.add_span(span.clone())),
+                            self.primitive(prim, span),
+                        ])
                     }
                     Deshape => {
                         if n == 1 {
@@ -2549,16 +2566,20 @@ impl Compiler {
                         if n == 0 {
                             return Ok(Node::empty());
                         }
+                        let span = self.add_span(span);
                         Node::from([
-                            Node::new_push(n - 1),
-                            Node::ImplPrim(ImplPrimitive::AntiOrient, self.add_span(span)),
+                            Node::new_push(n - 1, span),
+                            Node::ImplPrim(ImplPrimitive::AntiOrient, span),
                         ])
                     }
                     Sqrt => {
                         if n == 0 {
                             self.add_error(span.clone(), "Cannot take 0th root");
                         }
-                        Node::from_iter([Node::new_push(1.0 / n as f64), self.primitive(Pow, span)])
+                        Node::from_iter([
+                            Node::new_push(1.0 / n as f64, self.add_span(span.clone())),
+                            self.primitive(Pow, span),
+                        ])
                     }
                     Exp => {
                         let span = self.add_span(span);
@@ -2566,7 +2587,7 @@ impl Compiler {
                             2 => Node::ImplPrim(ImplPrimitive::Exp2, span),
                             10 => Node::ImplPrim(ImplPrimitive::Exp10, span),
                             n => Node::from_iter([
-                                Node::new_push(n as f64),
+                                Node::new_push(n as f64, span),
                                 Node::Prim(Flip, span),
                                 Node::Prim(Pow, span),
                             ]),
@@ -2575,27 +2596,29 @@ impl Compiler {
                     Floor | Ceil => {
                         self.subscript_experimental(prim, &span);
                         let mul = 10f64.powi(n);
+                        let spandex = self.add_span(span.clone());
                         Node::from_iter([
-                            Node::new_push(mul),
+                            Node::new_push(mul, spandex),
                             self.primitive(Mul, span.clone()),
                             self.primitive(prim, span.clone()),
-                            Node::new_push(mul),
+                            Node::new_push(mul, spandex),
                             self.primitive(Div, span),
                         ])
                     }
                     Round => {
                         let mul = 10f64.powi(n);
+                        let spandex = self.add_span(span.clone());
                         Node::from_iter([
-                            Node::new_push(mul),
+                            Node::new_push(mul, spandex),
                             self.primitive(Mul, span.clone()),
                             self.primitive(prim, span.clone()),
-                            Node::new_push(mul),
+                            Node::new_push(mul, spandex),
                             self.primitive(Div, span),
                         ])
                     }
                     Rand => Node::from_iter([
                         self.primitive(Rand, span.clone()),
-                        Node::new_push(n),
+                        Node::new_push(n, self.add_span(span.clone())),
                         self.primitive(Mul, span.clone()),
                         self.primitive(Floor, span),
                     ]),
@@ -2654,7 +2677,7 @@ impl Compiler {
                             0 => Node::Prim(Pop, span),
                             1 => Node::Prim(prim, span),
                             n if prim == First => Node::from_iter([
-                                Node::new_push(n),
+                                Node::new_push(n, span),
                                 Node::Prim(Take, span),
                                 Node::Unpack {
                                     count: n,
@@ -2665,7 +2688,7 @@ impl Compiler {
                                 },
                             ]),
                             n => Node::from_iter([
-                                Node::new_push(-(n as i32)),
+                                Node::new_push(-(n as i32), span),
                                 Node::Prim(Take, span),
                                 Node::Prim(Reverse, span),
                                 Node::Unpack {
@@ -2687,7 +2710,7 @@ impl Compiler {
                         let span = self.add_span(span);
                         Node::from_iter([
                             Node::Prim(Shape, span),
-                            Node::new_push(n),
+                            Node::new_push(n, span),
                             Node::Prim(Select, span),
                         ])
                     }
@@ -2695,7 +2718,7 @@ impl Compiler {
                         let span = self.add_span(span);
                         Node::from_iter([
                             Node::Prim(Shape, span),
-                            Node::new_push(n),
+                            Node::new_push(n, span),
                             Node::Prim(Take, span),
                         ])
                     }
@@ -2710,7 +2733,7 @@ impl Compiler {
                         let span = self.add_span(span);
                         Node::from([
                             Node::Prim(Occurrences, span),
-                            Node::new_push(n),
+                            Node::new_push(n, span),
                             Node::Prim(Lt, span),
                         ])
                     }

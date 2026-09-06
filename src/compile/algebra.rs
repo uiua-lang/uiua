@@ -42,9 +42,9 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<
 
     let push = |x: Complex| {
         if data.any_complex {
-            Node::new_push(x)
+            Node::new_push(x, span)
         } else {
-            Node::new_push(x.into_real().unwrap_or(f64::NAN))
+            Node::new_push(x.into_real().unwrap_or(f64::NAN), span)
         }
     };
 
@@ -140,9 +140,9 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<
         Node::from_iter([
             Prim(Pop, span),
             if c.im == 0.0 {
-                Node::new_push(c.re)
+                Node::new_push(c.re, span)
             } else {
-                Node::new_push(c)
+                Node::new_push(c, span)
             },
         ])
     } else if c == ZERO {
@@ -289,12 +289,12 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
             match term {
                 Term::X(pow) => match pow {
                     0.0 => {
-                        node.push(Node::new_push(0));
+                        node.push(Node::new_push(0, span));
                         node.push(Prim(Mul, span));
                         node.push(if any_complex {
-                            Node::new_push(coef)
+                            Node::new_push(coef, span)
                         } else {
-                            Node::new_push(coef.into_real().unwrap_or(f64::NAN))
+                            Node::new_push(coef.into_real().unwrap_or(f64::NAN), span)
                         });
                         node.push(Prim(Add, span));
                         mul_coef = false;
@@ -306,7 +306,7 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
                         node.push(Prim(Mul, span));
                     }
                     _ => {
-                        node.push(Node::new_push(pow));
+                        node.push(Node::new_push(pow, span));
                         node.push(Prim(Pow, span));
                     }
                 },
@@ -316,7 +316,7 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
                 }
                 Term::Div(expr) => {
                     recur(node, expr, any_complex, span);
-                    node.push(Node::new_push(1.0));
+                    node.push(Node::new_push(1.0, span));
                     node.push(Prim(Flip, span));
                     node.push(Prim(Div, span));
                 }
@@ -326,7 +326,7 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
                 }
                 Term::Log(base, expr) => {
                     recur(node, expr, any_complex, span);
-                    node.push(Node::new_push(base));
+                    node.push(Node::new_push(base, span));
                     node.push(ImplPrim(Log, span));
                 }
                 Term::Sin(expr) => {
@@ -348,9 +348,9 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
             }
             if mul_coef {
                 node.push(if any_complex {
-                    Node::new_push(coef)
+                    Node::new_push(coef, span)
                 } else {
-                    Node::new_push(coef.into_real().unwrap_or(f64::NAN))
+                    Node::new_push(coef.into_real().unwrap_or(f64::NAN), span)
                 });
                 node.push(Prim(Mul, span));
             }
@@ -362,7 +362,7 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
             if identity {
                 node.push(Prim(Identity, span))
             } else {
-                node.push(Node::new_push(0));
+                node.push(Node::new_push(0, span));
                 node.push(Prim(Mul, span));
             }
         }
@@ -468,8 +468,8 @@ impl<'a> AlgebraEnv<'a> {
                 }
             }
             Call(f, _) => self.node(&self.asm[f])?,
-            Push(val) if val.rank() > 0 => return Err(AlgebraError::NonScalar),
-            Push(val) => match val {
+            Push(val, _) if val.rank() > 0 => return Err(AlgebraError::NonScalar),
+            Push(val, _) => match val {
                 Value::Num(arr) => self.stack.push(arr.data[0].into()),
                 Value::Byte(arr) => self.stack.push((arr.data[0] as f64).into()),
                 Value::Complex(arr) => {

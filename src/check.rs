@@ -184,7 +184,7 @@ impl VirtualEnv {
         self.node_depth += 1;
         match node {
             Node::Run(nodes) => nodes.iter().try_for_each(|node| self.node(node))?,
-            Node::Push(_) => self.push(),
+            Node::Push(_, _) => self.push(),
             Node::Array { len, inner, .. } => {
                 self.node(inner)?;
                 self.stack.pop_n(*len);

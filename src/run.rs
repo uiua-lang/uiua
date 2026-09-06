@@ -504,7 +504,7 @@ impl Uiua {
                 self.with_prim_span(span, Some(prim), |env| run_prim_mod(&prim, args, env))
             }
             Node::ImplMod(prim, args, span) => self.with_span(span, |env| prim.run_mod(args, env)),
-            Node::Push(val) => {
+            Node::Push(val, _) => {
                 self.rt.stack.push(val);
                 Ok(())
             }

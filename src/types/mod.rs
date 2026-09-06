@@ -374,7 +374,7 @@ impl<'a> TypeEnv<'a> {
             use {ImplPrimitive::*, Node::*};
             match node {
                 Run(nodes) => nodes.iter().all(node_allows_more_arg_types),
-                Push(_) => true,
+                Push(_, _) => true,
                 Prim(prim, _) => prim.class() == PrimClass::Arguments,
                 Mod(prim, args, _) => {
                     prim.class() == PrimClass::Arguments
@@ -413,7 +413,7 @@ impl<'a> TypeEnv<'a> {
                     return Err(TypeError::Unsupported(None));
                 }
             }
-            Push(val) => self.push(val.clone()),
+            Push(val, _) => self.push(val.clone()),
             Prim(prim, _) => match prim {
                 Identity => _ = self.require_height(1)?,
                 Pop => _ = self.pop(1)?,

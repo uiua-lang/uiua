@@ -494,7 +494,7 @@ impl fmt::Debug for Word {
     }
 }
 
-/// A refered-to item
+/// A referred-to item
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Ref {
     /// The module path of the item

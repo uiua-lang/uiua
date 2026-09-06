@@ -880,7 +880,7 @@ under!(DupPat, input, g_sig, inverse, asm, Prim(Dup, dup_span), {
     match dyadic_part {
         [Prim(Add, span)] if monadic_sig == (0, 0) => {
             temp(false);
-            after.push(Node::new_push(2));
+            after.push(Node::new_push(2, *span));
             after.push(Prim(Div, *span));
         }
         [Prim(Add, span)] => {

@@ -74,7 +74,7 @@ node!(
     /// Track the caller of this node
     TrackCaller(inner(Arc<SigNode>)),
     /// Push a value onto the stack
-    Push(val(Value)),
+    Push(val(Value), span(usize)),
     /// Run a primitive function
     (#[serde(untagged)] rep),
     Prim(prim(Primitive), span(usize)),
@@ -335,11 +335,11 @@ impl Node {
         Self::Run(EcoVec::new())
     }
     /// Create a push node from a value
-    pub fn new_push(val: impl Into<Value>) -> Self {
+    pub fn new_push(val: impl Into<Value>, span: usize) -> Self {
         let mut value = val.into();
         value.try_shrink();
         value.derive_sortedness();
-        Self::Push(value)
+        Self::Push(value, span)
     }
     /// Get a slice of the nodes in this node
     pub fn as_slice(&self) -> &[Node] {
@@ -445,7 +445,7 @@ impl Node {
     ///
     /// Transforms the node into a [`Node::Run`] if it is not already a [`Node::Run`]
     pub fn push(&mut self, node: Node) {
-        if let Some(Node::Push(val)) = self.last_mut() {
+        if let Some(Node::Push(val, _)) = self.last_mut() {
             // Simple inlining
             'blk: {
                 match node {
@@ -743,7 +743,7 @@ impl fmt::Debug for Node {
                 }
                 tuple.finish()
             }
-            Node::Push(value) => write!(f, "push {value}"),
+            Node::Push(value, _) => write!(f, "push {value}"),
             Node::Prim(prim, _) => write!(f, "{prim}"),
             Node::ImplPrim(impl_prim, _) => write!(f, "{impl_prim:?}"),
             Node::Mod(prim, args, _) => {
@@ -1064,16 +1064,16 @@ impl Node {
                 {
                     let init = &node.as_slice()[..i];
                     let noreturn = match init {
-                        [.., Node::Push(val), Node::Prim(Dup | Flip, _)] if *val != 1 => true,
+                        [.., Node::Push(val, _), Node::Prim(Dup | Flip, _)] if *val != 1 => true,
                         [
                             ..,
                             Node::Format(..) | Node::Prim(Couple | Join, _) | Node::Array { .. },
                             Node::Prim(Dup, _),
                         ] => true,
-                        [.., Node::Push(val), Node::Push(_)] if *val != 1 => true,
+                        [.., Node::Push(val, _), Node::Push(_, _)] if *val != 1 => true,
                         [.., Node::Mod(Dip, args, _)]
                             if args.len() == 1
-                                && matches!(&args[0].node, Node::Push(val) if *val != 1) =>
+                                && matches!(&args[0].node, Node::Push(val, _) if *val != 1) =>
                         {
                             true
                         }

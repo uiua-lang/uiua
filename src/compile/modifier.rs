@@ -1145,7 +1145,7 @@ impl Compiler {
                 if let Some(n) =
                     subscript.and_then(|sub| self.subscript_int_only(&sub, &Repeat.format()))
                 {
-                    node.prepend(Node::new_push(n));
+                    node.prepend(Node::new_push(n, spandex));
                 }
                 node
             }
@@ -1173,7 +1173,7 @@ impl Compiler {
                             );
                         }
                         Node::from([
-                            Node::new_push(n),
+                            Node::new_push(n, span),
                             Node::Mod(Primitive::Tuples, eco_vec![sn], span),
                         ])
                     }
@@ -1220,7 +1220,7 @@ impl Compiler {
                     Node::Mod(Stencil, eco_vec![sn], span)
                 };
                 if let Some(n) = n {
-                    node.prepend(Node::new_push(n));
+                    node.prepend(Node::new_push(n, span));
                 }
                 node
             }
@@ -1606,10 +1606,10 @@ impl Compiler {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let node = self.do_comptime("quote's", operand, &modified.modifier.span)?;
                 let code: String = match node {
-                    Node::Push(Value::Char(chars)) if chars.rank() == 1 => {
+                    Node::Push(Value::Char(chars), _) if chars.rank() == 1 => {
                         chars.data.iter().collect()
                     }
-                    Node::Push(Value::Char(chars)) => {
+                    Node::Push(Value::Char(chars), _) => {
                         return Err(self.error(
                             modified.modifier.span.clone(),
                             format!(
@@ -1619,7 +1619,7 @@ impl Compiler {
                             ),
                         ));
                     }
-                    Node::Push(value) => {
+                    Node::Push(value, _) => {
                         return Err(self.error(
                             modified.modifier.span.clone(),
                             format!(
@@ -1826,7 +1826,7 @@ impl Compiler {
                 let key = (prim, name.clone());
                 if !comp.prim_arg_bindings.contains_key(&key) {
                     let node = Node::from([
-                        Node::new_push(index),
+                        Node::new_push(index, span),
                         Node::Prim(Primitive::Pick, span),
                         Node::ImplPrim(ImplPrimitive::UnBox, span),
                     ]);
@@ -1864,7 +1864,7 @@ impl Compiler {
             .rev()
             .flat_map(|arg| {
                 [
-                    Node::new_push(arg.default),
+                    Node::new_push(arg.default, span),
                     Node::Label(arg.name.into(), span),
                 ]
             })
@@ -2240,8 +2240,14 @@ impl Compiler {
         operand: Sp<Word>,
         span: &CodeSpan,
     ) -> UiuaResult<Node> {
+        let spandex = self.add_span(span.clone());
         self.do_comptime_vals(possesive, operand, span)
-            .map(|(values, _)| values.into_iter().map(Node::new_push).collect())
+            .map(|(values, _)| {
+                values
+                    .into_iter()
+                    .map(|val| Node::new_push(val, spandex))
+                    .collect()
+            })
     }
     fn do_comptime_vals(
         &mut self,
@@ -2378,7 +2384,7 @@ fn extract_node_pervasives(mut node: Node) -> (Node, Node) {
         if split_index >= 2
             && matches!(
                 &node[split_index - 2..split_index],
-                [Node::Push(val), Node::Prim(prim, _)]
+                [Node::Push(val, _), Node::Prim(prim, _)]
                     if val.rank() == 0 && prim.class() == PrimClass::DyadicPervasive
             )
         {

@@ -403,11 +403,11 @@ impl Compiler {
                     node.push(Node::Prim(Primitive::Pop, span));
                 }
                 for _ in 0..sig.outputs() {
-                    node.push(Node::Push(zero.clone()));
+                    node.push(Node::Push(zero.clone(), 0));
                 }
                 node.prepend(Node::Prim(Primitive::Assert, span));
-                node.prepend(Node::new_push("Unbound external function"));
-                node.prepend(Node::Push(zero));
+                node.prepend(Node::new_push("Unbound external function", span));
+                node.prepend(Node::Push(zero, 0));
             } else {
                 node = Node::NoInline(node.into());
             }
@@ -492,7 +492,7 @@ impl Compiler {
                     && !prelude.track_caller
                 {
                     // Binding is a constant
-                    let val = if let [Node::Push(v)] = node.as_slice() {
+                    let val = if let [Node::Push(v, _)] = node.as_slice() {
                         Some(v.clone())
                     } else if node.is_pure(&self.asm) {
                         match self.comptime_node(&node) {
@@ -540,7 +540,7 @@ impl Compiler {
                     if has_stack_value {
                         sig = Signature::new(0, 1);
                     }
-                    if let Some(Node::Push(val)) = self.asm.root.last() {
+                    if let Some(Node::Push(val, _)) = self.asm.root.last() {
                         // Actually binds the constant
                         let val = val.clone();
                         self.asm.root.pop();

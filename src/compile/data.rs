@@ -460,7 +460,8 @@ impl Compiler {
                     node.push(Node::ImplPrim(ImplPrimitive::TagVariant, span));
                 }
             }
-        } else if self.allow_experimental() {
+        }
+        if self.allow_experimental() {
             // Bind type
             let ty = Type {
                 scalar: Scalar::Box(ScalarBox::Def(

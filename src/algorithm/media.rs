@@ -1095,14 +1095,34 @@ pub fn gif_bytes_to_value_impl(
     let mut decoder = gif::DecodeOptions::new();
     decoder.set_color_output(mode);
     let mut decoder = decoder.read_info(bytes)?;
-    let first_frame = decoder.read_next_frame()?.unwrap();
+    let first_frame = decoder.read_next_frame()?.ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, "GIF contains no frames")
+    })?;
     let gif_width = (first_frame.left + first_frame.width) as usize;
     let gif_height = (first_frame.top + first_frame.height) as usize;
+    if gif_width == 0 || gif_height == 0 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "GIF has no image dimensions",
+        )
+        .into());
+    }
     let mut data: crate::cowslice::CowSlice<f64> = Default::default();
     let mut frame_count = 1;
     let mut delay_sum = first_frame.delay as f64 / 100.0;
     // Init frame data with the first frame
     let mut frame_data = first_frame.buffer.to_vec();
+    let channels = match mode {
+        gif::ColorOutput::RGBA => 4,
+        gif::ColorOutput::Indexed => 1,
+    };
+    if frame_data.len() != gif_width * gif_height * channels {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "GIF frame data does not match its dimensions",
+        )
+        .into());
+    }
     match mode {
         gif::ColorOutput::RGBA => data.extend(frame_data.iter().map(|b| *b as f64 / 255.0)),
         gif::ColorOutput::Indexed => data.extend(frame_data.iter().map(|b| *b as f64)),
@@ -1111,6 +1131,13 @@ pub fn gif_bytes_to_value_impl(
     while let Some(frame) = decoder.read_next_frame()? {
         let frame_width = frame.width as usize;
         let frame_height = frame.height as usize;
+        if frame.buffer.len() != frame_width * frame_height * channels {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "GIF frame data does not match its dimensions",
+            )
+            .into());
+        }
         // Some frames may have different dimensions than the GIF
         if frame_width == gif_width && frame_height == gif_height {
             if frame.dispose == gif::DisposalMethod::Keep && mode == gif::ColorOutput::RGBA {
@@ -1128,15 +1155,25 @@ pub fn gif_bytes_to_value_impl(
             // Copy the frame into the correct position in the GIF
             let frame_left = frame.left as usize;
             let frame_top = frame.top as usize;
+            if frame_left + frame_width > gif_width || frame_top + frame_height > gif_height {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "GIF frame exceeds its canvas",
+                )
+                .into());
+            }
             for dy in 0..frame_height {
                 let y = frame_top + dy;
                 for dx in 0..frame_width {
                     let x = frame_left + dx;
-                    let outer_i = (y * gif_width + x) * 4;
-                    let inner_i = (dy * frame_width + dx) * 4;
-                    let data = &mut frame_data[outer_i..][..4];
-                    let buffer = &frame.buffer[inner_i..][..4];
-                    if frame.dispose != gif::DisposalMethod::Keep || buffer[3] > 0 {
+                    let outer_i = (y * gif_width + x) * channels;
+                    let inner_i = (dy * frame_width + dx) * channels;
+                    let data = &mut frame_data[outer_i..][..channels];
+                    let buffer = &frame.buffer[inner_i..][..channels];
+                    if mode != gif::ColorOutput::RGBA
+                        || frame.dispose != gif::DisposalMethod::Keep
+                        || buffer[3] > 0
+                    {
                         data.copy_from_slice(buffer);
                     }
                 }

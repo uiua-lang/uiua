@@ -1301,14 +1301,13 @@ dependencies = [
 
 [[package]]
 name = "console"
-version = "0.15.11"
+version = "0.16.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "054ccb5b10f9f2cbf51eb355ca1d05c2d279ce1804688d0db74b4733a5aeafd8"
+checksum = "4fe5f465a4f6fee88fad41b85d990f84c835335e85b5d9e6e63e0d06d28cba7c"
 dependencies = [
  "encode_unicode",
  "libc",
- "once_cell",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1600,6 +1599,20 @@ dependencies = [
  "rustix 0.38.44",
  "signal-hook",
  "signal-hook-mio",
+ "winapi",
+]
+
+[[package]]
+name = "crossterm"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8b9f2e4c67f833b660cdb0a3523065869fb35570177239812ed4c905aeff87b"
+dependencies = [
+ "bitflags 2.10.0",
+ "crossterm_winapi",
+ "document-features",
+ "parking_lot",
+ "rustix 1.0.5",
  "winapi",
 ]
 
@@ -6424,7 +6437,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a9474484d1a0c031cd7d065c6f027a376859c9fedb32c94df3d7a797218bbb7"
 dependencies = [
  "coolor",
- "crossterm",
+ "crossterm 0.28.1",
  "thiserror 1.0.69",
  "xterm-query",
 ]
@@ -7144,16 +7157,15 @@ dependencies = [
 
 [[package]]
 name = "viuer"
-version = "0.9.1"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3f25eeadaacb5253b24f4b576fecad471b07107e552e2a631a6d7ab5e1e49e0"
+checksum = "da3a696d8afebb0cae4b263ff8cae3286b20ea88df0a82187b13ee6fe8398dce"
 dependencies = [
  "ansi_colours",
  "base64",
  "console",
- "crossterm",
+ "crossterm 0.29.0",
  "image",
- "lazy_static",
  "tempfile",
  "termcolor",
 ]

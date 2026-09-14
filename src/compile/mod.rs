@@ -2259,9 +2259,14 @@ impl Compiler {
         let mut br = EcoVec::with_capacity(count);
         let mut rigid_indices = Vec::new();
         let mut flex_indices = Vec::new();
-        for (i, branch) in branches.into_iter().enumerate() {
-            let span = branch.span.clone();
-            let SigNode { node, sig } = self.word_sig(branch)?;
+        let mut signodes: Vec<_> = (branches.into_iter().rev())
+            .map(|br| {
+                let span = br.span.clone();
+                self.word_sig(br).map(|sn| (sn, span))
+            })
+            .collect::<UiuaResult<_>>()?;
+        signodes.reverse();
+        for (i, (SigNode { node, sig }, span)) in signodes.into_iter().enumerate() {
             let is_flex = node
                 .iter()
                 .rposition(|node| matches!(node, Node::Prim(Primitive::Assert, _)))

@@ -4393,7 +4393,7 @@ sys_op! {
     /// Uiua arrays can be passed to foreign functions as pointer-length pairs.
     /// To do this, specify the type of the list items followed by `:n`, where `n` is the index of the parameter that corresponds to the length.
     /// The interpreter will automatically pass the number of elements in the array to this parameter.
-    /// If we wave a C function `int sum(const int* arr, int len)` in a shared library `example.dll`, we can call it like this:
+    /// If we have a C function `int sum(const int* arr, int len)` in a shared library `example.dll`, we can call it like this:
     /// ex! # Experimental!
     ///   : Lib ← &ffi ⊂□"example.dll"
     ///   : Sum ← Lib {"int" "sum" "int:1" "int"}

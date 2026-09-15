@@ -1477,7 +1477,6 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         UnJoin => Prim(Join, span),
         UnKeep => Prim(Keep, span),
         UnBox => Prim(Box, span),
-        ValidateImpl(_) => ImplPrim(UnValidate, span),
         UnHsv => Prim(Hsv, span),
         UnOklch => Prim(Oklch, span),
         UnJson => Prim(Json, span),
@@ -1497,6 +1496,7 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         UnClip => Prim(Sys(SysOp::Clip), span),
         Retropose => ImplPrim(Retropose, span),
         MvImpl(mode) => ImplPrim(UnMv(mode), span),
+        ValidateImpl(_) => ImplPrim(UnValidate, span),
         UnMv(mode) => ImplPrim(MvImpl(mode), span),
         StackN { n, inverse } => ImplPrim(
             StackN {

@@ -1477,6 +1477,7 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         UnJoin => Prim(Join, span),
         UnKeep => Prim(Keep, span),
         UnBox => Prim(Box, span),
+        ValidateImpl(_) => ImplPrim(UnValidate, span),
         UnHsv => Prim(Hsv, span),
         UnOklch => Prim(Oklch, span),
         UnJson => Prim(Json, span),

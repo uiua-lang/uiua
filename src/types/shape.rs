@@ -1,5 +1,6 @@
 use super::*;
 
+#[doc(hidden)]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct DynShape {
     pub dims: Vec<Dim>,
@@ -156,6 +157,7 @@ impl FromIterator<Dim> for DynShape {
     }
 }
 
+#[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Dim {

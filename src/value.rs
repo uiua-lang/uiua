@@ -1726,6 +1726,7 @@ macro_rules! scalar_mon_impl {
     ($name:ident, $($(#[$attr:meta])? ($in:pat,$out:expr),)*) => {
         impl Scalar {
             #[doc(hidden)]
+            #[allow(clippy::should_implement_trait)]
             pub fn $name(self) -> Result<Self, String> {
                 use Scalar::{*, Num as Byte};
                 #[cfg(feature = "ga")]

@@ -203,7 +203,7 @@ impl GridFmt for f64 {
             .into_iter()
             .find(|(sqrt, ..)| (sqrt - positive).abs() <= f64::EPSILON)
         {
-            format!("√{sqr}")
+            format!("{minus}√{sqr}")
         } else {
             let mut pos_formatted = positive.to_string();
             if pos_formatted.len() >= 17 {

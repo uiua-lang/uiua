@@ -379,28 +379,6 @@ impl Compiler {
     }
     pub(crate) fn modified(
         &mut self,
-        modified: Modified,
-        subscript: Option<Sp<Subscript>>,
-    ) -> UiuaResult<Node> {
-        use Primitive::*;
-        let locals_height = self.locals.len();
-        let locals_escape = match &modified.modifier.value {
-            Modifier::Primitive(prim) => match prim {
-                Content | Evert | Under | Fill => true,
-                Both => false,
-                prim => prim.class() == PrimClass::Arguments,
-            },
-            Modifier::Ref(_) => false,
-            Modifier::Macro(_) => true,
-        };
-        let res = self.modified_impl(modified, subscript);
-        if !locals_escape {
-            self.locals.truncate(locals_height);
-        }
-        res
-    }
-    fn modified_impl(
-        &mut self,
         mut modified: Modified,
         subscript: Option<Sp<Subscript>>,
     ) -> UiuaResult<Node> {
@@ -511,7 +489,7 @@ impl Compiler {
         let span = self.add_span(modified.modifier.span.clone());
 
         // Compile operands
-        let ops = self.args(modified.operands)?;
+        let ops = self.modifier_operands(&modified.modifier.value, modified.operands)?;
 
         Ok(Node::Mod(prim, ops, span))
     }
@@ -525,10 +503,43 @@ impl Compiler {
         self.print_diagnostics = print_diagnostics;
         res
     }
+    /// Compile modifier args
+    fn modifier_operands(
+        &mut self,
+        modifier: &Modifier,
+        mut words: Vec<Sp<Word>>,
+    ) -> UiuaResult<EcoVec<SigNode>> {
+        words.reverse();
+        let mut nodes: EcoVec<_> = (words.into_iter())
+            .filter(|w| w.value.is_code())
+            .map(|w| self.modifier_operand(modifier, w))
+            .collect::<UiuaResult<_>>()?;
+        nodes.make_mut().reverse();
+        Ok(nodes)
+    }
+    fn modifier_operand(&mut self, modifier: &Modifier, word: Sp<Word>) -> UiuaResult<SigNode> {
+        use Primitive::*;
+        let locals_height = self.locals.len();
+        let locals_escape = match modifier {
+            Modifier::Primitive(prim) => match prim {
+                Content | Evert | Under | Fill => true,
+                Both => false,
+                prim => prim.class() == PrimClass::Arguments,
+            },
+            Modifier::Ref(_) => false,
+            Modifier::Macro(_) => true,
+        };
+        let mut res = self.word_sig(word);
+        if !locals_escape && let Ok(sn) = &mut res {
+            self.end_locals(locals_height, Some(&mut sn.node));
+        }
+        res
+    }
     fn monadic_modifier_op(&mut self, m: &Modified) -> UiuaResult<(SigNode, CodeSpan)> {
         let operand = m.code_operands().next().unwrap().clone();
         let span = operand.span.clone();
-        self.word_sig(operand).map(|sn| (sn, span))
+        self.modifier_operand(&m.modifier.value, operand)
+            .map(|sn| (sn, span))
     }
     fn dyadic_modifier_ops(
         &mut self,
@@ -540,8 +551,8 @@ impl Compiler {
         let b_op = operands.next().unwrap();
         let a_span = a_op.span.clone();
         let b_span = b_op.span.clone();
-        let b = self.word_sig(b_op)?;
-        let a = self.word_sig(a_op)?;
+        let b = self.modifier_operand(&m.modifier.value, b_op)?;
+        let a = self.modifier_operand(&m.modifier.value, a_op)?;
         Ok((a, b, a_span, b_span))
     }
     /// Inline a modifier
@@ -809,7 +820,10 @@ impl Compiler {
                             node
                         }
                     } else {
-                        let ops = self.args(modified.operands.clone())?;
+                        let ops = self.modifier_operands(
+                            &Modifier::Primitive(Bracket),
+                            modified.operands.clone(),
+                        )?;
                         Node::ImplMod(ImplPrimitive::SidedBracket(sided), ops, span)
                     }
                 })

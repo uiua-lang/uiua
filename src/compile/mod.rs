@@ -1048,16 +1048,6 @@ impl Compiler {
             );
         }
     }
-    /// Compile modifier args
-    fn args(&mut self, mut words: Vec<Sp<Word>>) -> UiuaResult<EcoVec<SigNode>> {
-        words.reverse();
-        let mut nodes: EcoVec<_> = (words.into_iter())
-            .filter(|w| w.value.is_code())
-            .map(|w| self.word_sig(w))
-            .collect::<UiuaResult<_>>()?;
-        nodes.make_mut().reverse();
-        Ok(nodes)
-    }
     fn words_sig(&mut self, words: Vec<Sp<Word>>) -> UiuaResult<SigNode> {
         let span = words
             .first()

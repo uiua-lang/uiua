@@ -802,9 +802,10 @@ path(
 ⍤⤙≍ "aebcd" ⊂∪⌟⊟⊟₃ @a@b@c@d@e
 ⍤⤙≍ {3_4 1_2_5} ∪₂⌞{⊟|⊟₃} 1 2 3 4 5
 
-## "809:3: No such file or directory (os error 2) data_defs.ua"
+# Locals
 ⍤⤙≍ [5 6] [X Y] ⊃(X:|Y:+1) 5
 ⍤⤙≍ [5 11] [X Y] ⊓(X:|Y:+1) 5 10
+⍤⤙≍ 1 x ≡x:2_3_4 x:1
 
 ~ "data_defs" ~ M
 ⍤⤙≍ 21 M.X

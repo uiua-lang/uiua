@@ -169,7 +169,7 @@ pub fn Optimizations() -> impl IntoView {
         <p>"The "{lang}" interpreter contains a number of optimizations that you can take advantage of to improve the performance of your code."</p>
 
         <Hd id="pervasive-functions">"Pervasive Functions"</Hd>
-        <p>"All pervasive functions run on arrays in hot loops that should have performance comparable to an implementation in a languages like C or Rust. This includes all mathematical and comparison functions."</p>
+        <p>"All pervasive functions run on arrays in hot loops that should have performance comparable to an implementation in a language like C or Rust. This includes all mathematical and comparison functions."</p>
         <p>"The interpreter does its best to re-use allocated memory when possible instead of copying. Arrays are reference-counted, so an array's memory is only copied when it is modified "<em>"and"</em>" a duplicate exists somewhere. Duplicating an array with "<Prim prim=On/>"/"<Prim prim=By/>"/etc does not copy actual array memory. It only copies pointers and increments reference counts."</p>
         <p>"In this example, only the last line results in a copy:"</p>
         <Editor no_run=true example="+1 ⇡10\n˙× ⇡10\n×+1⇡10⇡10\n+1⊸⇡10"/>

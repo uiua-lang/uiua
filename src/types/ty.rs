@@ -249,9 +249,9 @@ impl Type {
             }
             val
         } else if self.shape.is_scalar() {
-            scalar_to_val(self.scalar)
-        } else if self.shape.is_any() {
             [Boxed(scalar_to_val(self.scalar))].into()
+        } else if self.shape.is_any() {
+            scalar_to_val(self.scalar)
         } else {
             let mut items = eco_vec![Boxed(scalar_to_val(self.scalar))];
             for dim in self.shape.dims {

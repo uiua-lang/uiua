@@ -2390,7 +2390,7 @@ fn construct_extracted_monadic_modifier<T>(
     span: usize,
     comp: &Compiler,
 ) -> Node {
-    if comp.in_fill {
+    if comp.in_fill || !sn.node.is_pure(&comp.asm) {
         return node_kind(m, eco_vec![sn], span);
     }
     let (node, extracted) = extract_node_pervasives(sn.node);

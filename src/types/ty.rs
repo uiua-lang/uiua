@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize, Hash)]
 #[doc(hidden)]
 pub struct Type {
     pub scalar: Scalar,
@@ -33,7 +33,14 @@ impl Type {
             && arr.rank() == 1
             && let Some((first, rest)) = arr.data.split_first()
         {
-            let mut scalar = value_as_scalar_spec(&first.0)?;
+            let Some(mut scalar) = value_as_scalar_spec(&first.0) else {
+                {
+                    let variants = (rest.iter())
+                        .map(|Boxed(val)| Type::from_spec(val))
+                        .collect::<Option<Vec<_>>>()?;
+                    return Some(Scalar::Or(variants).any_shape());
+                }
+            };
             if let [Boxed(arr)] = rest
                 && arr.type_id() == f64::TYPE_ID
                 && arr.shape == [0]
@@ -240,6 +247,7 @@ impl Type {
                 Scalar::Box(ScalarBox::All(ty)) => [Boxed((*ty).spec_val())].into(),
                 Scalar::Box(ScalarBox::Any) => '□'.into(),
                 Scalar::Box(ScalarBox::Def(..)) => unreachable!(),
+                Scalar::Or(_) => unreachable!(),
             }
         }
         if let Scalar::Box(ScalarBox::Def(name, fields)) = self.scalar {
@@ -248,6 +256,11 @@ impl Type {
                 val.meta.label = Some(name);
             }
             val
+        } else if let Scalar::Or(variants) = self.scalar {
+            std::iter::once('?'.into())
+                .chain(variants.into_iter().map(Type::spec_val))
+                .map(Boxed)
+                .collect()
         } else if self.shape.is_scalar() {
             [Boxed(scalar_to_val(self.scalar))].into()
         } else if self.shape.is_any() {

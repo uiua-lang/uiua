@@ -80,6 +80,12 @@ fn check_scalar(spec: Scalar, ch: &mut Type) -> TypeResult {
                 }
             }
         }
+    } else if let Scalar::Or(variants) = &spec {
+        variants
+            .iter()
+            .cloned()
+            .find_map(|variant_spec| validate(variant_spec, ch, None).ok())
+            .ok_or(TypeError::ScalarMismatch(spec, ch.scalar.clone()))?;
     } else if !spec.superset_of(&ch.scalar) {
         return Err(TypeError::ScalarMismatch(spec, ch.scalar.clone()));
     }

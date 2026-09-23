@@ -1626,15 +1626,15 @@ impl<'a> TypeEnv<'a> {
             .iter()
             .any(|f| f.scalar().superset_of(&ty.scalar))
     }
-    fn monadic<T: Into<TypeVal>, N: Into<TypeVal>, L: Into<TypeVal>>(
-        &mut self,
-        f: impl Fn(Type) -> Result<T, TypeError>,
-        num: impl Fn(f64) -> Result<N, TypeError>,
-        list: impl Fn(EcoVec<f64>) -> Result<L, TypeError>,
-        val: impl Fn(Value) -> Option<Value>,
-    ) -> TypeResult {
-        let x = self.pop(1)?;
-        self.push(match x {
+    fn monadic_inner<T: Into<TypeVal>, N: Into<TypeVal>, L: Into<TypeVal>>(
+        &self,
+        f: impl Fn(Type) -> Result<T, TypeError> + Clone,
+        num: impl Fn(f64) -> Result<N, TypeError> + Clone,
+        list: impl Fn(EcoVec<f64>) -> Result<L, TypeError> + Clone,
+        val: impl Fn(Value) -> Option<Value> + Clone,
+        x: TypeVal,
+    ) -> Result<TypeVal, TypeError> {
+        Ok(match x {
             TypeVal::Num(n) => num(n)?.into(),
             TypeVal::NumList(ns) => list(ns)?.into(),
             TypeVal::Val(Value::Num(arr)) if arr.rank() == 0 => num(arr.data[0])?.into(),
@@ -1651,19 +1651,97 @@ impl<'a> TypeEnv<'a> {
                     f(ty)?.into()
                 }
             }
+            TypeVal::Type(Type {
+                scalar: Scalar::Or(variants),
+                shape,
+            }) => TypeVal::Or(
+                variants
+                    .into_iter()
+                    .map(|v| f(v).map(Into::into))
+                    .collect::<Result<_, _>>()?,
+            ),
             TypeVal::Type(ty) => f(ty)?.into(),
-        });
+            TypeVal::Or(variants) => TypeVal::Or(
+                variants
+                    .into_iter()
+                    .map(|v| {
+                        self.monadic_inner(f.clone(), num.clone(), list.clone(), val.clone(), v)
+                    })
+                    .collect::<Result<_, _>>()?,
+            ),
+        })
+    }
+    fn monadic<T: Into<TypeVal>, N: Into<TypeVal>, L: Into<TypeVal>>(
+        &mut self,
+        f: impl Fn(Type) -> Result<T, TypeError> + Clone,
+        num: impl Fn(f64) -> Result<N, TypeError> + Clone,
+        list: impl Fn(EcoVec<f64>) -> Result<L, TypeError> + Clone,
+        val: impl Fn(Value) -> Option<Value> + Clone,
+    ) -> TypeResult {
+        let x = self.pop(1)?;
+        let tv = self.monadic_inner(f, num, list, val, x)?;
+        self.push(tv);
         Ok(())
     }
     fn second_filled(&self) -> bool {
         self.stack.len() >= 2 && self.fill_for(&self.stack[self.stack.len() - 2].clone().ty())
     }
+    fn dyadic_inner<T, N, L, NN>(
+        &self,
+        f: impl Fn(Type, Type) -> Result<T, TypeError> + Clone,
+        num: impl Fn(f64, Type) -> Result<N, TypeError> + Clone,
+        list: impl Fn(EcoVec<f64>, Type) -> Result<L, TypeError> + Clone,
+        num_num: impl Fn(f64, f64) -> Result<NN, TypeError> + Clone,
+        a: TypeVal,
+        b: TypeVal,
+    ) -> Result<TypeVal, TypeError>
+    where
+        T: Into<TypeVal>,
+        N: Into<TypeVal>,
+        L: Into<TypeVal>,
+        NN: Into<TypeVal>,
+    {
+        Ok(match (a, b) {
+            (TypeVal::Or(a), b) => TypeVal::Or(
+                a.into_iter()
+                    .map(|x| {
+                        self.dyadic_inner(
+                            f.clone(),
+                            num.clone(),
+                            list.clone(),
+                            num_num.clone(),
+                            x,
+                            b.clone(),
+                        )
+                    })
+                    .collect::<Result<_, _>>()?,
+            ),
+            (a, TypeVal::Or(b)) => TypeVal::Or(
+                b.into_iter()
+                    .map(|x| {
+                        self.dyadic_inner(
+                            f.clone(),
+                            num.clone(),
+                            list.clone(),
+                            num_num.clone(),
+                            a.clone(),
+                            x,
+                        )
+                    })
+                    .collect::<Result<_, _>>()?,
+            ),
+            (TypeVal::Num(a), TypeVal::Num(b)) => num_num(a, b)?.into(),
+            (TypeVal::Num(a), b) => num(a, b.ty())?.into(),
+            (TypeVal::NumList(a), b) => list(a, b.ty())?.into(),
+            (a, b) => f(a.ty(), b.ty())?.into(),
+        })
+    }
     fn dyadic<T, N, L, NN>(
         &mut self,
-        f: impl Fn(Type, Type) -> Result<T, TypeError>,
-        num: impl Fn(f64, Type) -> Result<N, TypeError>,
-        list: impl Fn(EcoVec<f64>, Type) -> Result<L, TypeError>,
-        num_num: impl Fn(f64, f64) -> Result<NN, TypeError>,
+        f: impl Fn(Type, Type) -> Result<T, TypeError> + Clone,
+        num: impl Fn(f64, Type) -> Result<N, TypeError> + Clone,
+        list: impl Fn(EcoVec<f64>, Type) -> Result<L, TypeError> + Clone,
+        num_num: impl Fn(f64, f64) -> Result<NN, TypeError> + Clone,
     ) -> TypeResult
     where
         T: Into<TypeVal>,
@@ -1673,12 +1751,8 @@ impl<'a> TypeEnv<'a> {
     {
         let a = self.pop(1)?;
         let b = self.pop(2)?;
-        self.push(match (a, b) {
-            (TypeVal::Num(a), TypeVal::Num(b)) => num_num(a, b)?.into(),
-            (TypeVal::Num(a), b) => num(a, b.ty())?.into(),
-            (TypeVal::NumList(a), b) => list(a, b.ty())?.into(),
-            (a, b) => f(a.ty(), b.ty())?.into(),
-        });
+        let tv = self.dyadic_inner(f, num, list, num_num, a, b)?;
+        self.push(tv);
         Ok(())
     }
     fn pack(&mut self, n: usize, bx: bool, allow_ext: bool, prim: Option<Primitive>) -> TypeResult {
@@ -1861,6 +1935,8 @@ impl<'a> TypeEnv<'a> {
                 self.push(val.unboxed_if(unbox))
             }
             TypeVal::Val(val) => self.push_all(val.into_rows().map(|v| v.unboxed_if(unbox).into())),
+            // TODO: If the first axes of all of the brances are the same, we can unpack into a bunch of `Or`s
+            TypeVal::Or(_) => return Err(TypeError::Unsupported(Some("What".into()))),
         };
         Ok(())
     }

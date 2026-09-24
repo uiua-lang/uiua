@@ -1569,8 +1569,8 @@ impl<'a> TypeEnv<'a> {
         &mut self,
         num_hint: Scalar,
         char_hint: Scalar,
-        f: impl Fn(Scalar, Scalar, bool, bool) -> Result<Scalar, TypeError>,
-        f64: impl Fn(f64, f64) -> N,
+        f: impl Fn(Scalar, Scalar, bool, bool) -> Result<Scalar, TypeError> + Clone,
+        f64: impl Fn(f64, f64) -> N + Clone,
     ) -> TypeResult {
         if let Ok(a) = self.pop(1) {
             if a.is_any() {
@@ -1592,22 +1592,30 @@ impl<'a> TypeEnv<'a> {
     fn dyadic_pervasive_hint<N: Into<TypeVal>>(
         &mut self,
         hint: Scalar,
-        f: impl Fn(Scalar, Scalar, bool, bool) -> Result<Scalar, TypeError>,
-        f64: impl Fn(f64, f64) -> N,
+        f: impl Fn(Scalar, Scalar, bool, bool) -> Result<Scalar, TypeError> + Clone,
+        f64: impl Fn(f64, f64) -> N + Clone,
     ) -> TypeResult {
         let hint = hint.any_shape();
         self.type_hint([hint.clone(), hint]);
         self.dyadic_pervasive(f, f64)
     }
-    fn dyadic_pervasive<N: Into<TypeVal>>(
+    fn dyadic_pervasive_inner<N: Into<TypeVal>>(
         &mut self,
-        f: impl Fn(Scalar, Scalar, bool, bool) -> Result<Scalar, TypeError>,
-        f64: impl Fn(f64, f64) -> N,
-    ) -> TypeResult {
-        let a = self.pop(1)?;
-        let b = self.pop(2)?;
-        self.push(match (a, b) {
+        f: impl Fn(Scalar, Scalar, bool, bool) -> Result<Scalar, TypeError> + Clone,
+        f64: impl Fn(f64, f64) -> N + Clone,
+        a: TypeVal,
+        b: TypeVal,
+    ) -> Result<TypeVal, TypeError> {
+        Ok(match (a, b) {
             (TypeVal::Num(a), TypeVal::Num(b)) => f64(a, b).into(),
+            (TypeVal::Or(a), b) => a
+                .into_iter()
+                .map(|a| self.dyadic_pervasive_inner(f.clone(), f64.clone(), a, b.clone()))
+                .collect::<Result<_, _>>()?,
+            (a, TypeVal::Or(b)) => b
+                .into_iter()
+                .map(|b| self.dyadic_pervasive_inner(f.clone(), f64.clone(), b, a.clone()))
+                .collect::<Result<_, _>>()?,
             (a, b) => {
                 let (a, b) = (a.ty(), b.ty());
                 let a_fill = self.fill_for(&a);
@@ -1618,7 +1626,17 @@ impl<'a> TypeEnv<'a> {
                 }
                 .into()
             }
-        });
+        })
+    }
+    fn dyadic_pervasive<N: Into<TypeVal>>(
+        &mut self,
+        f: impl Fn(Scalar, Scalar, bool, bool) -> Result<Scalar, TypeError> + Clone,
+        f64: impl Fn(f64, f64) -> N + Clone,
+    ) -> TypeResult {
+        let a = self.pop(1)?;
+        let b = self.pop(2)?;
+        let tv = self.dyadic_pervasive_inner(f, f64, a, b)?;
+        self.push(tv);
         Ok(())
     }
     fn fill_for(&self, ty: &Type) -> bool {

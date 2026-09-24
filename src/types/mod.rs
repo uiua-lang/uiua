@@ -1651,24 +1651,19 @@ impl<'a> TypeEnv<'a> {
                     f(ty)?.into()
                 }
             }
+            // TODO: What should happen to this shape?
             TypeVal::Type(Type {
                 scalar: Scalar::Or(variants),
-                shape,
-            }) => TypeVal::Or(
-                variants
-                    .into_iter()
-                    .map(|v| f(v).map(Into::into))
-                    .collect::<Result<_, _>>()?,
-            ),
+                ..
+            }) => variants
+                .into_iter()
+                .map(|v| f(v).map(Into::into))
+                .collect::<Result<_, _>>()?,
             TypeVal::Type(ty) => f(ty)?.into(),
-            TypeVal::Or(variants) => TypeVal::Or(
-                variants
-                    .into_iter()
-                    .map(|v| {
-                        self.monadic_inner(f.clone(), num.clone(), list.clone(), val.clone(), v)
-                    })
-                    .collect::<Result<_, _>>()?,
-            ),
+            TypeVal::Or(variants) => variants
+                .into_iter()
+                .map(|v| self.monadic_inner(f.clone(), num.clone(), list.clone(), val.clone(), v))
+                .collect::<Result<_, _>>()?,
         })
     }
     fn monadic<T: Into<TypeVal>, N: Into<TypeVal>, L: Into<TypeVal>>(
@@ -1702,34 +1697,33 @@ impl<'a> TypeEnv<'a> {
         NN: Into<TypeVal>,
     {
         Ok(match (a, b) {
-            (TypeVal::Or(a), b) => TypeVal::Or(
-                a.into_iter()
-                    .map(|x| {
-                        self.dyadic_inner(
-                            f.clone(),
-                            num.clone(),
-                            list.clone(),
-                            num_num.clone(),
-                            x,
-                            b.clone(),
-                        )
-                    })
-                    .collect::<Result<_, _>>()?,
-            ),
-            (a, TypeVal::Or(b)) => TypeVal::Or(
-                b.into_iter()
-                    .map(|x| {
-                        self.dyadic_inner(
-                            f.clone(),
-                            num.clone(),
-                            list.clone(),
-                            num_num.clone(),
-                            a.clone(),
-                            x,
-                        )
-                    })
-                    .collect::<Result<_, _>>()?,
-            ),
+            (TypeVal::Or(a), b) => a
+                .into_iter()
+                .map(|x| {
+                    self.dyadic_inner(
+                        f.clone(),
+                        num.clone(),
+                        list.clone(),
+                        num_num.clone(),
+                        x,
+                        b.clone(),
+                    )
+                })
+                .collect::<Result<_, _>>()?,
+
+            (a, TypeVal::Or(b)) => b
+                .into_iter()
+                .map(|x| {
+                    self.dyadic_inner(
+                        f.clone(),
+                        num.clone(),
+                        list.clone(),
+                        num_num.clone(),
+                        a.clone(),
+                        x,
+                    )
+                })
+                .collect::<Result<_, _>>()?,
             (TypeVal::Num(a), TypeVal::Num(b)) => num_num(a, b)?.into(),
             (TypeVal::Num(a), b) => num(a, b.ty())?.into(),
             (TypeVal::NumList(a), b) => list(a, b.ty())?.into(),

@@ -276,6 +276,9 @@ impl Type {
             items.into()
         }
     }
+    pub fn superset_of(&self, other: &Type) -> bool {
+        self.scalar.superset_of(&other.scalar) && self.shape.superset_of(&other.shape)
+    }
 }
 
 impl From<Scalar> for Type {

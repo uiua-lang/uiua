@@ -92,6 +92,9 @@ impl DynShape {
     pub fn rank(&self) -> usize {
         self.dims.len() + self.suffix.as_ref().map_or(0, |s| s.len())
     }
+    pub fn try_rank(&self) -> Option<usize> {
+        self.suffix.is_none().then_some(self.dims.len())
+    }
     pub fn is_any(&self) -> bool {
         self.dims.is_empty() && self.suffix.as_ref().is_some_and(|s| s.is_empty())
     }
@@ -141,6 +144,53 @@ impl DynShape {
             (Some(_), None) => {}
             (None, Some(b)) => self.suffix = Some(b),
             (Some(a), Some(b)) => merge(a, b),
+        }
+    }
+    pub fn prefix_only(&self) -> Option<DynShape> {
+        if self.suffix.is_some() && !self.dims.is_empty() {
+            Some(DynShape {
+                dims: self.dims.clone(),
+                suffix: None,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn suffix_only(&self) -> Option<DynShape> {
+        if self.dims.is_empty()
+            && let Some(suffix) = self.suffix.clone()
+        {
+            Some(DynShape {
+                dims: suffix,
+                suffix: None,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn superset_of(&self, other: &Self) -> bool {
+        if other.is_any() {
+            false
+        } else if self.is_any() {
+            true
+        } else if let Some(pref_self) = self.prefix_only()
+            && let Some(pref_other) = other.prefix_only()
+        {
+            pref_self.superset_of(&pref_other)
+        } else if let Some(suff_self) = self.suffix_only()
+            && let Some(suff_other) = other.suffix_only()
+        {
+            suff_self.superset_of(&suff_other)
+        } else if let Some(self_rank) = self.try_rank()
+            && let Some(other_rank) = other.try_rank()
+            && self_rank == other_rank
+        {
+            self.dims
+                .iter()
+                .zip(other.dims.iter())
+                .all(|(slfdim, othdim)| slfdim.superset_of(othdim))
+        } else {
+            false
         }
     }
 }
@@ -222,6 +272,13 @@ impl Dim {
             (Dim::Dyn, Dim::Static(_)) => Ordering::Less,
             (Dim::Dyn, Dim::Dyn) => Ordering::Equal,
             (Dim::Static(a), Dim::Static(b)) => a.cmp(b),
+        }
+    }
+    pub fn superset_of(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Dim::Dyn, Dim::Static(_)) => true,
+            (Dim::Static(a), Dim::Static(b)) => a == b,
+            _ => false,
         }
     }
 }

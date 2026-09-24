@@ -6,6 +6,7 @@ pub enum TypeVal {
     NumList(EcoVec<f64>),
     Val(Value),
     Type(Type),
+    Or(Vec<TypeVal>),
 }
 
 impl TypeVal {
@@ -15,6 +16,9 @@ impl TypeVal {
             TypeVal::NumList(list) => Scalar::Num.shaped(list.len()),
             TypeVal::Type(ty) => ty.clone(),
             TypeVal::Val(val) => Type::of_val(&val),
+            TypeVal::Or(vals) => {
+                Scalar::Or(vals.into_iter().map(TypeVal::ty).collect()).scalar_type()
+            }
         }
     }
     pub fn spec(self) -> Option<Type> {
@@ -33,6 +37,7 @@ impl TypeVal {
             TypeVal::NumList(list) => Dim::Static(list.len()),
             TypeVal::Val(value) => Dim::Static(value.row_count()),
             TypeVal::Type(ty) => ty.shape.row_count(),
+            TypeVal::Or(_) => Dim::Dyn,
         }
     }
     pub fn shape(&self) -> Cow<DynShape> {
@@ -41,6 +46,7 @@ impl TypeVal {
             TypeVal::NumList(items) => Cow::Owned([items.len()].into()),
             TypeVal::Val(value) => Cow::Owned((&value.shape).into()),
             TypeVal::Type(ty) => Cow::Borrowed(&ty.shape),
+            TypeVal::Or(_) => Cow::Owned(DynShape::ANY),
         }
     }
     pub fn scalar(&self) -> Scalar {
@@ -49,6 +55,7 @@ impl TypeVal {
             TypeVal::NumList(nums) => nums.as_slice().into(),
             TypeVal::Val(val) => Scalar::of_val(val),
             TypeVal::Type(ty) => ty.scalar.clone(),
+            TypeVal::Or(types) => Scalar::Or(types.iter().cloned().map(TypeVal::ty).collect()),
         }
     }
     pub fn set_scalar(&mut self, scalar: Scalar) {
@@ -80,6 +87,7 @@ impl TypeVal {
             TypeVal::NumList(_) => 1,
             TypeVal::Val(val) => val.rank(),
             TypeVal::Type(ty) => ty.shape.rank(),
+            TypeVal::Or(_) => 0,
         }
     }
     pub fn leading_rank(&self) -> usize {
@@ -88,6 +96,7 @@ impl TypeVal {
             TypeVal::NumList(_) => 1,
             TypeVal::Val(val) => val.rank(),
             TypeVal::Type(ty) => ty.shape.dims.len(),
+            TypeVal::Or(_) => 0,
         }
     }
     pub fn suffix_rank(&self) -> Option<usize> {
@@ -106,6 +115,7 @@ impl TypeVal {
             }
             TypeVal::NumList(_) | TypeVal::Val(_) => TypeVal::Type(self.ty().into_row()),
             TypeVal::Type(ty) => TypeVal::Type(ty.into_row()),
+            TypeVal::Or(variants) => variants.into_iter().map(|v| v.into_row()).collect(),
         }
     }
     pub fn into_first_row(self) -> Self {
@@ -115,6 +125,7 @@ impl TypeVal {
             TypeVal::Val(val) if val.row_count() > 0 => {
                 TypeVal::Val(val.into_rows().next().unwrap())
             }
+            TypeVal::Or(variants) => variants.into_iter().map(|v| v.into_first_row()).collect(),
             tv => tv.into_row(),
         }
     }
@@ -125,6 +136,7 @@ impl TypeVal {
             TypeVal::Val(val) if val.row_count() > 0 => {
                 TypeVal::Val(val.into_rows().next_back().unwrap())
             }
+            TypeVal::Or(variants) => variants.into_iter().map(|v| v.into_last_row()).collect(),
             tv => tv.into_row(),
         }
     }
@@ -138,6 +150,9 @@ impl TypeVal {
             }
             (TypeVal::Val(val), Dim::Static(1)) => val.fix(),
             (TypeVal::Type(ty), _) => ty.shape.dims.insert(0, dim),
+            (TypeVal::Or(variants), _) => variants.iter_mut().for_each(|v| {
+                v.prepend_dim(dim);
+            }),
             (_, Dim::Dyn | Dim::Static(_)) => {
                 *self = take(self).ty().into();
                 self.prepend_dim(dim);
@@ -239,6 +254,9 @@ impl TypeVal {
                     .reshape_scalar(Ok(n as isize), false, Context::NONE)
                     .unwrap(),
                 TypeVal::Type(ty) => ty.shape.dims.insert(0, dim),
+                TypeVal::Or(variants) => variants
+                    .iter_mut()
+                    .for_each(|v| v.reshape_scalar(dim, suffix)),
             },
             _ => {
                 let mut ty = take(self).ty();
@@ -250,6 +268,28 @@ impl TypeVal {
                 .insert(0, dim);
                 *self = ty.into();
             }
+        }
+    }
+    pub fn maybe_make_singlular(self) -> Self {
+        match self {
+            TypeVal::Or(mut variants) if variants.len() == 1 => variants.pop().unwrap(),
+            tv => tv,
+        }
+    }
+    fn superset_of(&self, other: &Self) -> bool {
+        match (self, other) {
+            (TypeVal::Num(a), TypeVal::Num(b)) => a == b,
+            (TypeVal::NumList(a), TypeVal::NumList(b)) => a == b,
+            (TypeVal::Val(a), TypeVal::Val(b)) => a == b,
+            (TypeVal::Type(ty), TypeVal::Num(_)) => {
+                matches!(ty.scalar, Scalar::Num) && ty.shape.is_scalar()
+            }
+            (TypeVal::Type(ty), TypeVal::NumList(_)) => {
+                matches!(ty.scalar, Scalar::Num) && ty.shape.rank() == 1
+            }
+            (TypeVal::Type(ty), TypeVal::Val(val)) => ty.superset_of(&Type::of_val(val)),
+            (TypeVal::Type(ty1), TypeVal::Type(ty2)) => ty1.superset_of(ty2),
+            _ => false,
         }
     }
 }
@@ -292,13 +332,19 @@ impl From<Value> for TypeVal {
 
 impl From<Type> for TypeVal {
     fn from(ty: Type) -> Self {
-        TypeVal::Type(ty)
+        match ty.scalar {
+            Scalar::Or(variants) => variants.into_iter().map(Into::into).collect(),
+            _ => TypeVal::Type(ty),
+        }
     }
 }
 
 impl From<Scalar> for TypeVal {
     fn from(scalar: Scalar) -> Self {
-        TypeVal::Type(scalar.into())
+        match scalar {
+            Scalar::Or(variants) => variants.into_iter().map(Into::into).collect(),
+            _ => TypeVal::Type(scalar.into()),
+        }
     }
 }
 
@@ -358,6 +404,27 @@ impl From<DynShape> for TypeVal {
     }
 }
 
+impl FromIterator<TypeVal> for TypeVal {
+    fn from_iter<T: IntoIterator<Item = TypeVal>>(iter: T) -> Self {
+        let mut out: Vec<TypeVal> = Vec::new();
+        fn maximal_insert(out: &mut Vec<TypeVal>, tv: TypeVal) {
+            if !out.iter().any(|o| o.superset_of(&tv)) {
+                out.retain(|o| !tv.superset_of(o));
+                out.push(tv);
+            }
+        }
+        iter.into_iter().for_each(|tv| match tv {
+            TypeVal::Or(variants) => variants
+                .into_iter()
+                .for_each(|v| maximal_insert(&mut out, v)),
+            tv => {
+                maximal_insert(&mut out, tv);
+            }
+        });
+        TypeVal::Or(out).maybe_make_singlular()
+    }
+}
+
 impl fmt::Display for TypeVal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -381,6 +448,16 @@ impl fmt::Display for TypeVal {
                 }
             }
             TypeVal::Type(ty) => ty.fmt(f),
+            TypeVal::Or(variants) => {
+                write!(f, "(")?;
+                for (i, variant) in variants.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, "|")?;
+                    }
+                    write!(f, "{variant}")?;
+                }
+                write!(f, ")")
+            }
         }
     }
 }

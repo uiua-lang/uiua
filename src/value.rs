@@ -435,22 +435,40 @@ impl Value {
         self,
         other: Self,
         n: impl FnOnce(Array<f64>, Array<f64>) -> Result<T, E>,
-        _b: impl FnOnce(Array<u8>, Array<u8>) -> Result<T, E>,
-        _co: impl FnOnce(Array<Complex>, Array<Complex>) -> Result<T, E>,
+        by: impl FnOnce(Array<u8>, Array<u8>) -> Result<T, E>,
+        co: impl FnOnce(Array<Complex>, Array<Complex>) -> Result<T, E>,
         ch: impl FnOnce(Array<char>, Array<char>) -> Result<T, E>,
         f: impl FnOnce(Array<Boxed>, Array<Boxed>) -> Result<T, E>,
+        #[cfg(feature = "ga")] mv: impl FnOnce(
+            Array<crate::Multivector>,
+            Array<crate::Multivector>,
+        ) -> Result<T, E>,
         err: impl FnOnce(Self, Self) -> E,
     ) -> Result<T, E> {
         match (self, other) {
             (Self::Num(a), Self::Num(b)) => n(a, b),
-            (Self::Byte(a), Self::Byte(b)) => _b(a, b),
+            (Self::Byte(a), Self::Byte(b)) => by(a, b),
             (Self::Byte(a), Self::Num(b)) => n(a.convert(), b),
             (Self::Num(a), Self::Byte(b)) => n(a, b.convert()),
-            (Self::Complex(a), Self::Complex(b)) => _co(a, b),
-            (Self::Complex(a), Self::Num(b)) => _co(a, b.convert()),
-            (Self::Num(a), Self::Complex(b)) => _co(a.convert(), b),
-            (Self::Complex(a), Self::Byte(b)) => _co(a, b.convert()),
-            (Self::Byte(a), Self::Complex(b)) => _co(a.convert(), b),
+            (Self::Complex(a), Self::Complex(b)) => co(a, b),
+            (Self::Complex(a), Self::Num(b)) => co(a, b.convert()),
+            (Self::Num(a), Self::Complex(b)) => co(a.convert(), b),
+            (Self::Complex(a), Self::Byte(b)) => co(a, b.convert()),
+            (Self::Byte(a), Self::Complex(b)) => co(a.convert(), b),
+            #[cfg(feature = "ga")]
+            (Self::Mv(a), Self::Mv(b)) => mv(a, b),
+            #[cfg(feature = "ga")]
+            (Self::Mv(a), Self::Complex(b)) => mv(a, b.convert()),
+            #[cfg(feature = "ga")]
+            (Self::Complex(a), Self::Mv(b)) => mv(a.convert(), b),
+            #[cfg(feature = "ga")]
+            (Self::Mv(a), Self::Num(b)) => mv(a, b.convert()),
+            #[cfg(feature = "ga")]
+            (Self::Num(a), Self::Mv(b)) => mv(a.convert(), b),
+            #[cfg(feature = "ga")]
+            (Self::Mv(a), Self::Byte(b)) => mv(a, b.convert()),
+            #[cfg(feature = "ga")]
+            (Self::Byte(a), Self::Mv(b)) => mv(a.convert(), b),
             (Self::Char(a), Self::Char(b)) => ch(a, b),
             (Self::Box(a), Self::Box(b)) => f(a, b),
             (Self::Box(a), b) => f(a, b.coerce_to_boxes()),

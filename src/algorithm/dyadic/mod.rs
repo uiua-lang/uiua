@@ -614,6 +614,8 @@ impl Value {
                 |a, b| a.undo_keep(&counts, b, env).map(Into::into),
                 |a, b| a.undo_keep(&counts, b, env).map(Into::into),
                 |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+                #[cfg(feature = "ga")]
+                |a, b| a.undo_keep(&counts, b, env).map(Into::into),
                 |a, b| {
                     env.error(format!(
                         "Cannot unkeep {} array with {} array",
@@ -1562,6 +1564,8 @@ impl Value {
             |a, b| a.undo_anti_orient(undices.clone(), b, env).map(Into::into),
             |a, b| a.undo_anti_orient(undices.clone(), b, env).map(Into::into),
             |a, b| a.undo_anti_orient(undices.clone(), b, env).map(Into::into),
+            |a, b| a.undo_anti_orient(undices.clone(), b, env).map(Into::into),
+            #[cfg(feature = "ga")]
             |a, b| a.undo_anti_orient(undices.clone(), b, env).map(Into::into),
             |a, b| {
                 env.error(format!(

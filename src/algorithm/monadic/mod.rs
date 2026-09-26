@@ -936,6 +936,8 @@ impl Value {
                 |a, b| a.undo_first(b, env).map(Into::into),
                 |a, b| a.undo_first(b, env).map(Into::into),
                 |a, b| a.undo_first(b, env).map(Into::into),
+                #[cfg(feature = "ga")]
+                |a, b| a.undo_first(b, env).map(Into::into),
                 |a, b| {
                     env.error(format!(
                         "Cannot unfirst {} into {}",
@@ -954,6 +956,8 @@ impl Value {
                 |a, b| a.undo_last(b, env).map(Into::into),
                 |a, b| a.undo_last(b, env).map(Into::into),
                 |a, b| a.undo_last(b, env).map(Into::into),
+                |a, b| a.undo_last(b, env).map(Into::into),
+                #[cfg(feature = "ga")]
                 |a, b| a.undo_last(b, env).map(Into::into),
                 |a, b| {
                     env.error(format!(

@@ -607,6 +607,10 @@ pub fn gen_code_view(code: &str, hidden: &str) -> View {
                 "unkeep: Deduplicate adjacent rows and get the duplicate counts",
             ),
             ((Un, By), "unby: Set a property given by a function"),
+            (
+                (Un, Validate),
+                "unvalidate: Get the array's type specification, preserving the array",
+            ),
             ((Anti, Drop), "antidrop: Pad an array"),
             ((Anti, Pow), "antipower: Get the nth root of a number"),
             (

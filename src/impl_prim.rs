@@ -157,6 +157,7 @@ impl_primitive!(
     (1(2)[1], UnPartition),
     (1(2), UnReshape),
     (1, UnSort, Impure),
+    (1(2), UnValidate),
     (1, UnHsv),
     (1, UnOklch),
     (1, UnJson),

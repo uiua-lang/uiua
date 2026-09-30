@@ -2877,6 +2877,10 @@ primitive!(
     ///   : ⊨⌞2⊨⌟3 [[1_2_3] [4_5_6]]
     /// ex! # Experimental!
     ///   : ⊨⌞2⊨⌟3 [[1_2 3_5] [5_6 7_8]]
+    /// [un][validate] gets the type specification of the value while preserving the value.
+    /// ex: # Experimental!
+    ///   : °⊨ "abcdef"
+    ///   : °⊨ [1_2_3 4_5_6]
     (2, Validate, Misc, ("validate", '⊨'), { experimental: true }),
     /// Memoize a function
     ///

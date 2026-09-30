@@ -778,6 +778,12 @@ impl ImplPrimitive {
                 env.push(val.unboxed());
             }
             ImplPrimitive::UnSort => env.monadic_mut(Value::shuffle)?,
+            ImplPrimitive::UnValidate => {
+                let val = env.pop(1)?;
+                let spec = Type::of_val(&val).spec_val();
+                env.push(val);
+                env.push(spec);
+            }
             ImplPrimitive::UnHsv => env.monadic_env(Value::hsv_to_rgb)?,
             ImplPrimitive::UnOklch => env.monadic_env(Value::oklch_to_rgb)?,
             ImplPrimitive::UnJson | ImplPrimitive::UnJson5 => {

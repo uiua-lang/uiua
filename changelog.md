@@ -4,6 +4,8 @@ Uiua is not yet stable.
 
 ## 0.20.0 - 2026-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Language
+- Add [`un °`](https://uiua.org/docs/un)[`validate ⊨`](https://uiua.org/docs/validate) for getting the type spec of an array.
 ### Interpreter
 - The pretty printer now shows simple box lists using `{}`s and spaces instead of box drawing characters.
   - This make reading simple box arrays much easier

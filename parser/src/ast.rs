@@ -359,11 +359,18 @@ pub enum Word {
     BreakLine,
     FlipLine,
     SemanticComment(SemanticComment),
-    TypeSigComment { i: usize },
-    OutputComment { i: usize, n: usize },
+    TypeSigComment {
+        i: usize,
+    },
+    OutputComment {
+        i: usize,
+        n: usize,
+    },
     Subscripted(Box<Subscripted>),
     InlineMacro(Box<InlineMacro>),
     Local(Local),
+    /// Doesn't compile, but useful for formatting format strings
+    Underscore,
 }
 
 impl PartialEq for Word {
@@ -493,6 +500,7 @@ impl fmt::Debug for Word {
                 write!(f, "inline_macro({:?}{}))", mac.func.value, mac.ident.value)
             }
             Word::Local(im) => write!(f, "{im:?}"),
+            Word::Underscore => write!(f, "_"),
         }
     }
 }

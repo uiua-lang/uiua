@@ -1797,6 +1797,7 @@ impl<'a> Lexer<'a> {
                 "b" => '\x07'.to_string(),
                 "\\" => '\\'.to_string(),
                 "\"" => '"'.to_string(),
+                "(" => "\\(".to_string(),
                 "'" => '\''.to_string(),
                 "_" => char::MAX.to_string(),
                 "W" => WILDCARD_CHAR.to_string(),

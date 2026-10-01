@@ -841,6 +841,7 @@ impl Spanner {
                     }
                     spans.push(mac.ident.span.clone().sp(mac_delim_kind));
                 }
+                Word::Underscore => spans.push(word.span.clone().sp(SpanKind::Strand)),
             }
         }
         spans.retain(|sp| !sp.span.as_str(self.inputs(), str::is_empty));

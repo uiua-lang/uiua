@@ -1595,6 +1595,10 @@ impl Compiler {
                 );
                 Node::empty()
             }
+            Word::Underscore => {
+                self.add_error(word.span, "_ is not valid here");
+                Node::empty()
+            }
         };
         Ok(res)
     }

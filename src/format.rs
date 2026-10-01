@@ -1499,9 +1499,9 @@ impl Formatter<'_> {
             match c {
                 '\\' => {
                     if let Some(first) = chars.next() {
+                        let mut depth = 1;
                         let frag = if first == '(' {
                             let mut frag = String::new();
-                            let mut depth = 1;
                             for c in chars.by_ref() {
                                 match c {
                                     '(' => depth += 1,
@@ -1530,7 +1530,9 @@ impl Formatter<'_> {
                                 if first == '(' {
                                     s.push_str("\\(");
                                     s.push_str(&frag);
-                                    s.push(')');
+                                    if depth == 0 {
+                                        s.push(')');
+                                    }
                                 } else {
                                     s.push('\\');
                                     s.push_str(&frag);

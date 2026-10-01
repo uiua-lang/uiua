@@ -1,6 +1,5 @@
 //! Algorithms for reducing modifiers
 
-use core::f64;
 use std::{convert::identity, mem::take};
 
 use ecow::{EcoVec, eco_vec};

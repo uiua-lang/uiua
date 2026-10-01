@@ -1,4 +1,3 @@
-use core::f64;
 use std::{array, cmp::Ordering, collections::BTreeMap, f64::consts::E, fmt, mem::take, ops};
 
 use ecow::eco_vec;

@@ -4,7 +4,6 @@ mod combine;
 mod search;
 mod structure;
 
-use core::f64;
 use std::{
     borrow::Cow,
     cmp::Ordering,

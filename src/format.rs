@@ -1516,7 +1516,7 @@ impl Formatter<'_> {
                                 frag.push(c);
                             }
                             frag
-                        } else if allow_short {
+                        } else if allow_short && first != '\\' {
                             once(first)
                                 .chain(chars.by_ref().take_while(|c| !c.is_whitespace()))
                                 .collect()

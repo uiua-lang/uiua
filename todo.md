@@ -2,9 +2,6 @@
 
 # 0.20
 
-- Way to use formatter in comments and strings
-- Syntax-aware strings/format strings
-- Special glyph for labels?
 - Non-decimal numeric literals
 - Chained access rework
   - Type-based data def field access
@@ -12,6 +9,8 @@
 - `fold` subscripts
 - Document array summary notation
 - Maybe:
+  - Special glyph for labels
+  - Syntax-aware strings/format strings
   - `uiua shell`
   - Useful behavior for noadic functions in `rows`, `inventory`, `table`, and `stencil`
 

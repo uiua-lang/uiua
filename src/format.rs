@@ -1065,7 +1065,7 @@ impl Formatter<'_> {
                         s = s.replace(esc, c).into();
                     }
                 }
-                self.output.push_str(&self.resolve_inner_format(&s))
+                self.output.push_str(&self.resolve_inner_format(&s, false))
             }
             Word::MultilineString(lines) => {
                 let curr_line_pos = self.curr_line_pos();
@@ -1081,7 +1081,8 @@ impl Formatter<'_> {
                         }
                     }
                     self.output.push_str("$ ");
-                    self.output.push_str(&self.resolve_inner_format(line));
+                    self.output
+                        .push_str(&self.resolve_inner_format(line, false));
                 }
             }
             Word::MultilineFormatString(lines) => {
@@ -1101,6 +1102,7 @@ impl Formatter<'_> {
                     }
                     self.output.push_str(&self.resolve_inner_format(
                         &self.inputs.get(&line.span.src)[line.span.byte_range()],
+                        false,
                     ));
                 }
             }
@@ -1481,7 +1483,7 @@ impl Formatter<'_> {
         }
     }
     fn format_comment(&mut self, comment: &Sp<EcoString>) {
-        let value = self.resolve_inner_format(&comment.value);
+        let value = self.resolve_inner_format(&comment.value, true);
         let text = if self.config.comment_space_after_hash && !value.starts_with('!') {
             format!("# {value}")
         } else {
@@ -1489,7 +1491,7 @@ impl Formatter<'_> {
         };
         self.push(&comment.span, &text);
     }
-    fn resolve_inner_format<'a>(&self, input: &'a str) -> Cow<'a, str> {
+    fn resolve_inner_format<'a>(&self, input: &'a str, allow_short: bool) -> Cow<'a, str> {
         if !input.contains('\\') {
             return Cow::Borrowed(input);
         }
@@ -1514,10 +1516,14 @@ impl Formatter<'_> {
                                 frag.push(c);
                             }
                             frag
-                        } else {
+                        } else if allow_short {
                             once(first)
                                 .chain(chars.by_ref().take_while(|c| !c.is_whitespace()))
                                 .collect()
+                        } else {
+                            s.push('\\');
+                            s.push(first);
+                            continue;
                         };
                         match format_str(&frag, self.config) {
                             Ok(mut o) => {

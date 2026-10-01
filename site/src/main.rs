@@ -117,7 +117,7 @@ pub fn Site() -> impl IntoView {
         // Pride month
         _ if date.get_month() == 5 => "/assets/uiua-logo-pride.png",
         // Halloween
-        _ if date.get_month() == 9 && (28..=31).contains(&date.get_date()) => {
+        _ if date.get_month() == 9 && (24..=31).contains(&date.get_date()) => {
             "/assets/uiua-logo-halloween.png"
         }
         _ => "/assets/uiua-logo.png",

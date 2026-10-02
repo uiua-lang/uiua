@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use super::*;
 
 #[doc(hidden)]
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize, Hash)]
 pub enum ScalarBox {
     #[default]
     Any,
@@ -28,7 +28,7 @@ impl ScalarBox {
 }
 
 #[doc(hidden)]
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize, Hash)]
 pub enum Scalar {
     Bool,
     Nat,
@@ -41,6 +41,7 @@ pub enum Scalar {
     Char,
     Stream,
     Box(ScalarBox),
+    Or(Vec<Type>),
     #[default]
     Any,
 }
@@ -83,6 +84,11 @@ impl Scalar {
             (Scalar::Int, Scalar::Nat | Scalar::Bool) => true,
             (Scalar::Nat, Scalar::Bool) => true,
             (Scalar::Char, Scalar::Ascii) => true,
+            (Scalar::Or(slf_variants), Scalar::Or(sub_variants)) => slf_variants
+                .iter()
+                .collect::<HashSet<_>>()
+                .is_superset(&sub_variants.iter().collect()),
+            (Scalar::Or(variants), _) => variants.iter().any(|ty| ty.scalar.superset_of(sub)),
             (a, b) => discriminant(a) == discriminant(b),
         }
     }
@@ -199,6 +205,7 @@ impl fmt::Debug for Scalar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Scalar::Box(ScalarBox::Def(..)) => write!(f, "{self}"),
+            Scalar::Or(_) => write!(f, "{self}"),
             _ => write!(f, "array of {self}"),
         }
     }
@@ -226,6 +233,16 @@ impl fmt::Display for Scalar {
                     write!(f, "{field}")?;
                 }
                 write!(f, "}}")
+            }
+            Scalar::Or(variants) => {
+                write!(f, "(")?;
+                for (i, variant) in variants.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, "|")?;
+                    }
+                    write!(f, "{variant}")?;
+                }
+                write!(f, ")")
             }
             Scalar::Complex => write!(f, "ℂ"),
             Scalar::Stream => write!(f, "stream"),

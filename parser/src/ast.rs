@@ -338,6 +338,10 @@ pub struct InlineMacro {
 #[serde(tag = "type", content = "value")]
 pub enum Word {
     Number(NumWord, String),
+    BaseInt {
+        base: char,
+        digits: String,
+    },
     Char(String),
     String(String),
     MultilineString(Vec<Sp<String>>),
@@ -444,6 +448,7 @@ impl fmt::Debug for Word {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Word::Number(s, ..) => write!(f, "{s:?}"),
+            Word::BaseInt { base, digits } => write!(f, "0{base}{digits}"),
             Word::Char(char) => write!(f, "{char:?}"),
             Word::String(string) => write!(f, "{string:?}"),
             Word::MultilineString(string) => write!(f, "$ {string:?}"),
@@ -1002,5 +1007,24 @@ pub struct Local {
 impl fmt::Debug for Local {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}:", self.name)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum IntBase {
+    Binary,
+    Octal,
+    Hex,
+    Vector,
+}
+
+impl fmt::Display for IntBase {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            IntBase::Binary => write!(f, "b"),
+            IntBase::Octal => write!(f, "o"),
+            IntBase::Hex => write!(f, "x"),
+            IntBase::Vector => write!(f, "v"),
+        }
     }
 }

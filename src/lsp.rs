@@ -620,6 +620,7 @@ impl Spanner {
                     }
                     spans.push(word.span.clone().sp(SpanKind::Number))
                 }
+                Word::BasedInt(_) => spans.push(word.span.clone().sp(SpanKind::Number)),
                 Word::Char(_) | Word::String(_) | Word::FormatString(_) => {
                     spans.push(word.span.clone().sp(SpanKind::String))
                 }

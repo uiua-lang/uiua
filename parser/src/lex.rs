@@ -10,13 +10,16 @@ use std::{
 };
 
 use ecow::EcoString;
+use enum_iterator::all;
 use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     Ident, Inputs, NumericSubscript, PrimComponent, Primitive, SidedSubscript, SubSide, Subscript,
-    SubscriptNumber, SubscriptToken, WILDCARD_CHAR, split_name,
+    SubscriptNumber, SubscriptToken, WILDCARD_CHAR,
+    ast::{self, BasedInt, IntBase},
+    split_name,
 };
 
 /// Subscript digit characters
@@ -633,6 +636,7 @@ pub enum Token {
     OutputComment(usize),
     Ident(Ident),
     Number,
+    BasedInt(BasedInt),
     Char(String),
     Str(String),
     Label(Option<Ident>),
@@ -727,6 +731,12 @@ impl Token {
             _ => None,
         }
     }
+    pub(crate) fn as_based_int(&self) -> Option<BasedInt> {
+        match self {
+            Token::BasedInt(int) => Some(int.clone()),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -738,6 +748,7 @@ impl fmt::Display for Token {
             Token::OutputComment(_) => write!(f, "output comment"),
             Token::Ident(_) => write!(f, "identifier"),
             Token::Number => write!(f, "number"),
+            Token::BasedInt(int) => write!(f, "{int}"),
             Token::Char(c) => {
                 for c in c.chars() {
                     write!(f, "{c:?}")?;
@@ -970,6 +981,12 @@ impl<'a> Lexer<'a> {
         }
         self.update_loc(c);
         Some(c)
+    }
+    fn next_char_map<T>(&mut self, f: impl Fn(&str) -> Option<T>) -> Option<T> {
+        let c = *self.input_segments.get(self.loc.char_pos as usize)?;
+        let res = f(c)?;
+        self.update_loc(c);
+        Some(res)
     }
     fn next_char_if_all(&mut self, f: impl Fn(char) -> bool + Copy) -> Option<&'a str> {
         self.next_char_if(|c| c.chars().all(f))
@@ -1474,8 +1491,33 @@ impl<'a> Lexer<'a> {
                 }
                 // Numbers
                 c if c.chars().all(|c| c.is_ascii_digit()) => {
-                    self.number(c);
-                    self.end(Number, start)
+                    let reset = self.loc;
+                    if c == "0"
+                        && let Some(base) = self.next_char_map(|c| {
+                            all::<IntBase>().find(|b| {
+                                c.chars().count() == 1 && b.char() == c.chars().next().unwrap()
+                            })
+                        })
+                    {
+                        // Based integers
+                        let mut digits = String::new();
+                        while let Some(c) = self.next_char_if(|c| {
+                            c.chars().count() == 1 && base.contains_digit(c.chars().next().unwrap())
+                        }) {
+                            digits.push_str(c);
+                        }
+                        if digits.is_empty() {
+                            self.loc = reset;
+                            self.number(c);
+                            self.end(Number, start)
+                        } else {
+                            self.end(BasedInt(ast::BasedInt { base, digits }), start);
+                        }
+                    } else {
+                        // Normal numbers
+                        self.number(c);
+                        self.end(Number, start)
+                    }
                 }
                 // Newlines
                 "\n" | "\r\n" => self.end(Newline, start),
@@ -1520,22 +1562,34 @@ impl<'a> Lexer<'a> {
     }
     fn number(&mut self, init: &str) -> bool {
         // Whole part
-        let mut got_digit = false;
+        let negative = "¯`".contains(init);
         let init_is_digit = init.chars().all(|c| c.is_ascii_digit());
         let mut last_is_comma = init_is_digit && self.next_char_exact(",");
         let mut got_comma = last_is_comma;
-        while self
-            .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
-            .is_some()
-        {
-            got_digit = true;
+
+        let mut digit_count = 0;
+        while self.next_char_if_all(|c| c.is_ascii_digit()).is_some() {
+            digit_count += 1;
             last_is_comma = self.next_char_exact(",");
             if last_is_comma {
                 got_comma = true;
             }
         }
+        let got_digit = digit_count > 0;
+        if negative
+            && got_digit
+            && self.input[self.loc.byte_pos as usize - digit_count..self.loc.byte_pos as usize]
+                .chars()
+                .all(|c| c == '0')
+            && self.peek_char().is_some_and(|c| {
+                c.chars().count() == 1
+                    && all::<IntBase>().any(|b| b.char() == c.chars().next().unwrap())
+            })
+        {
+            return true;
+        }
         if !init_is_digit && !got_digit {
-            return if "¯`".contains(init) {
+            return if negative {
                 let reset = self.loc;
                 if !(self.next_char_exact("e") && self.blade_subscript()) {
                     self.loc = reset;

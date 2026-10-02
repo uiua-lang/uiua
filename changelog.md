@@ -5,6 +5,7 @@ Uiua is not yet stable.
 ## 0.20.0 - 2026-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- Add based integer literals ([numbers tutorial](https://uiua.org/tutorial/Types#numbers))
 - Add [`un °`](https://uiua.org/docs/un)[`validate ⊨`](https://uiua.org/docs/validate) for getting the type spec of an array.
 - The formatter will now format text inside comments and strings that is surrounded with `\(...)`.
 ### Interpreter

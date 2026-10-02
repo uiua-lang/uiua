@@ -3,6 +3,7 @@
 use std::{collections::BTreeMap, fmt, iter::once, mem::discriminant};
 
 use ecow::EcoString;
+use enum_iterator::Sequence;
 use serde::*;
 
 use crate::{
@@ -338,10 +339,7 @@ pub struct InlineMacro {
 #[serde(tag = "type", content = "value")]
 pub enum Word {
     Number(NumWord, String),
-    BaseInt {
-        base: char,
-        digits: String,
-    },
+    BasedInt(BasedInt),
     Char(String),
     String(String),
     MultilineString(Vec<Sp<String>>),
@@ -381,6 +379,7 @@ impl PartialEq for Word {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Number(a_n, a_s), Self::Number(b_n, b_s)) => a_n == b_n && a_s == b_s,
+            (Self::BasedInt(a), Self::BasedInt(b)) => a == b,
             (Self::Char(a), Self::Char(b)) => a == b,
             (Self::String(a), Self::String(b)) => a == b,
             (Self::Label(a), Self::Label(b)) => a == b,
@@ -448,7 +447,7 @@ impl fmt::Debug for Word {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Word::Number(s, ..) => write!(f, "{s:?}"),
-            Word::BaseInt { base, digits } => write!(f, "0{base}{digits}"),
+            Word::BasedInt(int) => write!(f, "{int:?}"),
             Word::Char(char) => write!(f, "{char:?}"),
             Word::String(string) => write!(f, "{string:?}"),
             Word::MultilineString(string) => write!(f, "$ {string:?}"),
@@ -1010,7 +1009,19 @@ impl fmt::Debug for Local {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BasedInt {
+    pub base: IntBase,
+    pub digits: String,
+}
+
+impl fmt::Display for BasedInt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "0{}{}", self.base, self.digits)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Sequence)]
 pub enum IntBase {
     Binary,
     Octal,
@@ -1018,13 +1029,34 @@ pub enum IntBase {
     Vector,
 }
 
+impl IntBase {
+    pub fn contains_digit(&self, digit: char) -> bool {
+        match self {
+            IntBase::Binary => "01",
+            IntBase::Octal => "01234567",
+            IntBase::Hex | IntBase::Vector => "0123456789abcdefABCDEF",
+        }
+        .contains(digit)
+    }
+    pub fn base(&self) -> u32 {
+        match self {
+            IntBase::Binary => 2,
+            IntBase::Octal => 8,
+            IntBase::Hex | IntBase::Vector => 16,
+        }
+    }
+    pub fn char(&self) -> char {
+        match self {
+            IntBase::Binary => 'b',
+            IntBase::Octal => 'o',
+            IntBase::Hex => 'x',
+            IntBase::Vector => 'v',
+        }
+    }
+}
+
 impl fmt::Display for IntBase {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            IntBase::Binary => write!(f, "b"),
-            IntBase::Octal => write!(f, "o"),
-            IntBase::Hex => write!(f, "x"),
-            IntBase::Vector => write!(f, "v"),
-        }
+        self.char().fmt(f)
     }
 }

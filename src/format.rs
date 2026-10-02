@@ -1056,6 +1056,19 @@ impl Formatter<'_> {
                 }
                 self.push(&word.span, s.trim_end_matches(","));
             }
+            Word::BasedInt(int) => {
+                let mut s = format!("0{}", int.base);
+                let upper_count = int.digits.chars().filter(|c| c.is_uppercase()).count();
+                let lower_count = int.digits.chars().filter(|c| c.is_lowercase()).count();
+                if upper_count == 0 || lower_count == 0 {
+                    s.push_str(&int.digits)
+                } else if lower_count > upper_count {
+                    s.extend(int.digits.chars().flat_map(char::to_lowercase))
+                } else {
+                    s.extend(int.digits.chars().flat_map(char::to_uppercase))
+                }
+                self.push(&word.span, &s);
+            }
             Word::Label(Some(label)) => self.push(&word.span, &format!("${label}")),
             Word::Label(None) => self.push(&word.span, "$_"),
             Word::Char(_) | Word::String(_) | Word::FormatString(_) => {
@@ -1778,6 +1791,7 @@ fn item_is_multiline(item: &Item) -> bool {
 pub(crate) fn word_is_multiline(word: &Word) -> bool {
     match word {
         Word::Number(..) => false,
+        Word::BasedInt(_) => false,
         Word::Char(_) => false,
         Word::Label(_) => false,
         Word::String(_) => false,

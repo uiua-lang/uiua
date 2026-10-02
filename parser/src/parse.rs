@@ -1312,6 +1312,8 @@ impl Parser<'_> {
             op.map(Word::Placeholder)
         } else if let Some(span) = self.exact(PlaceholderN) {
             span.sp(Word::PlaceholderN)
+        } else if let Some(int) = self.next_token_map(Token::as_based_int) {
+            int.map(Word::BasedInt)
         } else if let Some(label) = self.next_token_map(Token::as_label) {
             let span = label.span;
             if let Some(label) = label.value {

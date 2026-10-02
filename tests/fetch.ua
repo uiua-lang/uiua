@@ -1,10 +1,10 @@
 # Experimental!
 
-⍤ ⤙≍ 66533 /+ &fetch "http://example.com/"
-⍤ ⤙≍ 66533 /+ &fetch "https://example.com/"
-⍤ ⤙≍ 66533 /+ &fetch "hTtP://example.com/"
-⍤ ⤙≍ 66533 /+ &fetch "HtTpS://example.com/"
-⍤ ⤙≍ 66533 /+ &fetch "example.com/"
-⍤ ⤙≍ 66533 /+ &fetch "www.example.com/"
+⍤ ⤙≍ 53797 /+ &fetch "http://example.com/"
+⍤ ⤙≍ 53797 /+ &fetch "https://example.com/"
+⍤ ⤙≍ 53797 /+ &fetch "hTtP://example.com/"
+⍤ ⤙≍ 53797 /+ &fetch "HtTpS://example.com/"
+⍤ ⤙≍ 53797 /+ &fetch "example.com/"
+⍤ ⤙≍ 53797 /+ &fetch "www.example.com/"
 
 ⍤ "unrecognized protocol failed to error" ⍡⍩(&fetch "ftp://example.com/") 1

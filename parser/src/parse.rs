@@ -1424,7 +1424,10 @@ impl Parser<'_> {
             if self.exact(Primitive::Reduce.into()).is_some() {
                 if let Some(((denom, ds), dspan)) = self
                     .numer_or_denom()
-                    .filter(|n| !n.value.1.contains(['.', '∞']))
+                    .filter(|n| {
+                        !n.value.1.contains(['.', '∞'])
+                            && !SUBSCRIPT_DIGITS.iter().any(|&d| n.value.1.contains(d))
+                    })
                     .map(Into::into)
                 {
                     let n = numer.map_with(denom, |n, d| n / d, |n, d| n / d);

@@ -992,8 +992,7 @@ impl Compiler {
                 let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
                 self.emit_diagnostic(
                     format!(
-                        "{name} comment describes {}, \
-                        but its code has signature {sig}",
+                        "{name} comment describes {}, but its code has signature {sig}",
                         comment_sig.sig_string()
                     ),
                     DiagnosticKind::Warning,

@@ -2448,9 +2448,7 @@ impl Array<f64> {
             check_number(n, env, u64::MAX as f64)?;
 
             let mut n = n as u64; // note: u64, not usize
-
             let mut divisors = eco_vec![];
-
             while n.is_multiple_of(2) {
                 n /= 2;
                 divisors.push(2.0f64);

@@ -1283,7 +1283,12 @@ pub(crate) use builtin_params;
 builtin_params!(
     VoxelsParam,
     (Fog, "Color for depth fog", Value::default()),
-    (Scale, "Number of pixels per voxel", 1),
+    (Scale, "Number of pixels per voxel", f64::INFINITY),
+    (
+        Size,
+        "Resolution of the picture",
+        [f64::INFINITY, f64::INFINITY]
+    ),
     (Camera, "The position of the camera", [1, 1, 1]),
 );
 
@@ -1337,6 +1342,7 @@ pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaRes
     };
     let mut pos: Option<[f64; 3]> = None;
     let mut scale = None;
+    let mut size = [None, None];
     let mut fog = None;
     for (i, arg) in args
         .into_iter()
@@ -1361,7 +1367,26 @@ pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaRes
                     }
                 }
             }
-            Some(VoxelsParam::Scale) => scale = Some(arg.as_num(env, "Scale must be a number")?),
+            Some(VoxelsParam::Scale) => {
+                scale = Some(arg.as_num(env, "Scale must be a number")?).filter(|v| v.is_finite())
+            }
+            Some(VoxelsParam::Size) => {
+                if arg.shape.is_empty() {
+                    size = [arg.as_nat_or_inf(env, "Size must be natural or infinity")?; 2]
+                } else if arg.shape == 2 {
+                    size = arg
+                        .elements()
+                        .map(|v| v.as_nat_or_inf(env, "Size must be natural or infinity"))
+                        .collect::<Result<Vec<_>, _>>()?
+                        .try_into()
+                        .unwrap()
+                } else {
+                    return Err(env.error(format!(
+                        "Size must be a scalar or list of 2 numbers, but its shape is {}",
+                        arg.shape
+                    )));
+                }
+            }
             Some(VoxelsParam::Camera) => {
                 let nums = arg.as_nums(env, "Camera position must be 3 numbers")?;
                 if let [x, y, z] = *nums {
@@ -1378,8 +1403,6 @@ pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaRes
     }
 
     let mut pos_arg = pos.unwrap_or([1.0, 1.0, 1.0]);
-    let scale = scale.unwrap_or(1.0);
-
     fn map<A: Copy, B: Copy, C, const N: usize>(
         a: [A; N],
         b: [B; N],
@@ -1458,8 +1481,10 @@ pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaRes
         .fold(0.0, |acc, &x| acc + (x as f64).powi(2))
         .sqrt()
         / 2.0;
-    let res_dim = (shell_radius * 2.0 * scale).round() as usize;
-    let mut res_shape = Shape::from([res_dim; 2]);
+    let calc_res = (shell_radius * 2.0 * scale.unwrap_or(1.0)).round() as usize;
+    let res_dim = size.map(|v| v.unwrap_or(calc_res));
+    let scale = scale.unwrap_or(res_dim.into_iter().min().unwrap() as f64 / calc_res as f64);
+    let mut res_shape = Shape::from(res_dim);
     let mut idxs = vec![0; res_shape.elements()];
     let mut depth_buf = vec![f64::INFINITY; res_shape.elements()];
     let mut translucents: Vec<(usize, usize, f64)> = Vec::new();
@@ -1486,7 +1511,6 @@ pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaRes
     let mut u = norm(cross(up_hint, normal));
     let v = cross(normal, u).map(|d| d * scale);
     u = u.map(|d| d * scale);
-    let scaled_shell_radius = shell_radius * scale;
 
     // println!("im radius: {shell_radius:.3}");
     // println!("scene radius: {scene_radius:.3}");
@@ -1545,18 +1569,18 @@ pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaRes
                     let proj = plane_point(normal, d, center);
                     let delta = sub(center, proj);
                     let cam_delta = sub(proj, cam_center);
-                    let x = scaled_shell_radius - dot(cam_delta, u);
-                    let y = scaled_shell_radius - dot(cam_delta, v);
+                    let x = res_dim[1] as f64 / 2.0 - dot(cam_delta, u);
+                    let y = res_dim[0] as f64 / 2.0 - dot(cam_delta, v);
                     if x < 0.0 || y < 0.0 {
                         continue;
                     }
                     let x = x.floor() as usize;
                     let y = y.floor() as usize;
-                    if x >= res_dim || y >= res_dim {
+                    if x >= res_dim[1] || y >= res_dim[0] {
                         continue;
                     }
                     let dist = mag(delta);
-                    let im_index = y * res_dim + x;
+                    let im_index = y * res_dim[1] + x;
                     if dist < depth_buf[im_index] {
                         match mode {
                             Mode::GrayA if arr.data[arr_index * 2 + 1] != 1.0 => {

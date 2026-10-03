@@ -1569,18 +1569,18 @@ pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaRes
                     let proj = plane_point(normal, d, center);
                     let delta = sub(center, proj);
                     let cam_delta = sub(proj, cam_center);
-                    let x = scaled_shell_radius - dot(cam_delta, u);
-                    let y = scaled_shell_radius - dot(cam_delta, v);
+                    let x = res_dim[1] as f64 / 2.0 - dot(cam_delta, u);
+                    let y = res_dim[0] as f64 / 2.0 - dot(cam_delta, v);
                     if x < 0.0 || y < 0.0 {
                         continue;
                     }
                     let x = x.floor() as usize;
                     let y = y.floor() as usize;
-                    if x >= res_dim[0] || y >= res_dim[1] {
+                    if x >= res_dim[1] || y >= res_dim[0] {
                         continue;
                     }
                     let dist = mag(delta);
-                    let im_index = y * res_dim[0] + x;
+                    let im_index = y * res_dim[1] + x;
                     if dist < depth_buf[im_index] {
                         match mode {
                             Mode::GrayA if arr.data[arr_index * 2 + 1] != 1.0 => {

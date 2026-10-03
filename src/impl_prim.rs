@@ -179,6 +179,7 @@ impl_primitive!(
     (0, UnRawMode, Impure),
     (0, UnChangeDirectory, Impure),
     (1(0), UnClip, Mutating),
+    (2(0), AntiVar, Mutating),
     // Unders
     (1, UndoFix),
     (2, UndoShape),

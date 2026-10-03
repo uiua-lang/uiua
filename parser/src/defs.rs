@@ -4001,6 +4001,8 @@ sys_op! {
     ///
     /// Expects a string and returns a string.
     /// If the environment variable does not exist, an error is thrown.
+    ///
+    /// [anti][&var] will set an environment variable, akin to `export VARIABLE=VALUE`.
     (1, Var, Env, "&var", "environment variable"),
     /// Run a command and wait for it to finish
     ///

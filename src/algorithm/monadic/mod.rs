@@ -2952,13 +2952,6 @@ impl Value {
                 hour += minute / 60.0;
                 minute = 60.0 + (minute % 60.0);
             }
-            if hour >= 24.0 {
-                day += (hour / 24.0).floor();
-                hour %= 24.0;
-            } else if hour < 0.0 {
-                day += hour / 24.0;
-                hour = 24.0 + (hour % 24.0);
-            }
             let day_delta = if day >= 28.0 {
                 let delta = day - 27.0;
                 day -= delta;
@@ -2970,6 +2963,13 @@ impl Value {
             } else {
                 day.fract()
             };
+            if hour >= 24.0 {
+                day += (hour / 24.0).floor();
+                hour %= 24.0;
+            } else if hour < 0.0 {
+                day += hour / 24.0;
+                hour = 24.0 + (hour % 24.0);
+            }
             if month >= 12.0 {
                 year += (month / 12.0).floor();
                 month %= 12.0;

@@ -7,7 +7,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - Add based integer literals ([numbers tutorial](https://uiua.org/tutorial/Types#numbers))
 - Add [`un °`](https://uiua.org/docs/un)[`validate ⊨`](https://uiua.org/docs/validate) for getting the type spec of an array.
-- The formatter will now format text inside comments and strings that is surrounded with `\(...)`.
+- The formatter will now format text inside comments and strings that is surrounded with `\\(...)`.
 - Add [`anti ⌝`](https://www.uiua.org/docs/anti)[`&var`](https://www.uiua.org/docs/%26var) for setting environment variables.
 ### Interpreter
 - The pretty printer now shows simple box lists using `{}`s and spaces instead of box drawing characters.

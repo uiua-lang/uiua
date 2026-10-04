@@ -2,9 +2,6 @@
 
 # 0.20
 
-- Non-decimal numeric literals
-- Chained access rework
-  - Type-based data def field access
 - `switch` subscripts
 - `fold` subscripts
 - Document array summary notation

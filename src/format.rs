@@ -1504,15 +1504,15 @@ impl Formatter<'_> {
         };
         self.push(&comment.span, &text);
     }
-    fn resolve_inner_format<'a>(&self, input: &'a str, allow_short: bool) -> Cow<'a, str> {
+    fn resolve_inner_format<'a>(&self, input: &'a str, comment: bool) -> Cow<'a, str> {
         if !input.contains('\\') {
             return Cow::Borrowed(input);
         }
         let mut s = String::new();
-        let mut chars = input.chars();
+        let mut chars = input.chars().peekable();
         while let Some(c) = chars.next() {
             match c {
-                '\\' => {
+                '\\' if chars.next_if_eq(&'\\').is_some() => {
                     if let Some(first) = chars.next() {
                         let mut depth = 1;
                         let frag = if first == '(' {
@@ -1529,12 +1529,12 @@ impl Formatter<'_> {
                                 frag.push(c);
                             }
                             frag
-                        } else if allow_short && first != '\\' {
+                        } else if comment && first != '\\' {
                             once(first)
                                 .chain(chars.by_ref().take_while(|c| !c.is_whitespace()))
                                 .collect()
                         } else {
-                            s.push('\\');
+                            s.push_str("\\\\");
                             s.push(first);
                             continue;
                         };
@@ -1547,19 +1547,19 @@ impl Formatter<'_> {
                             }
                             Err(_) => {
                                 if first == '(' {
-                                    s.push_str("\\(");
+                                    s.push_str("\\\\(");
                                     s.push_str(&frag);
                                     if depth == 0 {
                                         s.push(')');
                                     }
                                 } else {
-                                    s.push('\\');
+                                    s.push_str("\\\\");
                                     s.push_str(&frag);
                                 }
                             }
                         }
                     } else {
-                        s.push(c)
+                        s.push_str("\\\\");
                     }
                 }
                 c => s.push(c),

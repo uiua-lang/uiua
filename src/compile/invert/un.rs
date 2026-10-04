@@ -319,6 +319,8 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     &AntiJoinPat,
     &NoUnder(AntiContraFlip),
     &AntiCustomPat,
+    &(Sys(SysOp::Var), AntiVar),
+    &(AntiVar, Sys(SysOp::Var)),
 ];
 
 pub static CONTRA_PATTERNS: &[&dyn InvertPattern] = &[

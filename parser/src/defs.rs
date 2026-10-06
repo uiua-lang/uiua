@@ -497,7 +497,7 @@ primitive!(
     /// ex: =5 5
     /// ex: =1 [1 2 3]
     /// ex: = [1 2 2] [1 2 3]
-    /// Boxes compare lexicographically
+    /// Boxes compare lexicographically.
     /// ex: = {1 2_3 4_5_6} {1_2 3 4_5_6}
     (2, Eq, DyadicPervasive, ("equals", AsciiToken::Equal, '=')),
     /// Compare for inequality
@@ -506,7 +506,7 @@ primitive!(
     /// ex: ≠5 5
     /// ex: ≠1 [1 2 3]
     /// ex: ≠ [1 2 2] [1 2 3]
-    /// Boxes compare lexicographically
+    /// Boxes compare lexicographically.
     /// ex: ≠ {1 2_3 4_5_6} {1_2 3 4_5_6}
     (
         2,
@@ -523,7 +523,7 @@ primitive!(
     /// ex: <7 3
     /// ex: <2 [1 2 3]
     /// ex: < [1 2 2] [1 2 3]
-    /// Boxes compare lexicographically
+    /// Boxes compare lexicographically.
     /// ex: < {1 2_3 4_5_6} {1_2 3 4_5_6}
     (2, Lt, DyadicPervasive, ("less than", '<')),
     /// Compare for less than or equal
@@ -535,7 +535,7 @@ primitive!(
     /// ex: ≤7 3
     /// ex: ≤2 [1 2 3]
     /// ex: ≤ [1 2 2] [1 2 3]
-    /// Boxes compare lexicographically
+    /// Boxes compare lexicographically.
     /// ex: ≤ {1 2_3 4_5_6} {1_2 3 4_5_6}
     (
         2,
@@ -552,7 +552,7 @@ primitive!(
     /// ex: >7 3
     /// ex: >2 [1 2 3]
     /// ex: > [1 2 2] [1 2 3]
-    /// Boxes compare lexicographically
+    /// Boxes compare lexicographically.
     /// ex: > {1 2_3 4_5_6} {1_2 3 4_5_6}
     (2, Gt, DyadicPervasive, ("greater than", '>')),
     /// Compare for greater than or equal
@@ -564,7 +564,7 @@ primitive!(
     /// ex: ≥7 3
     /// ex: ≥2 [1 2 3]
     /// ex: ≥ [1 2 2] [1 2 3]
-    /// Boxes compare lexicographically
+    /// Boxes compare lexicographically.
     /// ex: ≥ {1 2_3 4_5_6} {1_2 3 4_5_6}
     (
         2,
@@ -707,7 +707,7 @@ primitive!(
     ///
     /// ex: ↧ 3 5
     /// ex: ↧ [1 4 2] [3 7 1]
-    /// Boxes compare lexicographically
+    /// Boxes compare lexicographically.
     /// ex: ↧ {1_2_3 "dog"} {1_4_5 "cat"}
     ///
     /// See also: [maximum]
@@ -716,7 +716,7 @@ primitive!(
     ///
     /// ex: ↥ 3 5
     /// ex: ↥ [1 4 2] [3 7 1]
-    /// Boxes compare lexicographically
+    /// Boxes compare lexicographically.
     /// ex: ↥ {1_2_3 "dog"} {1_4_5 "cat"}
     ///
     /// Uiua does not have dedicated boolean logical operators.
@@ -3294,7 +3294,7 @@ primitive!(
     /// The value is the starting node.
     /// The first function should return 1 or 2 arrays of equal [length].
     /// - An array of the neighboring nodes must always be returned.
-    /// - An array of costs may be returned before the nodes array. If ommitted, all costs are assumed to be 1.
+    /// - An array of costs may be returned before the nodes array. If omitted, all costs are assumed to be 1.
     /// The second function should return whether or not the goal node has been reached.
     ///
     /// When called, [path] will consume any additional arguments its functions need.

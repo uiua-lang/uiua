@@ -534,7 +534,7 @@ pub fn Subscripts() -> impl IntoView {
             "# Experimental!\n△ ⍉₃ °△1_2_3_4_5",
         ),
         subscript(Sqrt, "Nth root", "√₃ [8 27 125]"),
-        subscript(Neg, "Turn one Nth in the complex plane", "⁅₃ ⍥₄⊸¯₄ 1"),
+        subscript(Neg, "Turn one Nth in the complex plane", "⍥₄⊸¯₄ 1"),
         subscript(Exp, "Base N exponential", "ₑ₂ 8"),
         subscript(Round, "To N decimal places", "⁅₃ π"),
         subscript(Floor, "To N decimal places", "# Experimental!\n⌊₄ π\n⌊₄ τ"),
@@ -561,7 +561,11 @@ pub fn Subscripts() -> impl IntoView {
         subscript(With, "Last N values", "{⤙₂[⊙⊙∘] 1 2 3}"),
         subscript(Off, "First N values", "{⤚₂[⊙⊙∘] 1 2 3}"),
         subscript(Both, "Apply to N argument sets", "[∩₃+ 1 2 3 4 5 6]"),
-        subscript(Reach, "Include first N values", "∪₂⊟₃ 1 2 3 4"),
+        subscript(
+            Reach,
+            "# Experimental!\nInclude first N values",
+            "∪₂⊟₃ 1 2 3 4",
+        ),
         subscript(Rows, "Apply to rank-N subarrays", "≡₁□ °△2_3_4"),
         subscript(Inventory, "Apply to rank-N subarrays", "⍚₁⇡ °△2_3"),
         subscript(

@@ -1496,6 +1496,7 @@ impl Array<f64> {
         }
         Ok(Array::new(result_shape, result_data))
     }
+    /// Matrix *left* division (solves AX = B)
     pub(crate) fn matrix_div(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
         let (a, b) = (other, self);
         if a.rank() != 2 || b.rank() != 2 {
@@ -1505,15 +1506,118 @@ impl Array<f64> {
                 a.shape, b.shape
             )));
         }
-        if [a.shape[0], a.shape[1]] != [b.shape[1], b.shape[0]] {
+        if a.shape[0] != a.shape[1] {
+            return Err(env.error(format!(
+                "Matrix division require a square matrix of compatible shapes, \
+                but one the divisor is non-square ({})",
+                a.shape
+            )));
+        }
+        if a.shape[0] != b.shape[0] {
             return Err(env.error(format!(
                 "Matrix division requires arrays of compatible shapes, \
                 but their shapes are {} and {}",
                 a.shape, b.shape
             )));
         }
-        // let mut result_data = eco_vec![0.0; a.element_count().max(b.element_count())];
-        Err(env.error("Matrix division is not yet implemented"))
+
+        let n = a.shape[0];
+        let idx = |r, c| r * n + c;
+
+        /// Returns L (nxn) and P (n), 'a' is modified into U
+        fn lu_decomp(a: &mut [f64], n: usize, env: &Uiua) -> UiuaResult<(Vec<f64>, Vec<usize>)> {
+            let idx = |r, c| r * n + c;
+            let mut perm = (0..n).collect::<Vec<_>>();
+            let mut lower = vec![0.0; n * n];
+            for i in 0..n {
+                lower[idx(i, i)] = 1.0;
+            }
+
+            // yoinked from my matlab uni notes
+            for i in 0..n {
+                let pivot = {
+                    let mut max = a[idx(i, i)];
+                    let mut maxidx = i;
+                    for row in i + 1..n {
+                        let val = a[idx(row, i)];
+                        if val.abs() > max.abs() {
+                            (max, maxidx) = (val, row);
+                        }
+                    }
+                    maxidx
+                };
+
+                perm.swap(pivot, i);
+                for j in 0..i {
+                    lower.swap(idx(i, j), idx(pivot, j));
+                }
+                for j in i..n {
+                    a.swap(idx(i, j), idx(pivot, j));
+                }
+
+                // this check is very Not Ideal, but i can't
+                // think of anything better
+                if a[idx(i, i)].abs() < f64::EPSILON {
+                    return Err(env.error(
+                        "Matrix divisor is numerically singular (the matrix inversion failed)",
+                    ));
+                }
+                for j in i + 1..n {
+                    let mult = a[idx(j, i)] / a[idx(i, i)];
+                    lower[idx(j, i)] = mult;
+                    for col in i..n {
+                        a[idx(j, col)] -= mult * a[idx(i, col)];
+                    }
+                }
+            }
+
+            Ok((lower, perm))
+        }
+
+        // AX = B
+        //   PA = LU
+        // LUX = PB
+        // X = U⁻¹L⁻¹PB
+        let (l, u, p) = {
+            let mut a = EcoVec::from(a.data.as_slice());
+            let (l, p) = lu_decomp(a.make_mut(), n, env)?;
+            (l, a, p)
+        };
+
+        let mut x = EcoVec::from(b.data.as_slice());
+
+        // P * ·
+        let old = x.clone();
+
+        for i in 0..n {
+            for k in 0..n {
+                x.make_mut()[idx(i, k)] = old[idx(p[i], k)];
+            }
+        }
+
+        // L⁻¹ * · (forward subst)
+        for i in 0..n {
+            for k in 0..n {
+                let mut s = x[idx(i, k)];
+                for j in 0..i {
+                    s -= l[idx(i, j)] * x[idx(j, k)];
+                }
+                x.make_mut()[idx(i, k)] = s / l[idx(i, i)];
+            }
+        }
+
+        // U⁻¹ * · (back subst)
+        for i in (0..n).rev() {
+            for k in 0..n {
+                let mut s = x[idx(i, k)];
+                for j in (i + 1)..n {
+                    s -= u[idx(i, j)] * x[idx(j, k)];
+                }
+                x.make_mut()[idx(i, k)] = s / u[idx(i, i)];
+            }
+        }
+
+        Ok(Array::new(a.shape.clone(), x))
     }
 }
 

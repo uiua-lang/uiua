@@ -1913,8 +1913,9 @@ impl<T: RealArrayValue + GridFmt> Array<T> {
                 let mut abs_n = n.abs();
                 let sign = if n < 0.0 { -1.0 } else { 1.0 };
                 for j in 0..max_row_len {
-                    slice[i * max_row_len + j] = abs_n.rem_euclid(base) * sign;
-                    abs_n = abs_n.div_euclid(base);
+                    let base_count = (abs_n / base).floor();
+                    slice[i * max_row_len + j] = (abs_n - base_count * base) * sign;
+                    abs_n = base_count;
                 }
             }
             Array::new(new_shape, new_data)

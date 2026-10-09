@@ -1916,7 +1916,7 @@ impl<T: RealArrayValue + GridFmt> Array<T> {
                     // rem_euclid and div_euclid same as
                     // % and / for positive dividend
                     slice[i * max_row_len + j] = abs_n % base * sign;
-                    abs_n /= base;
+                    abs_n = (abs_n / base).floor();
                 }
             }
             Array::new(new_shape, new_data)

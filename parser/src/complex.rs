@@ -462,7 +462,7 @@ impl Rem for Complex {
 impl Rem<f64> for Complex {
     type Output = Self;
     fn rem(self, rhs: f64) -> Self::Output {
-        self.rem(Complex::from(rhs))
+        self.rem(Complex { re: rhs, im: 0.0 })
     }
 }
 

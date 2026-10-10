@@ -462,10 +462,7 @@ impl Rem for Complex {
 impl Rem<f64> for Complex {
     type Output = Self;
     fn rem(self, rhs: f64) -> Self::Output {
-        Self {
-            re: self.re.rem_euclid(rhs),
-            im: self.im.rem_euclid(rhs),
-        }
+        self.rem(Complex { re: rhs, im: 0.0 })
     }
 }
 

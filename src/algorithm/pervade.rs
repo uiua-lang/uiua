@@ -1797,7 +1797,7 @@ pub mod div {
 pub mod modulo {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
-        b.rem_euclid(a).abs()
+        b - (b / a).floor() * a
     }
     pub fn byte_byte(a: u8, b: u8) -> f64 {
         num_num(a.into(), b.into())

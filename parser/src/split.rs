@@ -281,6 +281,12 @@ impl Primitive {
             alias!((c, Un), (is, Transpose)),
             alias!((p, Dip), (e, Pop), (r, Under), (f, Now)),
             alias!((s, Un), (et, By)),
+            alias!((s, Reduce), (um, Add)),
+            alias!((pr, Reduce), (od, Mul)),
+            alias!((c, Reciprocal), (sc, Sin)),
+            alias!((s, Reciprocal), (ec, Cos)),
+            alias!((c, Reciprocal), (ot, Tan)),
+            alias!((a, Div), (v, Fork), (g, Len), (,Reduce), (,Add)),
             alias!((wr, Sub), (en, By), (ch, Not)),
             alias!((w, Sub), (r, By), (e, Not)),
             alias!(

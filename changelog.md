@@ -12,6 +12,13 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - The pretty printer now shows simple box lists using `{}`s and spaces instead of box drawing characters.
   - This make reading simple box arrays much easier
+- Add aliases
+  - `sum`
+  - `prod`
+  - `csc`
+  - `sec`
+  - `cot`
+  - `avg`
 ### Website
 - Separate [Aliases](https://uiua.org/docs/aliases) page from the [Idioms](https://uiua.org/docs/idioms) page.
 

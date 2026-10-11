@@ -665,16 +665,20 @@ primitive!(
     ),
     /// Modulo values
     ///
-    /// The second value is divided by the first, and the remainder is returned.
+    /// The second value is divided by the first, and the "remainder" is returned.
     /// This is so you can think of `◿``x` as a single unit.
     /// ex: ◿10 27
     /// ex: ◿5 [3 7 14]
-    /// ex: ◿ [3 4 5] [10 10 10]
+    /// ex: ◿[3 4 5] [10 10 10]
     ///
-    /// The result is always non-negative:
-    /// ex: ◿ 4 ¯21
-    /// If you prefer the negative modulo instead of the remainder, you may use [under]:
-    /// ex: ⍜⊙⌵◿ 4 ¯21
+    /// The result will be negative iff the divisor is negative (note how
+    /// this is not C/Rust's `%` remainder function).
+    /// ex: ◿4 ¯21
+    /// ex: ◿¯4 ¯21
+    ///
+    /// If you prefer the more common `%` remainder (which uses truncating
+    /// division) instead of `◿`'smodulo behavior (which using flooring division):
+    /// ex: -×⍜⌵⌊◡÷ 4 ¯21
     (2, Modulo, DyadicPervasive, ("modulo", '◿')),
     /// Logical OR and greatest common divisor
     ///

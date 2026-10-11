@@ -2143,8 +2143,7 @@ impl Value {
         let slice = data.make_mut();
 
         // Setup
-        let (corner_count, overflowed) = 2usize.overflowing_pow(n as u32);
-        if overflowed {
+        if n > 20 {
             return Err(env.error(format!(
                 "The coordinate array has shape {}, \
                 which implies {n} dimensions, \
@@ -2152,6 +2151,7 @@ impl Value {
                 self.shape
             )));
         }
+        let corner_count = 2usize.pow(n as u32);
         let sqrt_n = (n as f64).sqrt();
 
         if n == 2 {

@@ -92,14 +92,24 @@ impl Compiler {
                         types: old_meta.types,
                         external: old_meta.external || meta.external,
                     };
-                    let bind = Bind {
+                    let new_bind = Bind {
                         public,
                         index: self.next_bindex,
                     };
                     self.next_bindex += 1;
+                    if let Some(sig) = kind.sig() {
+                        let spandex = self.add_span(span.clone());
+                        self.asm.root.extend([
+                            Node::CallGlobal(bind.index, sig),
+                            Node::BindGlobal {
+                                index: new_bind.index,
+                                span: spandex,
+                            },
+                        ]);
+                    }
                     self.asm
-                        .add_binding_at(bind, kind, Some(span.clone()), meta);
-                    bind
+                        .add_binding_at(new_bind, kind, Some(span.clone()), meta);
+                    new_bind
                 } else {
                     // If there is no comment, it's a simple name insertion
                     Bind { public, ..bind }

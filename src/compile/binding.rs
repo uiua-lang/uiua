@@ -97,7 +97,9 @@ impl Compiler {
                         index: self.next_bindex,
                     };
                     self.next_bindex += 1;
-                    if let Some(sig) = kind.sig() {
+                    if let Some(sig) = kind.sig()
+                        && sig == (0, 1)
+                    {
                         let spandex = self.add_span(span.clone());
                         self.asm.root.extend([
                             Node::CallGlobal(bind.index, sig),

@@ -466,6 +466,10 @@ A ← ±4
 B ← A # New binding
 ⍤⤙≍ 1 B
 
+F ← ⋅∘
+G ← F # New binding
+⍤⤙≍ 2 G 1 2
+
 # Euler's identity
 ⍤⤙≍ 0 ⍜(×1000000000000)⁅ ⌵+1 ⁿiπ e
 

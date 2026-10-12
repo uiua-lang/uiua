@@ -1312,7 +1312,7 @@ impl Compiler {
                 let n = if i <= u8::MAX as _ {
                     Value::from(i as u8)
                 } else {
-                    if !too_large && i as f64 > 2f64.powi(53) && i as f64 as u128 != i {
+                    if !too_large && i > (1u128 << 53) && i as f64 as u128 != i {
                         self.emit_diagnostic(
                             "This number is not precisely representable",
                             DiagnosticKind::Warning,

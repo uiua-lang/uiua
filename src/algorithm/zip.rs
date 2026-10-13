@@ -933,7 +933,7 @@ pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let mut acc = if let Some(fv) = env.value_fill() {
         fv.value.clone()
     } else if row_count == 0 {
-        env.push(Array::<Boxed>::default());
+        env.push(Array::<f64>::default());
         return Ok(());
     } else if all_scalar {
         for rows in rows.into_iter().rev() {
@@ -969,6 +969,9 @@ pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
             env.exec(f.clone())?;
             let item = env.pop("accumulator")?;
             acc = acc.join(item, true, env)?;
+        }
+        if row_count == 1 {
+            acc.fix();
         }
         env.push(acc);
         Ok(())

@@ -1,6 +1,6 @@
 # Even More Argument Manipulation
 
-In the [More Argument Manipulation](/tutorial/More Argument Manipulation) tutorial, we learned about various ways of working with arguments including [fork](), [bracket]() and [both](). At the beginning of this tutorial, we touched briefly on [on]() and [by]().
+In the [More Argument Manipulation](</tutorial/More Argument Manipulation>) tutorial, we learned about various ways of working with arguments including [fork](), [bracket]() and [both](). At the beginning of this tutorial, we touched briefly on [on]() and [by]().
 
 But [on]() and [by]() are just two modifiers in a larger category.
 

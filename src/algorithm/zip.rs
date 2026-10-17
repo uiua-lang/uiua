@@ -970,7 +970,7 @@ pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
             let item = env.pop("accumulator")?;
             acc = acc.join(item, true, env)?;
         }
-        if row_count == 1 {
+        if row_count == 1 && acc.rank() == 0 {
             acc.fix();
         }
         env.push(acc);

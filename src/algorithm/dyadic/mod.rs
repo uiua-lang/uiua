@@ -1521,8 +1521,10 @@ impl Array<f64> {
             )));
         }
 
-        let n = a.shape[0];
-        let idx = |r, c| r * n + c;
+        let na = a.shape[0];
+        let nb = b.shape[1];
+        let l_idx = |r, c| r * na + c;
+        let r_idx = |r, c| r * nb + c;
 
         /// Returns L (nxn) and P (n), 'a' is modified into U
         fn lu_decomp(a: &mut [f64], n: usize, env: &Uiua) -> UiuaResult<(Vec<f64>, Vec<usize>)> {
@@ -1557,6 +1559,8 @@ impl Array<f64> {
 
                 // this check is very Not Ideal, but i can't
                 // think of anything better
+                // I also don't check for NaN-ness: if there's a NaN
+                // somewhere it'll just propagate
                 if a[idx(i, i)].abs() < f64::EPSILON {
                     return Err(env.error(
                         "Matrix divisor is numerically singular (the matrix inversion failed)",
@@ -1580,7 +1584,7 @@ impl Array<f64> {
         // X = U⁻¹L⁻¹PB
         let (l, u, p) = {
             let mut a = EcoVec::from(a.data.as_slice());
-            let (l, p) = lu_decomp(a.make_mut(), n, env)?;
+            let (l, p) = lu_decomp(a.make_mut(), na, env)?;
             (l, a, p)
         };
 
@@ -1589,35 +1593,35 @@ impl Array<f64> {
         // P * ·
         let old = x.clone();
 
-        for i in 0..n {
-            for k in 0..n {
-                x.make_mut()[idx(i, k)] = old[idx(p[i], k)];
+        for i in 0..na {
+            for k in 0..nb {
+                x.make_mut()[r_idx(i, k)] = old[r_idx(p[i], k)];
             }
         }
 
         // L⁻¹ * · (forward subst)
-        for i in 0..n {
-            for k in 0..n {
-                let mut s = x[idx(i, k)];
+        for i in 0..na {
+            for k in 0..nb {
+                let mut s = x[r_idx(i, k)];
                 for j in 0..i {
-                    s -= l[idx(i, j)] * x[idx(j, k)];
+                    s -= l[l_idx(i, j)] * x[r_idx(j, k)];
                 }
-                x.make_mut()[idx(i, k)] = s / l[idx(i, i)];
+                x.make_mut()[r_idx(i, k)] = s / l[l_idx(i, i)];
             }
         }
 
         // U⁻¹ * · (back subst)
-        for i in (0..n).rev() {
-            for k in 0..n {
-                let mut s = x[idx(i, k)];
-                for j in (i + 1)..n {
-                    s -= u[idx(i, j)] * x[idx(j, k)];
+        for i in (0..na).rev() {
+            for k in 0..nb {
+                let mut s = x[r_idx(i, k)];
+                for j in (i + 1)..na {
+                    s -= u[l_idx(i, j)] * x[r_idx(j, k)];
                 }
-                x.make_mut()[idx(i, k)] = s / u[idx(i, i)];
+                x.make_mut()[r_idx(i, k)] = s / u[l_idx(i, i)];
             }
         }
 
-        Ok(Array::new(a.shape.clone(), x))
+        Ok(Array::new(b.shape.clone(), x))
     }
 }
 

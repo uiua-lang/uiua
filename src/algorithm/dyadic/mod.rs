@@ -1508,8 +1508,8 @@ impl Array<f64> {
         }
         if a.shape[0] != a.shape[1] {
             return Err(env.error(format!(
-                "Matrix division require a square matrix of compatible shapes, \
-                but one the divisor is non-square ({})",
+                "Matrix division require a square matrix as the divisor, \
+                but it is non-square ({})",
                 a.shape
             )));
         }

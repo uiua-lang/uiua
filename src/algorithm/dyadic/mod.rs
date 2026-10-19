@@ -1497,40 +1497,8 @@ impl Array<f64> {
         Ok(Array::new(result_shape, result_data))
     }
     /// Matrix *left* division (solves AX = B)
+    /// Returns the _transpose_ of A\B, because of how matmul is spelt
     pub(crate) fn matrix_div(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let (a, b) = (self, other);
-
-        if a.rank() != 2 || b.rank() != 2 {
-            return Err(env.error(format!(
-                "Matrix division requires arrays of rank 2, \
-                but their shapes are {} and {}",
-                a.shape, b.shape
-            )));
-        }
-        if a.shape[0] != a.shape[1] {
-            return Err(env.error(format!(
-                "Matrix division require a square matrix as the divisor, \
-                but it is non-square ({})",
-                a.shape
-            )));
-        }
-        // Because of how matrix ops are called, `b` comes in transposed
-        // Instead of transposing (possible expensive), we adjust all indexing
-        let n = a.shape[0]; // also a.shape[1] and """b.shape[0]"""
-        let m = b.shape[0];
-        if a.shape[1] != b.shape[1] {
-            // note how it's [1] and [1] instead of [1] and [0]
-            return Err(env.error(format!(
-                "Matrix division requires arrays of compatible shapes, \
-                but their shapes are {} and {}",
-                a.shape, b.shape
-            )));
-        }
-
-        let l_idx = |r, c| r * n + c; // note the transposition!
-        let r_idx = |r, c| c * m + r;
-        let r_idx_tr = |r, c| r * m + c; // *double* transposed
-
         /// Returns L (nxn) and P (n), 'a' is modified into U
         fn lu_decomp(a: &mut [f64], n: usize, env: &Uiua) -> UiuaResult<(Vec<f64>, Vec<usize>)> {
             let idx = |r, c| r * n + c;
@@ -1583,6 +1551,42 @@ impl Array<f64> {
             Ok((lower, perm))
         }
 
+        // Remember, A is the divisor: A⁻¹B
+        let (a, b) = (self, other);
+
+        if a.rank() != 2 || b.rank() != 2 {
+            return Err(env.error(format!(
+                "Matrix division requires arrays of rank 2, \
+                but their shapes are {} and {}",
+                a.shape, b.shape
+            )));
+        }
+        if a.shape[0] != a.shape[1] {
+            return Err(env.error(format!(
+                "Matrix division require a square matrix as the divisor, \
+                but it is non-square ({})",
+                a.shape
+            )));
+        }
+
+        // Because of how matrix ops in uiua are spelt, `b` comes in transposed
+        // Instead of transposing (possible expensive), we adjust all indexing
+        // note how it's [1] and [1] instead of [1] and [0]
+        if a.shape[1] != b.shape[1] {
+            return Err(env.error(format!(
+                "Matrix division requires arrays of compatible shapes, \
+                but their shapes are {} and {}",
+                a.shape, b.shape
+            )));
+        }
+
+        let n = a.shape[0]; // also a.shape[1] and """b.shape[0]"""
+        let m = b.shape[0];
+
+        let l_idx = |r, c| r * n + c; // note the transposition!
+        let r_idx = |r, c| c * m + r;
+        let r_idx_tr = |r, c| r * m + c; // *double* transposed
+
         // AX = B
         //   PA = LU
         // LUX = PB
@@ -1627,6 +1631,7 @@ impl Array<f64> {
             }
         }
 
+        // It's transposed, remember
         Ok(Array::new(Shape::from([b.shape[1], b.shape[0]]), x))
     }
 }

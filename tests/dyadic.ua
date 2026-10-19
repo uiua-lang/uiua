@@ -412,8 +412,11 @@ I = slftab= ran
 MD = ⌝⍜⍉⊞(/+×) bratrauntra # Track caller!
 ⍤⤙≍A ⁅₂MD I4 A
 ⍤⤙≍B ⁅₂MD I4 B
-⍤⤙≍ withMD I100 ⁅₂ mul,100 gen[100 100] 15940
-⍤⤙≍res2_1 `1_1 ⁅₂MD [0_1 1_1] res2_1 1_0 # [2 2] [2 1]
+# ⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 100] 15940 # rectangulars must also work
+# ⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 20] 15940
+# ⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 2] 15940
+# ⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 1] 15940
+⍤⤙≍res2_1 `1_1 ⁅₂MD [0_1 1_1] res2_1 1_0
 ⍤⤙≍I4 ⁅₂ ⊞(/+×)⊙⍉ A MD A I4
 ⍤⤙≍I4 ⁅₂ ⊞(/+×)⊙⍉ B MD B I4
 ⍤⤙≍AdB ⁅₂MD A B # Matdiv

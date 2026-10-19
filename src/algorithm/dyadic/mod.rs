@@ -1498,7 +1498,8 @@ impl Array<f64> {
     }
     /// Matrix *left* division (solves AX = B)
     pub(crate) fn matrix_div(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let (a, b) = (other, self);
+        let (a, b) = (self, other);
+
         if a.rank() != 2 || b.rank() != 2 {
             return Err(env.error(format!(
                 "Matrix division requires arrays of rank 2, \
@@ -1513,7 +1514,12 @@ impl Array<f64> {
                 a.shape
             )));
         }
-        if a.shape[0] != b.shape[0] {
+        // Because of how matrix ops are called, `b` comes in transposed
+        // Instead of transposing (possible expensive), we adjust all indexing
+        let n = a.shape[0]; // also a.shape[1] and """b.shape[0]"""
+        let m = b.shape[0];
+        if a.shape[1] != b.shape[1] {
+            // note how it's [1] and [1] instead of [1] and [0]
             return Err(env.error(format!(
                 "Matrix division requires arrays of compatible shapes, \
                 but their shapes are {} and {}",
@@ -1521,10 +1527,9 @@ impl Array<f64> {
             )));
         }
 
-        let na = a.shape[0];
-        let nb = b.shape[1];
-        let l_idx = |r, c| r * na + c;
-        let r_idx = |r, c| r * nb + c;
+        let l_idx = |r, c| r * n + c; // note the transposition!
+        let r_idx = |r, c| c * m + r;
+        let r_idx_tr = |r, c| r * m + c; // *double* transposed
 
         /// Returns L (nxn) and P (n), 'a' is modified into U
         fn lu_decomp(a: &mut [f64], n: usize, env: &Uiua) -> UiuaResult<(Vec<f64>, Vec<usize>)> {
@@ -1582,46 +1587,47 @@ impl Array<f64> {
         //   PA = LU
         // LUX = PB
         // X = U⁻¹L⁻¹PB
-        let (l, u, p) = {
+        let (l, u, perm) = {
             let mut a = EcoVec::from(a.data.as_slice());
-            let (l, p) = lu_decomp(a.make_mut(), na, env)?;
+            let (l, p) = lu_decomp(a.make_mut(), n, env)?;
             (l, a, p)
         };
 
+        // for better cache hits
         let mut x = EcoVec::from(b.data.as_slice());
 
         // P * ·
-        let old = x.clone();
+        let old = EcoVec::from(b.data.as_slice()); // avoid incrementing x's refcount
 
-        for i in 0..na {
-            for k in 0..nb {
-                x.make_mut()[r_idx(i, k)] = old[r_idx(p[i], k)];
+        for i in 0..n {
+            for k in 0..m {
+                x.make_mut()[r_idx_tr(i, k)] = old[r_idx(perm[i], k)];
             }
         }
 
         // L⁻¹ * · (forward subst)
-        for i in 0..na {
-            for k in 0..nb {
-                let mut s = x[r_idx(i, k)];
+        for i in 0..n {
+            for k in 0..m {
+                let mut s = x[r_idx_tr(i, k)];
                 for j in 0..i {
-                    s -= l[l_idx(i, j)] * x[r_idx(j, k)];
+                    s -= l[l_idx(i, j)] * x[r_idx_tr(j, k)];
                 }
-                x.make_mut()[r_idx(i, k)] = s / l[l_idx(i, i)];
+                x.make_mut()[r_idx_tr(i, k)] = s / l[l_idx(i, i)];
             }
         }
 
         // U⁻¹ * · (back subst)
-        for i in (0..na).rev() {
-            for k in 0..nb {
-                let mut s = x[r_idx(i, k)];
-                for j in (i + 1)..na {
-                    s -= u[l_idx(i, j)] * x[r_idx(j, k)];
+        for i in (0..n).rev() {
+            for k in 0..m {
+                let mut s = x[r_idx_tr(i, k)];
+                for j in (i + 1)..n {
+                    s -= u[l_idx(i, j)] * x[r_idx_tr(j, k)];
                 }
-                x.make_mut()[r_idx(i, k)] = s / u[l_idx(i, i)];
+                x.make_mut()[r_idx_tr(i, k)] = s / u[l_idx(i, i)];
             }
         }
 
-        Ok(Array::new(b.shape.clone(), x))
+        Ok(Array::new(Shape::from([b.shape[1], b.shape[0]]), x))
     }
 }
 

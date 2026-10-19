@@ -1252,15 +1252,7 @@ inverse!(AntiContraFlip, input, asm, Prim(Flip, span), {
     generic()
 });
 
-inverse!(MatrixDivPat, input, _, Prim(Transpose, _), {
-    let [
-        Mod(Table, args, span),
-        ImplPrim(TransposeN(-1), _),
-        input @ ..,
-    ] = input
-    else {
-        return generic();
-    };
+inverse!(MatrixDivPat, input, _, ref, Mod(Table, args, span), {
     let [table_node] = args.as_slice() else {
         return generic();
     };

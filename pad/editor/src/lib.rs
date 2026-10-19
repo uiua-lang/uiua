@@ -2179,6 +2179,9 @@ pub fn Editor<'a>(
                                             <option value="Uiua386_Tall" selected=get_font_name() == "Uiua386_Tall">
                                                 {format!("{}386 Tall", lang())}
                                             </option>
+                                            <option value="https://dyalog.github.io/APL387/APL387.ttf" selected=get_font_name() == "https://dyalog.github.io/APL387/APL387.ttf">
+                                                "APL387"
+                                            </option>
                                             <option value="TerminusUiua_14" selected=get_font_name() == "TerminusUiua_14">
                                                 "TerminusUiua 14"
                                             </option>

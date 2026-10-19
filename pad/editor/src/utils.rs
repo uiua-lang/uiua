@@ -1735,8 +1735,13 @@ fn update_style() {
         .unwrap()
         .dyn_into::<HtmlStyleElement>()
         .unwrap();
+    let url = if font_name.starts_with("http") {
+        font_name
+    } else {
+        format!("/{font_name}.ttf")
+    };
     new_style.set_inner_text(&format!(
-        "@font-face {{ font-family: 'Code Font'; src: url('/{font_name}.ttf') format('truetype'); }}\n\
+        "@font-face {{ font-family: 'Code Font'; src: url('{url}') format('truetype'); }}\n\
         .sized-code {{ font-size: {font_size}; }}\n\
         .experimental-glyph-buttons {{ display: {show_experimental}; }}\n\
         .format-button {{ display: {run_on_format}; }}",

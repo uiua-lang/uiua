@@ -21,6 +21,8 @@ This version is not yet released. If you are reading this on the website, then t
   - `avg`
 ### Website
 - Separate [Aliases](https://uiua.org/docs/aliases) page from the [Idioms](https://uiua.org/docs/idioms) page.
+- Add [APL387](https://dyalog.github.io/APL387/) font to pad
+- Remove Pixua font from pad
 
 ## 0.19.1 - 2026-09-03
 ### Interpreter

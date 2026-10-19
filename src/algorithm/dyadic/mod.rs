@@ -1606,7 +1606,7 @@ impl Array<f64> {
 
         // a is [n n]
         // b is [m n] ()
-        let n = a.shape[0]; // also a.shape[1] and """b.shape[0]"""
+        let n = a.shape[0]; // also a.shape[1] and b.shape[0]
         let m = b.shape[1];
 
         let sq_idx = |r, c| c * n + r;
@@ -1618,19 +1618,35 @@ impl Array<f64> {
         // X = R⁻¹Q⁻¹B
         // X = R⁻¹Q'B
 
-        //for i in (0..n).rev() {
-        //    for k in 0..m {
-        //        let mut s = x[r_idx_tr(i, k)];
-        //        for j in (i + 1)..n {
-        //            s -= r[sq_idx(i, j)] * x[r_idx_tr(j, k)];
-        //        }
-        //        x.make_mut()[r_idx_tr(i, k)] = s / r[sq_idx(i, i)];
-        //    }
-        //}
-        //let mut r = EcoVec::from(b.data.as_slice());
+        let (q, r) = qr_decomp(a.data().into(), n);
+        let mut x: EcoVec<_> = eco_vec![0.0; n*m]; // B -> Y -> X
 
-        // It's transposed, remember
-        Ok(Array::new(Shape::from([b.shape[1], b.shape[1]]), x))
+        // Y = Q'B
+        for i in 0..n {
+            for k in 0..m {
+                let mut s = 0.0;
+
+                for j in 0..n {
+                    s += q[sq_idx_tr(i, j)] * b.data[rect_idx(j, k)];
+                }
+
+                x.make_mut()[rect_idx(i, k)] = s;
+            }
+        }
+
+        // RX = Y (back substitution)
+        for i in (0..n).rev() {
+            for k in 0..m {
+                let mut s = x[rect_idx(i, k)];
+
+                for j in (i + 1)..n {
+                    s -= r[sq_idx(i, j)] * x[rect_idx(j, k)];
+                }
+
+                x.make_mut()[rect_idx(i, k)] = s / r[sq_idx(i, i)];
+            }
+        }
+        Ok(Array::new(b.shape.clone(), x))
     }
 }
 

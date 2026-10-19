@@ -1549,6 +1549,15 @@ impl Array<f64> {
 
             h
         }
+        fn tra(a: &mut EcoVec<f64>, n: usize) {
+            let sq_idx = |r, c| c * n + r;
+
+            for i in 0..n {
+                for j in (i + 1)..n {
+                    a.make_mut().swap(sq_idx(i, j), sq_idx(j, i));
+                }
+            }
+        }
 
         /// Returns (Q,R)
         fn qr_decomp(a: EcoVec<f64>, n: usize) -> (EcoVec<f64>, EcoVec<f64>) {
@@ -1561,7 +1570,8 @@ impl Array<f64> {
                 matmul(&h, &mut q, n);
             }
 
-            todo!("transpose q");
+            tra(&mut q, n);
+            (q, r)
         }
         fn matmul(a: &[f64], b: &mut EcoVec<f64>, n: usize) {
             let idx = |r, c| c * n + r;

@@ -46,8 +46,6 @@ pub(crate) struct Runtime {
     pub(crate) under_stack: Vec<Value>,
     /// The call stack
     pub(crate) call_stack: Vec<StackFrame>,
-    /// The local stack
-    pub(crate) locals: Vec<StackedLocal>,
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
@@ -123,11 +121,6 @@ pub(crate) struct StackFrame {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct StackedLocal {
-    pub value: Option<Value>,
-}
-
-#[derive(Debug, Clone)]
 struct Channel {
     pub send: Sender<Value>,
     pub recv: Receiver<Value>,
@@ -200,7 +193,6 @@ impl Default for Runtime {
                 id: Some(FunctionId::Main),
                 ..Default::default()
             }],
-            locals: Vec::new(),
             recur_stack: Vec::new(),
             fill_stack: Vec::new(),
             fill_boundary_stack: Vec::new(),
@@ -723,42 +715,6 @@ impl Uiua {
                 self.rt.call_stack.last_mut().unwrap().track_caller = true;
                 self.exec(inner)
             }),
-            Node::BindLocal { span } => self.with_span(span, |env| {
-                let val = env.pop(1)?;
-                env.rt.locals.push(StackedLocal { value: Some(val) });
-                Ok(())
-            }),
-            Node::GetLocal { index, take, span } => self.with_span(span, |env| {
-                let len = env.rt.locals.len();
-                if len <= index {
-                    return Err(env.error(format!(
-                        "No local for index {index}. This is a bug in the interpreter."
-                    )));
-                }
-                let im = &mut env.rt.locals[len - index - 1];
-                let val = if take {
-                    im.value.take()
-                } else {
-                    im.value.as_ref().cloned()
-                }
-                .ok_or_else(|| {
-                    env.error("Local was already used. This is a bug in the interpreter.")
-                })?;
-                env.push(val);
-                Ok(())
-            }),
-            Node::PopLocals { n } => {
-                if self.rt.locals.len() < n {
-                    Err(self.error(format!(
-                        "Can't pop {n} locals when there are only {}. \
-                        This is a bug in the interpreter.",
-                        self.rt.locals.len()
-                    )))
-                } else {
-                    self.rt.locals.truncate(self.rt.locals.len() - n);
-                    Ok(())
-                }
-            }
         };
         #[allow(clippy::print_stdout)]
         if self.rt.time_instrs {
@@ -1475,7 +1431,6 @@ impl Uiua {
                     .drain(self.rt.stack.len() - f.sig.args()..)
                     .collect(),
                 under_stack: Vec::new(),
-                locals: self.rt.locals.clone(),
                 fill_stack: Vec::new(),
                 fill_boundary_stack: Vec::new(),
                 unfill_stack: Vec::new(),

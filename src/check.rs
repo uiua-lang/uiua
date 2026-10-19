@@ -196,9 +196,6 @@ impl VirtualEnv {
             Node::BindGlobal { .. } => self.handle_args_outputs(1, 0),
             Node::CustomInverse(cust, _) => self.handle_sig(cust.sig()?),
             Node::Dynamic(dy) => self.handle_sig(dy.sig),
-            Node::BindLocal { .. } => self.handle_args_outputs(1, 0),
-            Node::GetLocal { .. } => self.handle_args_outputs(0, 1),
-            Node::PopLocals { .. } => {}
             &Node::Switch {
                 sig, under_cond, ..
             } => {

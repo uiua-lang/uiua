@@ -52,10 +52,6 @@ pub enum SpanKind {
     Subscript(Option<Primitive>, Option<SubscriptToken>),
     /// `obverse` primitive. Contains which inverses are set.
     Obverse(SetInverses),
-    Local {
-        bind: bool,
-        uses: usize,
-    },
 }
 
 /// Documentation information for a binding
@@ -171,10 +167,6 @@ pub struct CodeMeta {
     pub global_references: HashMap<CodeSpan, usize>,
     /// A set of references to shadowable constants
     pub constant_references: HashSet<Sp<Ident>>,
-    /// A map of references to locals to their binding spans
-    pub local_references: HashMap<CodeSpan, CodeSpan>,
-    /// A map of local binding spans to their number of uses
-    pub local_uses: HashMap<CodeSpan, usize>,
     /// A map of identifiers to possible completions
     pub completions: HashMap<CodeSpan, Vec<Completion>>,
     /// Spans of functions and their signatures and whether they are explicit
@@ -632,27 +624,13 @@ impl Spanner {
                     spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
                 }
                 Word::Ref(r, chained) => {
-                    if r.path.is_empty()
-                        && chained.is_empty()
-                        && let Some(bind_span) = self.code_meta.local_references.get(&word.span)
-                    {
-                        // Local
-                        let uses = (self.code_meta.local_uses.get(bind_span).copied()).unwrap_or(0);
-                        spans.push((word.span.clone()).sp(SpanKind::Local { bind: false, uses }))
-                    } else {
-                        // Normal ident
-                        spans.extend(self.ref_spans(r));
-                        for comp in chained {
-                            spans.push(comp.dot_span.clone().sp(SpanKind::Delimiter));
-                            spans.extend(self.ref_spans(&comp.item));
-                        }
+                    spans.extend(self.ref_spans(r));
+                    for comp in chained {
+                        spans.push(comp.dot_span.clone().sp(SpanKind::Delimiter));
+                        spans.extend(self.ref_spans(&comp.item));
                     }
                 }
                 Word::IncompleteRef(path) => spans.extend(self.ref_path_spans(path)),
-                Word::Local(_) => {
-                    let uses = (self.code_meta.local_uses.get(&word.span).copied()).unwrap_or(0);
-                    spans.push((word.span.clone()).sp(SpanKind::Local { bind: true, uses }))
-                }
                 Word::Strand(items) => {
                     for i in 0..items.len() {
                         let word = &items[i];
@@ -1266,31 +1244,6 @@ mod server {
                     }));
                 }
             }
-            // Hovering an local
-            if let Some((span, orig_span, bind)) = (doc.code_meta.local_references.iter())
-                .find(|(span, _)| span.contains_line_col(line, col) && span.src == path)
-                .map(|(r, o)| (r, o, false))
-                .or_else(|| {
-                    (doc.code_meta.local_uses.keys())
-                        .find(|span| span.contains_line_col(line, col) && span.src == path)
-                        .map(|span| (span, span, true))
-                })
-            {
-                let mut value = if bind { "bind local" } else { "local" }.to_owned();
-                if let Some(uses) = doc.code_meta.local_uses.get(orig_span) {
-                    value.push_str(&format!(
-                        "\n\n{uses} use{}",
-                        if *uses == 1 { "" } else { "s" }
-                    ))
-                }
-                return Ok(Some(Hover {
-                    contents: HoverContents::Markup(MarkupContent {
-                        kind: MarkupKind::Markdown,
-                        value,
-                    }),
-                    range: Some(uiua_span_to_lsp(span, &doc.asm.inputs)),
-                }));
-            }
             // Hovering an inline function
             if let Some((span, sig_decl)) = (doc.code_meta.function_sigs.iter())
                 .filter(|(span, inline)| {
@@ -1751,7 +1704,6 @@ mod server {
                         stt
                     }
                     SpanKind::Placeholder(_) => SemanticTokenType::PARAMETER,
-                    SpanKind::Local { bind: true, .. } => MONADIC_FUNCTION_STT,
                     _ => continue,
                 };
                 let mut token_type = UIUA_SEMANTIC_TOKEN_TYPES
@@ -2090,22 +2042,6 @@ mod server {
                     return Ok(Some(GotoDefinitionResponse::Scalar(Location {
                         uri,
                         range: uiua_span_to_lsp(&binding.span, &doc.asm.inputs),
-                    })));
-                }
-            }
-            // Check locals
-            for (name_span, orig_span) in &doc.code_meta.local_references {
-                if name_span.contains_line_col(line, col) && name_span.src == path {
-                    let uri = match &orig_span.src {
-                        InputSrc::Str(_) | InputSrc::Macro(_) => {
-                            params.text_document_position_params.text_document.uri
-                        }
-                        InputSrc::File(file) => path_to_uri(file)?,
-                        InputSrc::Literal(_) => continue,
-                    };
-                    return Ok(Some(GotoDefinitionResponse::Scalar(Location {
-                        uri,
-                        range: uiua_span_to_lsp(orig_span, &doc.asm.inputs),
                     })));
                 }
             }
@@ -2462,19 +2398,6 @@ mod server {
                             }
                         }
                     }
-                    return Ok(Some(locations));
-                }
-            }
-            // Local references
-            let mut locations = Vec::new();
-            for (span, orig_span) in &doc.code_meta.local_references {
-                if orig_span.contains_line_col(line, col) && orig_span.src == path {
-                    let uri = match &span.src {
-                        InputSrc::File(file) => path_to_uri(file)?,
-                        _ => continue,
-                    };
-                    let range = uiua_span_to_lsp(span, &doc.asm.inputs);
-                    locations.push(Location { uri, range });
                     return Ok(Some(locations));
                 }
             }

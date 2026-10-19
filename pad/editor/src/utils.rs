@@ -34,7 +34,7 @@ use crate::{
     backend::{OutputItem, WebBackend},
     binding_class, code_font, modifier_class, prim_sig_class,
 };
-use crate::{binding_style, comment_class, module_class, number_class, sig_class, string_class};
+use crate::{binding_style, comment_class, module_class, number_class, string_class};
 
 #[derive(Clone)]
 pub struct ChallengeDef {
@@ -717,7 +717,6 @@ pub fn gen_code_view(code: &str, hidden: &str) -> View {
                         SpanKind::Strand => "strand-span",
                         SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, n.as_ref()),
                         SpanKind::MacroDelim(margs) => modifier_class(*margs),
-                        SpanKind::Local { bind: true, .. } => sig_class((1, 0).into()),
                         _ => "",
                     };
                     match kind {
@@ -1065,17 +1064,6 @@ pub fn gen_code_view(code: &str, hidden: &str) -> View {
                                     </span>
                                 }
                                 .into_view(),
-                            )
-                        }
-                        SpanKind::Local { bind, uses } => {
-                            let class = format!("code-span {color_class}");
-                            let title = format!(
-                                "{}local\n{uses} use{}",
-                                if bind { "bind " } else { "" },
-                                if uses == 1 { "" } else { "s" }
-                            );
-                            frag_views.push(
-                                view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
                         _ => {

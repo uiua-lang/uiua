@@ -517,23 +517,8 @@ impl Compiler {
         nodes.make_mut().reverse();
         Ok(nodes)
     }
-    fn modifier_operand(&mut self, modifier: &Modifier, word: Sp<Word>) -> UiuaResult<SigNode> {
-        use Primitive::*;
-        let locals_height = self.locals.len();
-        let locals_escape = match modifier {
-            Modifier::Primitive(prim) => match prim {
-                Content | Evert | Under | Fill => true,
-                Both => false,
-                prim => prim.class() == PrimClass::Arguments,
-            },
-            Modifier::Ref(_) => false,
-            Modifier::Macro(_) => true,
-        };
-        let mut res = self.word_sig(word);
-        if !locals_escape && let Ok(sn) = &mut res {
-            self.end_locals(locals_height, Some(&mut sn.node));
-        }
-        res
+    fn modifier_operand(&mut self, _modifier: &Modifier, word: Sp<Word>) -> UiuaResult<SigNode> {
+        self.word_sig(word)
     }
     fn monadic_modifier_op(&mut self, m: &Modified) -> UiuaResult<(SigNode, CodeSpan)> {
         let operand = m.code_operands().next().unwrap().clone();
@@ -1801,13 +1786,11 @@ impl Compiler {
         {
             // Module import macro
             let call = names.get_last("Call");
-            let locals_height = self.locals.len();
             let (_, sn) = self.in_scope(ScopeKind::AllInModule, move |comp| {
                 comp.scope.names.extend_from_other(names);
                 comp.words_sig(operands)
             })?;
             let (mut node, sig) = sn.into();
-            self.end_locals(locals_height, Some(&mut node));
             if data_func {
                 // Data macro
                 let BindingKind::Func(call_func) =

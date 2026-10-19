@@ -956,14 +956,6 @@ impl Parser<'_> {
                 return Some(span.sp(Word::IncompleteRef(path)));
             }
         };
-        // Locals
-        if first.path.is_empty()
-            && let Some(span) = self.exact(Colon.into())
-        {
-            return Some((first.name.span.merge(span)).sp(Word::Local(Local {
-                name: first.name.value,
-            })));
-        }
         let mut chained = Vec::new();
         while let Some(dot_span) = self
             .exact(DoubleTilde.into())

@@ -370,7 +370,6 @@ pub enum Word {
     },
     Subscripted(Box<Subscripted>),
     InlineMacro(Box<InlineMacro>),
-    Local(Local),
     /// Doesn't compile, but useful for formatting format strings
     Underscore,
 }
@@ -400,7 +399,6 @@ impl PartialEq for Word {
             }
             (Self::Placeholder(_), Self::Placeholder(_)) => false,
             (Self::Comment(a), Self::Comment(b)) => a == b,
-            (Self::Local(a), Self::Local(b)) => a == b,
             _ => discriminant(self) == discriminant(other),
         }
     }
@@ -503,7 +501,6 @@ impl fmt::Debug for Word {
             Word::InlineMacro(mac) => {
                 write!(f, "inline_macro({:?}{}))", mac.func.value, mac.ident.value)
             }
-            Word::Local(im) => write!(f, "{im:?}"),
             Word::Underscore => write!(f, "_"),
         }
     }

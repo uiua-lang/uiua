@@ -63,8 +63,6 @@ pub struct Compiler {
     pub(crate) scope: Scope,
     /// Ancestor scopes of the current one
     higher_scopes: Vec<Scope>,
-    /// Locals stack
-    locals: Vec<LocalSlot>,
     /// Determines which How test scopes are run
     mode: RunMode,
     /// The paths of files currently being imported (used to detect import cycles)
@@ -109,7 +107,6 @@ impl Default for Compiler {
             current_bindings: Vec::new(),
             next_bindex: 0,
             scope: Scope::default(),
-            locals: Vec::new(),
             higher_scopes: Vec::new(),
             mode: RunMode::All,
             current_imports: EcoVec::new(),
@@ -279,13 +276,6 @@ struct CurrentBinding {
     signature: Option<Signature>,
     recurses: usize,
     bindex: usize,
-}
-
-#[derive(Clone)]
-struct LocalSlot {
-    name: Ident,
-    span: CodeSpan,
-    used: bool,
 }
 
 /// A scope where names are defined
@@ -611,7 +601,6 @@ impl Compiler {
         if let InputSrc::File(_) = &src {
             self.current_imports.pop();
         }
-        self.end_locals(0, None);
 
         // Collect errors
         match res {
@@ -1404,18 +1393,6 @@ impl Compiler {
                 }
                 Node::empty()
             }
-            Word::Local(im) => {
-                self.experimental_error_them(&word.span, || "Locals");
-                self.locals.push(LocalSlot {
-                    name: im.name,
-                    span: word.span.clone(),
-                    used: false,
-                });
-                self.code_meta.local_uses.insert(word.span.clone(), 0);
-                Node::BindLocal {
-                    span: self.add_span(word.span),
-                }
-            }
             Word::Strand(items) => {
                 // Diagnostic for strand of characters
                 if (items.iter()).all(|w| !w.value.is_code() || matches!(w.value, Word::Char(_))) {
@@ -2052,20 +2029,6 @@ impl Compiler {
         let completions = self.completions(&ident, &self.scope.names, false);
         if !completions.is_empty() {
             self.code_meta.completions.insert(span.clone(), completions);
-        }
-
-        // Look in locals
-        if let Some((index, im)) =
-            (self.locals.iter_mut().rev().enumerate()).find(|(_, im)| im.name == ident)
-        {
-            im.used = true;
-            (self.code_meta.local_references).insert(span.clone(), im.span.clone());
-            *self.code_meta.local_uses.get_mut(&im.span).unwrap() += 1;
-            return Node::GetLocal {
-                index,
-                span: self.add_span(span),
-                take: false,
-            };
         }
 
         // Normal name lookup
@@ -3272,48 +3235,6 @@ impl Compiler {
                 format!("Cannot infer function signature: {e}"),
             )
         })
-    }
-    fn end_locals(&mut self, start_height: usize, node: Option<&mut Node>) {
-        use {ImplPrimitive::*, Primitive::*};
-
-        if self.locals.len() <= start_height {
-            return;
-        }
-        let n = self.locals.len() - start_height;
-        let node = node.unwrap_or(&mut self.asm.root);
-        for i in 0..n {
-            fn recur(node: &mut Node, i: usize) -> bool {
-                match node {
-                    Node::Run(nodes) => {
-                        nodes.make_mut().iter_mut().rev().any(|node| recur(node, i))
-                    }
-                    Node::GetLocal { index, take, .. } if *index == i => {
-                        *take = true;
-                        true
-                    }
-                    Node::Mod(
-                        Dip | Gap | On | By | With | Off | Below | Above | Fork | Bracket,
-                        ops,
-                        _,
-                    ) => (ops.make_mut().iter_mut().rev()).any(|sn| recur(&mut sn.node, i)),
-                    Node::ImplMod(
-                        DipN(_) | OnSub(_) | BySub(_) | WithSub(_) | OffSub(_) | FixMatchRanks,
-                        ops,
-                        _,
-                    ) => (ops.make_mut().iter_mut().rev()).any(|sn| recur(&mut sn.node, i)),
-                    Node::TrackCaller(sn) => recur(&mut Arc::make_mut(sn).node, i),
-                    Node::NoInline(node) => recur(Arc::make_mut(node), i),
-                    Node::Array { inner, .. } => recur(Arc::make_mut(inner), i),
-                    Node::Switch { branches, .. } => {
-                        (branches.make_mut().iter_mut().rev()).any(|sn| recur(&mut sn.node, i))
-                    }
-                    _ => false,
-                }
-            }
-            recur(node, i);
-        }
-        node.push(Node::PopLocals { n });
-        self.locals.drain(start_height..);
     }
 }
 

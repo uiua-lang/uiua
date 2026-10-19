@@ -1499,56 +1499,9 @@ impl Array<f64> {
     /// Matrix *left* division (solves AX = B)
     /// Returns the _transpose_ of A\B, because of how matmul is spelt
     pub(crate) fn matrix_div(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
-        /// Returns L (nxn) and P (n), 'a' is modified into U
-        fn lu_decomp(a: &mut [f64], n: usize, env: &Uiua) -> UiuaResult<(Vec<f64>, Vec<usize>)> {
-            let idx = |r, c| r * n + c;
-            let mut perm = (0..n).collect::<Vec<_>>();
-            let mut lower = vec![0.0; n * n];
-            for i in 0..n {
-                lower[idx(i, i)] = 1.0;
-            }
-
-            // yoinked from my matlab uni notes
-            for i in 0..n {
-                let pivot = {
-                    let mut max = a[idx(i, i)];
-                    let mut maxidx = i;
-                    for row in i + 1..n {
-                        let val = a[idx(row, i)];
-                        if val.abs() > max.abs() {
-                            (max, maxidx) = (val, row);
-                        }
-                    }
-                    maxidx
-                };
-
-                perm.swap(pivot, i);
-                for j in 0..i {
-                    lower.swap(idx(i, j), idx(pivot, j));
-                }
-                for j in i..n {
-                    a.swap(idx(i, j), idx(pivot, j));
-                }
-
-                // this check is very Not Ideal, but i can't
-                // think of anything better
-                // I also don't check for NaN-ness: if there's a NaN
-                // somewhere it'll just propagate
-                if a[idx(i, i)].abs() < f64::EPSILON {
-                    return Err(env.error(
-                        "Matrix divisor is numerically singular (the matrix inversion failed)",
-                    ));
-                }
-                for j in i + 1..n {
-                    let mult = a[idx(j, i)] / a[idx(i, i)];
-                    lower[idx(j, i)] = mult;
-                    for col in i..n {
-                        a[idx(j, col)] -= mult * a[idx(i, col)];
-                    }
-                }
-            }
-
-            Ok((lower, perm))
+        /// Returns (Q,R)
+        fn qr_decomp(a: EcoVec<T>) -> (EcoVec<T>, EcoVec<T>) {
+            todo!()
         }
 
         // Remember, A is the divisor: A⁻¹B
@@ -1569,10 +1522,7 @@ impl Array<f64> {
             )));
         }
 
-        // Because of how matrix ops in uiua are spelt, `b` comes in transposed
-        // Instead of transposing (possible expensive), we adjust all indexing
-        // note how it's [1] and [1] instead of [1] and [0]
-        if a.shape[1] != b.shape[1] {
+        if a.shape[1] != b.shape[0] {
             return Err(env.error(format!(
                 "Matrix division requires arrays of compatible shapes, \
                 but their shapes are {} and {}",
@@ -1580,59 +1530,33 @@ impl Array<f64> {
             )));
         }
 
+        // a is [n n]
+        // b is [m n] ()
         let n = a.shape[0]; // also a.shape[1] and """b.shape[0]"""
-        let m = b.shape[0];
+        let m = b.shape[1];
 
-        let l_idx = |r, c| r * n + c; // note the transposition!
-        let r_idx = |r, c| c * m + r;
-        let r_idx_tr = |r, c| r * m + c; // *double* transposed
+        let sq_idx = |r, c| c * n + r;
+        let sq_idx_tr = |r, c| r * n + c; // for inverting Q without copying
+        let rect_idx = |r, c| c * m + r;
 
         // AX = B
-        //   PA = LU
-        // LUX = PB
-        // X = U⁻¹L⁻¹PB
-        let (l, u, perm) = {
-            let mut a = EcoVec::from(a.data.as_slice());
-            let (l, p) = lu_decomp(a.make_mut(), n, env)?;
-            (l, a, p)
-        };
+        // (QR)X = B
+        // X = R⁻¹Q⁻¹B
+        // X = R⁻¹Q'B
 
-        // for better cache hits
-        let mut x = EcoVec::from(b.data.as_slice());
-
-        // P * ·
-        let old = EcoVec::from(b.data.as_slice()); // avoid incrementing x's refcount
-
-        for i in 0..n {
-            for k in 0..m {
-                x.make_mut()[r_idx_tr(i, k)] = old[r_idx(perm[i], k)];
-            }
-        }
-
-        // L⁻¹ * · (forward subst)
-        for i in 0..n {
-            for k in 0..m {
-                let mut s = x[r_idx_tr(i, k)];
-                for j in 0..i {
-                    s -= l[l_idx(i, j)] * x[r_idx_tr(j, k)];
-                }
-                x.make_mut()[r_idx_tr(i, k)] = s / l[l_idx(i, i)];
-            }
-        }
-
-        // U⁻¹ * · (back subst)
-        for i in (0..n).rev() {
-            for k in 0..m {
-                let mut s = x[r_idx_tr(i, k)];
-                for j in (i + 1)..n {
-                    s -= u[l_idx(i, j)] * x[r_idx_tr(j, k)];
-                }
-                x.make_mut()[r_idx_tr(i, k)] = s / u[l_idx(i, i)];
-            }
-        }
+        //for i in (0..n).rev() {
+        //    for k in 0..m {
+        //        let mut s = x[r_idx_tr(i, k)];
+        //        for j in (i + 1)..n {
+        //            s -= r[sq_idx(i, j)] * x[r_idx_tr(j, k)];
+        //        }
+        //        x.make_mut()[r_idx_tr(i, k)] = s / r[sq_idx(i, i)];
+        //    }
+        //}
+        //let mut r = EcoVec::from(b.data.as_slice());
 
         // It's transposed, remember
-        Ok(Array::new(Shape::from([b.shape[1], b.shape[0]]), x))
+        Ok(Array::new(Shape::from([b.shape[1], b.shape[1]]), x))
     }
 }
 

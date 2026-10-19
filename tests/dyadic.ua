@@ -405,14 +405,16 @@ ApB ← ↯4_4 [88 99 73 89 157 136 115 89 88 84 47 46 101 101 59 88]
 BpA ← ↯4_4 [53 50 70 64 116 77 104 96 145 114 112 116 99 64 109 117]
 AdB = ↯4_4 [¯0.09 1.44 ¯0.25 ¯0.21 0.45 ¯1.04 0.82 ¯0.55 1.48 1.87 0.49 ¯0.36 ¯0.58 ¯1.5 ¯0 1.77]
 BdA = ↯4_4 [¯2.12 ¯1.06 0.68 ¯0.44 1.04 0.28 0.07 0.22 2.59 2.07 ¯0.09 0.93 0.19 ¯0.11 0.29 0.61]
-I,2 = slftab= ran2
-I,4 = slftab= ran4
+I = slftab= ran
 ⍤⤙≍ApB ⁅₂⊞(/+×)⊙⍉ A B # Matmul
 ⍤⤙≍BpA ⁅₂⊞(/+×)⊙⍉ B A
 # (Matdiv only triggers with ⌝⍜⍉⊞(/+×) instead of the arguably-more-correct ⌝⍜⊙⍉⊞(/+×), so these tests pre-pre-transpose to get around that until that's fixed)
-⍤⤙≍AdB ⁅₂⌝⍜⍉⊞(/+×) ∩⍉ A B # Matdiv
-⍤⤙≍BdA ⁅₂⌝⍜⍉⊞(/+×) ∩⍉ B A
-⍤⤙≍A ⁅₂⌝⍜⍉⊞(/+×) ∩⍉ I,4 A
-⍤⤙≍B ⁅₂⌝⍜⍉⊞(/+×) ∩⍉ I,4 B
-⍤⤙≍I,4 ⁅₂ ⊞(/+×)⊙⍉ A ⌝⍜⍉⊞(/+×) ∩⍉ A I,4
-⍤⤙≍I,4 ⁅₂ ⊞(/+×)⊙⍉ B ⌝⍜⍉⊞(/+×) ∩⍉ B I,4
+MD = ⌝⍜⍉⊞(/+×) bratrauntra # Track caller!
+⍤⤙≍A ⁅₂MD I4 A
+⍤⤙≍B ⁅₂MD I4 B
+⍤⤙≍ withMD I100 ⁅₂ mul,100 gen[100 100] 15940
+⍤⤙≍res2_1 `1_1 ⁅₂MD [0_1 1_1] res2_1 1_0 # [2 2] [2 1]
+⍤⤙≍I4 ⁅₂ ⊞(/+×)⊙⍉ A MD A I4
+⍤⤙≍I4 ⁅₂ ⊞(/+×)⊙⍉ B MD B I4
+⍤⤙≍AdB ⁅₂MD A B # Matdiv
+⍤⤙≍BdA ⁅₂MD B A

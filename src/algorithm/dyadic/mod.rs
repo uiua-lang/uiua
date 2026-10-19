@@ -1499,9 +1499,83 @@ impl Array<f64> {
     /// Matrix *left* division (solves AX = B)
     /// Returns the _transpose_ of A\B, because of how matmul is spelt
     pub(crate) fn matrix_div(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
+        fn id(n: usize) -> EcoVec<f64> {
+            let idx = |r, c| c * n + r;
+            let mut t = eco_vec![0.0; n*n];
+            for i in 0..n {
+                t.make_mut()[idx(i, i)] = 1.0
+            }
+            t
+        }
+        // Thank you to https://docs.rs/advanced-algorithms/latest/src/advanced_algorithms/numerical/qr_decomposition.rs.html#53
+        // for being MIT/Apache licensed
+        fn hhmat(a: &[f64], n: usize, k: usize) -> EcoVec<f64> {
+            let idx = |r, c| c * n + r;
+            // Extract the k-th column from row k onwards
+            let mut x: EcoVec<f64> = (k..n).map(|i| a[idx(i, k)]).collect();
+
+            // Compute the norm of x
+            let norm_x: f64 = x.iter().map(|&val| val * val).sum::<f64>().sqrt();
+
+            if norm_x < 1e-10 {
+                // Column is already zeros below diagonal
+                return id(n);
+            }
+
+            // Compute the Householder vector
+            let norm_v = {
+                let first = x[0];
+                x.make_mut()[0] += if first >= 0.0 { norm_x } else { -norm_x };
+                x.iter().map(|&val| val * val).sum::<f64>().sqrt()
+            };
+
+            if norm_v < 1e-10 {
+                return id(n);
+            }
+
+            // Normalize
+            for val in x.make_mut().iter_mut() {
+                *val /= norm_v;
+            }
+
+            // Construct H = I - 2vv^T
+            let mut h = id(n);
+
+            for i in 0..(n - k) {
+                for j in 0..(n - k) {
+                    h.make_mut()[idx(i + k, j + k)] -= 2.0 * x[i] * x[j];
+                }
+            }
+
+            h
+        }
+
         /// Returns (Q,R)
-        fn qr_decomp(a: EcoVec<T>) -> (EcoVec<T>, EcoVec<T>) {
-            todo!()
+        fn qr_decomp(a: EcoVec<f64>, n: usize) -> (EcoVec<f64>, EcoVec<f64>) {
+            let mut r = a;
+            let mut q = id(n);
+
+            for k in 0..n {
+                let h = hhmat(&r, n, k);
+                matmul(&h, &mut r, n);
+                matmul(&h, &mut q, n);
+            }
+
+            todo!("transpose q");
+        }
+        fn matmul(a: &[f64], b: &mut EcoVec<f64>, n: usize) {
+            let idx = |r, c| c * n + r;
+            let mut result = eco_vec![0.0; n*n];
+
+            for i in 0..n {
+                for j in 0..n {
+                    for k in 0..n {
+                        result.make_mut()[idx(i, j)] += a[idx(i, k)] * b[idx(k, j)];
+                    }
+                }
+            }
+
+            *b = result;
         }
 
         // Remember, A is the divisor: A⁻¹B

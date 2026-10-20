@@ -1511,7 +1511,7 @@ impl Array<f64> {
         // for being MIT/Apache licensed
         /// Returns (Q, R), with A = QR.
         fn qr_decomp(a: EcoVec<f64>, n: usize) -> (EcoVec<f64>, EcoVec<f64>) {
-            let idx = |r, c| c * n + r;
+            let idx = |r, c| r * n + c;
 
             let mut r = a;
             let mut q = id(n);
@@ -1551,6 +1551,10 @@ impl Array<f64> {
                     for (i, &vi) in (k..n).zip(v.iter()) {
                         r_data[idx(i, j)] -= 2.0 * vi * dot;
                     }
+                }
+                // damn floats
+                for i in (k + 1)..n {
+                    r_data[idx(i, k)] = 0.0;
                 }
 
                 // Q <- Q H.
@@ -1612,10 +1616,10 @@ impl Array<f64> {
         let n = a.shape[0]; // also a.shape[1] and "b.shape[0]"
         let m = b.shape[0];
 
-        let sq_idx = |r, c| c * n + r;
-        let sq_idx_tr = |r, c| r * n + c; // for inverting Q without copying
-        let rect_idx_tr = |r, c| r * m + c; // transposed because b comes in transposed
-        let rect_idx = |r, c| c * m + r;
+        let sq_idx = |r, c| r * n + c;
+        let sq_idx_tr = |r, c| c * n + r; // for inverting Q without copying
+        let rect_idx = |r, c| r * m + c;
+        let rect_idx_tr = |r, c| c * n + r; // transposed because b comes in transposed
 
         // AX = B
         // (QR)X = B
@@ -1623,7 +1627,6 @@ impl Array<f64> {
         // X = R⁻¹Q'B
 
         let (q, r) = qr_decomp(a.data().into(), n);
-        dbg!(&q, &r);
         let mut x: EcoVec<_> = eco_vec![0.0; n*m]; // B -> Y -> X
 
         let x_data = x.make_mut();

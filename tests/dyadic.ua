@@ -413,10 +413,10 @@ MD = anti⊞(/+×)⊙⍉ # Track caller!
 # (Matdiv only triggers with ⌝⍜⍉⊞(/+×) instead of the arguably-more-correct ⌝⍜⊙⍉⊞(/+×), so these tests pre-pre-transpose to get around that until that's fixed)
 ⍤⤙≍A ⁅₂MD I4 A
 ⍤⤙≍B ⁅₂MD I4 B
-# ⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 100] 15940 # rectangulars must also work
-# ⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 20] 15940
-# ⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 2] 15940
-# ⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 1] 15940
+#⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 100] 15940 # rectangulars must also work
+#⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 20] 15940
+#⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 2] 15940
+⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 1] 15940
 ⍤⤙≍res2_1 `1_1 ⁅₂MD [0_1 1_1] res2_1 1_0
 ⍤⤙≍I4 ⁅₂ MP A MD A I4
 ⍤⤙≍I4 ⁅₂ MP B MD B I4

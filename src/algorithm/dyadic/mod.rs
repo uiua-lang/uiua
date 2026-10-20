@@ -1653,6 +1653,10 @@ impl Array<f64> {
                     s -= r[sq_idx(i, j)] * x[rect_idx(j, k)];
                 }
 
+                // this check could definitely be improved (e.g. by scaling it with the rest of b)
+                if r[sq_idx(i, i)].abs() < 1e-10 {
+                    return Err(env.error("Matrix division requires non-singular divisor"));
+                }
                 x.make_mut()[rect_idx(i, k)] = s / r[sq_idx(i, i)];
             }
         }

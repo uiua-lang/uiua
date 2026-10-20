@@ -373,7 +373,7 @@ F ← ⊂0 [⊙⊙∘]
 ⍤⤙≍⊃◿(-×⌊◡÷)¯50×100-⊸¬˙gen100
 ⍤⤙≍⊃◿(-×⌊◡÷)50×100-⊸¬˙gen100
 ⍤⤙≍[1 ¯3 3 ¯1] ≡/◿[4_21 ¯4_21 4_¯21 ¯4_¯21]
-⍤⤙≍[4 17 ¯17 ¯4] ≡/bac◿[4_21 ¯4_21 4_¯21 ¯4_¯21]
+⍤⤙≍[4 17 ¯17 ¯4] ≡/˜◿[4_21 ¯4_21 4_¯21 ¯4_¯21]
 ⍤⤙≍[¯4r16i 2r12i 7i ¯6r15i 2i] /◿↯2_∞/ℂ⌊×20gen[2 10]67
 ⍤⤙≍[¯11r11i ¯2r7i ¯6r12i ¯2r15i ¯1r3i ¯2r9i ¯5r4i 2r6i ¯1r17i ¯3r5i] ≡◿ /ℂ∩(⌊×20)gen[2 10]67 gen[10]69 # coercing float to comp
 
@@ -403,30 +403,30 @@ A   ← ↯4_4 [9 4 2 5 6 8 6 5 1 1 7 3 3 1 6 7]
 B   ← ↯4_4 [1 5 2 4 9 4 8 1 9 9 4 2 5 4 3 9]
 ApB ← ↯4_4 [88 99 73 89 157 136 115 89 88 84 47 46 101 101 59 88]
 BpA ← ↯4_4 [53 50 70 64 116 77 104 96 145 114 112 116 99 64 109 117]
-AdB = ↯4_4 [¯0.09 1.44 ¯0.25 ¯0.21 0.45 ¯1.04 0.82 ¯0.55 1.48 1.87 0.49 ¯0.36 ¯0.58 ¯1.5 ¯0 1.77]
-BdA = ↯4_4 [¯2.12 ¯1.06 0.68 ¯0.44 1.04 0.28 0.07 0.22 2.59 2.07 ¯0.09 0.93 0.19 ¯0.11 0.29 0.61]
-I = slftab= ran
-MP = ⊞(/+×)⊙⍉ # Track caller!
-MD = anti⊞(/+×)⊙⍉ # Track caller!
+AdB ← ↯4_4 [¯0.09 1.44 ¯0.25 ¯0.21 0.45 ¯1.04 0.82 ¯0.55 1.48 1.87 0.49 ¯0.36 ¯0.58 ¯1.5 ¯0 1.77]
+BdA ← ↯4_4 [¯2.12 ¯1.06 0.68 ¯0.44 1.04 0.28 0.07 0.22 2.59 2.07 ¯0.09 0.93 0.19 ¯0.11 0.29 0.61]
+I   ← ˙⊞= ⇡
+MP  ← ⊞(/+×)⊙⍉ # Track caller!
+MD  ← ⌝⊞(/+×)⊙⍉ # Track caller!
 ⍤⤙≍ApB ⁅₂MP A B # Matmul
 ⍤⤙≍BpA ⁅₂MP B A
 ⍤⤙≍A ⁅₂MD I4 A
 ⍤⤙≍B ⁅₂MD I4 B
 ⍤⤙≍B ⁅₂ MP A MD A B
 ⍤⤙≍A ⁅₂ MP B MD B A
-⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 100] 15940 # rectangulars must also work
-⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 20] 15940
-⍤⤙≍ withslfMD I100
-⍤⤙≍ withMD onmul,2 I100
-⍤⤙≍ withMD onmul,3 I100
-⍤⤙≍ withMD onmul,4 I100
-⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 2] 15940
-⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 1] 15940
-⍤⤙≍res2_1 `1_1 ⁅₂MD [0_1 1_1] res2_1 1_0
+⍤⤙≍ ⤙MD I100 ⁅ ×₁₀₀ gen[100 100] 15940 # rectangulars must also work
+⍤⤙≍ ⤙MD I100 ⁅ ×₁₀₀ gen[100 20] 15940
+⍤⤙≍ ⤙˙MD I100
+⍤⤙≍ ⤙MD⟜×₂ I100
+⍤⤙≍ ⤙MD⟜×₃ I100
+⍤⤙≍ ⤙MD⟜×₄ I100
+⍤⤙≍ ⤙MD I100 ⁅ ×₁₀₀ gen[100 2] 15940
+⍤⤙≍ ⤙MD I100 ⁅ ×₁₀₀ gen[100 1] 15940
+⍤⤙≍↯2_1 ¯1_1 ⁅₂MD [0_1 1_1] ↯2_1 1_0
 ⍤⤙≍I4 ⁅₂ MP A MD A I4
 ⍤⤙≍I4 ⁅₂ MP B MD B I4
 ⍤⤙≍AdB ⁅₂MD A B # Matdiv
 ⍤⤙≍BdA ⁅₂MD B A
-⍤⤙≍ 0/*des⁅₂MP res4_4 0 A
-try(case(ass"Expected to fail with singular matrix, but did not") MD|) underpicgap67 2_3 res4_4 0 A
-try(case(ass"Expected to fail with singular matrix, but did not") MD|) res4_4 0 A
+⍤⤙≍ 0/×♭⁅₂MP↯4_4 0 A
+⍣(⍩(⍤"Expected to fail with singular matrix, but did not") MD|) ⍜⊡⋅67 2_3 ↯4_4 0 A
+⍣(⍩(⍤"Expected to fail with singular matrix, but did not") MD|) ↯4_4 0 A

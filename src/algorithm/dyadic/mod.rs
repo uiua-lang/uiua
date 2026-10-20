@@ -1498,23 +1498,19 @@ impl Array<f64> {
     }
     /// Matrix *left* division (solves AX = B)
     pub(crate) fn matrix_div(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
-        fn id(n: usize) -> EcoVec<f64> {
-            let idx = |r, c| c * n + r;
-            let mut t = eco_vec![0.0; n*n];
-            let t_data = t.make_mut();
-            for i in 0..n {
-                t_data[idx(i, i)] = 1.0
-            }
-            t
-        }
-        // Thank you to https://docs.rs/advanced-algorithms/latest/src/advanced_algorithms/numerical/qr_decomposition.rs.html#53
-        // for being MIT/Apache licensed
         /// Returns (Q, R), with A = QR.
         fn qr_decomp(a: EcoVec<f64>, n: usize) -> (EcoVec<f64>, EcoVec<f64>) {
             let idx = |r, c| r * n + c;
 
             let mut r = a;
-            let mut q = id(n);
+            let mut q = {
+                let mut t = eco_vec![0.0; n*n];
+                let t_data = t.make_mut();
+                for i in 0..n {
+                    t_data[i * n + i] = 1.0
+                }
+                t
+            };
 
             for k in 0..n {
                 // Extract the active part of column k.

@@ -410,9 +410,10 @@ MP = ⊞(/+×)⊙⍉ # Track caller!
 MD = anti⊞(/+×)⊙⍉ # Track caller!
 ⍤⤙≍ApB ⁅₂MP A B # Matmul
 ⍤⤙≍BpA ⁅₂MP B A
-# (Matdiv only triggers with ⌝⍜⍉⊞(/+×) instead of the arguably-more-correct ⌝⍜⊙⍉⊞(/+×), so these tests pre-pre-transpose to get around that until that's fixed)
 ⍤⤙≍A ⁅₂MD I4 A
 ⍤⤙≍B ⁅₂MD I4 B
+⍤⤙≍B ⁅₂ MP A MD A B
+⍤⤙≍A ⁅₂ MP B MD B A
 #⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 100] 15940 # rectangulars must also work
 #⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 20] 15940
 #⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 2] 15940
@@ -422,3 +423,6 @@ MD = anti⊞(/+×)⊙⍉ # Track caller!
 ⍤⤙≍I4 ⁅₂ MP B MD B I4
 ⍤⤙≍AdB ⁅₂MD A B # Matdiv
 ⍤⤙≍BdA ⁅₂MD B A
+⍤⤙≍ 0/*des⁅₂MP res4_4 0 A
+ass"Expected to fail with singular matrix, but did not"try(gap0 MD|1) 2_3 res4_4 0 A
+ass"Expected to fail with singular matrix, but did not"try(gap0 MD|1) 0 A

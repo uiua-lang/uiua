@@ -410,19 +410,19 @@ MP = ⊞(/+×)⊙⍉ # Track caller!
 MD = anti⊞(/+×)⊙⍉ # Track caller!
 ⍤⤙≍ApB ⁅₂MP A B # Matmul
 ⍤⤙≍BpA ⁅₂MP B A
-#⍤⤙≍A ⁅₂MD I4 A
-#⍤⤙≍B ⁅₂MD I4 B
+⍤⤙≍A ⁅₂MD I4 A
+⍤⤙≍B ⁅₂MD I4 B
 ⍤⤙≍B ⁅₂ MP A MD A B
-#⍤⤙≍A ⁅₂ MP B MD B A
-#⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 100] 15940 # rectangulars must also work
+⍤⤙≍A ⁅₂ MP B MD B A
+⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 100] 15940 # rectangulars must also work
 #⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 20] 15940
-#⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 2] 15940
-#⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 1] 15940
-#⍤⤙≍res2_1 `1_1 ⁅₂MD [0_1 1_1] res2_1 1_0
-#⍤⤙≍I4 ⁅₂ MP A MD A I4
-#⍤⤙≍I4 ⁅₂ MP B MD B I4
-#⍤⤙≍AdB ⁅₂MD A B # Matdiv
-#⍤⤙≍BdA ⁅₂MD B A
-#⍤⤙≍ 0/*des⁅₂MP res4_4 0 A
-#ass"Expected to fail with singular matrix, but did not"try(gap0 MD|1) 2_3 res4_4 0 A
-#ass"Expected to fail with singular matrix, but did not"try(gap0 MD|1) 0 A
+⍤⤙≍ ?,2 withMD I100 ⁅ mul,100 gen[100 2] 15940
+⍤⤙≍ withMD I100 ⁅ mul,100 gen[100 1] 15940
+⍤⤙≍res2_1 `1_1 ⁅₂MD [0_1 1_1] res2_1 1_0
+⍤⤙≍I4 ⁅₂ MP A MD A I4
+⍤⤙≍I4 ⁅₂ MP B MD B I4
+⍤⤙≍AdB ⁅₂MD A B # Matdiv
+⍤⤙≍BdA ⁅₂MD B A
+⍤⤙≍ 0/*des⁅₂MP res4_4 0 A
+try(case(ass"Expected to fail with singular matrix, but did not") MD|) underpicgap67 2_3 res4_4 0 A
+try(case(ass"Expected to fail with singular matrix, but did not") MD|) res4_4 0 A

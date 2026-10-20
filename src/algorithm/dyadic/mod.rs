@@ -1497,7 +1497,6 @@ impl Array<f64> {
         Ok(Array::new(result_shape, result_data))
     }
     /// Matrix *left* division (solves AX = B)
-    /// Returns the _transpose_ of A\B, because of how matmul is spelt
     pub(crate) fn matrix_div(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
         fn id(n: usize) -> EcoVec<f64> {
             let idx = |r, c| c * n + r;
@@ -1606,7 +1605,7 @@ impl Array<f64> {
             )));
         }
 
-        if a.shape[1] != b.shape[0] {
+        if a.shape[1] != b.shape[1] {
             return Err(env.error(format!(
                 "Matrix division requires arrays of compatible shapes, \
                 but their shapes are {} and {}",
@@ -1616,11 +1615,12 @@ impl Array<f64> {
 
         // a is [n n]
         // b is [m n] ()
-        let n = a.shape[0]; // also a.shape[1] and b.shape[0]
-        let m = b.shape[1];
+        let n = a.shape[0]; // also a.shape[1] and "b.shape[0]"
+        let m = b.shape[0];
 
         let sq_idx = |r, c| c * n + r;
         let sq_idx_tr = |r, c| r * n + c; // for inverting Q without copying
+        let rect_idx_tr = |r, c| r * m + c; // transposed because b comes in transposed
         let rect_idx = |r, c| c * m + r;
 
         // AX = B
@@ -1637,7 +1637,7 @@ impl Array<f64> {
                 let mut s = 0.0;
 
                 for j in 0..n {
-                    s += q[sq_idx_tr(i, j)] * b.data[rect_idx(j, k)];
+                    s += q[sq_idx_tr(i, j)] * b.data[rect_idx_tr(j, k)];
                 }
 
                 x.make_mut()[rect_idx(i, k)] = s;
@@ -1656,7 +1656,8 @@ impl Array<f64> {
                 x.make_mut()[rect_idx(i, k)] = s / r[sq_idx(i, i)];
             }
         }
-        Ok(Array::new(b.shape.clone(), x))
+        // B comes in transposed, so the shape is reversed
+        Ok(Array::new(Shape::from([b.shape[1], b.shape[0]]), x))
     }
 }
 

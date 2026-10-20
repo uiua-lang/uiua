@@ -1608,7 +1608,7 @@ impl Array<f64> {
         }
 
         // a is [n n]
-        // b is [m n] ()
+        // b is [m n] (comes in transposed!!)
         let n = a.shape[0]; // also a.shape[1] and "b.shape[0]"
         let m = b.shape[0];
 

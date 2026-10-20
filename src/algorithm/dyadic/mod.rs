@@ -1623,6 +1623,7 @@ impl Array<f64> {
         // X = R⁻¹Q'B
 
         let (q, r) = qr_decomp(a.data().into(), n);
+        dbg!(&q, &r);
         let mut x: EcoVec<_> = eco_vec![0.0; n*m]; // B -> Y -> X
 
         let x_data = x.make_mut();

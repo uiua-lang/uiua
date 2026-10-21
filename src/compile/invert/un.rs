@@ -1268,8 +1268,8 @@ inverse!(MatrixDivPat, input, _, ref, Mod(Table, args, span), {
     Ok((input, ImplPrim(MatrixDiv, *span)))
 });
 
-inverse!(NBitsPat, input, _, ImplPrim(NBits(_), span), {
-    Ok((input, ImplPrim(UnBits, span)))
+inverse!(NBitsPat, input, _, ImplPrim(NBits(n), span), {
+    Ok((input, ImplPrim(UnBits(Some(n)), span)))
 });
 
 #[derive(Debug)]
@@ -1393,7 +1393,7 @@ inverse!(PrimPat, input, _, Prim(prim, span), {
         Div => ImplPrim(UnDiv, span),
         Reverse => Prim(Reverse, span),
         Transpose => ImplPrim(TransposeN(-1), span),
-        Bits => ImplPrim(UnBits, span),
+        Bits => ImplPrim(UnBits(None), span),
         Couple => ImplPrim(UnCouple, span),
         Box => ImplPrim(UnBox, span),
         Where => ImplPrim(UnWhere, span),

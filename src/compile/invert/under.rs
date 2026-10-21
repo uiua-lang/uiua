@@ -116,6 +116,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &TransposePat,
     &RotatePat,
     &AtanPat,
+    &UnBitsPat,
     &ArrayPat,
     &UnpackPat,
     &FillPat,
@@ -237,16 +238,11 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
         (Dup, Classify, PushUnd(1), Deduplicate),
         (PopUnd(1), Select),
     ),
-    // Where and un bits
+    // Where
     &(
         Where,
         (Dup, Shape, PushUnd(1), Where),
         (PopUnd(1), UndoWhere),
-    ),
-    &(
-        UnBits,
-        (Dup, Shape, PushUnd(1), UnBits),
-        (PopUnd(1), UndoUnBits),
     ),
     // Rounding
     &(
@@ -1051,6 +1047,28 @@ under!(
         Ok((input, before, after))
     }
 );
+
+// &(
+//     UnBits,
+//     (Dup, Shape, PushUnd(1), UnBits),
+//     (PopUnd(1), UndoUnBits),
+// ),
+under!(UnBitsPat, input, _, _, _, ImplPrim(UnBits(n), span), {
+    let (before, after) = if let Some(n) = n {
+        (ImplPrim(UnBits(Some(n)), span), ImplPrim(NBits(n), span))
+    } else {
+        (
+            Node::from([
+                Prim(Dup, span),
+                Prim(Shape, span),
+                PushUnder(1, span),
+                ImplPrim(UnBits(n), span),
+            ]),
+            Node::from([PopUnder(1, span), ImplPrim(UndoUnBits, span)]),
+        )
+    };
+    Ok((input, before, after))
+});
 
 #[derive(Debug)]
 struct Trivial;

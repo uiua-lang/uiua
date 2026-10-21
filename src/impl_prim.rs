@@ -116,7 +116,7 @@ impl_primitive!(
     (1, ATanH),
     (1, Ln),
     (0, UnPop),
-    (1, UnBits),
+    (1, UnBits(Option<usize>)),
     (1, UnWhere),
     (1(2), UnCouple),
     (1(2), UnAdd),

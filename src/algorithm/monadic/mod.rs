@@ -1682,7 +1682,6 @@ impl Value {
         }
     }
     pub(crate) fn undo_un_bits(&self, orig_shape: &Self, env: &Uiua) -> UiuaResult<Value> {
-        dbg!(&self, orig_shape);
         let min_bits_len = orig_shape
             .as_nats(env, "Shape must be an array of natural numbers")?
             .pop()

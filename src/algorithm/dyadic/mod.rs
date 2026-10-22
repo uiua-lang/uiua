@@ -1496,8 +1496,94 @@ impl Array<f64> {
         }
         Ok(Array::new(result_shape, result_data))
     }
+    /// Matrix *left* division (solves AX = B)
     pub(crate) fn matrix_div(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let (a, b) = (other, self);
+        /// Returns (Q, R), with A = QR.
+        fn qr_decomp(a: EcoVec<f64>, n: usize) -> (EcoVec<f64>, EcoVec<f64>) {
+            let idx = |r, c| r * n + c;
+
+            let mut r = a;
+            let mut q = {
+                let mut t = eco_vec![0.0; n*n];
+                let t_data = t.make_mut();
+                for i in 0..n {
+                    t_data[i * n + i] = 1.0
+                }
+                t
+            };
+
+            for k in 0..n {
+                // Extract the active part of column k.
+                let mut v: Vec<f64> = (k..n).map(|i| r[idx(i, k)]).collect(); // this allocates n times, and i dislike that
+
+                let norm = v.iter().map(|x| x * x).sum::<f64>().sqrt();
+
+                if norm < 1e-10 {
+                    continue;
+                }
+
+                // Stable Householder vector.
+                v[0] += if v[0] >= 0.0 { norm } else { -norm };
+
+                let norm_v = v.iter().map(|x| x * x).sum::<f64>().sqrt();
+
+                if norm_v < 1e-10 {
+                    continue;
+                }
+
+                for x in &mut v {
+                    *x /= norm_v;
+                }
+                // (*) see at the end for what's going on here
+
+                // R <- H R, where H = I - 2vvᵀ.
+                let r_data = r.make_mut();
+                for j in k..n {
+                    let dot = (k..n) // of the column and v
+                        .zip(v.iter())
+                        .map(|(i, &vi)| vi * r_data[idx(i, j)])
+                        .sum::<f64>();
+
+                    for (i, &vi) in (k..n).zip(v.iter()) {
+                        r_data[idx(i, j)] -= 2.0 * vi * dot;
+                    }
+                }
+                // damn floats
+                for i in (k + 1)..n {
+                    r_data[idx(i, k)] = 0.0;
+                }
+
+                // Q <- Q H.
+                // Accumulating on the right avoids the final transpose.
+                // (Matrix directionality so cool)
+                let q_data = q.make_mut();
+                for i in 0..n {
+                    // v'R
+                    let dot = (k..n)
+                        .zip(v.iter())
+                        .map(|(j, &vj)| q_data[idx(i, j)] * vj)
+                        .sum::<f64>();
+
+                    for (j, &vj) in (k..n).zip(v.iter()) {
+                        q_data[idx(i, j)] -= 2.0 * dot * vj;
+                    }
+                }
+
+                // (*) this is the thing at the end that explains what's going on here
+                // Shenanigans for better time execution:
+                // H = I-2vv'
+                // C = HR
+                //  ==>
+                // C = (I-2vv')R
+                //   = R-2vv'R
+                //   = R-2v(v'R) -> no need to construct the hh mat, *then* multiply
+            }
+            (q, r)
+        }
+
+        // Remember, A is the divisor: A⁻¹B
+        let (a, b) = (self, other);
+
         if a.rank() != 2 || b.rank() != 2 {
             return Err(env.error(format!(
                 "Matrix division requires arrays of rank 2, \
@@ -1505,15 +1591,73 @@ impl Array<f64> {
                 a.shape, b.shape
             )));
         }
-        if [a.shape[0], a.shape[1]] != [b.shape[1], b.shape[0]] {
+        if a.shape[0] != a.shape[1] {
+            return Err(env.error(format!(
+                "Matrix division require a square matrix as the divisor, \
+                but it is non-square ({})",
+                a.shape
+            )));
+        }
+
+        if a.shape[1] != b.shape[1] {
             return Err(env.error(format!(
                 "Matrix division requires arrays of compatible shapes, \
                 but their shapes are {} and {}",
                 a.shape, b.shape
             )));
         }
-        // let mut result_data = eco_vec![0.0; a.element_count().max(b.element_count())];
-        Err(env.error("Matrix division is not yet implemented"))
+
+        // a is [n n]
+        // b is [m n] (comes in transposed!!)
+        let n = a.shape[0]; // also a.shape[1] and "b.shape[0]"
+        let m = b.shape[0];
+
+        let sq_idx = |r, c| r * n + c;
+        let sq_idx_tr = |r, c| c * n + r; // for inverting Q without copying
+        let rect_idx = |r, c| r * m + c;
+        let rect_idx_tr = |r, c| c * n + r; // transposed because b comes in transposed
+
+        // AX = B
+        // (QR)X = B
+        // X = R⁻¹Q⁻¹B
+        // X = R⁻¹Q'B
+
+        let (q, r) = qr_decomp(a.data().into(), n);
+        let mut x: EcoVec<_> = eco_vec![0.0; n*m]; // B -> Y -> X
+
+        let x_data = x.make_mut();
+
+        // Y = Q'B
+        for i in 0..n {
+            for k in 0..m {
+                let mut s = 0.0;
+
+                for j in 0..n {
+                    s += q[sq_idx_tr(i, j)] * b.data[rect_idx_tr(j, k)];
+                }
+
+                x_data[rect_idx(i, k)] = s;
+            }
+        }
+
+        // RX = Y (back substitution)
+        for i in (0..n).rev() {
+            for k in 0..m {
+                let mut s = x_data[rect_idx(i, k)];
+
+                for j in (i + 1)..n {
+                    s -= r[sq_idx(i, j)] * x_data[rect_idx(j, k)];
+                }
+
+                // this check could definitely be improved (e.g. by scaling it with the rest of b)
+                if r[sq_idx(i, i)].abs() < 1e-10 {
+                    return Err(env.error("Matrix division requires non-singular divisor"));
+                }
+                x_data[rect_idx(i, k)] = s / r[sq_idx(i, i)];
+            }
+        }
+        // B comes in transposed, so the shape is reversed
+        Ok(Array::new(Shape::from([b.shape[1], b.shape[0]]), x))
     }
 }
 

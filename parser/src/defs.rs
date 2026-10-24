@@ -3605,6 +3605,7 @@ primitive!(
     /// - `i128`
     /// - `f32`
     /// - `f64`
+    /// - `f16`
     ///
     /// Numbers that do not fit in a format's range will be clamped to the range.
     /// ex: # Experimental!

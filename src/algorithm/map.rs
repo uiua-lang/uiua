@@ -926,10 +926,17 @@ fn coerce_values(
         return Ok(b);
     }
     if let Value::Box(a) = a
-        && a.rank() == 1
         && !matches!(b, Value::Box(_))
     {
-        return Ok(Boxed(b).into());
+        return if a.rank() <= 1 {
+            Ok(Boxed(b).into())
+        } else {
+            Err(format!(
+                "Cannot {action1} shape {} {action2} shape {} {action3}",
+                b.shape,
+                FormatShape(&a.shape[1..])
+            ))
+        };
     }
     if let Value::Box(b_arr) = &b
         && b_arr.rank() == 0
@@ -976,11 +983,11 @@ fn coerce_values(
                 Ok(owned)
             }
         }
-        (Value::Box(_), Value::Num(num)) => Ok(Value::Box(Array::from(Boxed(Value::from(num))))),
-        (Value::Box(_), Value::Char(ch)) => Ok(Value::Box(Array::from(Boxed(Value::from(ch))))),
-        (Value::Box(_), Value::Complex(num)) => {
-            Ok(Value::Box(Array::from(Boxed(Value::from(num)))))
-        }
+        // (Value::Box(_), Value::Num(num)) => Ok(Value::Box(Array::from(Boxed(Value::from(num))))),
+        // (Value::Box(_), Value::Char(ch)) => Ok(Value::Box(Array::from(Boxed(Value::from(ch))))),
+        // (Value::Box(_), Value::Complex(num)) => {
+        //     Ok(Value::Box(Array::from(Boxed(Value::from(num)))))
+        // }
         (m, owned) => Err(format!(
             "Cannot {action1} {} {action2} {} {action3}",
             owned.type_name(),

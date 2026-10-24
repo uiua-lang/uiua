@@ -6912,7 +6912,6 @@ dependencies = [
  "enum-iterator",
  "flate2",
  "gif 0.13.3",
- "half",
  "highway",
  "hodaun",
  "hound",

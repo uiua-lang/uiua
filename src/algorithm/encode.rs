@@ -361,6 +361,7 @@ impl Value {
             "u128" | "i128" => 16,
             "f32" => 4,
             "f64" => 8,
+            "f16" => 2,
             _ => return Err(env.error(format!("Invalid byte format: {format}"))),
         };
         // Early return when a byte array can be reused
@@ -406,6 +407,15 @@ impl Value {
                     "i128" => write!(arr, i128),
                     "f32" => write!(arr, f32),
                     "f64" => write!(arr, f64),
+                    "f16" => match side {
+                        None => write(&arr.data, slice, |n| half::f16::from(n).to_ne_bytes()),
+                        Some(SubSide::Left) => {
+                            write(&arr.data, slice, |n| half::f16::from(n).to_le_bytes())
+                        }
+                        Some(SubSide::Right) => {
+                            write(&arr.data, slice, |n| half::f16::from(n).to_be_bytes())
+                        }
+                    },
                     format => unreachable!("format {format} is not supported"),
                 }
                 arr.shape
@@ -424,6 +434,15 @@ impl Value {
                     "i128" => write!(arr, i128),
                     "f32" => write!(arr, f32),
                     "f64" => write!(arr, f64),
+                    "f16" => match side {
+                        None => write(&arr.data, slice, |n| half::f16::from_f64(n).to_ne_bytes()),
+                        Some(SubSide::Left) => {
+                            write(&arr.data, slice, |n| half::f16::from_f64(n).to_le_bytes())
+                        }
+                        Some(SubSide::Right) => {
+                            write(&arr.data, slice, |n| half::f16::from_f64(n).to_be_bytes())
+                        }
+                    },
                     format => unreachable!("format {format} is not supported"),
                 }
                 arr.shape
@@ -457,6 +476,7 @@ impl Value {
             "u128" | "i128" => 16,
             "f32" => 4,
             "f64" => 8,
+            "f16" => 2,
             _ => return Err(env.error(format!("Invalid byte format: {format}"))),
         };
         let bytes = match bytes {
@@ -517,6 +537,17 @@ impl Value {
             "i128" => read!(i128),
             "f32" => read!(f32),
             "f64" => read!(f64),
+            "f16" => match side {
+                None => read(&bytes.data, slice, |arr| {
+                    half::f16::from_ne_bytes(arr).into()
+                }),
+                Some(SubSide::Left) => read(&bytes.data, slice, |arr| {
+                    half::f16::from_le_bytes(arr).into()
+                }),
+                Some(SubSide::Right) => read(&bytes.data, slice, |arr| {
+                    half::f16::from_be_bytes(arr).into()
+                }),
+            },
             format => unreachable!("format {format} is not supported"),
         }
         Ok(Array::new(new_shape, data).into())

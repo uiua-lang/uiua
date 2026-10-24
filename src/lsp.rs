@@ -481,6 +481,8 @@ impl Spanner {
                     pure: false,
                 }
             }
+            // Don't show character counts on references
+            docs.meta.counts = None;
             return Some(docs.into());
         }
         // Look in constant references

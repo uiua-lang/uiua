@@ -1,3 +1,5 @@
+use crate::invert::preanti::pre_anti_inverse;
+
 use super::*;
 
 impl Node {
@@ -156,10 +158,7 @@ fn anti_inverse_impl(mut input: &[Node], asm: &Assembly, for_un: bool) -> Invers
         None
     };
 
-    let pre_sig = pre.sig()?;
-    if !(pre_sig == (0, 0) || pre_sig == (1, 1)) {
-        return generic();
-    }
+    let (post_pre, pre_pre) = pre_anti_inverse(pre.as_slice(), asm)?;
 
     // Trailing un inverse
     let mut post = Node::empty();
@@ -183,16 +182,17 @@ fn anti_inverse_impl(mut input: &[Node], asm: &Assembly, for_un: bool) -> Invers
     let span = post.span().or_else(|| anti.span()).or_else(|| pre.span());
     if !post.is_empty() {
         let span = span.ok_or(Generic)?;
-        post = Mod(Dip, eco_vec![post.sig_node()?], span);
+        post = post.sig_node()?.dipped(1, span).node;
     }
 
     anti.prepend(post);
-    anti.prepend(pre);
+    anti.prepend(pre_pre);
+    anti.push(post_pre);
 
     if let Some(val) = val {
         let span = span.ok_or(Generic)?;
         anti.prepend(val);
-        anti = Mod(Dip, eco_vec![anti.sig_node()?], span);
+        anti = anti.sig_node()?.dipped(1, span).node;
         anti.push(ImplPrim(MatchPattern, span));
     }
 

@@ -33,8 +33,11 @@ pub(super) fn pre_anti_inverse(input: &[Node], asm: &Assembly) -> InversionResul
     Err(error)
 }
 
-const PRE_ANTI_PATTERNS: &[&dyn PreAntiPattern] =
-    &[&PreAntiMonadicPat, &PreAntiDipPat, &PreAntiForkPat];
+const PRE_ANTI_PATTERNS: &[&dyn PreAntiPattern] = &[
+    &PreAntiMonadicPat,
+    &PreAntiDipPat,
+    // &PreAntiForkPat
+];
 
 trait PreAntiPattern: fmt::Debug + Sync {
     fn pre_anti_extract<'a>(
@@ -59,24 +62,24 @@ preanti!(PreAntiDipPat, input, asm, Dip, _span, [f], {
     Ok((input, f_inv, Node::empty()))
 });
 
-preanti!(PreAntiForkPat, input, asm, Fork, span, [f, g], {
-    let f = if f.sig == (1, 1) {
-        f.clone()
-    } else if f.sig == (2, 1) {
-        f.anti_inverse(asm)?
-    } else {
-        return generic();
-    };
-    let g = if g.sig == (1, 1) {
-        g.clone()
-    } else if g.sig == (2, 1) {
-        g.anti_inverse(asm)?
-    } else {
-        return generic();
-    };
-    let args = eco_vec![f, g];
-    Ok((input, Node::empty(), Mod(Fork, args, span)))
-});
+// preanti!(PreAntiForkPat, input, asm, Fork, span, [f, g], {
+//     let f = if f.sig == (1, 1) {
+//         f.clone()
+//     } else if f.sig == (2, 1) {
+//         f.anti_inverse(asm)?
+//     } else {
+//         return generic();
+//     };
+//     let g = if g.sig == (1, 1) {
+//         g.clone()
+//     } else if g.sig == (2, 1) {
+//         g.anti_inverse(asm)?
+//     } else {
+//         return generic();
+//     };
+//     let args = eco_vec![f, g];
+//     Ok((input, Node::empty(), Mod(Fork, args, span)))
+// });
 
 macro_rules! preanti {
     // Optional parens

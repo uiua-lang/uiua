@@ -1599,7 +1599,7 @@ impl Array<f64> {
             )));
         }
 
-        if a.shape[1] != b.shape[1] {
+        if a.shape[1] != b.shape[0] {
             return Err(env.error(format!(
                 "Matrix division requires arrays of compatible shapes, \
                 but their shapes are {} and {}",
@@ -1608,14 +1608,14 @@ impl Array<f64> {
         }
 
         // a is [n n]
-        // b is [m n] (comes in transposed!!)
-        let n = a.shape[0]; // also a.shape[1] and "b.shape[0]"
-        let m = b.shape[0];
+        // b is [n m]
+        let n = a.shape[0]; // also a.shape[1] and b.shape[0]
+        let m = b.shape[1];
 
-        let sq_idx = |r, c| r * n + c;
-        let sq_idx_tr = |r, c| c * n + r; // for inverting Q without copying
-        let rect_idx = |r, c| r * m + c;
-        let rect_idx_tr = |r, c| c * n + r; // transposed because b comes in transposed
+        let sq_idx_a = |r, c| r * n + c;
+        let sq_idx_q = |r, c| c * n + r; // for inverting Q without copying
+        let rect_idx_output = |r, c| c * n + r; // transposed to prepare for the post-un-trans
+        let rect_idx_b = |r, c| r * m + c;
 
         // AX = B
         // (QR)X = B
@@ -1633,30 +1633,30 @@ impl Array<f64> {
                 let mut s = 0.0;
 
                 for j in 0..n {
-                    s += q[sq_idx_tr(i, j)] * b.data[rect_idx_tr(j, k)];
+                    s += q[sq_idx_q(i, j)] * b.data[rect_idx_b(j, k)];
                 }
 
-                x_data[rect_idx(i, k)] = s;
+                x_data[rect_idx_output(i, k)] = s;
             }
         }
 
         // RX = Y (back substitution)
         for i in (0..n).rev() {
             for k in 0..m {
-                let mut s = x_data[rect_idx(i, k)];
+                let mut s = x_data[rect_idx_output(i, k)];
 
                 for j in (i + 1)..n {
-                    s -= r[sq_idx(i, j)] * x_data[rect_idx(j, k)];
+                    s -= r[sq_idx_a(i, j)] * x_data[rect_idx_output(j, k)];
                 }
 
                 // this check could definitely be improved (e.g. by scaling it with the rest of b)
-                if r[sq_idx(i, i)].abs() < 1e-10 {
+                if r[sq_idx_a(i, i)].abs() < 1e-10 {
                     return Err(env.error("Matrix division requires non-singular divisor"));
                 }
-                x_data[rect_idx(i, k)] = s / r[sq_idx(i, i)];
+                x_data[rect_idx_output(i, k)] = s / r[sq_idx_a(i, i)];
             }
         }
-        // B comes in transposed, so the shape is reversed
+        // output must flow out transposed, so the shape is reversed
         Ok(Array::new(Shape::from([b.shape[1], b.shape[0]]), x))
     }
 }

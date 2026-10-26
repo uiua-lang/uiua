@@ -84,6 +84,10 @@ pub trait GridFmt: Sized {
     fn summary_min_elems() -> usize {
         3600
     }
+    /// The maximum number of distinct elements that can be summarized using the multiset format
+    fn summary_multiset_max_distinct() -> usize {
+        5
+    }
     /// How to align elements when formatting
     fn alignment() -> ElemAlign {
         ElemAlign::Left
@@ -105,6 +109,9 @@ impl GridFmt for u8 {
     fn summarize(elems: &[Self]) -> String {
         if elems.is_empty() {
             return String::new();
+        }
+        if let Some(s) = multiset_summary(elems) {
+            return s;
         }
         let mut min = u8::MAX;
         let mut max = 0;
@@ -249,6 +256,9 @@ impl GridFmt for f64 {
         if elems.is_empty() {
             return String::new();
         }
+        if let Some(s) = multiset_summary(elems) {
+            return s;
+        }
         if elems.iter().all(|&n| n.is_nan()) {
             return "all NaN".into();
         }
@@ -358,6 +368,9 @@ impl GridFmt for Complex {
     fn summarize(elems: &[Self]) -> String {
         if elems.is_empty() {
             return String::new();
+        }
+        if let Some(s) = multiset_summary(elems) {
+            return s;
         }
         let (mut re_min, mut im_min) = (f64::INFINITY, f64::INFINITY);
         let (mut re_max, mut im_max) = (f64::NEG_INFINITY, f64::NEG_INFINITY);
@@ -643,6 +656,9 @@ impl GridFmt for char {
     fn summarize(elems: &[Self]) -> String {
         if elems.is_empty() {
             return String::new();
+        }
+        if let Some(s) = multiset_summary(elems) {
+            return s;
         }
         let mut parts = Vec::new();
         let lowercase = elems.iter().any(|c| c.is_lowercase());
@@ -1675,4 +1691,77 @@ fn round_sig_dec(f: f64, n: i32) -> f64 {
     }
     let mul = 10f64.powf(n as f64 - f.fract().abs().log10().ceil());
     (f * mul).round() / mul
+}
+
+fn multiset_summary<T: MultisetItem + GridFmt + Copy>(elems: &[T]) -> Option<String> {
+    if elems.is_empty() {
+        return None;
+    }
+
+    // Typically, one would use a BTreeMap here.
+    // However, this function bails at a size limit that is expected to be very small.
+    // So small, in fact, that a BTreeMap would only have one node anyway. (B = 6)
+    // In addition, the usage of non-Ord keys (f64, Complex) would require a newtype.
+    // This is plenty doable, but gets more annoying in a generic context.
+    let mut pairs = Vec::<(T, usize)>::with_capacity(T::summary_multiset_max_distinct());
+    for elem in elems.iter().copied().map(T::sanitize) {
+        match pairs.binary_search_by(|p| T::compare(&p.0, &elem)) {
+            Ok(i) => pairs[i].1 += 1,
+            Err(_) if pairs.len() >= pairs.capacity() => return None,
+            Err(i) => pairs.insert(i, (elem, 1)),
+        }
+    }
+
+    if let [(val, _)] = *pairs {
+        return Some(format!("all {}", val.grid_string(false)));
+    }
+
+    let mut s = String::from("◴");
+    for (val, _) in &pairs {
+        s += " ";
+        s += &val.grid_string(false);
+    }
+    s += " ⧆";
+    for (_, count) in &pairs {
+        s += " ";
+        s += &count.to_string();
+    }
+    Some(s)
+}
+
+trait MultisetItem: Sized {
+    fn compare(&self, other: &Self) -> std::cmp::Ordering;
+    fn sanitize(self) -> Self {
+        self
+    }
+}
+
+impl MultisetItem for u8 {
+    fn compare(&self, other: &Self) -> std::cmp::Ordering {
+        Ord::cmp(self, other)
+    }
+}
+
+impl MultisetItem for char {
+    fn compare(&self, other: &Self) -> std::cmp::Ordering {
+        Ord::cmp(self, other)
+    }
+}
+
+impl MultisetItem for f64 {
+    fn compare(&self, other: &Self) -> std::cmp::Ordering {
+        f64::total_cmp(self, other)
+    }
+    fn sanitize(self) -> Self {
+        if self == -0.0 { 0.0 } else { self }
+    }
+}
+
+impl MultisetItem for Complex {
+    fn compare(&self, other: &Self) -> std::cmp::Ordering {
+        self.re.compare(&other.re).then(self.im.compare(&other.im))
+    }
+    fn sanitize(self) -> Self {
+        Self::new(self.re.sanitize(), self.im.sanitize())
+    }
 }

@@ -1101,8 +1101,19 @@ impl ArrayValue for f64 {
 
 #[cfg(test)]
 #[test]
-fn f64_summarize() {
-    assert_eq!(f64::summarize(&[2.0, 6.0, 1.0]), "1-6 μ3");
+fn f64_summarize_stats() {
+    let arr = [2.0, 6.0, 1.0, 2.5, 3.5, 1.5, 4.5];
+    assert_eq!(f64::summarize(&arr), "1-6 μ3");
+}
+
+#[cfg(test)]
+#[test]
+fn f64_summarize_multiset() {
+    let arr = (0..1000)
+        .map(|n| (f64::from(n).sin() * 2.5).round())
+        .collect::<Vec<_>>();
+
+    assert_eq!(f64::summarize(&arr), "◴ ¯2 ¯1 0 1 2 ⧆ 296 140 127 142 295")
 }
 
 impl ArrayValue for u8 {

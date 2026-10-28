@@ -4,6 +4,8 @@
 
 - `switch` subscripts
 - `fold` subscripts
+- `under` `on` dyadic constant
+- Maps tutorial
 - Document array summary notation
 - Maybe:
   - Special glyph for labels

@@ -52,7 +52,6 @@ features = [
   "ClipboardEvent",
   "CssStyleDeclaration",
   "DataTransfer",
-  "DataTransfer",
   "DomRect",
   "EventInit",
   "File",

@@ -407,29 +407,15 @@ impl Value {
                     "i128" => write!(arr, i128),
                     "f32" => write!(arr, f32),
                     "f64" => write!(arr, f64),
-                    "f16" => {
-                        // Works based on a test malkicodes did comparing it to the `half` crate
-                        fn u8_to_half(v: u8) -> u16 {
-                            if v == 0 {
-                                return 0;
-                            }
-
-                            let exp = (7 - v.leading_zeros()) as u16;
-                            let mantissa = ((v as u16) << (v.leading_zeros() + 3)) & 0x03ff;
-
-                            ((exp + 15) << 10) | mantissa
+                    "f16" => match side {
+                        None => write(&arr.data, slice, |n| u8_to_half(n).to_ne_bytes()),
+                        Some(SubSide::Left) => {
+                            write(&arr.data, slice, |n| u8_to_half(n).to_le_bytes())
                         }
-
-                        match side {
-                            None => write(&arr.data, slice, |n| u8_to_half(n).to_ne_bytes()),
-                            Some(SubSide::Left) => {
-                                write(&arr.data, slice, |n| u8_to_half(n).to_le_bytes())
-                            }
-                            Some(SubSide::Right) => {
-                                write(&arr.data, slice, |n| u8_to_half(n).to_be_bytes())
-                            }
+                        Some(SubSide::Right) => {
+                            write(&arr.data, slice, |n| u8_to_half(n).to_be_bytes())
                         }
-                    }
+                    },
                     format => unreachable!("format {format} is not supported"),
                 }
                 arr.shape
@@ -448,66 +434,15 @@ impl Value {
                     "i128" => write!(arr, i128),
                     "f32" => write!(arr, f32),
                     "f64" => write!(arr, f64),
-                    "f16" => {
-                        // Works based on a test malkicodes did comparing it to the `half` crate
-                        fn f64_to_half(v: f64) -> u16 {
-                            const HALF_INFINITY: u16 = 0x7c00;
-                            const HALF_NEG_INFINITY: u16 = HALF_INFINITY ^ 0x8000;
-
-                            if v.is_infinite() {
-                                return if v.is_sign_positive() {
-                                    HALF_INFINITY
-                                } else {
-                                    HALF_NEG_INFINITY
-                                };
-                            } else if v.is_nan() {
-                                return 0x7e00;
-                            } else if v == 0. {
-                                return if v.is_sign_positive() { 0x0 } else { 0x8000 };
-                            }
-
-                            let f64_mantissa = v.to_bits() & 0x000f_ffff_ffff_ffff;
-                            let mut f64_exp = ((v.to_bits() & 0x7ff0_0000_0000_0000)
-                                >> (f64::MANTISSA_DIGITS - 1))
-                                as i16
-                                - 1023;
-
-                            let mut value = match f64_exp {
-                                16.. => HALF_INFINITY,
-                                ..-24 => 0,
-                                -24..-14 => ((f64_mantissa + (1 << 52)) >> (28 - f64_exp)) as u16, // idek man
-                                -14..=15 => {
-                                    let mut rounded_mantissa: u16 = (f64_mantissa >> 42) as u16;
-                                    // if 41st bit is on, round up
-                                    if f64_mantissa & 0x0000_0100_0000_0000 != 0 {
-                                        rounded_mantissa += 1;
-
-                                        if rounded_mantissa >= 0x400 {
-                                            f64_exp += 1;
-                                        }
-                                    }
-
-                                    ((f64_exp + 15) << 10) as u16 | rounded_mantissa
-                                }
-                            };
-
-                            if v.is_sign_negative() {
-                                value |= 0x8000;
-                            }
-
-                            value
+                    "f16" => match side {
+                        None => write(&arr.data, slice, |n| f64_to_half(n).to_ne_bytes()),
+                        Some(SubSide::Left) => {
+                            write(&arr.data, slice, |n| f64_to_half(n).to_le_bytes())
                         }
-
-                        match side {
-                            None => write(&arr.data, slice, |n| f64_to_half(n).to_ne_bytes()),
-                            Some(SubSide::Left) => {
-                                write(&arr.data, slice, |n| f64_to_half(n).to_le_bytes())
-                            }
-                            Some(SubSide::Right) => {
-                                write(&arr.data, slice, |n| f64_to_half(n).to_be_bytes())
-                            }
+                        Some(SubSide::Right) => {
+                            write(&arr.data, slice, |n| f64_to_half(n).to_be_bytes())
                         }
-                    }
+                    },
                     format => unreachable!("format {format} is not supported"),
                 }
                 arr.shape
@@ -564,7 +499,7 @@ impl Value {
         {
             return Err(env.error(format!(
                 "Bytes shape has last axis size {last_dim}, \
-                    which does not match format {format}"
+                which does not match format {format}"
             )));
         }
         let mut data = eco_vec![0.0; new_shape.elements()];
@@ -602,42 +537,90 @@ impl Value {
             "i128" => read!(i128),
             "f32" => read!(f32),
             "f64" => read!(f64),
-            "f16" => {
-                // Based on https://stackoverflow.com/questions/36008434/how-can-i-decode-f16-to-f32-using-only-the-stable-standard-library
-                // Works based on a test malkicodes did comparing it to the `half` crate
-                fn half_to_f64(half: u16) -> f64 {
-                    let exp = (half >> 10) & 0x001f;
-                    let mantissa = half & 0x03ff;
-
-                    let unsigned_value = match (exp, mantissa) {
-                        (0, _) => mantissa as f64 / 16777216., // zero and subnormals
-                        (31, 0) => f64::INFINITY,              // infinity
-                        (31, _) => f64::NAN,                   // NaN
-                        _ => (mantissa as f64 + 1024.) * (2.0f64).powi(exp as i32 - 25),
-                    };
-
-                    if half & 0x8000 != 0 {
-                        -unsigned_value
-                    } else {
-                        unsigned_value
-                    }
-                }
-
-                match side {
-                    None => read(&bytes.data, slice, |arr| {
-                        half_to_f64(u16::from_ne_bytes(arr))
-                    }),
-                    Some(SubSide::Left) => read(&bytes.data, slice, |arr| {
-                        half_to_f64(u16::from_le_bytes(arr))
-                    }),
-                    Some(SubSide::Right) => read(&bytes.data, slice, |arr| {
-                        half_to_f64(u16::from_be_bytes(arr))
-                    }),
-                }
-            }
+            "f16" => match side {
+                None => read(&bytes.data, slice, |arr| {
+                    half_to_f64(u16::from_ne_bytes(arr))
+                }),
+                Some(SubSide::Left) => read(&bytes.data, slice, |arr| {
+                    half_to_f64(u16::from_le_bytes(arr))
+                }),
+                Some(SubSide::Right) => read(&bytes.data, slice, |arr| {
+                    half_to_f64(u16::from_be_bytes(arr))
+                }),
+            },
             format => unreachable!("format {format} is not supported"),
         }
         Ok(Array::new(new_shape, data).into())
+    }
+}
+
+// Works based on a test malkicodes did comparing it to the `half` crate
+fn u8_to_half(v: u8) -> u16 {
+    if v == 0 {
+        return 0;
+    }
+    let exp = (7 - v.leading_zeros()) as u16;
+    let mantissa = ((v as u16) << (v.leading_zeros() + 3)) & 0x03ff;
+    ((exp + 15) << 10) | mantissa
+}
+
+// Works based on a test malkicodes did comparing it to the `half` crate
+fn f64_to_half(v: f64) -> u16 {
+    const HALF_INFINITY: u16 = 0x7c00;
+    const HALF_NEG_INFINITY: u16 = HALF_INFINITY ^ 0x8000;
+    if v.is_infinite() {
+        return if v.is_sign_positive() {
+            HALF_INFINITY
+        } else {
+            HALF_NEG_INFINITY
+        };
+    } else if v.is_nan() {
+        return 0x7e00;
+    } else if v == 0. {
+        return if v.is_sign_positive() { 0x0 } else { 0x8000 };
+    }
+    let f64_mantissa = v.to_bits() & 0x000f_ffff_ffff_ffff;
+    let mut f64_exp =
+        ((v.to_bits() & 0x7ff0_0000_0000_0000) >> (f64::MANTISSA_DIGITS - 1)) as i16 - 1023;
+    let mut value = match f64_exp {
+        16.. => HALF_INFINITY,
+        ..-24 => 0,
+        -24..-14 => ((f64_mantissa + (1 << 52)) >> (28 - f64_exp)) as u16, // idek man
+        -14..=15 => {
+            let mut rounded_mantissa: u16 = (f64_mantissa >> 42) as u16;
+            // if 41st bit is on, round up
+            if f64_mantissa & 0x0000_0100_0000_0000 != 0 {
+                rounded_mantissa += 1;
+                if rounded_mantissa >= 0x400 {
+                    f64_exp += 1;
+                }
+            }
+            ((f64_exp + 15) << 10) as u16 | rounded_mantissa
+        }
+    };
+    if v.is_sign_negative() {
+        value |= 0x8000;
+    }
+    value
+}
+
+// Based on https://stackoverflow.com/questions/36008434/how-can-i-decode-f16-to-f32-using-only-the-stable-standard-library
+// Works based on a test malkicodes did comparing it to the `half` crate
+fn half_to_f64(half: u16) -> f64 {
+    let exp = (half >> 10) & 0x001f;
+    let mantissa = half & 0x03ff;
+
+    let unsigned_value = match (exp, mantissa) {
+        (0, _) => mantissa as f64 / 16777216., // zero and subnormals
+        (31, 0) => f64::INFINITY,              // infinity
+        (31, _) => f64::NAN,                   // NaN
+        _ => (mantissa as f64 + 1024.) * (2.0f64).powi(exp as i32 - 25),
+    };
+
+    if half & 0x8000 != 0 {
+        -unsigned_value
+    } else {
+        unsigned_value
     }
 }
 

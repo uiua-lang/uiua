@@ -809,7 +809,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
         SysOp::Var => {
             let key = env
                 .pop(1)?
-                .as_string(env, "Augument to var must be a string")?;
+                .as_string(env, "Argument to var must be a string")?;
             let var = env
                 .rt
                 .backend

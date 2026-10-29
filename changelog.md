@@ -10,6 +10,7 @@ This version is not yet released. If you are reading this on the website, then t
 - The formatter will now format text inside comments and strings that is surrounded with `\\(...)`.
 - Add [`anti ⌝`](https://www.uiua.org/docs/anti)[`&var`](https://www.uiua.org/docs/%26var) for setting environment variables.
 - Add native matrix division (spelt `⌝(⊞(/+×)⊙⍉)`) as the [`anti ⌝`](https://www.uiua.org/docs/anti) to matrix multiplication (spelt `⊞(/+×)⊙⍉`).
+- Add [`"f16"`](https://en.wikipedia.org/wiki/Half-precision_floating-point_format) format to [`bytes`](https://www.uiua.org/docs/bytes)
 ### Interpreter
 - The pretty printer now shows simple box lists using `{}`s and spaces instead of box drawing characters.
   - This make reading simple box arrays much easier

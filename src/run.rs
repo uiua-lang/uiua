@@ -1312,7 +1312,7 @@ impl Uiua {
         Value::from_row_values(rows, self.ctx())
     }
     /// Do something with the fill context set
-    pub(crate) fn with_fill<T>(
+    pub fn with_fill<T>(
         &mut self,
         vals: impl Into<FillFrame>,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
@@ -1323,7 +1323,7 @@ impl Uiua {
         res
     }
     /// Do something with the unfill context set
-    pub(crate) fn with_unfill<T>(
+    pub fn with_unfill<T>(
         &mut self,
         vals: impl Into<FillFrame>,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
@@ -1334,7 +1334,7 @@ impl Uiua {
         res
     }
     /// Do something with the top fill context unset
-    pub(crate) fn without_fill<T>(&mut self, in_ctx: impl FnOnce(&mut Self) -> T) -> T {
+    pub fn without_fill<T>(&mut self, in_ctx: impl FnOnce(&mut Self) -> T) -> T {
         let fill_boundary = self.rt.fill_stack.len();
         let unfill_boundary = self.rt.unfill_stack.len();
         (self.rt.fill_boundary_stack).push((fill_boundary, unfill_boundary));

@@ -1249,10 +1249,12 @@ impl Compiler {
                 invert::dbgln!("\n//////////////\n// begin UN //\n//////////////");
                 self.add_span(span.clone());
                 let mut normal = sn.un_inverse(&self.asm);
-                if let Node::Prim(Pretty, _) = sn.node
-                    && let Err(e) = &mut normal
-                {
-                    *e = InversionError::Pretty;
+                if let Err(e) = &mut normal {
+                    match sn.node {
+                        Node::Prim(Pretty, _) => *e = InversionError::Pretty,
+                        Node::Prim(Now, _) => *e = InversionError::Now,
+                        _ => {}
+                    }
                 }
                 invert::dbgln!("////////////\n// end UN //\n////////////\n");
                 if let Ok(Node::CustomInverse(..)) = normal.as_ref().map(|sn| &sn.node) {

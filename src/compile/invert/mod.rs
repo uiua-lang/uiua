@@ -192,10 +192,11 @@ pub enum InversionError {
     UnderExperimental,
     AlgebraError(AlgebraError),
     ReduceFormat,
-    Pretty,
     SidedBoth,
     LateBinding(String),
     UnderNonMonadicFork(usize),
+    Pretty,
+    Now,
 }
 
 pub type InversionResult<T = ()> = Result<T, InversionError>;
@@ -241,6 +242,7 @@ impl fmt::Display for InversionError {
                 and text only between them can be inverted"
             ),
             InversionError::Pretty => write!(f, "Nah, let's keep things pretty"),
+            InversionError::Now => write!(f, "Time travel is not yet implemented"),
             InversionError::SidedBoth => {
                 write!(f, "Cannot invert sided {}", Primitive::Both.format())
             }

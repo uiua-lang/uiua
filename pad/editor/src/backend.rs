@@ -437,6 +437,8 @@ impl SysBackend for WebBackend {
             static WORKING: RefCell<HashSet<String>> = Default::default();
         }
 
+        logging::log!("{target:?}");
+
         fn cache_url(url: &str, subfolder: Option<String>, res: Result<String, String>) {
             CACHE.with(|cache| {
                 cache.borrow_mut().insert((url.into(), subfolder), res);
@@ -455,20 +457,22 @@ impl SysBackend for WebBackend {
             return Err("Waiting for module, try running again in a moment...".into());
         }
 
-        match target {
-            GitTarget::Default => {}
-            GitTarget::Branch(_) => {
-                return Err("Git branch specification is not supported in the web backend".into());
-            }
+        let branch_name: String = match &target {
+            GitTarget::Default => "main".to_owned(),
+            GitTarget::Branch(branch) => branch.clone(),
             GitTarget::Commit(_) => {
                 return Err("Git commit specification is not supported in the web backend".into());
             }
-        }
+        };
+
         let (repo_owner, repo_name, path) = {
             let mut parts = original_url.rsplitn(3, '/');
             let repo_name = parts.next().ok_or("Invalid git url")?;
             let repo_owner = parts.next().ok_or("Invalid git url")?;
-            let mut path = Path::new("uiua-modules").join(repo_owner).join(repo_name);
+            let mut path = Path::new("uiua-modules")
+                .join(repo_owner)
+                .join(repo_name)
+                .join(&branch_name);
             if let Some(subfolder) = subfolder {
                 path = path.join(subfolder);
             }
@@ -476,6 +480,10 @@ impl SysBackend for WebBackend {
 
             (repo_owner.to_string(), repo_name.to_string(), path)
         };
+
+        logging::log!("repo_owner: {}", &repo_owner);
+        logging::log!("repo_name: {}", &repo_name);
+        logging::log!("path: {:?}", &path);
 
         if FILES.with(|files| files.borrow().contains_key(&path)) {
             return Ok(path);
@@ -486,6 +494,13 @@ impl SysBackend for WebBackend {
             .replace("www.", "")
             .replace("github.com", "raw.githubusercontent.com")
             .replace("src/branch/master", "raw/branch/master");
+
+        if matches!(&target, GitTarget::Branch(_)) {
+            url.push_str("_branch-");
+            url.push_str(&branch_name);
+        }
+
+        logging::log!("{original_url} -> {url}");
 
         let res = CACHE.with(|cache| {
             let subfolder = subfolder.map(str::to_string);
@@ -500,71 +515,69 @@ impl SysBackend for WebBackend {
                 spawn_local(async move {
                     let tree_res = fetch(&format!(
                         "https://api.github.com\
-                        /repos/{repo_owner}/{repo_name}/git/trees/main?recursive=1",
+                        /repos/{repo_owner}/{repo_name}/git/trees/{branch_name}?recursive=1",
                     ))
                     .await;
 
-                    match tree_res {
-                        Err(_) => {
-                            cache_url(&url, subfolder, tree_res);
-                            unmark_working(&original_url);
-                            return;
+                    let Ok(tree) = tree_res else {
+                        cache_url(&url, subfolder, tree_res);
+                        unmark_working(&original_url);
+                        return;
+                    };
+
+                    let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
+                    let tree = tree.get("tree").unwrap().as_array().unwrap();
+                    let paths = tree
+                        .iter()
+                        .filter_map(|entry| entry.get("path")?.as_str())
+                        .collect::<HashSet<_>>();
+
+                    let mut lib_path = PathBuf::from("lib.ua");
+                    if let Some(subfolder) = &subfolder {
+                        lib_path = PathBuf::from(subfolder).join(lib_path);
+                    }
+                    let lib_path = lib_path.to_string_lossy();
+                    if !paths.contains(&*lib_path) {
+                        cache_url(&url, subfolder, Err(format!("{lib_path} not found")));
+                        unmark_working(&original_url);
+                        return;
+                    }
+
+                    let results = join_all(paths.iter().map(|path| {
+                        logging::log!("path: {path}");
+                        let repo_owner = repo_owner.clone();
+                        let repo_name = repo_name.clone();
+                        let branch_name = branch_name.clone();
+                        async move {
+                            let fetch_url = format!(
+                                "https://raw.githubusercontent.com\
+                                        /{repo_owner}/{repo_name}/{branch_name}/{path}",
+                            );
+                            let internal_path = Path::new("uiua-modules")
+                                .join(repo_owner)
+                                .join(repo_name)
+                                .join(branch_name)
+                                .join(path);
+
+                            (path, internal_path, fetch_bytes(fetch_url.as_str()).await)
                         }
-                        Ok(_) => {
-                            let tree = tree_res.unwrap();
-                            let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
-                            let tree = tree.get("tree").unwrap().as_array().unwrap();
-                            let paths = tree
-                                .iter()
-                                .filter_map(|entry| entry.get("path")?.as_str())
-                                .collect::<HashSet<_>>();
+                    }))
+                    .await;
 
-                            let mut lib_path = PathBuf::from("lib.ua");
-                            if let Some(subfolder) = &subfolder {
-                                lib_path = PathBuf::from(subfolder).join(lib_path);
-                            }
-                            let lib_path = lib_path.to_string_lossy();
-                            if !paths.contains(&*lib_path) {
-                                cache_url(&url, subfolder, Err(format!("{lib_path} not found")));
-                                unmark_working(&original_url);
-                                return;
-                            }
-
-                            let results = join_all(paths.iter().map(|path| {
-                                logging::log!("path: {path}");
-                                let repo_owner = repo_owner.clone();
-                                let repo_name = repo_name.clone();
-                                async move {
-                                    let fetch_url = format!(
-                                        "https://raw.githubusercontent.com\
-                                        /{repo_owner}/{repo_name}/main/{path}",
-                                    );
-                                    let internal_path = Path::new("uiua-modules")
-                                        .join(repo_owner)
-                                        .join(repo_name)
-                                        .join(path);
-
-                                    (path, internal_path, fetch_bytes(fetch_url.as_str()).await)
-                                }
-                            }))
-                            .await;
-
-                            for (&original_path, internal_path, res) in results {
-                                if subfolder.is_none() && original_path == "lib.ua"
-                                    || subfolder.is_some() && original_path.ends_with("/lib.ua")
-                                {
-                                    let text = res.clone().map(|b| {
-                                        String::from_utf8(b).unwrap_or_else(|e| {
-                                            String::from_utf8_lossy(e.as_bytes()).into_owned()
-                                        })
-                                    });
-                                    logging::log!("{} text: {:?}", original_path, text);
-                                    cache_url(&url, subfolder.clone(), text);
-                                }
-                                if let Ok(contents) = res {
-                                    drop_file(internal_path.clone(), contents);
-                                }
-                            }
+                    for (&original_path, internal_path, res) in results {
+                        if subfolder.is_none() && original_path == "lib.ua"
+                            || subfolder.is_some() && original_path.ends_with("/lib.ua")
+                        {
+                            let text = res.clone().map(|b| {
+                                String::from_utf8(b).unwrap_or_else(|e| {
+                                    String::from_utf8_lossy(e.as_bytes()).into_owned()
+                                })
+                            });
+                            logging::log!("{} text: {:?}", original_path, text);
+                            cache_url(&url, subfolder.clone(), text);
+                        }
+                        if let Ok(contents) = res {
+                            drop_file(internal_path.clone(), contents);
                         }
                     }
 
@@ -597,6 +610,7 @@ impl SysBackend for WebBackend {
             None => Err("Waiting for module, try running again in a moment...".into()),
         }
     }
+
     fn timezone(&self) -> Result<f64, String> {
         if !cfg!(target_arch = "wasm32") {
             return Ok(0.0);

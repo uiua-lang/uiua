@@ -12,7 +12,6 @@ use std::{
     borrow::{BorrowMut, Cow},
     cell::RefCell,
     collections::HashMap,
-    env,
     f64::consts::{PI, TAU},
     iter::repeat_n,
     sync::OnceLock,
@@ -850,13 +849,11 @@ impl ImplPrimitive {
                 let value = env
                     .pop(2)?
                     .as_string(env, "Environment variable value must be a string")?;
-                static LOCK: parking_lot::Mutex<()> = parking_lot::Mutex::new(());
-                let _lock = LOCK.lock();
-                // Safety: `set_var` is unsafe for unix in multithreaded contexts.
-                // Use a lock to ensure serialization and thus safety.
-                unsafe {
-                    env::set_var(key, value);
-                }
+
+                env.rt
+                    .backend
+                    .set_var(&key, &value)
+                    .map_err(|e| env.error(e))?
             }
             ImplPrimitive::MatrixDiv => env.dyadic_rr_env(Value::matrix_div)?,
             &ImplPrimitive::RangeSub(n) => {

@@ -1961,6 +1961,9 @@ impl SysBackend for FormatterBackend {
     fn var(&self, name: &str) -> Option<String> {
         self.sys().var(name)
     }
+    fn set_var(&self, name: &str, value: &str) -> Result<(), String> {
+        self.sys().set_var(name, value)
+    }
     fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
         self.sys().tcp_connect(addr)
     }

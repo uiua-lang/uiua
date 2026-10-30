@@ -270,6 +270,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn var(&self, name: &str) -> Option<String> {
         None
     }
+    /// Set an environment variable
+    fn set_var(&self, name: &str, value: &str) -> Result<(), String> {
+        Err("Setting environment variables is not supported in this environment".into())
+    }
     /// Get the size of the terminal
     fn term_size(&self) -> Result<(usize, usize), String> {
         Err("Getting the terminal size is not supported in this environment".into())

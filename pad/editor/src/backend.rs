@@ -481,10 +481,6 @@ impl SysBackend for WebBackend {
             (repo_owner.to_string(), repo_name.to_string(), path)
         };
 
-        logging::log!("repo_owner: {}", &repo_owner);
-        logging::log!("repo_name: {}", &repo_name);
-        logging::log!("path: {:?}", &path);
-
         if FILES.with(|files| files.borrow().contains_key(&path)) {
             return Ok(path);
         }
@@ -499,8 +495,6 @@ impl SysBackend for WebBackend {
             url.push_str("_branch-");
             url.push_str(&branch_name);
         }
-
-        logging::log!("{original_url} -> {url}");
 
         let res = CACHE.with(|cache| {
             let subfolder = subfolder.map(str::to_string);

@@ -1030,6 +1030,11 @@ pub trait ArrayValue:
     fn nested_value(&self) -> Option<&Value> {
         None
     }
+    /// Get a glyph indicating the domain of a specific set of values,
+    /// which may be more specific than the glyph for the overall type
+    fn domain_symbol(values: &[Self]) -> char {
+        Self::SYMBOL
+    }
     /// Check if this element has the wildcard value
     fn has_wildcard(&self) -> bool {
         false

@@ -1030,6 +1030,11 @@ pub trait ArrayValue:
     fn nested_value(&self) -> Option<&Value> {
         None
     }
+    /// Get a glyph indicating the domain of a specific set of values,
+    /// which may be more specific than the glyph for the overall type
+    fn domain_symbol(values: &[Self]) -> char {
+        Self::SYMBOL
+    }
     /// Check if this element has the wildcard value
     fn has_wildcard(&self) -> bool {
         false
@@ -1083,6 +1088,17 @@ impl ArrayValue for f64 {
     fn default_scalar() -> Self {
         0.0
     }
+    fn domain_symbol(values: &[Self]) -> char {
+        if values.iter().any(|&n| n.fract() != 0.0) {
+            'ℝ'
+        } else if values.iter().any(|&n| n < 0.0) {
+            'ℤ'
+        } else if values.iter().any(|&n| n > 1.0) {
+            'ℕ'
+        } else {
+            '𝔹'
+        }
+    }
     fn has_wildcard(&self) -> bool {
         self.to_bits() == WILDCARD_NAN.to_bits()
     }
@@ -1131,6 +1147,13 @@ impl ArrayValue for u8 {
     }
     fn default_scalar() -> Self {
         0
+    }
+    fn domain_symbol(values: &[Self]) -> char {
+        if values.iter().any(|&n| n > 1) {
+            'ℕ'
+        } else {
+            '𝔹'
+        }
     }
     fn sort_list(list: &mut [Self], up: bool) {
         let mut counts: [usize; 256] = [0; 256];
@@ -1182,6 +1205,13 @@ impl ArrayValue for char {
     }
     fn default_scalar() -> Self {
         ' '
+    }
+    fn domain_symbol(values: &[Self]) -> char {
+        if values.iter().any(|c| !c.is_ascii()) {
+            '𝕌'
+        } else {
+            '@'
+        }
     }
     fn has_wildcard(&self) -> bool {
         *self == WILDCARD_CHAR

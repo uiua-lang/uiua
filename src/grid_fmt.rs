@@ -898,19 +898,11 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 if metagrid.is_empty() {
                     let mut keys_row_shape = keys.keys.shape.clone();
                     keys_row_shape.make_row();
-                    let mut row = match &keys.keys {
-                        Value::Num(_) => shape_row::<f64>(&keys_row_shape),
-                        Value::Byte(_) => shape_row::<u8>(&keys_row_shape),
-                        Value::Complex(_) => shape_row::<Complex>(&keys_row_shape),
-                        Value::Char(_) => shape_row::<char>(&keys_row_shape),
-                        Value::Box(_) => shape_row::<Boxed>(&keys_row_shape),
-                        #[cfg(feature = "ga")]
-                        Value::Mv(_) => shape_row::<crate::Multivector>(&keys_row_shape),
-                    };
+                    let mut row = shape_row(&keys_row_shape, keys.keys.domain_symbol());
                     row.extend([' ', '→', ' ']);
                     let mut value_row_shape = self.shape.clone();
                     value_row_shape.make_row();
-                    row.extend(shape_row::<T>(&value_row_shape));
+                    row.extend(shape_row(&value_row_shape, self.domain_symbol()));
                     metagrid.push(vec![vec![row]]);
                 }
             }
@@ -1325,29 +1317,27 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 impl<T: ArrayValue> Array<T> {
     /// Get a string representation of the shape of the array
     pub fn shape_string(&self) -> String {
-        let base: String = shape_row::<T>(&self.shape).into_iter().collect();
-        if let Some(keys) = &self.meta.map_keys {
-            let mut keys_shape = keys.keys.shape.clone();
-            if let Some(len) = keys_shape.first_mut() {
-                *len = self.row_count();
-            }
-            let mut s: String = match keys.keys {
-                Value::Num(_) => shape_row::<f64>(&keys_shape),
-                Value::Byte(_) => shape_row::<u8>(&keys_shape),
-                Value::Complex(_) => shape_row::<Complex>(&keys_shape),
-                Value::Char(_) => shape_row::<char>(&keys_shape),
-                Value::Box(_) => shape_row::<Boxed>(&keys_shape),
-                #[cfg(feature = "ga")]
-                Value::Mv(_) => shape_row::<crate::Multivector>(&keys_shape),
-            }
-            .into_iter()
-            .collect();
-            s.push_str(" → ");
-            s.push_str(&base);
-            s
-        } else {
-            base
+        let base = shape_row(&self.shape, self.domain_symbol());
+
+        let Some(keys) = &self.meta.map_keys else {
+            return String::from_iter(base);
+        };
+
+        let mut keys_shape = keys.keys.shape.clone();
+        if let Some(len) = keys_shape.first_mut() {
+            *len = self.row_count();
         }
+
+        shape_row(&keys_shape, keys.keys.domain_symbol())
+            .into_iter()
+            .chain([' ', '→', ' '])
+            .chain(base)
+            .collect()
+    }
+
+    /// Get a glyph indicating the domain of the array's elements
+    pub fn domain_symbol(&self) -> char {
+        T::domain_symbol(&self.data)
     }
 }
 
@@ -1356,9 +1346,14 @@ impl Value {
     pub fn shape_string(&self) -> String {
         val_as_arr!(self, Array::shape_string)
     }
+
+    /// Get a glyph indicating the domain of the value's array elements
+    pub fn domain_symbol(&self) -> char {
+        val_as_arr!(self, Array::domain_symbol)
+    }
 }
 
-fn shape_row<T: ArrayValue>(shape: &[usize]) -> Vec<char> {
+fn shape_row(shape: &[usize], symbol: char) -> Vec<char> {
     let mut shape_row = Vec::new();
     const MAX_RENDERED_RANK: usize = 40;
     if shape.len() <= MAX_RENDERED_RANK {
@@ -1382,7 +1377,7 @@ fn shape_row<T: ArrayValue>(shape: &[usize]) -> Vec<char> {
     if !shape.is_empty() {
         shape_row.push(' ');
     }
-    shape_row.push(T::SYMBOL);
+    shape_row.push(symbol);
     shape_row
 }
 
@@ -1412,20 +1407,21 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     metagrid: &mut Metagrid,
 ) {
     if data.is_empty() {
-        metagrid.push(vec![vec![shape_row::<T>(shape)]]);
+        metagrid.push(vec![vec![shape_row(shape, T::SYMBOL)]]);
         return;
     }
     if requires_summary::<T>(shape) {
         let summary = T::summarize(data);
         if !summary.is_empty() {
-            metagrid.push(vec![if shape.len() == 1 {
-                let mut chars = shape_row::<T>(shape);
-                chars.extend(": ".chars());
-                chars.extend(summary.chars());
-                vec![chars]
+            let mut first_row = shape_row(shape, T::domain_symbol(data));
+            let grid: Grid = if shape.len() == 1 {
+                first_row.extend(": ".chars());
+                first_row.extend(summary.chars());
+                vec![first_row]
             } else {
-                vec![shape_row::<T>(shape), summary.chars().collect()]
-            }]);
+                vec![first_row, summary.chars().collect()]
+            };
+            metagrid.push(vec![grid]);
             return;
         }
     }

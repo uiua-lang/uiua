@@ -979,6 +979,16 @@ impl ImplPrimitive {
                 let val = n.undo_windows(val, sided, env)?;
                 env.push(val);
             }
+            ImplPrimitive::UndoIndexIn => {
+                let haystack = env.pop(1)?;
+                let original = env.pop(1)?;
+                let indices = env.pop(1)?;
+                env.with_fill(original, |env| {
+                    let val = indices.select(haystack, env)?;
+                    env.push(val);
+                    Ok(())
+                })?;
+            }
             ImplPrimitive::UndoFirst => {
                 let into = env.pop(1)?;
                 let from = env.pop(2)?;

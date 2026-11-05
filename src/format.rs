@@ -1958,8 +1958,8 @@ impl SysBackend for FormatterBackend {
     fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
         self.sys().write(handle, contents)
     }
-    fn var(&self, name: &str) -> Option<String> {
-        self.sys().var(name)
+    fn get_var(&self, name: &str) -> Option<String> {
+        self.sys().get_var(name)
     }
     fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
         self.sys().tcp_connect(addr)

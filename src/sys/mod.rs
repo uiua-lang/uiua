@@ -267,9 +267,15 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("Getting raw mode is not supported in this environment".into())
     }
     /// Get an environment variable
-    fn var(&self, name: &str) -> Option<String> {
+    fn get_var(&self, name: &str) -> Option<String> {
         None
     }
+    /// Set an environment variable
+    ///
+    /// # Safety
+    /// Should take into account race conditions from setting env vars on certain platforms.
+    /// Note that when called by the Uiua interpreter, a lock is used.
+    unsafe fn set_var(&self, name: &str, val: &str) {}
     /// Get the size of the terminal
     fn term_size(&self) -> Result<(usize, usize), String> {
         Err("Getting the terminal size is not supported in this environment".into())
@@ -807,13 +813,9 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             env.push(Array::<Boxed>::from_iter(args));
         }
         SysOp::Var => {
-            let key = env
-                .pop(1)?
-                .as_string(env, "Augument to var must be a string")?;
-            let var = env
-                .rt
-                .backend
-                .var(&key)
+            let key = (env.pop(1)?).as_string(env, "Augument to var must be a string")?;
+            let var = (env.rt.backend.get_var(&key).map(Into::into))
+                .or_else(|| env.value_fill().map(|fv| fv.value.clone()))
                 .ok_or_else(|| env.error(format!("Environment variable `{key}` is not set")))?;
             env.push(var);
         }

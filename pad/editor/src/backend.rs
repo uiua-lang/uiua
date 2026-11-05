@@ -24,6 +24,7 @@ pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
     pub stderr: Mutex<String>,
     pub trace: Mutex<String>,
+    vars: Mutex<HashMap<String, String>>,
     streams: Mutex<HashMap<Handle, VirtualStream>>,
     output_enabled: AtomicBool,
 }
@@ -79,6 +80,7 @@ impl WebBackend {
             stdout: Vec::new().into(),
             stderr: String::new().into(),
             trace: String::new().into(),
+            vars: Mutex::default(),
             streams: HashMap::new().into(),
             output_enabled: AtomicBool::new(true),
         }
@@ -181,6 +183,12 @@ impl SysBackend for WebBackend {
         Ok(window()
             .prompt_with_message("Enter a line of text for stdin")
             .unwrap_or(None))
+    }
+    fn get_var(&self, name: &str) -> Option<String> {
+        self.vars.lock().unwrap().get(name).map(Into::into)
+    }
+    unsafe fn set_var(&self, name: &str, val: &str) {
+        self.vars.lock().unwrap().insert(name.into(), val.into());
     }
     fn show_image(&self, image: image::DynamicImage, label: Option<&str>) -> Result<(), String> {
         let mut bytes = Cursor::new(Vec::new());

@@ -12,7 +12,6 @@ use std::{
     borrow::{BorrowMut, Cow},
     cell::RefCell,
     collections::HashMap,
-    env,
     f64::consts::{PI, TAU},
     iter::repeat_n,
     sync::OnceLock,
@@ -852,9 +851,7 @@ impl ImplPrimitive {
                 let _lock = LOCK.lock();
                 // Safety: `set_var` is unsafe for unix in multithreaded contexts.
                 // Use a lock to ensure serialization and thus safety.
-                unsafe {
-                    env::set_var(key, value);
-                }
+                unsafe { env.backend().set_var(&key, &value) }
             }
             ImplPrimitive::MatrixDiv => env.dyadic_rr_env(Value::matrix_div)?,
             &ImplPrimitive::RangeSub(n) => {

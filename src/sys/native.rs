@@ -452,6 +452,18 @@ impl SysBackend for NativeSys {
     fn var(&self, name: &str) -> Option<String> {
         env::var(name).ok()
     }
+    fn set_var(&self, name: &str, value: &str) -> Result<(), String> {
+        // Safety: `set_var` is unsafe for unix in multithreaded contexts.
+        // Use a lock to ensure serialization and thus safety.
+        static LOCK: parking_lot::Mutex<()> = parking_lot::Mutex::new(());
+        let _lock = LOCK.lock();
+
+        unsafe {
+            env::set_var(name, value);
+        }
+
+        Ok(())
+    }
     fn file_exists(&self, path: &str) -> bool {
         fs::metadata(path).is_ok()
     }

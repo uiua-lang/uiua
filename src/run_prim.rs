@@ -152,9 +152,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         }
         Primitive::Box => {
             let val = env.pop(1)?;
-            if val.box_nesting() > 255 {
-                return Err(env.error("Box nesting too deep"));
-            }
+            val.validate_boxable(env)?;
             env.push(val.box_depth(0));
         }
         Primitive::EncodeBytes => {

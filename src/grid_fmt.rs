@@ -1106,9 +1106,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             }
             // Outline the grid
             let grid_row_count = grid.len();
-            if self.rank() == 0 && self.is_map() {
-                // Don't surround maplings
-            } else if !params.soa_row
+            if !params.soa_row
                 && (params.parent_rank == 0
                     || self.rank() <= 1 && params.parent_rank == 1 && !params.multiline
                     || T::box_lines() && self.rank() <= 1 && params.parent_rank <= 1

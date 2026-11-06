@@ -47,7 +47,7 @@ impl<T: ArrayValue> Array<T> {
         kv
     }
     /// Create a map array
-    pub fn map(&mut self, keys: Value, ctx: Context) -> UiuaResult {
+    pub fn map(&mut self, mut keys: Value, ctx: Context) -> UiuaResult {
         let values = self;
         if keys.row_count() != values.row_count() {
             return Err(ctx.error(format!(
@@ -57,14 +57,10 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         if keys.rank() == 0 {
-            let map_keys = MapKeys {
-                keys,
-                indices: vec![0],
-                len: 1,
-                fix_stack: Vec::new(),
-            };
-            values.meta.map_keys = Some(map_keys);
-            return Ok(());
+            keys.fix();
+        }
+        if values.rank() == 0 {
+            values.fix();
         }
         let mut map_keys = MapKeys {
             keys: keys.clone(),

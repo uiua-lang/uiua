@@ -608,7 +608,7 @@ impl Uiua {
                 span,
                 under_cond,
             } => self.with_span(span, |env| {
-                algorithm::switch(branches, sig, under_cond, env)
+                algorithm::switch(Ok(branches), sig, under_cond, env)
             }),
             Node::Format(parts, span) => self.with_span(span, |env| algorithm::format(&parts, env)),
             Node::MatchFormatPattern(parts, span) => {

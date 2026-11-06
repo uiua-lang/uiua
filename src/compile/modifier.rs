@@ -1384,10 +1384,21 @@ impl Compiler {
                 modified.modifier.span.clone(),
                 true,
             )?,
-            Switch => self.switch(
-                modified.code_operands().cloned().collect(),
-                modified.modifier.span.clone(),
-            )?,
+            Switch => {
+                if let Some(sub) = subscript {
+                    let n = self.subscript_int_only(&sub, &Switch.format()).unwrap_or(0);
+                    let n = self.positive_subscript(n, Switch, &sub.span);
+                    Node::ImplPrim(
+                        ImplPrimitive::SwitchSub(n),
+                        self.add_span(modified.modifier.span.clone()),
+                    )
+                } else {
+                    self.switch(
+                        modified.code_operands().cloned().collect(),
+                        modified.modifier.span.clone(),
+                    )?
+                }
+            }
             Fill => {
                 let mut operands = modified.code_operands().rev().cloned();
 

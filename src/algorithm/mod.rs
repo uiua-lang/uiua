@@ -319,11 +319,12 @@ pub(crate) fn fill_value_shapes(
 }
 
 pub fn switch(
-    branches: Ops,
+    branches: Result<Ops, usize>,
     sig: Signature,
     copy_condition_under: bool,
     env: &mut Uiua,
 ) -> UiuaResult {
+    let branch_count = branches.as_ref().map_or_else(|&n| n, |brs| brs.len());
     // Get selector
     let selector = env.pop("switch index")?;
     let copied_selector = if copy_condition_under {
@@ -336,34 +337,50 @@ pub fn switch(
         // Scalar
         let selector =
             selector.as_natural_array(env, "Switch index must be an array of naturals")?;
-        if let Some(i) = selector.data.iter().find(|&&i| i >= branches.len()) {
+        if let Some(i) = selector.data.iter().find(|&&i| i >= branch_count) {
             return Err(env.error(format!(
                 "Switch index {i} is out of bounds for switch of size {}",
-                branches.len()
+                branch_count
             )));
         }
         let i = selector.data[0];
-        // Get function
-        let Some(f) = branches.into_iter().nth(i) else {
-            return Err(env.error(
-                "Function stack was empty when getting switch function. \
-                This is a bug in the interpreter.",
-            ));
-        };
-        // Discard unused arguments
-        let discard_start = env.rt.stack.len().saturating_sub(sig.args());
-        if discard_start > env.rt.stack.len() {
-            return Err(env.error("Stack was empty when discarding excess switch arguments."));
+        match branches {
+            Ok(branches) => {
+                // Get function
+                let Some(f) = branches.into_iter().nth(i) else {
+                    return Err(
+                        env.error("Not enough switch functions. This is a bug in the interpreter.")
+                    );
+                };
+                // Discard unused arguments
+                let discard_start = env.rt.stack.len().saturating_sub(sig.args());
+                if discard_start > env.rt.stack.len() {
+                    return Err(
+                        env.error("Stack was empty when discarding excess switch arguments.")
+                    );
+                }
+                // `saturating_sub` and `max` handle incorrect explicit signatures
+                let discard_end = (discard_start + sig.args() + f.sig.outputs())
+                    .saturating_sub(f.sig.args() + sig.outputs())
+                    .max(discard_start);
+                if discard_end > env.rt.stack.len() {
+                    return Err(
+                        env.error("Stack was empty when discarding excess switch arguments.")
+                    );
+                }
+                env.rt.stack.drain(discard_start..discard_end);
+                env.exec(f)?;
+            }
+            Err(n) => {
+                let items = env.pop_n(n)?;
+                env.push(items.into_iter().nth(i).ok_or_else(|| {
+                    env.error(
+                        "Not enough switch arguments for selector. \
+                        This is a bug in the interpreter.",
+                    )
+                })?);
+            }
         }
-        // `saturating_sub` and `max` handle incorrect explicit signatures
-        let discard_end = (discard_start + sig.args() + f.sig.outputs())
-            .saturating_sub(f.sig.args() + sig.outputs())
-            .max(discard_start);
-        if discard_end > env.rt.stack.len() {
-            return Err(env.error("Stack was empty when discarding excess switch arguments."));
-        }
-        env.rt.stack.drain(discard_start..discard_end);
-        env.exec(f)?;
     } else {
         // Array
         // Collect arguments
@@ -388,16 +405,21 @@ pub fn switch(
         {
             *new_shape.row_count_mut() = sh.row_count();
         }
-        if args.iter().any(|v| v.row_count() == 0)
-            && push_empty_rows_value(
-                &branches[0],
-                &args[1..],
-                false,
-                &mut Default::default(),
-                env,
-            )
-        {
-            return Ok(());
+        if args.iter().any(|v| v.row_count() == 0) {
+            match &branches {
+                Ok(branches) => {
+                    if push_empty_rows_value(
+                        &branches[0],
+                        &args[1..],
+                        false,
+                        &mut Default::default(),
+                        env,
+                    ) {
+                        return Ok(());
+                    }
+                }
+                Err(_) => todo!(),
+            }
         }
         let arg_shapes: Vec<Shape> = args[1..].iter().map(|v| v.shape.clone()).collect();
         let FixedRowsData {
@@ -409,16 +431,18 @@ pub fn switch(
         } = fixed_rows("switch", sig.outputs(), args, env)?;
         // println!("row_count: {row_count}");
         // Collect functions
-        let args: Vec<usize> = branches
-            .iter()
-            .map(|sn| {
-                if sn.sig.outputs() < sig.outputs() {
-                    sn.sig.args() + sig.outputs() - sn.sig.outputs()
-                } else {
-                    sn.sig.args()
-                }
-            })
-            .collect();
+        let args: Vec<usize> = match &branches {
+            Ok(branches) => (branches.iter())
+                .map(|sn| {
+                    if sn.sig.outputs() < sig.outputs() {
+                        sn.sig.args() + sig.outputs() - sn.sig.outputs()
+                    } else {
+                        sn.sig.args()
+                    }
+                })
+                .collect(),
+            Err(_) => Vec::new(),
+        };
 
         // Switch with each selector element
         let mut outputs = multi_output(sig.outputs(), Vec::new());
@@ -429,10 +453,10 @@ pub fn switch(
                 Err(selector) => selector.clone(),
             }
             .as_natural_array(env, "Switch index must be an array of naturals")?;
-            if let Some(i) = selector.data.iter().find(|&&i| i >= branches.len()) {
+            if let Some(i) = selector.data.iter().find(|&&i| i >= branch_count) {
                 return Err(env.error(format!(
                     "Switch index {i} is out of bounds for switch of size {}",
-                    branches.len()
+                    branch_count
                 )));
             }
             // println!("selector: {} {:?}", selector.shape, selector.data);
@@ -471,22 +495,29 @@ pub fn switch(
                     rows_to_sel.push(row.into_row_shaped_slices(row_shape));
                 }
             }
-            for sel_row_slice in selector.row_slices() {
-                for &sel_elem in sel_row_slice {
-                    // println!("  sel_elem: {}", sel_elem);
-                    let node = &branches[sel_elem];
-                    let arg_count = args[sel_elem];
-                    for (i, row) in rows_to_sel.iter_mut().rev().enumerate().rev() {
-                        let row = row.next().unwrap();
-                        // println!("  row: {:?}", row);
-                        if i < arg_count {
-                            env.push(row);
+            match &branches {
+                Ok(branches) => {
+                    for sel_row_slice in selector.row_slices() {
+                        for &sel_elem in sel_row_slice {
+                            // println!("  sel_elem: {}", sel_elem);
+                            let node = &branches[sel_elem];
+                            let arg_count = args[sel_elem];
+                            for (i, row) in rows_to_sel.iter_mut().rev().enumerate().rev() {
+                                let row = row.next().unwrap();
+                                // println!("  row: {:?}", row);
+                                if i < arg_count {
+                                    env.push(row);
+                                }
+                            }
+                            env.exec(node.clone())?;
+                            for i in 0..sig.outputs() {
+                                outputs[i].push(env.pop("switch output")?);
+                            }
                         }
                     }
-                    env.exec(node.clone())?;
-                    for i in 0..sig.outputs() {
-                        outputs[i].push(env.pop("switch output")?);
-                    }
+                }
+                Err(n) => {
+                    todo!()
                 }
             }
         }

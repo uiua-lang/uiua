@@ -760,6 +760,9 @@ impl ImplPrimitive {
                 env.push(denom);
             }
             ImplPrimitive::UnParse => env.monadic_env(Value::unparse)?,
+            &ImplPrimitive::SwitchSub(n) => {
+                algorithm::switch(Err(n), (n + 1, 1).into(), false, env)?
+            }
             &ImplPrimitive::UnParseSub(i) => {
                 let nums = env.pop(1)?;
                 let strs = nums.unparse_base(i, env)?;

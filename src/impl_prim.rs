@@ -46,6 +46,7 @@ macro_rules! impl_primitive {
             MaxRank(usize),
             BothImpl(Subscript<u32>),
             UnBothImpl(Subscript<u32>),
+            SwitchSub(usize)
         }
 
         impl ImplPrimitive {
@@ -61,6 +62,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::MaxRowCount(n) | ImplPrimitive::MaxRank(n) => *n,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 2,
                     ImplPrimitive::MultiJoin(n) => *n,
+                    ImplPrimitive::SwitchSub(n) => *n + 1,
                     _ => return None
                 })
             }
@@ -73,6 +75,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) | ImplPrimitive::MaxRank(n) => *n + 1,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 1,
+                    ImplPrimitive::SwitchSub(_) => 1,
                     _ if self.modifier_args().is_some() => return None,
                     _ => 1
                 })

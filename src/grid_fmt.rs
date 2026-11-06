@@ -1698,7 +1698,10 @@ fn multiset_summary<T: ArrayCmp + GridFmt + Clone>(elems: &[T]) -> Option<String
     // So small, in fact, that a BTreeMap would only have one node anyway. (B = 6 -> node capacity = 11)
     // In addition, the usage of non-Ord keys (f64, Complex) would require a newtype.
     // This is plenty doable, but gets more annoying in a generic context.
-    let mut pairs = SmallVec::<[(T, usize); T::SUMMARY_MULTISET_MAX_DISTINCT]>::new();
+    let mut pairs = SmallVec::<[(T, usize);
+    5 // can be replaced with T::SUMMARY_MULTISET_MAX_DISTINCT on nightly compiler
+      // but this is just a lower bound so it's ok
+    ]>::new();
     for elem in elems.iter().cloned() {
         match pairs
             .iter_mut()

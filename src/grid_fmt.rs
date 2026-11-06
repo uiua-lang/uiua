@@ -842,7 +842,7 @@ impl GridFmt for Boxed {
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         let mut metagrid: Option<Metagrid> = None;
-        let mut first_align: Option<ElemAlign> = None;
+        let mut map_key_align: Option<ElemAlign> = None;
         // println!(
         //     "shape: {}, box lines: {}, parent rank: {}, max boxed rank: {}, max boxed len: {}",
         //     self.shape,
@@ -880,7 +880,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         } else {
             // Hashmap
             if let Some(keys) = &self.meta.map_keys {
-                first_align = Some(match &keys.keys {
+                map_key_align = Some(match &keys.keys {
                     Value::Num(_) => f64::alignment(),
                     Value::Byte(_) => u8::alignment(),
                     Value::Complex(_) => Complex::alignment(),
@@ -946,13 +946,23 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 
             let requires_summary = requires_summary::<T>(&self.shape);
 
-            let mut grid = synthesize_grid::<T>(
+            let main_align = if requires_summary {
+                ElemAlign::None
+            } else {
+                T::alignment()
+            };
+
+            let dimensions = MetagridDimensions::of::<T>(&metagrid, requires_summary);
+
+            let mut grid = synthesize_grid(
                 metagrid,
+                dimensions,
                 &self.shape,
-                first_align,
+                map_key_align.unwrap_or(main_align),
+                main_align,
                 self.is_map(),
                 is_soa,
-                requires_summary,
+                T::box_lines(),
                 params.multiline,
             );
 
@@ -1591,44 +1601,66 @@ fn metacolumn_subrows(metagrid: &Metagrid, meta_x: usize) -> impl Iterator<Item 
         .map(Vec::as_slice)
 }
 
-fn synthesize_grid<T: ArrayValue>(
+struct MetagridDimensions {
+    metagrid_height: usize,
+    metagrid_width: usize,
+    row_heights: Vec<usize>,
+    column_widths: Vec<usize>,
+}
+
+impl MetagridDimensions {
+    fn of<T: ArrayValue>(metagrid: &Metagrid, is_summary: bool) -> Self {
+        let metagrid_height = metagrid.len();
+        let metagrid_width = max_len(&metagrid, 0);
+
+        let row_heights: Vec<usize> = metagrid.iter().map(|metarow| max_len(metarow, 1)).collect();
+
+        // A rank-2 iterator over the non-meta rows within each meta-column.
+        let metacolumn_rows =
+            (0..metagrid_width).map(|meta_col_idx| metacolumn_subrows(&metagrid, meta_col_idx));
+
+        let column_widths: Vec<usize> = if is_summary {
+            metacolumn_rows
+                .map(|rows| rows.map(|row| row.len()).max().unwrap_or(0))
+                .collect()
+        } else {
+            metacolumn_rows.map(T::max_col_width).collect()
+        };
+
+        Self {
+            metagrid_height,
+            metagrid_width,
+            row_heights,
+            column_widths,
+        }
+    }
+}
+
+fn synthesize_grid(
     mut metagrid: Metagrid,
+    dimensions: MetagridDimensions,
     shape: &[usize],
-    first_align: Option<ElemAlign>,
+    first_align: ElemAlign,
+    main_align: ElemAlign,
     is_map: bool,
     is_soa: bool,
-    is_summary: bool,
+    box_lines: bool,
     multiline: bool,
 ) -> Grid {
     let mut output_grid = Grid::new();
 
-    let metagrid_height = metagrid.len();
-    let metagrid_width = max_len(&metagrid, 0);
-
-    let row_heights: Vec<usize> = metagrid.iter().map(|metarow| max_len(metarow, 1)).collect();
-
-    // A rank-2 iterator over the non-meta rows within each meta-column.
-    let metacolumn_rows =
-        (0..metagrid_width).map(|meta_col_idx| metacolumn_subrows(&metagrid, meta_col_idx));
-
-    let column_widths: Vec<usize> = if is_summary {
-        metacolumn_rows
-            .map(|rows| rows.map(|row| row.len()).max().unwrap_or(0))
-            .collect()
-    } else {
-        metacolumn_rows.map(T::max_col_width).collect()
-    };
+    let MetagridDimensions {
+        metagrid_height,
+        metagrid_width,
+        row_heights,
+        column_widths,
+    } = dimensions;
 
     let max_lr_lengths: Vec<(usize, usize)> = (0..metagrid_width)
         .map(|meta_x| {
-            // Use a different alignment for the first column, if provided.
-            // This is used for map keys.
-            let align = match (meta_x, first_align) {
-                (0, Some(a)) => a,
-                (1.., _) | (_, None) => T::alignment(),
-            };
+            let alignment = if meta_x == 0 { first_align } else { main_align };
 
-            let (delimiter, is_right_aligned) = match align {
+            let (delimiter, is_right_aligned) = match alignment {
                 ElemAlign::DelimOrLeft(delim) => (delim, false),
                 ElemAlign::DelimOrRight(delim) => (delim, true),
                 _ => return (0, 0),
@@ -1659,18 +1691,12 @@ fn synthesize_grid<T: ArrayValue>(
         let row_height = row_heights[meta_y];
 
         for (meta_x, meta_cell) in metarow.iter_mut().enumerate() {
-            let align = match (meta_x, is_summary, first_align) {
-                // For maps, the first column may use a different alignment
-                (0, _, Some(a)) => a,
-                // For summaries, the alignment of the actual data doesn't matter
-                (_, true, _) => ElemAlign::None,
-                _ => T::alignment(),
-            };
+            let alignment = if meta_x == 0 { first_align } else { main_align };
 
             pad_grid_center(
                 column_widths[meta_x],
                 row_height,
-                align,
+                alignment,
                 false,
                 Some(max_lr_lengths[meta_x]),
                 meta_cell,
@@ -1694,7 +1720,7 @@ fn synthesize_grid<T: ArrayValue>(
             for (subrow, inner_row) in subrows.iter_mut().zip(meta_cell) {
                 subrow.extend(inner_row);
 
-                let add_column_divider = T::box_lines()
+                let add_column_divider = box_lines
                     && !is_map
                     && (meta_x + 1 < metagrid_width
                         || shape[shape.len() - 1 - horizontal_offset * 2] == 1);
@@ -1723,7 +1749,7 @@ fn synthesize_grid<T: ArrayValue>(
 
         let vert_offset = 2 * (1 + vertical_offset);
         let add_row_divider = (meta_y == 0 || !is_soa)
-            && T::box_lines()
+            && box_lines
             && !is_map
             && (meta_y + 1 < metagrid_height
                 || shape.len() >= vert_offset && shape[shape.len() - vert_offset] == 1);

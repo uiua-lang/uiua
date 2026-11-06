@@ -715,7 +715,7 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 match (f.sig.args(), g.sig.args()) {
                     (0, _) => Node::from_iter([g.node, f.node]),
-                    (1, 0) => Node::from_iter([Node::Mod(Dip, eco_vec![g], span), f.node]),
+                    (n, 0) => Node::from_iter([g.dipped(n, span).node, f.node]),
                     _ => Node::Mod(Fork, eco_vec![f, g], span),
                 }
             }

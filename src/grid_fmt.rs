@@ -966,79 +966,14 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 params.multiline,
             );
 
-            // Outline the grid
-            let grid_row_count = grid.len();
-            if self.rank() == 0 && self.is_map() {
-                // Don't surround maplings
-            } else if !params.soa_row
-                && (params.parent_rank == 0
-                    || self.rank() <= 1 && params.parent_rank == 1 && !params.multiline
-                    || T::box_lines() && self.rank() <= 1 && params.parent_rank <= 1
-                    || !T::box_lines() && self.rank() < params.max_boxed_rank)
-                || T::compress_list_grid() && self.rank() <= 1
-            {
-                // Normal surrounding
-                if grid_row_count == 1 && self.rank() == 1 && !params.multiline {
-                    outlined = true;
-                    // Add brackets to lists
-                    let (left, right) = if requires_summary || self.is_map() {
-                        ('[', ']')
-                    } else {
-                        T::grid_fmt_delims()
-                    };
-                    grid[0].insert(0, left);
-                    grid[0].push(right);
-                    if T::box_lines() && self.row_count() == 0 && params.parent_rank == 0 {
-                        grid[0].insert(1, Primitive::Box.glyph().unwrap());
-                    }
-                } else {
-                    outlined = true;
-                    let apparent_rank = if requires_summary { 1 } else { self.rank() };
-                    // Add corners to non-vectors
-                    let width = grid[0].len();
-                    let height = grid.len();
-                    pad_grid_center(
-                        width + 4,
-                        (height + 2).max(apparent_rank + 1),
-                        ElemAlign::None,
-                        true,
-                        None,
-                        &mut grid,
-                    );
-                    grid[0][0] = if T::box_lines() { '┌' } else { '╭' };
-                    grid[0][1] = '─';
-                    for i in 0..apparent_rank.saturating_sub(1) {
-                        grid[i + 1][0] = '╷';
-                    }
-                    *grid.last_mut().unwrap().last_mut().unwrap() =
-                        if T::box_lines() { '┘' } else { '╯' };
-                }
-            } else {
-                // Don't surround if going to draw box separators later
-                if !T::box_lines()
-                    && self.row_count() == 1
-                    && (params.soa_row
-                        || ((params.max_boxed_len == 1
-                            || T::compress_list_grid()
-                            || self.row_count() == 1 && self.rank() < params.max_boxed_rank)
-                            && params.max_boxed_rank != 1))
-                {
-                    // Disambiguate fixed arrays
-                    if !requires_summary {
-                        let mut fix_amnt = self.shape.iter().take_while(|&&d| d == 1).count();
-                        if T::compress_list_grid() && self.shape.last() == Some(&1) {
-                            fix_amnt = fix_amnt.saturating_sub(1);
-                        }
-                        for row in &mut grid {
-                            row.extend(repeat_n(' ', fix_amnt));
-                            row.rotate_right(fix_amnt);
-                        }
-                        for i in 0..fix_amnt {
-                            grid[0][i] = Primitive::Fix.glyph().unwrap();
-                        }
-                    }
-                }
-            }
+            outline_grid::<T>(
+                &mut grid,
+                &self.shape,
+                &params,
+                requires_summary,
+                self.is_map(),
+                &mut outlined,
+            );
             grid
         };
 
@@ -1771,6 +1706,92 @@ fn synthesize_grid(
     }
 
     output_grid
+}
+
+fn outline_grid<T: ArrayValue>(
+    grid: &mut Grid,
+    shape: &[usize],
+    params: &GridFmtParams,
+    requires_summary: bool,
+    is_map: bool,
+    outlined: &mut bool,
+) {
+    let rank = shape.len();
+    let grid_row_count = grid.len();
+    if rank == 0 && is_map {
+        // Don't surround maplings
+        return;
+    }
+
+    if !params.soa_row
+        && (params.parent_rank == 0
+            || rank <= 1 && params.parent_rank == 1 && !params.multiline
+            || T::box_lines() && rank <= 1 && params.parent_rank <= 1
+            || !T::box_lines() && rank < params.max_boxed_rank)
+        || T::compress_list_grid() && rank <= 1
+    {
+        // Normal surrounding
+        if grid_row_count == 1 && rank == 1 && !params.multiline {
+            *outlined = true;
+            // Add brackets to lists
+            let (left, right) = if requires_summary || is_map {
+                ('[', ']')
+            } else {
+                T::grid_fmt_delims()
+            };
+            grid[0].insert(0, left);
+            grid[0].push(right);
+            if T::box_lines() && shape[0] == 0 && params.parent_rank == 0 {
+                grid[0].insert(1, Primitive::Box.glyph().unwrap());
+            }
+        } else {
+            *outlined = true;
+            let apparent_rank = if requires_summary { 1 } else { rank };
+            // Add corners to non-vectors
+            let width = grid[0].len();
+            let height = grid.len();
+            pad_grid_center(
+                width + 4,
+                (height + 2).max(apparent_rank + 1),
+                ElemAlign::None,
+                true,
+                None,
+                grid,
+            );
+            grid[0][0] = if T::box_lines() { '┌' } else { '╭' };
+            grid[0][1] = '─';
+            for i in 0..apparent_rank.saturating_sub(1) {
+                grid[i + 1][0] = '╷';
+            }
+            *grid.last_mut().unwrap().last_mut().unwrap() =
+                if T::box_lines() { '┘' } else { '╯' };
+        }
+    } else {
+        // Don't surround if going to draw box separators later
+        if !T::box_lines()
+            && shape[0] == 1
+            && (params.soa_row
+                || ((params.max_boxed_len == 1
+                    || T::compress_list_grid()
+                    || shape[0] == 1 && rank < params.max_boxed_rank)
+                    && params.max_boxed_rank != 1))
+        {
+            // Disambiguate fixed arrays
+            if !requires_summary {
+                let mut fix_amnt = shape.iter().take_while(|&&d| d == 1).count();
+                if T::compress_list_grid() && shape.last() == Some(&1) {
+                    fix_amnt = fix_amnt.saturating_sub(1);
+                }
+                for row in grid.iter_mut() {
+                    row.extend(repeat_n(' ', fix_amnt));
+                    row.rotate_right(fix_amnt);
+                }
+                for i in 0..fix_amnt {
+                    grid[0][i] = Primitive::Fix.glyph().unwrap();
+                }
+            }
+        }
+    }
 }
 
 /// Count how many dimensions the current meta-row or meta-column needs a divider for.

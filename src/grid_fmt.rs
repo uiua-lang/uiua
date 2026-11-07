@@ -29,9 +29,19 @@ pub struct GridFmtParams {
     pub(crate) label: bool,
     pub(crate) depth: usize,
     pub(crate) parent_rank: usize,
+    /// The maximum rank among sibling boxes within the parent box array.
+    /// 0 if this array is not being formatted as a boxed child.
     pub(crate) max_boxed_rank: usize,
+    /// The maximum length among sibling boxes within the parent box array.
+    /// 0 if this array is not being formatted as a boxed child.
     pub(crate) max_boxed_len: usize,
+    /// Whether this array is being formatted as one "cell" of a "struct of arrays".
+    /// This is the case if all sibling boxes have labels, matching lengths, and no map keys.
+    /// If so, the array being formatted is not actually the entire array, but one row of it.
     pub(crate) soa_row: bool,
+    /// Whether multiline formatting should be used,
+    /// even if this array can be formatted as one line.
+    /// This is the case if any sibling boxes require multiline formatting.
     pub(crate) multiline: bool,
 }
 
@@ -842,7 +852,7 @@ impl GridFmt for Boxed {
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         let mut metagrid: Option<Metagrid> = None;
-        let mut first_align: Option<ElemAlign> = None;
+        let mut map_key_align: Option<ElemAlign> = None;
         // println!(
         //     "shape: {}, box lines: {}, parent rank: {}, max boxed rank: {}, max boxed len: {}",
         //     self.shape,
@@ -880,7 +890,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         } else {
             // Hashmap
             if let Some(keys) = &self.meta.map_keys {
-                first_align = Some(match &keys.keys {
+                map_key_align = Some(match &keys.keys {
                     Value::Num(_) => f64::alignment(),
                     Value::Byte(_) => u8::alignment(),
                     Value::Complex(_) => Complex::alignment(),
@@ -934,7 +944,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             }
 
             // Default array formatting
-            let mut metagrid = metagrid.unwrap_or_else(|| {
+            let metagrid = metagrid.unwrap_or_else(|| {
                 let mut metagrid = Metagrid::new();
                 let params = GridFmtParams {
                     parent_rank: self.rank(),
@@ -944,237 +954,47 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 metagrid
             });
 
-            // Synthesize a grid from the metagrid
-            let mut grid: Grid = Grid::new();
+            let is_summary = requires_summary::<T>(&self.shape);
 
-            // Determine max row heights and column widths
-            let metagrid_width = metagrid.iter().map(|row| row.len()).max().unwrap();
-            let metagrid_height = metagrid.len();
-            let mut row_heights = vec![0; metagrid_height];
-            let mut column_widths = vec![0; metagrid_width];
-            let mut max_lr_lens = vec![(0, 0); metagrid_width];
-            for row in 0..metagrid_height {
-                let max_row_height = metagrid[row]
-                    .iter()
-                    .map(|cell| cell.len())
-                    .max()
-                    .unwrap_or(1);
-                row_heights[row] = max_row_height;
-            }
-            let requires_summary = requires_summary::<T>(&self.shape);
-            for col in 0..metagrid_width {
-                let max_col_width = if requires_summary {
-                    metagrid
-                        .iter()
-                        .filter_map(|row| row.get(col))
-                        .flatten()
-                        .map(|row| row.len())
-                        .max()
-                        .unwrap_or(0)
-                } else {
-                    T::max_col_width(
-                        metagrid
-                            .iter()
-                            .filter_map(|row| row.get(col))
-                            .flatten()
-                            .map(Vec::as_slice),
-                    )
-                };
-                column_widths[col] = max_col_width;
-                let align = first_align.filter(|_| col == 0).unwrap_or(T::alignment());
-                match align {
-                    ElemAlign::DelimOrRight(s) | ElemAlign::DelimOrLeft(s) => {
-                        for row in metagrid.iter().filter_map(|row| row.get(col)).flatten() {
-                            if let Some(pos) = (0..row.len().saturating_sub(s.chars().count()))
-                                .find(|&i| row[i..].iter().zip(s.chars()).all(|(&a, b)| a == b))
-                            {
-                                let right_len = row.len() - pos - s.chars().count();
-                                max_lr_lens[col].0 = max_lr_lens[col].0.max(pos);
-                                max_lr_lens[col].1 = max_lr_lens[col].1.max(right_len);
-                            } else if let ElemAlign::DelimOrRight(_) = align {
-                                max_lr_lens[col].0 = max_lr_lens[col].0.max(row.len());
-                            } else {
-                                max_lr_lens[col].1 = max_lr_lens[col].1.max(row.len());
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            // Pad each metagrid cell to its row's max height and column's max width
-            for i in 0..metagrid_height {
-                let row_height = row_heights[i];
-                let mut subrows = vec![vec![]; row_height];
-                let mut div_pos = HashMap::new();
-                // Vertical offset for row dividers
-                let vert = if self.shape.contains(&0) {
-                    0
-                } else {
-                    ((0..self.rank().saturating_sub(1)).rev().step_by(2))
-                        .scan(1, |prod, d| {
-                            let is_mul = (i + 1) % (*prod).max(1) == 0;
-                            *prod *= self.shape[d];
-                            Some(is_mul)
-                        })
-                        .filter(|&is_mul| is_mul)
-                        .count()
-                        .saturating_sub(1)
-                };
-                for (j, ((col_width, max_lr_lens), cell)) in (column_widths.iter())
-                    .zip(&max_lr_lens)
-                    .zip(&mut metagrid[i])
-                    .enumerate()
-                {
-                    let align = first_align
-                        .filter(|_| j == 0)
-                        .or_else(|| requires_summary.then_some(ElemAlign::None))
-                        .unwrap_or(T::alignment());
-                    // Pad
-                    pad_grid_center(
-                        *col_width,
-                        row_height,
-                        align,
-                        false,
-                        Some(*max_lr_lens),
-                        cell,
-                    );
-                    // Horizontal offset for column dividers
-                    let horiz = if self.shape.contains(&0) {
-                        0
-                    } else {
-                        ((0..self.rank()).rev().step_by(2))
-                            .scan(1, |prod, d| {
-                                let is_mul = (j + 1) % (*prod).max(1) == 0;
-                                *prod *= self.shape[d];
-                                Some(is_mul)
-                            })
-                            .filter(|&is_mul| is_mul)
-                            .count()
-                            .saturating_sub(1)
-                    };
-                    for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
-                        subrow.extend(cell_row);
-                        // Add column dividers
-                        if T::box_lines()
-                            && !self.is_map()
-                            && (j + 1 < metagrid_width
-                                || self.shape[self.rank() - 1 - horiz * 2] == 1)
-                        {
-                            if !is_soa && self.rank() == 1 && row_height == 1 && !params.multiline {
-                                if self.row_count() > 1 {
-                                    subrow.push(' ');
-                                }
-                            } else {
-                                for mut line in Line::set(horiz) {
-                                    if j + 1 == metagrid_width {
-                                        line = line.singleton();
-                                    }
-                                    div_pos.insert(subrow.len(), *line);
-                                    subrow.push(line.vert());
-                                }
-                            }
-                        }
-                    }
-                }
-                let len = subrows.last().unwrap().len();
-                grid.extend(subrows);
-                // Add row dividers
-                let vert_offset = 2 + vert * 2;
-                if (i == 0 || !is_soa)
-                    && T::box_lines()
-                    && !self.is_map()
-                    && (i + 1 < metagrid_height
-                        || self.rank() >= vert_offset && self.shape[self.rank() - vert_offset] == 1)
-                {
-                    for mut row_line in Line::set(vert) {
-                        if i + 1 == metagrid_height {
-                            row_line = row_line.singleton();
-                        }
-                        let row_c = row_line.horiz();
-                        let mut row = Vec::with_capacity(len);
-                        for k in 0..len {
-                            let c = if let Some(col_line) = div_pos.get(&k).copied() {
-                                row_line.intersect(col_line)
-                            } else {
-                                row_c
-                            };
-                            row.push(c);
-                        }
-                        grid.push(row);
-                    }
-                }
-            }
-            // Outline the grid
-            let grid_row_count = grid.len();
-            if self.rank() == 0 && self.is_map() {
-                // Don't surround maplings
-            } else if !params.soa_row
-                && (params.parent_rank == 0
-                    || self.rank() <= 1 && params.parent_rank == 1 && !params.multiline
-                    || T::box_lines() && self.rank() <= 1 && params.parent_rank <= 1
-                    || !T::box_lines() && self.rank() < params.max_boxed_rank)
-                || T::compress_list_grid() && self.rank() <= 1
-            {
-                // Normal surrounding
-                if grid_row_count == 1 && self.rank() == 1 && !params.multiline {
+            let main_align = if is_summary {
+                ElemAlign::None
+            } else {
+                T::alignment()
+            };
+
+            let dimensions = MetagridDimensions::of::<T>(&metagrid, is_summary);
+
+            let mut grid = synthesize_grid(
+                metagrid,
+                dimensions,
+                &self.shape,
+                map_key_align.unwrap_or(main_align),
+                main_align,
+                self.is_map(),
+                is_soa,
+                T::box_lines(),
+                params.multiline,
+            );
+
+            let is_mapling = self.is_map() && self.rank() == 0;
+            if !is_mapling {
+                if should_outline::<T>(&params, self.rank()) {
                     outlined = true;
-                    // Add brackets to lists
-                    let (left, right) = if requires_summary || self.is_map() {
+                    let list_brackets = if is_summary || self.is_map() {
                         ('[', ']')
                     } else {
                         T::grid_fmt_delims()
                     };
-                    grid[0].insert(0, left);
-                    grid[0].push(right);
-                    if T::box_lines() && self.row_count() == 0 && params.parent_rank == 0 {
-                        grid[0].insert(1, Primitive::Box.glyph().unwrap());
-                    }
-                } else {
-                    outlined = true;
-                    let apparent_rank = if requires_summary { 1 } else { self.rank() };
-                    // Add corners to non-vectors
-                    let width = grid[0].len();
-                    let height = grid.len();
-                    pad_grid_center(
-                        width + 4,
-                        (height + 2).max(apparent_rank + 1),
-                        ElemAlign::None,
-                        true,
-                        None,
+                    outline_grid(
                         &mut grid,
+                        &self.shape,
+                        &params,
+                        is_summary,
+                        T::box_lines(),
+                        list_brackets,
                     );
-                    grid[0][0] = if T::box_lines() { '┌' } else { '╭' };
-                    grid[0][1] = '─';
-                    for i in 0..apparent_rank.saturating_sub(1) {
-                        grid[i + 1][0] = '╷';
-                    }
-                    *grid.last_mut().unwrap().last_mut().unwrap() =
-                        if T::box_lines() { '┘' } else { '╯' };
-                }
-            } else {
-                // Don't surround if going to draw box separators later
-                if !T::box_lines()
-                    && self.row_count() == 1
-                    && (params.soa_row
-                        || ((params.max_boxed_len == 1
-                            || T::compress_list_grid()
-                            || self.row_count() == 1 && self.rank() < params.max_boxed_rank)
-                            && params.max_boxed_rank != 1))
-                {
-                    // Disambiguate fixed arrays
-                    if !requires_summary {
-                        let mut fix_amnt = self.shape.iter().take_while(|&&d| d == 1).count();
-                        if T::compress_list_grid() && self.shape.last() == Some(&1) {
-                            fix_amnt = fix_amnt.saturating_sub(1);
-                        }
-                        for row in &mut grid {
-                            row.extend(repeat_n(' ', fix_amnt));
-                            row.rotate_right(fix_amnt);
-                        }
-                        for i in 0..fix_amnt {
-                            grid[0][i] = Primitive::Fix.glyph().unwrap();
-                        }
-                    }
+                } else if !T::box_lines() && !is_summary {
+                    disambiguate_fixed(&mut grid, &self.shape, &params, T::compress_list_grid())
                 }
             }
             grid
@@ -1725,4 +1545,303 @@ fn multiset_summary<T: ArrayCmp + GridFmt + Clone>(elems: &[T]) -> Option<String
         s += &count.to_string();
     }
     Some(s)
+}
+
+fn max_len<T>(a: &Vec<Vec<T>>, fill: usize) -> usize {
+    a.iter().map(|r| r.len()).max().unwrap_or(fill)
+}
+
+fn metacolumn_subrows(metagrid: &Metagrid, meta_x: usize) -> impl Iterator<Item = &[char]> + Clone {
+    metagrid
+        .iter()
+        .filter_map(move |metarow| metarow.get(meta_x))
+        .flatten()
+        .map(Vec::as_slice)
+}
+
+struct MetagridDimensions {
+    metagrid_height: usize,
+    metagrid_width: usize,
+    row_heights: Vec<usize>,
+    column_widths: Vec<usize>,
+}
+
+impl MetagridDimensions {
+    fn of<T: ArrayValue>(metagrid: &Metagrid, is_summary: bool) -> Self {
+        let metagrid_height = metagrid.len();
+        let metagrid_width = max_len(&metagrid, 0);
+
+        let row_heights: Vec<usize> = metagrid.iter().map(|metarow| max_len(metarow, 1)).collect();
+
+        // A rank-2 iterator over the non-meta rows within each meta-column.
+        let metacolumn_rows =
+            (0..metagrid_width).map(|meta_col_idx| metacolumn_subrows(&metagrid, meta_col_idx));
+
+        let column_widths: Vec<usize> = if is_summary {
+            metacolumn_rows
+                .map(|rows| rows.map(|row| row.len()).max().unwrap_or(0))
+                .collect()
+        } else {
+            metacolumn_rows.map(T::max_col_width).collect()
+        };
+
+        Self {
+            metagrid_height,
+            metagrid_width,
+            row_heights,
+            column_widths,
+        }
+    }
+}
+
+fn synthesize_grid(
+    mut metagrid: Metagrid,
+    dimensions: MetagridDimensions,
+    shape: &[usize],
+    first_align: ElemAlign,
+    main_align: ElemAlign,
+    is_map: bool,
+    is_soa: bool,
+    box_lines: bool,
+    multiline: bool,
+) -> Grid {
+    let mut output_grid = Grid::new();
+
+    let MetagridDimensions {
+        metagrid_height,
+        metagrid_width,
+        row_heights,
+        column_widths,
+    } = dimensions;
+
+    let max_lr_lengths: Vec<(usize, usize)> = (0..metagrid_width)
+        .map(|meta_x| {
+            let alignment = if meta_x == 0 { first_align } else { main_align };
+
+            let (delimiter, is_right_aligned) = match alignment {
+                ElemAlign::DelimOrLeft(delim) => (delim, false),
+                ElemAlign::DelimOrRight(delim) => (delim, true),
+                _ => return (0, 0),
+            };
+
+            let delim_len = delimiter.chars().count();
+            let find_delim = |row: &[char]| {
+                row.windows(delim_len)
+                    .position(|w| w.iter().copied().eq(delimiter.chars()))
+            };
+
+            let left = metacolumn_subrows(&metagrid, meta_x).map(|row| match find_delim(row) {
+                Some(pos) => pos,
+                None if is_right_aligned => row.len(),
+                None => 0,
+            });
+            let right = metacolumn_subrows(&metagrid, meta_x).map(|row| match find_delim(row) {
+                Some(pos) => row.len() - (pos + delim_len),
+                None if is_right_aligned => 0,
+                None => row.len(),
+            });
+            (left.max().unwrap_or(0), right.max().unwrap_or(0))
+        })
+        .collect();
+
+    // Pad each metagrid cell to its row's max height and column's max width
+    for (meta_y, metarow) in metagrid.iter_mut().enumerate() {
+        let row_height = row_heights[meta_y];
+
+        for (meta_x, meta_cell) in metarow.iter_mut().enumerate() {
+            let alignment = if meta_x == 0 { first_align } else { main_align };
+
+            pad_grid_center(
+                column_widths[meta_x],
+                row_height,
+                alignment,
+                false,
+                Some(max_lr_lengths[meta_x]),
+                meta_cell,
+            );
+        }
+    }
+
+    // Actually combine the cells and insert dividers
+    for (meta_y, metarow) in metagrid.into_iter().enumerate() {
+        let row_height = row_heights[meta_y];
+        // The rows of the output grid that we're currently working on
+        let mut subrows: Grid = vec![vec![]; row_height];
+        // The horizontal positions of vertical gridlines
+        let mut divider_intersections = HashMap::<usize, Line>::new();
+
+        let vertical_offset = count_dividers(meta_y, shape, 1);
+
+        for (meta_x, meta_cell) in metarow.into_iter().enumerate() {
+            let horizontal_offset = count_dividers(meta_x, shape, 0);
+
+            for (subrow, inner_row) in subrows.iter_mut().zip(meta_cell) {
+                subrow.extend(inner_row);
+
+                let add_column_divider = box_lines
+                    && !is_map
+                    && (meta_x + 1 < metagrid_width
+                        || shape[shape.len() - 1 - horizontal_offset * 2] == 1);
+
+                if add_column_divider {
+                    if !is_soa && shape.len() == 1 && row_height == 1 && !multiline {
+                        if shape[0] > 1 {
+                            subrow.push(' ');
+                        }
+                    } else {
+                        for mut line in Line::set(horizontal_offset) {
+                            if meta_x + 1 == metagrid_width {
+                                line = line.singleton();
+                            }
+                            // Mark the current horizontal position as a grid line intersection.
+                            divider_intersections.insert(subrow.len(), *line);
+                            subrow.push(line.vert());
+                        }
+                    }
+                }
+            }
+        }
+
+        let len = subrows.last().unwrap().len();
+        output_grid.extend(subrows);
+
+        let vert_offset = 2 * (1 + vertical_offset);
+        let add_row_divider = (meta_y == 0 || !is_soa)
+            && box_lines
+            && !is_map
+            && (meta_y + 1 < metagrid_height
+                || shape.len() >= vert_offset && shape[shape.len() - vert_offset] == 1);
+
+        if add_row_divider {
+            for mut row_line in Line::set(vertical_offset) {
+                if meta_y + 1 == metagrid_height {
+                    row_line = row_line.singleton();
+                }
+
+                let row_ch = row_line.horiz();
+                let mut divider_row = vec![row_ch; len];
+                for (&x, &col_line) in &divider_intersections {
+                    divider_row[x] = row_line.intersect(col_line);
+                }
+                output_grid.push(divider_row);
+            }
+        }
+    }
+
+    output_grid
+}
+
+fn should_outline<T: ArrayValue>(params: &GridFmtParams, rank: usize) -> bool {
+    if rank <= 1 && T::compress_list_grid() {
+        // This is a string (or something with similar semantics). Strings always get quotes.
+        true
+    } else if params.soa_row {
+        // If an SoA label row is to be printed, normal borders are not.
+        false
+    } else if params.parent_rank == 0 {
+        // This array is not a child of some parent box array. It's being formatted normally.
+        true
+    } else if rank <= 1 && params.parent_rank == 1 && !params.multiline {
+        // This is a scalar or list, and its parent is a list.
+        true
+    } else {
+        if T::box_lines() {
+            rank <= 1 && params.parent_rank <= 1
+        } else {
+            rank < params.max_boxed_rank
+        }
+    }
+}
+
+fn outline_grid(
+    grid: &mut Grid,
+    shape: &[usize],
+    params: &GridFmtParams,
+    is_summary: bool,
+    box_lines: bool,
+    list_brackets: (char, char),
+) {
+    let rank = shape.len();
+    let grid_row_count = grid.len();
+
+    if grid_row_count == 1 && rank == 1 && !params.multiline {
+        grid[0].insert(0, list_brackets.0);
+        grid[0].push(list_brackets.1);
+        if box_lines && shape[0] == 0 && params.parent_rank == 0 {
+            grid[0].insert(1, Primitive::Box.glyph().unwrap());
+        }
+    } else {
+        let apparent_rank = if is_summary { 1 } else { rank };
+        // Add corners to non-vectors
+        let width = grid[0].len();
+        let height = grid.len();
+        pad_grid_center(
+            width + 4,
+            (height + 2).max(apparent_rank + 1),
+            ElemAlign::None,
+            true,
+            None,
+            grid,
+        );
+        grid[0][0] = if box_lines { '┌' } else { '╭' };
+        grid[0][1] = '─';
+        for i in 0..apparent_rank.saturating_sub(1) {
+            grid[i + 1][0] = '╷';
+        }
+        *grid.last_mut().unwrap().last_mut().unwrap() = if box_lines { '┘' } else { '╯' };
+    }
+}
+
+fn disambiguate_fixed(
+    grid: &mut Grid,
+    shape: &[usize],
+    params: &GridFmtParams,
+    compress_list_grid: bool,
+) {
+    let mut fix_amount = shape.iter().take_while(|d| **d == 1).count();
+    if fix_amount == 0 {
+        return;
+    }
+
+    let rank = shape.len();
+
+    let should_disambiguate = params.soa_row
+        || (rank < params.max_boxed_rank || params.max_boxed_len == 1 || compress_list_grid)
+            && params.max_boxed_rank != 1;
+
+    if !should_disambiguate {
+        return;
+    }
+
+    if compress_list_grid && fix_amount == rank {
+        // Prefer e.g. "x" over ¤@x, ¤"x" over ¤¤@x, etc.
+        fix_amount = fix_amount.saturating_sub(1);
+    }
+
+    for row in grid.iter_mut() {
+        row.extend(repeat_n(' ', fix_amount));
+        row.rotate_right(fix_amount);
+    }
+    for i in 0..fix_amount {
+        grid[0][i] = Primitive::Fix.glyph().unwrap();
+    }
+}
+
+/// Count how many dimensions the current meta-row or meta-column needs a divider for.
+fn count_dividers(position: usize, shape: &[usize], parity: usize) -> usize {
+    if shape.contains(&0) {
+        return 0;
+    }
+
+    let dimensions = shape.iter().rev().skip(parity).step_by(2);
+
+    let mut dividers: usize = 0;
+    let mut product: usize = 1;
+    for dimension in dimensions {
+        if (position + 1) % product.max(1) == 0 {
+            dividers += 1;
+        }
+        product *= dimension;
+    }
+    dividers.saturating_sub(1)
 }

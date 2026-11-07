@@ -29,9 +29,19 @@ pub struct GridFmtParams {
     pub(crate) label: bool,
     pub(crate) depth: usize,
     pub(crate) parent_rank: usize,
+    /// The maximum rank among sibling boxes within the parent box array.
+    /// 0 if this array is not being formatted as a boxed child.
     pub(crate) max_boxed_rank: usize,
+    /// The maximum length among sibling boxes within the parent box array.
+    /// 0 if this array is not being formatted as a boxed child.
     pub(crate) max_boxed_len: usize,
+    /// Whether this array is being formatted as one "cell" of a "struct of arrays".
+    /// This is the case if all sibling boxes have labels, matching lengths, and no map keys.
+    /// If so, the array being formatted is not actually the entire array, but one row of it.
     pub(crate) soa_row: bool,
+    /// Whether multiline formatting should be used,
+    /// even if this array can be formatted as one line.
+    /// This is the case if any sibling boxes require multiline formatting.
     pub(crate) multiline: bool,
 }
 
@@ -968,21 +978,24 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 
             let is_mapling = self.is_map() && self.rank() == 0;
             if !is_mapling {
-                let list_brackets = if is_summary || self.is_map() {
-                    ('[', ']')
-                } else {
-                    T::grid_fmt_delims()
-                };
-                outline_grid(
-                    &mut grid,
-                    &self.shape,
-                    &params,
-                    is_summary,
-                    T::box_lines(),
-                    T::compress_list_grid(),
-                    list_brackets,
-                    &mut outlined,
-                );
+                if should_outline::<T>(&params, self.rank()) {
+                    outlined = true;
+                    let list_brackets = if is_summary || self.is_map() {
+                        ('[', ']')
+                    } else {
+                        T::grid_fmt_delims()
+                    };
+                    outline_grid(
+                        &mut grid,
+                        &self.shape,
+                        &params,
+                        is_summary,
+                        T::box_lines(),
+                        list_brackets,
+                    );
+                } else if !T::box_lines() && !is_summary {
+                    disambiguate_fixed(&mut grid, &self.shape, &params, T::compress_list_grid())
+                }
             }
             grid
         };
@@ -1718,80 +1731,99 @@ fn synthesize_grid(
     output_grid
 }
 
+fn should_outline<T: ArrayValue>(params: &GridFmtParams, rank: usize) -> bool {
+    if rank <= 1 && T::compress_list_grid() {
+        // This is a string (or something with similar semantics). Strings always get quotes.
+        true
+    } else if params.soa_row {
+        // If an SoA label row is to be printed, normal borders are not.
+        false
+    } else if params.parent_rank == 0 {
+        // This array is not a child of some parent box array. It's being formatted normally.
+        true
+    } else if rank <= 1 && params.parent_rank == 1 && !params.multiline {
+        // This is a scalar or list, and its parent is a list.
+        true
+    } else {
+        if T::box_lines() {
+            rank <= 1 && params.parent_rank <= 1
+        } else {
+            rank < params.max_boxed_rank
+        }
+    }
+}
+
 fn outline_grid(
     grid: &mut Grid,
     shape: &[usize],
     params: &GridFmtParams,
     is_summary: bool,
     box_lines: bool,
-    compress_list_grid: bool,
     list_brackets: (char, char),
-    outlined: &mut bool,
 ) {
     let rank = shape.len();
     let grid_row_count = grid.len();
 
-    if !params.soa_row
-        && (params.parent_rank == 0
-            || rank <= 1 && params.parent_rank == 1 && !params.multiline
-            || box_lines && rank <= 1 && params.parent_rank <= 1
-            || !box_lines && rank < params.max_boxed_rank)
-        || compress_list_grid && rank <= 1
-    {
-        // Normal surrounding
-        if grid_row_count == 1 && rank == 1 && !params.multiline {
-            *outlined = true;
-            grid[0].insert(0, list_brackets.0);
-            grid[0].push(list_brackets.1);
-            if box_lines && shape[0] == 0 && params.parent_rank == 0 {
-                grid[0].insert(1, Primitive::Box.glyph().unwrap());
-            }
-        } else {
-            *outlined = true;
-            let apparent_rank = if is_summary { 1 } else { rank };
-            // Add corners to non-vectors
-            let width = grid[0].len();
-            let height = grid.len();
-            pad_grid_center(
-                width + 4,
-                (height + 2).max(apparent_rank + 1),
-                ElemAlign::None,
-                true,
-                None,
-                grid,
-            );
-            grid[0][0] = if box_lines { '┌' } else { '╭' };
-            grid[0][1] = '─';
-            for i in 0..apparent_rank.saturating_sub(1) {
-                grid[i + 1][0] = '╷';
-            }
-            *grid.last_mut().unwrap().last_mut().unwrap() = if box_lines { '┘' } else { '╯' };
+    if grid_row_count == 1 && rank == 1 && !params.multiline {
+        grid[0].insert(0, list_brackets.0);
+        grid[0].push(list_brackets.1);
+        if box_lines && shape[0] == 0 && params.parent_rank == 0 {
+            grid[0].insert(1, Primitive::Box.glyph().unwrap());
         }
     } else {
-        // Don't surround if going to draw box separators later
-        if !box_lines
-            && shape[0] == 1
-            && (params.soa_row
-                || ((params.max_boxed_len == 1
-                    || compress_list_grid
-                    || shape[0] == 1 && rank < params.max_boxed_rank)
-                    && params.max_boxed_rank != 1))
-        {
-            // Disambiguate fixed arrays
-            if !is_summary {
-                let mut fix_amnt = shape.iter().take_while(|&&d| d == 1).count();
-                if compress_list_grid && shape.last() == Some(&1) {
-                    fix_amnt = fix_amnt.saturating_sub(1);
-                }
-                for row in grid.iter_mut() {
-                    row.extend(repeat_n(' ', fix_amnt));
-                    row.rotate_right(fix_amnt);
-                }
-                for i in 0..fix_amnt {
-                    grid[0][i] = Primitive::Fix.glyph().unwrap();
-                }
-            }
+        let apparent_rank = if is_summary { 1 } else { rank };
+        // Add corners to non-vectors
+        let width = grid[0].len();
+        let height = grid.len();
+        pad_grid_center(
+            width + 4,
+            (height + 2).max(apparent_rank + 1),
+            ElemAlign::None,
+            true,
+            None,
+            grid,
+        );
+        grid[0][0] = if box_lines { '┌' } else { '╭' };
+        grid[0][1] = '─';
+        for i in 0..apparent_rank.saturating_sub(1) {
+            grid[i + 1][0] = '╷';
         }
+        *grid.last_mut().unwrap().last_mut().unwrap() = if box_lines { '┘' } else { '╯' };
+    }
+}
+
+fn disambiguate_fixed(
+    grid: &mut Grid,
+    shape: &[usize],
+    params: &GridFmtParams,
+    compress_list_grid: bool,
+) {
+    let mut fix_amount = shape.iter().take_while(|d| **d == 1).count();
+    if fix_amount == 0 {
+        return;
+    }
+
+    let rank = shape.len();
+
+    let should_disambiguate = params.soa_row
+        || (rank < params.max_boxed_rank || params.max_boxed_len == 1 || compress_list_grid)
+            && params.max_boxed_rank != 1;
+
+    if !should_disambiguate {
+        return;
+    }
+
+    if compress_list_grid && fix_amount == rank {
+        // Prefer e.g. "x" over ¤@x, ¤"x" over ¤¤@x, etc.
+        fix_amount = fix_amount.saturating_sub(1);
+    }
+
+    for row in grid.iter_mut() {
+        row.extend(repeat_n(' ', fix_amount));
+        row.rotate_right(fix_amount);
+    }
+    for i in 0..fix_amount {
+        grid[0][i] = Primitive::Fix.glyph().unwrap();
     }
 }
 

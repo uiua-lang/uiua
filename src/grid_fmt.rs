@@ -105,7 +105,7 @@ pub trait GridFmt: Sized {
     }
     /// How to determine the maximum width of a formatted column
     fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]> + Clone) -> usize {
-        rows.map(|row| row.len()).max().unwrap_or(0)
+        max_of_lengths(rows, 0)
     }
     /// Get SoA rows
     fn soa_rows(_arr: &Array<Self>) -> Option<Vec<(&EcoString, &Value)>> {
@@ -1302,7 +1302,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         }
         if i > 0 && (adjusted_rank > 2 || T::box_lines()) && adjusted_rank % 2 == 1 {
             let elem_rows = metagrid.iter().flatten().flatten();
-            let max_width = elem_rows.map(|r| r.len()).max().unwrap_or(0);
+            let max_width = max_of_lengths(elem_rows, 0);
             let div = if max_width > 10 { 1 } else { 2 };
             let rows = metagrid.split_off(len_before);
             for (mrow, row) in metagrid.iter_mut().skip(start_len).zip(rows) {
@@ -1547,8 +1547,11 @@ fn multiset_summary<T: ArrayCmp + GridFmt + Clone>(elems: &[T]) -> Option<String
     Some(s)
 }
 
-fn max_len<T>(a: &Vec<Vec<T>>, fill: usize) -> usize {
-    a.iter().map(|r| r.len()).max().unwrap_or(fill)
+fn max_of_lengths<T>(rows: impl IntoIterator<Item: AsRef<[T]>>, fill: usize) -> usize {
+    rows.into_iter()
+        .map(|row| row.as_ref().len())
+        .max()
+        .unwrap_or(fill)
 }
 
 fn metacolumn_subrows(metagrid: &Metagrid, meta_x: usize) -> impl Iterator<Item = &[char]> + Clone {
@@ -1569,20 +1572,21 @@ struct MetagridDimensions {
 impl MetagridDimensions {
     fn of<T: ArrayValue>(metagrid: &Metagrid, is_summary: bool) -> Self {
         let metagrid_height = metagrid.len();
-        let metagrid_width = max_len(&metagrid, 0);
+        let metagrid_width = max_of_lengths(metagrid, 0);
 
-        let row_heights: Vec<usize> = metagrid.iter().map(|metarow| max_len(metarow, 1)).collect();
+        let row_heights: Vec<usize> = metagrid
+            .iter()
+            .map(|metarow| max_of_lengths(metarow, 1))
+            .collect();
 
         // A rank-2 iterator over the non-meta rows within each meta-column.
-        let metacolumn_rows =
-            (0..metagrid_width).map(|meta_col_idx| metacolumn_subrows(&metagrid, meta_col_idx));
+        let row_iterators =
+            (0..metagrid_width).map(|meta_col_idx| metacolumn_subrows(metagrid, meta_col_idx));
 
         let column_widths: Vec<usize> = if is_summary {
-            metacolumn_rows
-                .map(|rows| rows.map(|row| row.len()).max().unwrap_or(0))
-                .collect()
+            row_iterators.map(|rows| max_of_lengths(rows, 0)).collect()
         } else {
-            metacolumn_rows.map(T::max_col_width).collect()
+            row_iterators.map(T::max_col_width).collect()
         };
 
         Self {
@@ -1594,6 +1598,11 @@ impl MetagridDimensions {
     }
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "this code was extracted from <Array<T> as GridFmt>::grid_fmt largely to avoid monomorphization, \
+              and several of the arguments would otherwise be available as trait methods on T"
+)]
 fn synthesize_grid(
     mut metagrid: Metagrid,
     dimensions: MetagridDimensions,
@@ -1838,7 +1847,7 @@ fn count_dividers(position: usize, shape: &[usize], parity: usize) -> usize {
     let mut dividers: usize = 0;
     let mut product: usize = 1;
     for dimension in dimensions {
-        if (position + 1) % product.max(1) == 0 {
+        if (position + 1).is_multiple_of(product) {
             dividers += 1;
         }
         product *= dimension;

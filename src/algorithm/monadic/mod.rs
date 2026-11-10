@@ -9,7 +9,7 @@ use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
     convert::identity,
-    f64::consts::{PI, TAU},
+    f64::consts::{FRAC_PI_3, PI, TAU},
     io::Write,
     iter::{self, once},
     mem::take,
@@ -2711,6 +2711,107 @@ pub(crate) fn oklch_to_rgb(l: f64, c: f64, h: f64) -> [f64; 3] {
     let oklch = Oklch::new(l as f32, c as f32, OklabHue::from_radians(h as f32));
     let rgb: Srgb = oklch.into_color_unclamped();
     [rgb.red as f64, rgb.green as f64, rgb.blue as f64]
+}
+
+pub(crate) fn rgb_to_hsl(r: f64, g: f64, b: f64) -> [f64; 3] {
+    let min_v = r.min(g).min(b);
+    let max_v = r.max(g).max(b);
+
+    let chroma = max_v - min_v;
+
+    let lightness = (max_v + min_v) * 0.5;
+
+    let hue = if chroma == 0.0 {
+        0.0
+    } else {
+        FRAC_PI_3
+            * if max_v == r {
+                ((g - b) / chroma).rem_euclid(6.0)
+            } else if max_v == g {
+                (b - r) / chroma + 2.0
+            } else {
+                (r - g) / chroma + 4.0
+            }
+    };
+
+    [
+        hue,
+        if lightness == 0.0 || lightness == 1.0 {
+            0.0
+        } else {
+            0.5 * chroma / lightness.min(1.0 - lightness)
+        },
+        lightness,
+    ]
+}
+
+pub(crate) fn hsl_to_rgb(h: f64, s: f64, l: f64) -> [f64; 3] {
+    // algorithm based on https://en.wikipedia.org/wiki/HSL_and_HSV#HSL_to_RGB
+    let chroma = (1.0 - (2.0 * l - 1.0).abs()) * s;
+    let hue_section = (h / FRAC_PI_3).rem_euclid(6.0);
+
+    let anti_chroma = chroma * (1.0 - (hue_section.rem_euclid(2.0) - 1.0).abs());
+
+    let color = match hue_section {
+        0.0..1.0 => [chroma, anti_chroma, 0.],
+        1.0..2.0 => [anti_chroma, chroma, 0.],
+        2.0..3.0 => [0., chroma, anti_chroma],
+        3.0..4.0 => [0., anti_chroma, chroma],
+        4.0..5.0 => [anti_chroma, 0., chroma],
+        5.0..6.0 => [chroma, 0., anti_chroma],
+        _ => unreachable!(),
+    };
+
+    let m = l - chroma * 0.5;
+
+    color.map(|v| v + m)
+}
+
+#[cfg(test)]
+#[allow(clippy::items_after_test_module)]
+mod hsl_tests {
+    use std::f64::consts::PI;
+
+    use crate::algorithm::monadic::{hsl_to_rgb, rgb_to_hsl};
+
+    #[test]
+    fn it_works() {
+        assert_eq!(rgb_to_hsl(0.5, 0.0, 0.0), [0.0, 1.0, 0.25]);
+        assert_eq!(rgb_to_hsl(1.0, 0.0, 0.0), [0.0, 1.0, 0.5]);
+        assert_eq!(rgb_to_hsl(1.0, 0.5, 0.5), [0.0, 1.0, 0.75]);
+        assert_eq!(rgb_to_hsl(1.0, 1.0, 1.0), [0.0, 0.0, 1.0]);
+
+        assert!(
+            rgb_to_hsl(0.0, 1.0, 1.0)
+                .into_iter()
+                .zip([PI, 1.0, 0.5].into_iter())
+                .all(|(a, b)| (a - b).abs() <= 0.0000001)
+        );
+        assert!(
+            rgb_to_hsl(0.4, 0.2, 0.6)
+                .into_iter()
+                .zip([PI * 1.5, 0.5, 0.4].into_iter())
+                .all(|(a, b)| (a - b).abs() <= 0.0000001)
+        );
+
+        assert_eq!(hsl_to_rgb(0.0, 1., 0.25), [0.5, 0.0, 0.0]);
+        assert_eq!(hsl_to_rgb(0.0, 1., 0.5), [1.0, 0.0, 0.0]);
+        assert_eq!(hsl_to_rgb(0.0, 1., 0.75), [1.0, 0.5, 0.5]);
+        assert_eq!(hsl_to_rgb(0.0, 0., 1.), [1.0, 1.0, 1.0]);
+
+        assert!(
+            hsl_to_rgb(PI, 1.0, 0.5)
+                .into_iter()
+                .zip([0.0, 1.0, 1.0].into_iter())
+                .all(|(a, b)| (a - b).abs() <= 0.0000001)
+        );
+        assert!(
+            hsl_to_rgb(PI * 1.5, 0.5, 0.4)
+                .into_iter()
+                .zip([0.4, 0.2, 0.6].into_iter())
+                .all(|(a, b)| (a - b).abs() <= 0.0000001)
+        );
+    }
 }
 
 fn f64_repr(n: f64) -> String {

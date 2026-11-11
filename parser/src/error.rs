@@ -1,6 +1,7 @@
 use std::fmt;
 
 use colored::{Color, Colorize};
+use serde::*;
 
 use crate::{InputSrc, Inputs, Span};
 
@@ -38,7 +39,7 @@ impl Ord for Diagnostic {
 }
 
 /// Kinds of non-error diagnostics
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum DiagnosticKind {
     /// Informational message
     Info,
@@ -82,7 +83,7 @@ impl Diagnostic {
 }
 
 /// Kinds of reports
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ReportKind {
     /// An error
     Error,
@@ -110,7 +111,7 @@ impl ReportKind {
 }
 
 /// A text fragment of a report
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ReportFragment {
     /// Just plain text
     Plain(String),
@@ -125,7 +126,7 @@ pub enum ReportFragment {
 }
 
 /// A rich-text error/diagnostic report
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Report {
     /// The rich-text fragments of the report
     pub fragments: Vec<ReportFragment>,

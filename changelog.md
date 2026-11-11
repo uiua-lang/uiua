@@ -12,6 +12,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`fill ⬚`](https://uiua.org/docs/fill) support to [`&var`](https://www.uiua.org/docs/%26var)
 - Add native matrix division (spelt `⌝(⊞(/+×)⊙⍉)`) as the [`anti ⌝`](https://www.uiua.org/docs/anti) to matrix multiplication (spelt `⊞(/+×)⊙⍉`).
 - Add [`"f16"`](https://en.wikipedia.org/wiki/Half-precision_floating-point_format) format to [`bytes`](https://www.uiua.org/docs/bytes)
+- Add [`hsl`](https://uiua.org/docs/hsl) and [`oklab`](https://uiua.org/docs/oklab)
 ### Interpreter
 - The pretty printer now shows simple box lists using `{}`s and spaces instead of box drawing characters.
   - This make reading simple box arrays much easier

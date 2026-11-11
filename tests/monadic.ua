@@ -291,8 +291,17 @@ ReprTest! ←^ ˙$"\"_\" repr _" °□⊢
 ⍤⤙≍ [2τ/3 5/9 0.9] hsv [0.4 0.4 0.9]
 ⍤⤙≍ [0 0.5 1 0.5] hsv [1 0.5 0.5 0.5]
 ⍤⤙≍ ⟜⍜hsv∘ [Red Orange Yellow Green Cyan Blue Purple Magenta]
-⍤⤙≍ ⟜⍜hsv∘ [Red Orange Yellow Green Cyan Blue Purple Magenta]
 ⍤⤙≍ ∩(⁅₁₂♭) ⟜⍜hsv∘ ▽⟜≡▽0.5 Lena
+
+# HSL
+⍤⤙≍ [0 1 0.25] hsl [0.5 0 0]
+⍤⤙≍ [0 1 0.5] hsl [1 0 0]
+⍤⤙≍ [0 1 0.75] hsl [1 0.5 0.5]
+⍤⤙≍ [0 0 1] hsl [1 1 1]
+⍤⤙≍ [π 1 0.5] hsl [0 1 1]
+⍤⤙≍ ∩⁅₁₂ [3η 0.5 0.4] hsl [0.4 0.2 0.6]
+⍤⤙≍ ∩⁅₁₂ ⟜⍜hsl∘ [Red Orange Yellow Green Cyan Blue Purple Magenta]
+⍤⤙≍ ∩(⁅₁₂♭) ⟜⍜hsl∘ ▽⟜≡▽0.5 Lena
 
 # FFT
 ⍤⤙≍ ⟜⍜fft∘ ℂ0[1 2 3 4]

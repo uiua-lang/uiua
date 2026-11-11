@@ -160,6 +160,8 @@ impl_primitive!(
     (1(2), UnValidate),
     (1, UnHsv),
     (1, UnOklch),
+    (1, UnHsl),
+    (1, UnOklab),
     (1, UnJson),
     (1, UnJson5),
     (1, UnBinary),

@@ -2713,6 +2713,22 @@ pub(crate) fn oklch_to_rgb(l: f64, c: f64, h: f64) -> [f64; 3] {
     [rgb.red as f64, rgb.green as f64, rgb.blue as f64]
 }
 
+pub(crate) fn rgb_to_oklab(r: f64, g: f64, b: f64) -> [f64; 3] {
+    use palette::{Oklab, Srgb, convert::FromColorUnclamped};
+    let rgb = Srgb::new(r, g, b);
+    let oklab = Oklab::from_color_unclamped(rgb);
+
+    [oklab.l, oklab.a, oklab.b]
+}
+
+pub(crate) fn oklab_to_rgb(l: f64, a: f64, b: f64) -> [f64; 3] {
+    use palette::{Oklab, Srgb, convert::FromColorUnclamped};
+    let oklab = Oklab::new(l, a, b);
+    let rgb = Srgb::from_color_unclamped(oklab);
+
+    [rgb.red, rgb.green, rgb.blue]
+}
+
 pub(crate) fn rgb_to_hsl(r: f64, g: f64, b: f64) -> [f64; 3] {
     let min_v = r.min(g).min(b);
     let max_v = r.max(g).max(b);

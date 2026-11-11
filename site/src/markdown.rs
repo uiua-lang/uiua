@@ -6,8 +6,8 @@ use comrak::{
     options::Extension,
     *,
 };
-use leptos::*;
-use leptos_router::*;
+use leptos::prelude::*;
+use leptos_router::components::*;
 use uiua::{EXAMPLE_UA, Inputs, Primitive, Token};
 use uiua_editor::{Editor, backend::fetch, lang, replace_lang_name, utils::ChallengeDef};
 
@@ -20,18 +20,20 @@ pub fn Markdown<S: Into<String>>(src: S) -> impl IntoView {
 }
 
 #[component]
-pub fn Fetch<S: Into<String>, F: Fn(&str) -> View + 'static>(src: S, f: F) -> impl IntoView {
+pub fn Fetch<S, F>(src: S, f: F) -> impl IntoView
+where
+    S: Into<String>,
+    F: Fn(&str) -> AnyView + Send + 'static,
+{
     let src = src.into();
-    let (src, _) = create_signal(src);
-    let once = create_resource(
-        || (),
-        move |_| async move { fetch(&src.get_untracked()).await.unwrap() },
-    );
+    let (src, _) = signal(src);
+    let once =
+        LocalResource::new(move || async move { fetch(&src.get_untracked()).await.unwrap() });
     view! {{
         move || match once.get() {
-            Some(text) if text.starts_with("<!DOCTYPE html>") => view!(<NotFound/>).into_view(),
-            Some(text) => view!(<ScrollToHash/>{f(&text)}).into_view(),
-            None => view! {<h3 class="running-text">"Loading..."</h3>}.into_view(),
+            Some(text) if text.starts_with("<!DOCTYPE html>") => view!(<NotFound/>).into_any(),
+            Some(text) => view!(<ScrollToHash/>{f(&text)}).into_any(),
+            None => view! {<h3 class="running-text">"Loading..."</h3>}.into_any(),
         }
     }}
 }
@@ -47,11 +49,11 @@ fn options() -> Options<'static> {
     }
 }
 
-pub fn markdown_view(text: &str) -> View {
+pub fn markdown_view(text: &str) -> AnyView {
     markdown_view_impl(text, true)
 }
 
-fn markdown_view_impl(text: &str, make_paragraph: bool) -> View {
+fn markdown_view_impl(text: &str, make_paragraph: bool) -> AnyView {
     let arena = Arena::new();
     let text = text
         .replace("`` ` ``", "<code backtick>")
@@ -102,13 +104,13 @@ impl Default for State {
 
 fn maybe_code<T: Display>(val: Option<T>) -> impl IntoView {
     if let Some(val) = val {
-        view! {  <code>{ val.to_string() }</code> }.into_view()
+        view! {  <code>{ val.to_string() }</code> }.into_any()
     } else {
-        view! {  "" }.into_view()
+        view! {  "" }.into_any()
     }
 }
 
-fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
+fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> AnyView {
     let children: Vec<_> = node.children().map(|node| node_view(node, state)).collect();
     match &node.data.borrow().value {
         NodeValue::Text(text) => {
@@ -117,7 +119,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 .and_then(|text| text.strip_suffix(']'))
                 && let Some(prim) = Primitive::from_name(text)
             {
-                return view!(<Prim prim=prim/>).into_view();
+                return view!(<Prim prim=prim/>).into_any();
             }
             let mut text = Cow::Borrowed(&**text);
             if replace_lang_name() && text.contains("Uiua") {
@@ -126,7 +128,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
             if text.contains("UIUA_VERSION") {
                 text = Cow::Owned(text.replace("UIUA_VERSION", uiua::VERSION));
             }
-            text.into_owned().into_view()
+            text.into_owned().into_any()
         }
         NodeValue::Heading(heading) => {
             let id = all_text(node)
@@ -136,42 +138,42 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 .replace("  ", " ")
                 .replace(' ', "-");
             match heading.level {
-                0 | 1 => view!(<h1 id=id>{children}</h1>).into_view(),
+                0 | 1 => view!(<h1 id=id>{children}</h1>).into_any(),
                 2 => {
                     if id.is_empty() {
-                        view!(<h2 id=id>{children}</h2>).into_view()
+                        view!(<h2 id=id>{children}</h2>).into_any()
                     } else {
-                        view!(<Hd id={&id}>{children}</Hd>).into_view()
+                        view!(<Hd id={&id}>{children}</Hd>).into_any()
                     }
                 }
                 3 => {
                     if id.is_empty() {
-                        view!(<h3 id=id>{children}</h3>).into_view()
+                        view!(<h3 id=id>{children}</h3>).into_any()
                     } else {
-                        view!(<Hd3 id={&id}>{children}</Hd3>).into_view()
+                        view!(<Hd3 id={&id}>{children}</Hd3>).into_any()
                     }
                 }
-                4 => view!(<h4 id=id>{children}</h4>).into_view(),
-                5 => view!(<h5 id=id>{children}</h5>).into_view(),
-                _ => view!(<h6 id=id>{children}</h6>).into_view(),
+                4 => view!(<h4 id=id>{children}</h4>).into_any(),
+                5 => view!(<h5 id=id>{children}</h5>).into_any(),
+                _ => view!(<h6 id=id>{children}</h6>).into_any(),
             }
         }
         NodeValue::List(list) => match list.list_type {
-            ListType::Bullet => view!(<ul>{children}</ul>).into_view(),
-            ListType::Ordered => view!(<ol>{children}</ol>).into_view(),
+            ListType::Bullet => view!(<ul>{children}</ul>).into_any(),
+            ListType::Ordered => view!(<ol>{children}</ol>).into_any(),
         },
-        NodeValue::Item(_) => view!(<li>{children}</li>).into_view(),
+        NodeValue::Item(_) => view!(<li>{children}</li>).into_any(),
         NodeValue::Paragraph => {
             if state.make_paragraph {
-                view!(<p>{children}</p>).into_view()
+                view!(<p>{children}</p>).into_any()
             } else {
-                children.into_view()
+                children.into_any()
             }
         }
         NodeValue::Code(code) => {
             // Special cases
             match code.literal.as_str() {
-                "EXAMPLE.UA" => return view!(<Editor example=EXAMPLE_UA/>).into_view(),
+                "EXAMPLE.UA" => return view!(<Editor example=EXAMPLE_UA/>).into_any(),
                 "END OF TUTORIAL LIST" => {
                     return view! {
                         <ul>
@@ -183,7 +185,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                             <li>"The online "<A href="/pad">"pad"</A>" for writing longer code"</li>
                         </ul>
                     }
-                    .into_view();
+                    .into_any();
                 }
                 "MATH TABLES" => {
                     use Primitive::*;
@@ -239,7 +241,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                             {comp_table}
                         </table>
                     </div>)
-                    .into_view();
+                    .into_any();
                 }
                 "ARG MODIFIER TABLE" => {
                     return view!(<table class="bordered-table header-centered-table">
@@ -269,10 +271,10 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                             <th>"below"</th>
                         </tr>
                     </table>)
-                    .into_view();
+                    .into_any();
                 }
-                "<dropdown>" => return view!(<code>"⌵"</code>).into_view(),
-                "\\" => return view!(<code>"\\"</code>).into_view(),
+                "<dropdown>" => return view!(<code>"⌵"</code>).into_any(),
+                "\\" => return view!(<code>"\\"</code>).into_any(),
                 lit => {
                     if let Some(mut kala) = lit.strip_prefix("kala ") {
                         let mut flip = "float:right";
@@ -284,7 +286,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                             src=format!("/assets/kala/{kala}.png")
                             style=format!("width:min(15em,40%);margin-right:1em;{flip}")
                         />)
-                        .into_view();
+                        .into_any();
                     }
                     for (prefix, class) in [
                         ("monadic mod", "monadic-modifier"),
@@ -303,7 +305,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                                 text = prefix.split_whitespace().next().unwrap();
                             }
                             let text = text.to_string();
-                            return view!(<span class=class>{text}</span>).into_view();
+                            return view!(<span class=class>{text}</span>).into_any();
                         }
                     }
                 }
@@ -329,20 +331,20 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                                 && (prim.name() == text
                                     || prim.glyph().is_some_and(|c| c.to_string() == text)) =>
                         {
-                            frags.push(view!(<Prim prim=prim glyph_only=true/>).into_view())
+                            frags.push(view!(<Prim prim=prim glyph_only=true/>).into_any())
                         }
                         Token::Subscr(sub) if !(text.contains(',') || text.contains("__")) => {
-                            frags.push(view!(<code>{sub.to_string()}</code>).into_view())
+                            frags.push(view!(<code>{sub.to_string()}</code>).into_any())
                         }
                         _ => {
-                            frags = vec![view!(<code>{lit.clone()}</code>).into_view()];
+                            frags = vec![view!(<code>{lit.clone()}</code>).into_any()];
                             break;
                         }
                     }
                 }
-                view!(<span>{frags}</span>).into_view()
+                view!(<span>{frags}</span>).into_any()
             } else {
-                view!(<code>{code.literal.clone()}</code>).into_view()
+                view!(<code>{code.literal.clone()}</code>).into_any()
             }
         }
         NodeValue::Link(link) => {
@@ -358,24 +360,24 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 })
                 .unwrap_or(&text);
             if let Some(prim) = Primitive::from_name(name).or_else(|| Primitive::from_name(&text)) {
-                view!(<Prim prim=prim/>).into_view()
+                view!(<Prim prim=prim/>).into_any()
             } else {
                 if name.chars().count() == 1
                     && let Some(prim) = Primitive::from_glyph(name.chars().next().unwrap())
                 {
-                    return view!(<Prim prim=prim glyph_only=true/>).into_view();
+                    return view!(<Prim prim=prim glyph_only=true/>).into_any();
                 }
-                view!(<a href={&link.url} title={&link.title}>{children}</a>).into_view()
+                view!(<a href={&link.url} title={&link.title}>{children}</a>).into_any()
             }
         }
-        NodeValue::Emph => view!(<em>{children}</em>).into_view(),
-        NodeValue::Strong => view!(<strong>{children}</strong>).into_view(),
-        NodeValue::Strikethrough => view!(<del>{children}</del>).into_view(),
-        NodeValue::LineBreak => view!(<br/>).into_view(),
+        NodeValue::Emph => view!(<em>{children}</em>).into_any(),
+        NodeValue::Strong => view!(<strong>{children}</strong>).into_any(),
+        NodeValue::Strikethrough => view!(<del>{children}</del>).into_any(),
+        NodeValue::LineBreak => view!(<br/>).into_any(),
         NodeValue::CodeBlock(block) => {
             let lit = block.literal.trim_end_matches("\n");
             if lit.trim() == "LOGO" {
-                view!(<Editor example=logo()/>).into_view()
+                view!(<Editor example=logo()/>).into_any()
             } else if block.info.starts_with("uiua")
                 || block.info.is_empty()
                     && uiua::parse(lit, (), &mut Default::default()).1.is_empty()
@@ -398,7 +400,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 };
                 let format_hint = block.info.contains("format_hint");
                 view!(<Editor example=code hidden=hidden help=help kala=kala no_run=no_run format_hint=format_hint/>)
-                    .into_view()
+                    .into_any()
             } else if block.info.starts_with("challenge") {
                 let mut lines = lit.lines().map(|s| s.to_string());
                 let prompt = markdown_view_impl(&lines.next().unwrap_or_default(), false);
@@ -429,12 +431,12 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                         <Editor challenge=def example=default/>
                     </div>
                 }
-                .into_view()
+                .into_any()
             } else {
-                view!(<code class="code-block">{lit.to_string()}</code>).into_view()
+                view!(<code class="code-block">{lit.to_string()}</code>).into_any()
             }
         }
-        NodeValue::ThematicBreak => view!(<hr/>).into_view(),
+        NodeValue::ThematicBreak => view!(<hr/>).into_any(),
         NodeValue::Image(image) => {
             let mut class = "";
             let mut alt = leaf_text(node).unwrap_or_default();
@@ -453,19 +455,19 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 alt = a.into();
             }
             view!(<img src={&image.url} alt={alt.clone()} title=alt class=class style=size/>)
-                .into_view()
+                .into_any()
         }
-        NodeValue::Table(_) => view!(<table class="bordered-table">{children}</table>).into_view(),
+        NodeValue::Table(_) => view!(<table class="bordered-table">{children}</table>).into_any(),
         &NodeValue::TableRow(is_header) => {
             let items = children.into_iter();
             let cells: Vec<_> = if is_header {
-                items.map(|c| view!(<th>{c}</th>).into_view()).collect()
+                items.map(|c| view!(<th>{c}</th>).into_any()).collect()
             } else {
-                items.map(|c| view!(<td>{c}</td>).into_view()).collect()
+                items.map(|c| view!(<td>{c}</td>).into_any()).collect()
             };
-            view!(<tr>{cells}</tr>).into_view()
+            view!(<tr>{cells}</tr>).into_any()
         }
-        _ => children.into_view(),
+        _ => children.into_any(),
     }
 }
 

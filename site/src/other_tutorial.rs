@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 
 use enum_iterator::{Sequence, all};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::Title;
-use leptos_router::*;
+use leptos_router::{components::*, params::*};
 use uiua::{Primitive, SysOp};
 use uiua_editor::{Editor, lang};
 
@@ -25,39 +25,38 @@ impl OtherTutorialPage {
     pub fn path(&self) -> String {
         format!("{self:?}").to_lowercase()
     }
-    pub fn view(&self) -> View {
+    pub fn view(&self) -> AnyView {
         match self {
             Self::Strings => title_markdown(
                 "Strings",
                 "/text/other_tutorial/strings.md",
-                strings_challenges().into_view(),
+                strings_challenges().into_any(),
             )
-            .into_view(),
+            .into_any(),
             Self::FilesAndStreams => title_markdown(
                 "Files and Streams",
                 "/text/other_tutorial/files_and_streams.md",
-                View::default(),
+                ().into_any(),
             )
-            .into_view(),
-            Self::Audio => Audio().into_view(),
-            Self::Images => ImagesAndGifs().into_view(),
-            Self::Documentation => Documentation().into_view(),
+            .into_any(),
+            Self::Audio => Audio().into_any(),
+            Self::Images => ImagesAndGifs().into_any(),
+            Self::Documentation => Documentation().into_any(),
             Self::CodeTactility => title_markdown(
                 "Code Tactility",
                 "/text/other_tutorial/code_tactility.md",
-                View::default(),
+                ().into_any(),
             )
-            .into_view(),
+            .into_any(),
             Self::Ranges => {
-                title_markdown("Ranges", "/text/other_tutorial/ranges.md", View::default())
-                    .into_view()
+                title_markdown("Ranges", "/text/other_tutorial/ranges.md", ().into_any()).into_any()
             }
             Self::EvenMoreArgument => title_markdown(
                 "Even More Argument Manipulation",
                 "/text/other_tutorial/even_more_argument.md",
-                View::default(),
+                ().into_any(),
             )
-            .into_view(),
+            .into_any(),
         }
     }
     pub fn title(&self) -> &'static str {
@@ -85,6 +84,12 @@ impl OtherTutorialPage {
             OtherTutorialPage::CodeTactility => "tools for debugging and editing code",
             OtherTutorialPage::Ranges => "various ways to generate ranges",
         })
+    }
+}
+
+impl ParamToString for OtherTutorialPage {
+    fn param_to_string(&self, _: &str) -> Option<String> {
+        Some(self.path())
     }
 }
 

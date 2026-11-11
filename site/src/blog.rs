@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_router::*;
+use leptos_router::{components::*, hooks::*, params::*};
 use uiua_editor::lang;
 
 use crate::markdown::*;
@@ -14,6 +14,11 @@ pub struct BlogParams {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct BlogParam(String);
+impl ParamToString for BlogParam {
+    fn param_to_string(&self, _: &str) -> Option<String> {
+        Some(self.0.clone())
+    }
+}
 impl IntoParam for BlogParam {
     fn into_param(value: Option<&str>, _: &str) -> Result<Self, ParamsError> {
         let s = value.unwrap_or_default();
@@ -30,12 +35,12 @@ pub fn Blog() -> impl IntoView {
         move || match use_params::<BlogParams>().get() {
             Ok(params) => {
                 if params.page.0.is_empty() {
-                    view!(<BlogHome/>)
+                    view!(<BlogHome/>).into_any()
                 } else {
-                    view!(<BlogPage name={params.page.0}/>)
+                    view!(<BlogPage name={params.page.0}/>).into_any()
                 }
             }
-            Err(_) => view!(<BlogHome/>),
+            Err(_) => view!(<BlogHome/>).into_any(),
         }
     })
 }
@@ -55,7 +60,7 @@ fn BlogHome() -> impl IntoView {
                 let name = name.to_string();
                 let date = date.to_string();
                 view!(<h3><span class="output-faint">{date}" - "</span><A href={format!("/blog/{path}")}>{name}</A></h3>)
-            }).collect::<Vec<_>>().into_view()
+            }).collect::<Vec<_>>().into_any()
         }
     }
 }
@@ -83,10 +88,10 @@ fn BlogPage(name: String) -> impl IntoView {
 
 #[component]
 fn BlogRssButton() -> impl IntoView {
-    let (copied, set_copied) = create_signal(false);
+    let (copied, set_copied) = signal(false);
     view! {
         <button
-            href="/blog/feed.rss"
+            prop:href="/blog/feed.rss"
             class="editor-right-button"
             style="float: right"
             data-title={move || if copied.get() { "Copied!" } else { "Copy RSS Feed" }}
@@ -94,7 +99,7 @@ fn BlogRssButton() -> impl IntoView {
                 set_copied.set(true);
                 let host = window().location().host().unwrap();
                 _ = window().navigator().clipboard().write_text(&format!("{host}/blog/feed.rss"));
-                set_timeout(
+                _ = set_timeout(
                     move || set_copied.set(false),
                     Duration::from_secs(10),
                 );

@@ -12,10 +12,10 @@ use base64::engine::{Engine, general_purpose::STANDARD};
 use ev::mousemove;
 use leptos::{
     ev::{keydown, keyup},
+    prelude::*,
     *,
 };
-
-use leptos_router::{BrowserIntegration, History, LocationChange, NavigateOptions, use_navigate};
+use leptos_router::{NavigateOptions, hooks::use_navigate};
 use uiua::{
     PrimClass, PrimDoc, Primitive, Signature, Subscript, SubscriptToken, SysOp, Token, Value,
     format::{FormatConfig, format_str},
@@ -25,8 +25,8 @@ use uiua::{
 };
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::{
-    DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlBodyElement, HtmlDivElement,
-    HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
+    DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlDivElement, HtmlInputElement,
+    HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
 };
 
 use utils::*;
@@ -36,14 +36,28 @@ use backend::{OutputItem, WebBackend, delete_file, drop_file};
 use js_sys::Date;
 use std::sync::OnceLock;
 
-use leptos_use::use_resize_observer;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EditorMode {
     #[default]
     Example,
     Showcase,
     Pad,
+}
+
+enum EditorOutput {
+    Empty,
+    Running,
+    Ready {
+        rows: Vec<Vec<OutputItem>>,
+        allow_autoplay: bool,
+        flex_wrap: &'static str,
+    },
+}
+
+#[derive(Clone, Copy)]
+enum GlyphDoc {
+    Primitive(Primitive),
+    Syntax(&'static str, &'static str),
 }
 
 thread_local! {
@@ -66,11 +80,11 @@ pub fn Editor<'a>(
     #[prop(optional)] showcase_examples: Option<Vec<examples::PadExampleCategory>>,
     #[prop(optional)] kala: &'a str,
     #[prop(optional)] format_hint: bool,
-) -> impl IntoView {
+) -> impl IntoView + use<> {
     START_TIME.get_or_init(|| Date::now() / 1000.0);
 
     let showcase_examples = showcase_examples.unwrap_or_default();
-    let showcase_examples_flattened: Rc<Vec<examples::PadExample>> = Rc::new(
+    let showcase_examples_flattened: Arc<Vec<examples::PadExample>> = Arc::new(
         showcase_examples
             .iter()
             .flat_map(|category| category.items.iter().cloned())
@@ -129,7 +143,7 @@ pub fn Editor<'a>(
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
     // Track line count
-    let (line_count, set_line_count) = create_signal(1);
+    let (line_count, set_line_count) = signal(1);
 
     let initial_code_str = if mode == EditorMode::Example && !nonprogressive {
         examples.last()
@@ -140,23 +154,23 @@ pub fn Editor<'a>(
     }
     .cloned()
     .unwrap_or_else(|| example.into());
-    let (initial_code, set_initial_code) = create_signal(Some(initial_code_str.clone()));
+    let (initial_code, set_initial_code) = signal(Some(initial_code_str.clone()));
 
-    let (example, set_example) = create_signal(if mode == EditorMode::Example && !nonprogressive {
+    let (example, set_example) = signal(if mode == EditorMode::Example && !nonprogressive {
         examples.len().saturating_sub(1)
     } else {
         0
     });
-    let (diag_output, set_diag_output) = create_signal(View::default());
-    let (output, set_output) = create_signal(View::default());
-    let (token_count, set_token_count) = create_signal(0);
+    let (diag_output, set_diag_output) = signal(Vec::<OutputItem>::new());
+    let (output, set_output) = signal(EditorOutput::Empty);
+    let (token_count, set_token_count) = signal(0);
 
     // let code_text = move || code_text(&code_id());
     let get_code_cursor = move || get_code_cursor(&code_id());
-    let (copied_link, set_copied_link) = create_signal(false);
-    let (settings_open, set_settings_open) = create_signal(false);
-    let (fullscreen_enabled, set_fullscreen_enabled) = create_signal(false);
-    let (show_format_hint, set_show_format_hint) = create_signal(format_hint);
+    let (copied_link, set_copied_link) = signal(false);
+    let (settings_open, set_settings_open) = signal(false);
+    let (fullscreen_enabled, set_fullscreen_enabled) = signal(false);
+    let (show_format_hint, set_show_format_hint) = signal(format_hint);
     let update_token_count = move |code: &str| {
         set_token_count.set(
             lex(code, (), &mut Default::default())
@@ -169,7 +183,7 @@ pub fn Editor<'a>(
         )
     };
     let get_code = move || get_code(&code_id());
-    let (overlay, set_overlay) = create_signal(String::new());
+    let (overlay, set_overlay) = signal(String::new());
 
     let hidden = hidden.to_string();
 
@@ -198,7 +212,7 @@ pub fn Editor<'a>(
             }
         },
     };
-    let (get_state, state) = create_signal(state);
+    let (get_state, state) = signal_local(state);
 
     // Get the code with output comments cleaned up
     let clean_code = move || {
@@ -295,12 +309,11 @@ pub fn Editor<'a>(
         {
             let encoded = url_encode_code(&clean_code());
             if let EditorMode::Pad = mode {
-                BrowserIntegration {}.navigate(&LocationChange {
-                    value: format!("/pad?src={encoded}"),
-                    scroll: false,
-                    replace: true,
-                    ..Default::default()
-                });
+                let _ = window().history().unwrap().replace_state_with_url(
+                    &JsValue::NULL,
+                    "",
+                    Some(&format!("/pad?src={encoded}")),
+                );
             }
         }
 
@@ -324,65 +337,53 @@ pub fn Editor<'a>(
         });
     };
 
-    // Run the code
-    let run = move |do_format: bool, set_cursor: bool| {
-        // Format code
-        let (input, seed) = format(do_format, set_cursor);
-        state.update(|s| s.update_line_number_width());
-
-        // Run code
-        set_output.set(view! { <div class="running-text">"Running"</div> }.into_view());
-        let allow_autoplay = !matches!(mode, EditorMode::Example) && get_autoplay();
-        let render_output_item = move |item| match item {
-            OutputItem::String(mut s) => {
-                if s.is_empty() {
-                    s.push(' ');
-                }
-                view! { <div class="output-item">{s}</div> }.into_view()
+    let (render_output_item, render_output_items) = {
+        let render_output_item = move |item: &OutputItem, allow_autoplay| match item {
+            OutputItem::String(s) => {
+                let s = if s.is_empty() { " " } else { s.as_str() }.to_owned();
+                view! { <div class="output-item">{s}</div> }.into_any()
             }
             OutputItem::Classed(class, s) => {
                 let class = format!("output-item {class}");
-                view! { <div class=class>{s}</div> }.into_view()
+                view! { <div class=class>{s.clone()}</div> }.into_any()
             }
             OutputItem::Faint(s) => {
-                view! { <div class="output-item output-fainter">{s}</div> }.into_view()
+                view! { <div class="output-item output-fainter">{s.clone()}</div> }.into_any()
             }
             OutputItem::Image(bytes, label) => {
                 let encoded = STANDARD.encode(bytes);
                 view! {
                     <div class="output-media-wrapper">
-                        <div class="output-image-label">{label}</div>
+                        <div class="output-image-label">{label.clone()}</div>
                         <img class="output-image" src=format!("data:image/png;base64,{encoded}") />
                     </div>
                 }
-                .into_view()
+                .into_any()
             }
-            OutputItem::Gif(mut bytes, label) => {
-                bytes.extend(uiua::random().to_ne_bytes());
+            OutputItem::Gif(bytes, label) => {
                 let encoded = STANDARD.encode(bytes);
                 view! {
                     <div class="output-media-wrapper">
-                        <div class="output-image-label">{label}</div>
+                        <div class="output-image-label">{label.clone()}</div>
                         <img class="output-image" src=format!("data:image/gif;base64,{encoded}") />
                     </div>
                 }
-                .into_view()
+                .into_any()
             }
-            OutputItem::Apng(mut bytes, label) => {
-                bytes.extend(uiua::random().to_ne_bytes());
+            OutputItem::Apng(bytes, label) => {
                 let encoded = STANDARD.encode(bytes);
                 view! {
                     <div class="output-media-wrapper">
-                        <div class="output-image-label">{label}</div>
+                        <div class="output-image-label">{label.clone()}</div>
                         <img class="output-image" src=format!("data:image/png;base64,{encoded}") />
                     </div>
                 }
-                .into_view()
+                .into_any()
             }
             OutputItem::Audio(bytes, label) => {
                 let encoded = STANDARD.encode(bytes);
                 let src = format!("data:audio/wav;base64,{encoded}");
-                let label = label.map(|s| format!("{s}:"));
+                let label = label.as_ref().map(|s| format!("{s}:"));
                 if allow_autoplay {
                     view! {
                         <div class="output-media-wrapper">
@@ -390,7 +391,7 @@ pub fn Editor<'a>(
                             <audio class="output-audio" controls autoplay src=src />
                         </div>
                     }
-                    .into_view()
+                    .into_any()
                 } else {
                     view! {
                         <div class="output-media-wrapper">
@@ -398,88 +399,96 @@ pub fn Editor<'a>(
                             <audio class="output-audio" controls src=src />
                         </div>
                     }
-                    .into_view()
+                    .into_any()
                 }
             }
             OutputItem::Svg(s, label) => view! {
                 <div class="output-media-wrapper">
-                    <div class="output-image-label">{label}</div>
+                    <div class="output-image-label">{label.clone()}</div>
                     <img
                         class="output-image"
-                        src=format!("data:image/svg+xml;utf8, {}", urlencoding::encode(&s))
+                        src=format!("data:image/svg+xml;utf8, {}", urlencoding::encode(s))
                     />
                 </div>
             }
-            .into_view(),
-            OutputItem::Report(report) => report_view(&report, state).into_view(),
+            .into_any(),
+            OutputItem::Report(report) => report_view(report, state).into_any(),
             OutputItem::Separator => view! {
                 <div class="output-item">
                     <hr />
                 </div>
             }
-            .into_view(),
+            .into_any(),
         };
+        let render_output_items = move |items: &[OutputItem], allow_autoplay, flex_wrap| match items
+        {
+            [] => ().into_any(),
+            [OutputItem::Separator] => view!(<div class="output-item">
+                    <hr />
+                </div>)
+            .into_any(),
+            _ => view!(<div class="output-values" style=flex_wrap>
+                    {(items.iter())
+                        .map(|item| {
+                            render_output_item(item, allow_autoplay)
+                                .into_any()
+                        })
+                        .collect::<Vec<_>>()
+                    }
+                </div>)
+            .into_any(),
+        };
+        (render_output_item, render_output_items)
+    };
+
+    // Run the code
+    let run = move |do_format: bool, set_cursor: bool| {
+        // Format code
+        let (input, seed) = format(do_format, set_cursor);
+        state.update(|s| s.update_line_number_width());
+
+        // Run code
+        set_output.set(EditorOutput::Running);
+        let allow_autoplay = !matches!(mode, EditorMode::Example) && get_autoplay();
         let flex_wrap = if get_top_at_top() {
             "flex-wrap: wrap;"
         } else {
             "flex-wrap: wrap-reverse;"
         };
-        let render_output_items = move |items: Vec<OutputItem>| match items.as_slice() {
-            [] => View::default(),
-            [OutputItem::Separator] => view!(<div class="output-item">
-                    <hr />
-                </div>)
-            .into_view(),
-            _ => view!(<div class="output-values" style=flex_wrap>
-                    {(items.into_iter())
-                        .map(|item| {
-                            render_output_item(item)
-                                .into_view()
-                        })
-                        .collect::<Vec<_>>()
-                    }
-                </div>)
-            .into_view(),
+        let update_output = move |output: Vec<Vec<OutputItem>>| {
+            let (diags, mut rows): (Vec<_>, Vec<_>) = output
+                .into_iter()
+                .partition(|line| line.len() == 1 && line[0].is_report());
+            for item in rows.iter_mut().flatten() {
+                if let OutputItem::Gif(bytes, _) | OutputItem::Apng(bytes, _) = item {
+                    bytes.extend(uiua::random().to_ne_bytes());
+                }
+            }
+            set_output.set(EditorOutput::Ready {
+                rows,
+                allow_autoplay,
+                flex_wrap,
+            });
+            set_diag_output.set(diags.into_iter().flatten().collect());
         };
-        set_timeout(
+        _ = set_timeout(
             move || {
                 state.update(|st| {
                     seed_random(seed);
                     let output = st.run_code(&input);
                     if take(&mut st.loading_module) {
-                        set_timeout(
+                        _ = set_timeout(
                             move || {
                                 state.update(|st| {
                                     seed_random(seed);
                                     let output = st.run_code(&input);
-                                    let (diags, items): (Vec<_>, Vec<_>) = output
-                                        .into_iter()
-                                        .partition(|line| line.len() == 1 && line[0].is_report());
-                                    let items: Vec<_> =
-                                        items.into_iter().map(render_output_items).collect();
-                                    let diags: Vec<_> = diags
-                                        .into_iter()
-                                        .map(|line| {
-                                            render_output_item(line.into_iter().next().unwrap())
-                                        })
-                                        .collect();
-                                    set_output.set(items.into_view());
-                                    set_diag_output.set(diags.into_view());
+                                    update_output(output);
                                 });
                             },
                             Duration::from_millis(200),
                         );
                     } else {
-                        let (diags, items): (Vec<_>, Vec<_>) = output
-                            .into_iter()
-                            .partition(|line| line.len() == 1 && line[0].is_report());
-                        let items: Vec<_> = items.into_iter().map(render_output_items).collect();
-                        let diags: Vec<_> = diags
-                            .into_iter()
-                            .map(|line| render_output_item(line.into_iter().next().unwrap()))
-                            .collect();
-                        set_output.set(items.into_view());
-                        set_diag_output.set(diags.into_view());
+                        update_output(output);
                     }
                 });
             },
@@ -569,10 +578,16 @@ pub fn Editor<'a>(
     let update_rounded_line_height = move || {
         state.update(|state| state.update_rounded_line_height());
     };
-    let line_height_sampler_ref = NodeRef::new();
-    use_resize_observer(line_height_sampler_ref, move |_, _| {
-        // logging::log!("sample code line resized on pad {id}");
-        update_rounded_line_height();
+    let line_height_sampler_ref = NodeRef::<html::Div>::new();
+    Effect::new(move |_| {
+        let Some(element) = line_height_sampler_ref.get() else {
+            return;
+        };
+        let callback = Closure::<dyn FnMut()>::new(update_rounded_line_height);
+        let observer = web_sys::ResizeObserver::new(callback.as_ref().unchecked_ref()).unwrap();
+        observer.observe(&element);
+        let observer = StoredValue::new_local((observer, callback));
+        on_cleanup(move || observer.with_value(|(observer, _)| observer.disconnect()));
     });
 
     // Handle key events
@@ -583,8 +598,7 @@ pub fn Editor<'a>(
             } else {
                 "none"
             };
-            overlay_element
-                .style()
+            (overlay_element.css())
                 .set_property("pointer-events", pointer_events)
                 .unwrap();
         }
@@ -605,8 +619,7 @@ pub fn Editor<'a>(
         if (key == "Control" && !on_mac() || key == "Meta" && on_mac())
             && let Some(overlay_element) = get_element::<HtmlDivElement>(&overlay_id())
         {
-            overlay_element
-                .style()
+            (overlay_element.css())
                 .set_property("pointer-events", "all")
                 .unwrap();
         }
@@ -1042,7 +1055,7 @@ pub fn Editor<'a>(
             "ArrowLeft" | "ArrowRight" if !on_mac() && event.alt_key() => {}
             // Chrome 😠
             "Unidentified" => {
-                set_timeout(
+                _ = set_timeout(
                     move || get_state.get().refresh_code(),
                     Duration::from_millis(0),
                 );
@@ -1062,7 +1075,7 @@ pub fn Editor<'a>(
 
     // Handle composition events
     let update_composition = move |_| {
-        set_timeout(
+        _ = set_timeout(
             move || get_state.get().refresh_code(),
             Duration::from_millis(0),
         );
@@ -1072,7 +1085,7 @@ pub fn Editor<'a>(
     window_event_listener(ev::compositionend, update_composition);
 
     // Handle paste evens
-    let code_paste = move |event: Event| {
+    let code_paste = move |event: web_sys::ClipboardEvent| {
         let event = event.dyn_into::<web_sys::ClipboardEvent>().unwrap();
         event.prevent_default();
         event.stop_propagation();
@@ -1082,7 +1095,7 @@ pub fn Editor<'a>(
 
     // Handle change events
     let code_input = move |_| {
-        set_timeout(
+        _ = set_timeout(
             move || {
                 state.update(|state| {
                     state.refresh_code();
@@ -1108,10 +1121,10 @@ pub fn Editor<'a>(
         let Some((data_title, rect)) = subchildren
             .find(|child| {
                 let rect = child.get_bounding_client_rect();
-                rect.left() <= mouse_x as f64
-                    && mouse_x as f64 <= rect.right()
-                    && rect.top() <= mouse_y as f64
-                    && mouse_y as f64 <= rect.bottom()
+                rect.left() <= mouse_x
+                    && mouse_x <= rect.right()
+                    && rect.top() <= mouse_y
+                    && mouse_y <= rect.bottom()
             })
             .and_then(|child| {
                 child
@@ -1119,11 +1132,11 @@ pub fn Editor<'a>(
                     .map(|title| (title, child.get_bounding_client_rect()))
             })
         else {
-            hover_elem.style().set_property("display", "none").unwrap();
+            hover_elem.css().set_property("display", "none").unwrap();
             return;
         };
         // Set hover elem pos to mouse pos
-        let style = hover_elem.style();
+        let style = hover_elem.css();
         let left = rect.left();
         let top = rect.bottom();
         _ = style.set_property("left", &format!("{left}px"));
@@ -1131,13 +1144,13 @@ pub fn Editor<'a>(
         // Set hover elem text to hovered data-title
         hover_elem.set_inner_text(&data_title);
         // Show hover elem
-        hover_elem.style().set_property("display", "block").unwrap();
+        hover_elem.css().set_property("display", "block").unwrap();
     };
 
     // Handle mouse leave events
     let code_mouse_leave = move |_| {
         let hover_elem: HtmlDivElement = element(&hover_id());
-        hover_elem.style().set_property("display", "none").unwrap();
+        hover_elem.css().set_property("display", "none").unwrap();
     };
 
     // Go to the next example
@@ -1186,12 +1199,32 @@ pub fn Editor<'a>(
             "🧪 # Experimental!"
         </button>
     }
-    .into_view();
+    .into_any();
 
     // Glyph hover doc
-    let (glyph_doc, set_glyph_doc) = create_signal(View::default());
+    let (glyph_doc, set_glyph_doc) = signal(None::<GlyphDoc>);
+    let glyph_doc_view = move || {
+        glyph_doc.get().map(|doc| match doc {
+            GlyphDoc::Primitive(prim) => view! {
+                <Prim prim=prim />
+                {prim
+                    .is_experimental()
+                    .then(|| {
+                        view! {
+                            <span class="experimental" style="font-size: 0.8em;">
+                                "⚠️ Experimental"
+                            </span>
+                        }
+                    })}
+                <br />
+                {PrimDoc::from(prim).short_text().into_owned()}
+            }
+            .into_any(),
+            GlyphDoc::Syntax(glyph, title) => view! { <code>{glyph}</code>" "{title} }.into_any(),
+        })
+    };
     let onmouseleave = move |_| {
-        _ = glyph_doc_element().style().set_property("display", "none");
+        _ = glyph_doc_element().css().set_property("display", "none");
     };
 
     // Glyph buttons
@@ -1219,26 +1252,9 @@ pub fn Editor<'a>(
             }
         };
         // Show the glyph doc on mouseover
-        let doc = PrimDoc::from(prim);
         let onmouseover = move |_| {
-            set_glyph_doc.set(
-                view! {
-                    <Prim prim=prim />
-                    {prim
-                        .is_experimental()
-                        .then(|| {
-                            view! {
-                                <span class="experimental" style="font-size: 0.8em;">
-                                    "⚠️ Experimental"
-                                </span>
-                            }
-                        })}
-                    <br />
-                    {doc.short_text().into_owned()}
-                }
-                .into_view(),
-            );
-            _ = glyph_doc_element().style().remove_property("display");
+            set_glyph_doc.set(Some(GlyphDoc::Primitive(prim)));
+            _ = glyph_doc_element().css().remove_property("display");
         };
         view! {
             <button
@@ -1251,11 +1267,11 @@ pub fn Editor<'a>(
                 <div class=prim_class(prim)>{glyph}</div>
             </button>
         }
-        .into_view()
+        .into_any()
     };
 
     // Show or hide the glyph buttons
-    let (show_glyphs, set_show_glyphs) = create_signal(match mode {
+    let (show_glyphs, set_show_glyphs) = signal(match mode {
         EditorMode::Example => false,
         EditorMode::Showcase | EditorMode::Pad => true,
     });
@@ -1366,15 +1382,8 @@ pub fn Editor<'a>(
                 // Show the doc on mouseover
                 let onmouseover = move |_| {
                     if !doc.is_empty() {
-                        set_glyph_doc.set(
-                            view! {
-                                <code>{glyph}</code>
-                                " "
-                                {title}
-                            }
-                            .into_view(),
-                        );
-                        _ = glyph_doc_element().style().remove_property("display");
+                        set_glyph_doc.set(Some(GlyphDoc::Syntax(glyph, title)));
+                        _ = glyph_doc_element().css().remove_property("display");
                     }
                 };
                 glyph_buttons.insert(
@@ -1390,7 +1399,7 @@ pub fn Editor<'a>(
                             {glyph}
                         </button>
                     }
-                    .into_view(),
+                    .into_any(),
                 );
             }
 
@@ -1443,7 +1452,7 @@ pub fn Editor<'a>(
                         {options}
                     </select>
                 }
-                .into_view(),
+                .into_any(),
             );
             glyph_buttons.swap(insertion_point, insertion_point - 1);
 
@@ -1518,20 +1527,15 @@ pub fn Editor<'a>(
     let toggle_fullscreen = move |_: MouseEvent| {
         set_fullscreen_enabled.update(|s| {
             *s = !*s;
-            let _ = document()
-                .body()
-                .unwrap()
-                .unchecked_into::<HtmlBodyElement>()
-                .style()
-                .set_property(
-                    "overflow",
-                    match *s {
-                        true => "hidden",
-                        false => "auto",
-                    },
-                );
+            let _ = document().body().unwrap().css().set_property(
+                "overflow",
+                match *s {
+                    true => "hidden",
+                    false => "auto",
+                },
+            );
             if !*s {
-                set_timeout(
+                _ = set_timeout(
                     move || state.update(|state| state.update_line_number_width()),
                     Duration::ZERO,
                 );
@@ -1566,7 +1570,7 @@ pub fn Editor<'a>(
     };
 
     // This ensures the output of the first example is shown
-    set_timeout(
+    _ = set_timeout(
         move || {
             if no_run {
                 let code = initial_code.get().unwrap();
@@ -1579,10 +1583,10 @@ pub fn Editor<'a>(
         Duration::from_millis(0),
     );
 
-    let (drag_message, set_drag_message) = create_signal("");
+    let (drag_message, set_drag_message) = signal("");
 
     // Get file drop events
-    window_event_listener(leptos_dom::ev::dragover, move |event: DragEvent| {
+    window_event_listener(ev::dragover, move |event: DragEvent| {
         let event = event.dyn_into::<web_sys::DragEvent>().unwrap();
         event.prevent_default();
         event.stop_propagation();
@@ -1591,7 +1595,7 @@ pub fn Editor<'a>(
             set_drag_message.set("Drop file to load");
         }
     });
-    window_event_listener(leptos_dom::ev::dragleave, move |event: DragEvent| {
+    window_event_listener(ev::dragleave, move |event: DragEvent| {
         let event = event.dyn_into::<web_sys::DragEvent>().unwrap();
         event.prevent_default();
         event.stop_propagation();
@@ -1635,7 +1639,7 @@ pub fn Editor<'a>(
         }
     };
 
-    let listener = window_event_listener(leptos_dom::ev::drop, move |event: DragEvent| {
+    let listener = window_event_listener(ev::drop, move |event: DragEvent| {
         let event = event.dyn_into::<web_sys::DragEvent>().unwrap();
         event.prevent_default();
         event.stop_propagation();
@@ -1727,7 +1731,7 @@ pub fn Editor<'a>(
         anchor.set_attribute("style", "display: none").unwrap();
         doc.body().unwrap().append_child(&anchor).unwrap();
         anchor.dyn_ref::<HtmlAnchorElement>().unwrap().click();
-        set_timeout(move || anchor.remove(), Duration::from_millis(0));
+        _ = set_timeout(move || anchor.remove(), Duration::from_millis(0));
     };
 
     // Toggle settings
@@ -1772,7 +1776,7 @@ pub fn Editor<'a>(
     };
     let toggle_run_on_format = move |_| set_run_on_format(!get_run_on_format());
     let toggle_inlay_values = move |_| {
-        set_timeout(
+        _ = set_timeout(
             move || get_state.get().refresh_code(),
             Duration::from_millis(0),
         );
@@ -1806,7 +1810,7 @@ pub fn Editor<'a>(
         set_gayness(input.value().as_str().into());
     };
     let toggle_rgb_bindings = move |_| {
-        set_timeout(
+        _ = set_timeout(
             move || get_state.get().refresh_code(),
             Duration::from_millis(0),
         );
@@ -1835,7 +1839,7 @@ pub fn Editor<'a>(
         // The file list updates every time output changes.
         // The code runs immediately after dropping a file, so the output changes too.
         // Plus it handles cases where files are created/deleted after the code runs.
-        let _ = output.get();
+        output.track();
 
         let excluded_files = ["example.txt", "example.ua", "primitives.json"];
         backend::FILES.with(|files| {
@@ -1854,7 +1858,7 @@ pub fn Editor<'a>(
     let file_tab_display = move || {
         let files = get_files_to_display().clone();
         if files.is_empty() {
-            return view! { <div></div> };
+            return view! { <div></div> }.into_any();
         }
 
         let file_list = get_files_to_display()
@@ -1895,7 +1899,7 @@ pub fn Editor<'a>(
                     anchor.set_attribute("style", "display: none").unwrap();
                     doc.body().unwrap().append_child(&anchor).unwrap();
                     anchor.dyn_ref::<HtmlAnchorElement>().unwrap().click();
-                    set_timeout(move || anchor.remove(), Duration::from_millis(0));
+                    _ = set_timeout(move || anchor.remove(), Duration::from_millis(0));
                 };
 
                 let path_clone = path.clone();
@@ -1936,11 +1940,11 @@ pub fn Editor<'a>(
             })
             .collect_view();
 
-        view! { <div class="pad-files">{file_list}</div> }
+        view! { <div class="pad-files">{file_list}</div> }.into_any()
     };
 
-    let (splitter_dragging, set_splitter_dragging) = create_signal(false);
-    let (splitter_ratio, set_splitter_ratio) = create_signal(0.5);
+    let (splitter_dragging, set_splitter_dragging) = signal(false);
+    let (splitter_ratio, set_splitter_ratio) = signal(0.5);
 
     let start_dragging_splitter = move |event: MouseEvent| {
         event.prevent_default();
@@ -1969,17 +1973,16 @@ pub fn Editor<'a>(
         )
     };
 
-    let mouse_move_listener =
-        window_event_listener(leptos_dom::ev::mousemove, move |event: MouseEvent| {
-            if splitter_dragging.get() {
-                let mouse_x = event.client_x();
-                let editor_width = editor_wrapper_element().client_width();
-                let ratio = (mouse_x as f64 / editor_width as f64).clamp(0.1, 0.9);
-                set_splitter_ratio.set(ratio);
-            }
-        });
+    let mouse_move_listener = window_event_listener(ev::mousemove, move |event: MouseEvent| {
+        if splitter_dragging.get() {
+            let mouse_x = event.client_x();
+            let editor_width = editor_wrapper_element().client_width();
+            let ratio = (mouse_x / editor_width as f64).clamp(0.1, 0.9);
+            set_splitter_ratio.set(ratio);
+        }
+    });
 
-    let mouse_up_listener = window_event_listener(leptos_dom::ev::mouseup, move |_: MouseEvent| {
+    let mouse_up_listener = window_event_listener(ev::mouseup, move |_: MouseEvent| {
         set_splitter_dragging.set(false);
     });
 
@@ -1989,10 +1992,10 @@ pub fn Editor<'a>(
         listener.remove();
     });
 
-    let (showcase_example_index, set_showcase_example_index) = create_signal(0usize);
+    let (showcase_example_index, set_showcase_example_index) = signal(0usize);
 
     let select_showcase = {
-        let examples = Rc::clone(&showcase_examples_flattened);
+        let examples = Arc::clone(&showcase_examples_flattened);
         move |index: usize| {
             if let Some(example) = examples.get(index) {
                 set_showcase_example_index.set(index);
@@ -2021,7 +2024,7 @@ pub fn Editor<'a>(
 
     let has_previous_showcase_example = move || showcase_example_index.get() > 0;
     let has_next_showcase_example = {
-        let examples = Rc::clone(&showcase_examples_flattened);
+        let examples = Arc::clone(&showcase_examples_flattened);
         move || showcase_example_index.get() + 1 < examples.len()
     };
 
@@ -2309,7 +2312,7 @@ pub fn Editor<'a>(
 
                 <div class="editor-area">
                     <div id=glyph_doc_id class="glyph-doc" style="display: none">
-                        {move || glyph_doc.get()}
+                        {glyph_doc_view}
                         <div class="glyph-doc-ctrl-click">
                             "Shift+click for more info (Ctrl/⌘+click for new tab)"
                         </div>
@@ -2410,7 +2413,7 @@ pub fn Editor<'a>(
                                 <textarea
                                     id=code_id
                                     class="code-entry"
-                                    autocorrect="false"
+                                    prop:autocorrect="false"
                                     autocapitalize="off"
                                     spellcheck="false"
                                     translate="no"
@@ -2418,7 +2421,7 @@ pub fn Editor<'a>(
                                     on:input=code_input
                                     on:mousemove=code_mouse_move
                                     on:mouseleave=code_mouse_leave
-                                    value=initial_code_str
+                                    prop:value=initial_code_str
                                 ></textarea>
                                 // ///////////////////////
                                 <div id=overlay_id class="code-overlay">
@@ -2433,10 +2436,16 @@ pub fn Editor<'a>(
 
                 <div class="output-frame">
                     <div class="output-lines">
-                        <div class="output-diagnostics sized-code">{move || diag_output.get()}</div>
+                        <div class="output-diagnostics sized-code">{move || diag_output.with(|items| items.iter().map(|item| render_output_item(item, false)).collect::<Vec<_>>())}</div>
                         <div class="output-wrapper">
                             <div id=format!("output-{id}") class="output sized-code">
-                                {move || output.get()}
+                                {move || output.with(|output| match output {
+                                    EditorOutput::Empty => ().into_any(),
+                                    EditorOutput::Running => view! { <div class="running-text">"Running"</div> }.into_any(),
+                                    EditorOutput::Ready { rows, allow_autoplay, flex_wrap } => rows.iter()
+                                        .map(|items| render_output_items(items, *allow_autoplay, *flex_wrap))
+                                        .collect::<Vec<_>>().into_any(),
+                                })}
                                 {move || {
                                     get_state
                                         .get()
@@ -2555,7 +2564,7 @@ pub fn Editor<'a>(
                 }}
             </div>
             <div id="editor-help">
-                {help.iter().map(|s| view! { <p>{s}</p> }).collect::<Vec<_>>()}
+                {help.into_iter().map(|s| view! { <p>{s}</p> }).collect::<Vec<_>>()}
             </div>
             <input
                 id=input_id
@@ -2568,7 +2577,7 @@ pub fn Editor<'a>(
         { (!kala.is_empty()).then(||
             view!(<img src=format!("/assets/kala/{kala}.png") class="editor-side-icon"/>)
         ) }
-    </div> }
+    </div> }.into_any()
 }
 
 #[component]
@@ -2616,6 +2625,7 @@ pub fn Prim(
                 </code>
             </a>
         }
+        .into_any()
     } else {
         view! {
             <a href=href class="prim-code-a">
@@ -2625,6 +2635,7 @@ pub fn Prim(
                 </code>
             </a>
         }
+        .into_any()
     }
 }
 

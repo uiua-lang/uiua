@@ -24,9 +24,6 @@ hound.workspace = true
 image = "0.25"
 js-sys.workspace = true
 leptos = {workspace = true, features = ["csr"]}
-leptos-use = {version = "0.13.0", default-features = false, features = [
-  "use_resize_observer",
-]}
 leptos_router.workspace = true
 serde_json.workspace = true
 uiua = {path = "../..", default-features = false, features = [

@@ -14,7 +14,8 @@ use std::{
 use crate::{START_TIME, get_ast_time};
 use futures::future::join_all;
 use js_sys::{Date, Uint8Array};
-use leptos::*;
+use leptos::task::spawn_local;
+use leptos::{prelude::*, *};
 use uiua::{BigConstant, EXAMPLE_TXT, EXAMPLE_UA, GitTarget, Handle, Report, SysBackend, now};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;

@@ -2551,6 +2551,7 @@ impl Value {
             val => Err(env.error(format!("Cannot convert {} to RGB", val.type_name_plural()))),
         }
     }
+
     /// Convert a value from RGB to Oklch
     pub fn rgb_to_oklch(self, env: &Uiua) -> UiuaResult<Self> {
         match self {
@@ -2568,6 +2569,43 @@ impl Value {
             Value::Num(arr) => arr.oklch_to_rgb(env).map(Into::into),
             Value::Byte(arr) => arr.convert_ref::<f64>().oklch_to_rgb(env).map(Into::into),
             val => Err(env.error(format!("Cannot convert {} to RGB", val.type_name_plural()))),
+        }
+    }
+
+    /// Convert a value from RGB to HSL
+    pub fn rgb_to_hsl(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Num(arr) => arr.rgb_to_hsl(env).map(Into::into),
+            Value::Byte(arr) => arr.convert_ref::<f64>().rgb_to_hsl(env).map(Into::into),
+            val => Err(env.error(format!("Cannot convert {} to HSL", val.type_name_plural()))),
+        }
+    }
+    /// Convert a value from HSL to RGB
+    pub fn hsl_to_rgb(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Num(arr) => arr.hsl_to_rgb(env).map(Into::into),
+            Value::Byte(arr) => arr.convert_ref::<f64>().hsl_to_rgb(env).map(Into::into),
+            val => Err(env.error(format!("Cannot convert {} to RGB", val.type_name_plural()))),
+        }
+    }
+
+    /// Convert a value from RGB to Oklab
+    pub fn rgb_to_oklab(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Num(arr) => arr.rgb_to_oklab(env).map(Into::into),
+            Value::Byte(arr) => arr.convert_ref::<f64>().rgb_to_oklab(env).map(Into::into),
+            val => Err(env.error(format!(
+                "Cannot convert {} to Oklab",
+                val.type_name_plural()
+            ))),
+        }
+    }
+    /// Convert a value from Oklab to RGB
+    pub fn oklab_to_rgb(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Num(arr) => arr.oklab_to_rgb(env).map(Into::into),
+            Value::Byte(arr) => arr.convert_ref::<f64>().oklab_to_rgb(env).map(Into::into),
+            val => Err(env.error(format!("Cannot convert {} to HSL", val.type_name_plural()))),
         }
     }
 }
@@ -2633,9 +2671,11 @@ impl Array<f64> {
             hsv[2] = b;
         }
         self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
         self.validate();
         Ok(self)
     }
+
     /// Convert an array from RGB to Oklch
     pub fn rgb_to_oklch(mut self, env: &Uiua) -> UiuaResult<Self> {
         if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
@@ -2653,6 +2693,7 @@ impl Array<f64> {
             rgb[2] = h;
         }
         self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
         self.validate();
         Ok(self)
     }
@@ -2673,6 +2714,101 @@ impl Array<f64> {
             oklch[2] = b;
         }
         self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
+        self.validate();
+        Ok(self)
+    }
+
+    /// Convert an array from RGB to Oklab
+    pub fn rgb_to_oklab(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
+            return Err(env.error(format!(
+                "Array to convert to Oklab must have a shape \
+                ending with 3 or 4, but its shape is {}",
+                self.shape
+            )));
+        }
+
+        let channels = *self.shape.last().unwrap();
+        for rgb in self.data.as_mut_slice().chunks_exact_mut(channels) {
+            let [l, a, b] = rgb_to_oklab(rgb[0], rgb[1], rgb[2]);
+            rgb[0] = l;
+            rgb[1] = a;
+            rgb[2] = b;
+        }
+
+        self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
+        self.validate();
+        Ok(self)
+    }
+    /// Convert an array from HSL to RGB
+    pub fn oklab_to_rgb(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
+            return Err(env.error(format!(
+                "Array to convert to RGB must have a shape \
+                ending with 3 or 4, but its shape is {}",
+                self.shape
+            )));
+        }
+
+        let channels = *self.shape.last().unwrap();
+        for oklab in self.data.as_mut_slice().chunks_exact_mut(channels) {
+            let [r, g, b] = oklab_to_rgb(oklab[0], oklab[1], oklab[2]);
+            oklab[0] = r;
+            oklab[1] = g;
+            oklab[2] = b;
+        }
+
+        self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
+        self.validate();
+        Ok(self)
+    }
+
+    /// Convert an array from RGB to HSL
+    pub fn rgb_to_hsl(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
+            return Err(env.error(format!(
+                "Array to convert to HSL must have a shape \
+                ending with 3 or 4, but its shape is {}",
+                self.shape
+            )));
+        }
+
+        let channels = *self.shape.last().unwrap();
+        for rgb in self.data.as_mut_slice().chunks_exact_mut(channels) {
+            let [h, s, l] = rgb_to_hsl(rgb[0], rgb[1], rgb[2]);
+            rgb[0] = h;
+            rgb[1] = s;
+            rgb[2] = l;
+        }
+
+        self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
+        self.validate();
+        Ok(self)
+    }
+    /// Convert an array from HSL to RGB
+    pub fn hsl_to_rgb(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
+            return Err(env.error(format!(
+                "Array to convert to RGB must have a shape \
+                ending with 3 or 4, but its shape is {}",
+                self.shape
+            )));
+        }
+
+        let channels = *self.shape.last().unwrap();
+        for hsl in self.data.as_mut_slice().chunks_exact_mut(channels) {
+            let [r, g, b] = hsl_to_rgb(hsl[0], hsl[1], hsl[2]);
+            hsl[0] = r;
+            hsl[1] = g;
+            hsl[2] = b;
+        }
+
+        self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
         self.validate();
         Ok(self)
     }

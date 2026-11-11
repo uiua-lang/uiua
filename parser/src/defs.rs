@@ -3020,6 +3020,16 @@ primitive!(
     /// [un][oklch] converts from Oklch to RGB. This means it can be used with [under] to do various color manipulations.
     /// ex: ⍜(⊢°⍉oklch|↥0.8↧0.9) ▽20≡↯200 Rainbow # Clamp lightness to 0.8-0.9
     (1, Oklch, Algorithm, "oklch"),
+    /// Convert a color array from RGB to HSL
+    ///
+    /// The last axis of the array must be `3` or `4`. This axis is the color channels. If present, a fourth channel is interpreted as an alpha channel and will be ignored.
+    /// Hue is in radians between `0` and `tau`. Saturation and lightness are between `0` and `1`.
+    (1, Hsl, Algorithm, "hsl"),
+    /// Convert a color array from RGB to Oklab
+    ///
+    /// The last axis of the array must be `3` or `4`. This axis is the color channels. If present, a fourth channel is interpreted as an alpha channel and will be ignored.
+    /// [Oklab](https://en.wikipedia.org/wiki/Oklab_color_space) is a perceptually uniform color space. L (lightness) ranges from 0 to 1, a (+red, -green) and b (+yellow, -blue) both range from -0.5 to 0.5.
+    (1, Oklab, Algorithm, "oklab"),
     /// Convert a string to UTF-8 bytes
     ///
     /// ex: utf₈ "hello!"

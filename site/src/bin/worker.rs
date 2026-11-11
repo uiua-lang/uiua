@@ -1,0 +1,6 @@
+//! Run the worker
+
+fn main() {
+    console_error_panic_hook::set_once();
+    uiua_editor::worker::start();
+}

@@ -1,15 +1,16 @@
 pub mod backend;
 pub mod examples;
 pub mod utils;
+pub mod worker;
 
 use std::{
-    borrow::Cow, cell::Cell, iter::repeat_n, mem::take, path::PathBuf, rc::Rc, sync::Arc,
+    borrow::Cow, cell::Cell, iter::repeat_n, path::PathBuf, rc::Rc, sync::Arc, sync::OnceLock,
     time::Duration,
 };
 
 use base64::engine::{Engine, general_purpose::STANDARD};
-
 use ev::mousemove;
+use js_sys::Date;
 use leptos::{
     ev::{keydown, keyup},
     prelude::*,
@@ -29,12 +30,9 @@ use web_sys::{
     HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
 };
 
-use utils::*;
-use utils::{element, format_insert_file_code, get_ast_time};
-
 use backend::{OutputItem, WebBackend, delete_file, drop_file};
-use js_sys::Date;
-use std::sync::OnceLock;
+use utils::*;
+use worker::Output;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EditorMode {
@@ -48,7 +46,6 @@ enum EditorOutput {
     Empty,
     Running,
     Ready {
-        rows: Vec<Vec<OutputItem>>,
         allow_autoplay: bool,
         flex_wrap: &'static str,
     },
@@ -163,6 +160,7 @@ pub fn Editor<'a>(
     });
     let (diag_output, set_diag_output) = signal(Vec::<OutputItem>::new());
     let (output, set_output) = signal(EditorOutput::Empty);
+    let output_data = RwSignal::new(Output::default());
     let (token_count, set_token_count) = signal(0);
 
     // let code_text = move || code_text(&code_id());
@@ -200,7 +198,6 @@ pub fn Editor<'a>(
         past: Vec::new(),
         future: Vec::new(),
         challenge,
-        loading_module: false,
         hidden: hidden.clone(),
         curr: {
             let code = initial_code.get_untracked().unwrap();
@@ -441,13 +438,26 @@ pub fn Editor<'a>(
         (render_output_item, render_output_items)
     };
 
+    let render_output = move |allow_autoplay, flex_wrap| {
+        output_data.with(|output| {
+            output.lines(|items| render_output_items(items, allow_autoplay, flex_wrap))
+        })
+    };
+
     // Run the code
+    let latest_run = StoredValue::new(0u64);
+    on_cleanup(move || {
+        latest_run.try_update_value(|run| *run += 1);
+        worker::client::cancel(id);
+    });
     let run = move |do_format: bool, set_cursor: bool| {
         // Format code
         let (input, seed) = format(do_format, set_cursor);
         state.update(|s| s.update_line_number_width());
 
         // Run code
+        output_data.set(Output::default());
+        set_diag_output.set(Vec::new());
         set_output.set(EditorOutput::Running);
         let allow_autoplay = !matches!(mode, EditorMode::Example) && get_autoplay();
         let flex_wrap = if get_top_at_top() {
@@ -455,44 +465,79 @@ pub fn Editor<'a>(
         } else {
             "flex-wrap: wrap-reverse;"
         };
-        let update_output = move |output: Vec<Vec<OutputItem>>| {
-            let (diags, mut rows): (Vec<_>, Vec<_>) = output
-                .into_iter()
-                .partition(|line| line.len() == 1 && line[0].is_report());
-            for item in rows.iter_mut().flatten() {
-                if let OutputItem::Gif(bytes, _) | OutputItem::Apng(bytes, _) = item {
-                    bytes.extend(uiua::random().to_ne_bytes());
+        let update_output = move |mut data: Output| {
+            let mut diags = Vec::new();
+            for section in &mut data.sections {
+                diags.extend(section.reports.extract_if(.., |item| item.is_report()));
+                // Prevent browser from caching gif playback positions
+                for item in (section.stdout.iter_mut())
+                    .chain(section.stack.iter_mut().flatten())
+                    .chain(&mut section.reports)
+                {
+                    if let OutputItem::Gif(bytes, _) | OutputItem::Apng(bytes, _) = item {
+                        bytes.extend(uiua::random().to_ne_bytes());
+                    }
                 }
             }
+            output_data.set(data);
             set_output.set(EditorOutput::Ready {
-                rows,
                 allow_autoplay,
                 flex_wrap,
             });
-            set_diag_output.set(diags.into_iter().flatten().collect());
+            set_diag_output.set(diags);
         };
-        _ = set_timeout(
-            move || {
-                state.update(|st| {
-                    seed_random(seed);
-                    let output = st.run_code(&input);
-                    if take(&mut st.loading_module) {
-                        _ = set_timeout(
-                            move || {
-                                state.update(|st| {
-                                    seed_random(seed);
-                                    let output = st.run_code(&input);
-                                    update_output(output);
-                                });
-                            },
-                            Duration::from_millis(200),
-                        );
-                    } else {
-                        update_output(output);
+        latest_run.update_value(|run| *run += 1);
+        let ticket = latest_run.get_value();
+        let (hidden, challenge) =
+            get_state.with_untracked(|st| (st.hidden.clone(), st.challenge.clone()));
+        let frame_pending = Rc::new(Cell::new(false));
+        worker::client::run(
+            id,
+            input,
+            hidden,
+            challenge,
+            seed,
+            move |update| {
+                if latest_run.try_get_value() == Some(ticket) {
+                    output_data.update_untracked(|output| output.update(update));
+                    if !frame_pending.replace(true) {
+                        let frame_pending = frame_pending.clone();
+                        _ = request_animation_frame(move || {
+                            frame_pending.set(false);
+                            if latest_run.try_get_value() == Some(ticket)
+                                && output.with_untracked(|output| {
+                                    matches!(output, EditorOutput::Running)
+                                })
+                            {
+                                output_data.notify();
+                            }
+                        });
                     }
-                });
+                }
             },
-            Duration::ZERO,
+            move |result| {
+                if latest_run.try_get_value() != Some(ticket) {
+                    return;
+                }
+                match result {
+                    Ok(result) => {
+                        if result.initialized_challenge {
+                            state.update(|st| {
+                                if let Some(challenge) = &st.challenge {
+                                    challenge.did_init_run.set(true);
+                                }
+                            });
+                        }
+                        update_output(result.output);
+                    }
+                    Err(error) => {
+                        let mut data = Output::default();
+                        output_data.update_untracked(|output| std::mem::swap(output, &mut data));
+                        data.section().reports.push(OutputItem::String(error));
+                        update_output(data);
+                    }
+                }
+            },
         );
     };
 
@@ -2436,56 +2481,52 @@ pub fn Editor<'a>(
 
                 <div class="output-frame">
                     <div class="output-lines">
-                        <div class="output-diagnostics sized-code">{move || diag_output.with(|items| items.iter().map(|item| render_output_item(item, false)).collect::<Vec<_>>())}</div>
+                        <div class="output-diagnostics sized-code">{
+                            move || diag_output.with(|items| items.iter().map(|item| render_output_item(item, false)).collect::<Vec<_>>())
+                        }</div>
                         <div class="output-wrapper">
                             <div id=format!("output-{id}") class="output sized-code">
                                 {move || output.with(|output| match output {
                                     EditorOutput::Empty => ().into_any(),
-                                    EditorOutput::Running => view! { <div class="running-text">"Running"</div> }.into_any(),
-                                    EditorOutput::Ready { rows, allow_autoplay, flex_wrap } => rows.iter()
-                                        .map(|items| render_output_items(items, *allow_autoplay, *flex_wrap))
-                                        .collect::<Vec<_>>().into_any(),
+                                    EditorOutput::Running => view! { {render_output(false, "")} <div class="running-text">"Running"</div> }.into_any(),
+                                    EditorOutput::Ready { allow_autoplay, flex_wrap } => render_output(*allow_autoplay, *flex_wrap).into_any(),
                                 })}
                                 {move || {
-                                    get_state
-                                        .get()
-                                        .challenge
-                                        .as_ref()
-                                        .map(|chal| {
-                                            let intended = chal.intended_answer.clone();
-                                            let click_intended = move |_| {
-                                                get_state.get().set_code(&intended, Cursor::Ignore);
-                                            };
-                                            view! {
-                                                <div>
-                                                    <hr />
-                                                    <button
-                                                        class="glyph-button"
-                                                        data-title="Show intended answer"
-                                                        on:click=click_intended
-                                                    >
-                                                        "📖"
-                                                    </button>
-                                                    {chal
-                                                        .best_answer
-                                                        .clone()
-                                                        .map(|ans| {
-                                                            let click_ans = move |_| {
-                                                                get_state.get().set_code(&ans, Cursor::Ignore);
-                                                            };
-                                                            view! {
-                                                                <button
-                                                                    class="glyph-button"
-                                                                    data-title="Show idiomatic answer"
-                                                                    on:click=click_ans
-                                                                >
-                                                                    "💡"
-                                                                </button>
-                                                            }
-                                                        })}
-                                                </div>
-                                            }
-                                        })
+                                    (get_state.get().challenge.as_ref()).map(|chal| {
+                                        let intended = chal.intended_answer.clone();
+                                        let click_intended = move |_| {
+                                            get_state.get().set_code(&intended, Cursor::Ignore);
+                                        };
+                                        view! {
+                                            <div>
+                                                <hr />
+                                                <button
+                                                    class="glyph-button"
+                                                    data-title="Show intended answer"
+                                                    on:click=click_intended
+                                                >
+                                                    "📖"
+                                                </button>
+                                                {chal
+                                                    .best_answer
+                                                    .clone()
+                                                    .map(|ans| {
+                                                        let click_ans = move |_| {
+                                                            get_state.get().set_code(&ans, Cursor::Ignore);
+                                                        };
+                                                        view! {
+                                                            <button
+                                                                class="glyph-button"
+                                                                data-title="Show idiomatic answer"
+                                                                on:click=click_ans
+                                                            >
+                                                                "💡"
+                                                            </button>
+                                                        }
+                                                    })}
+                                            </div>
+                                        }
+                                    })
                                 }}
                             </div>
                         </div>
@@ -2493,9 +2534,7 @@ pub fn Editor<'a>(
                     <div id="code-buttons">
                         <button
                             class="code-button format-button run-format-button"
-                            on:click=move |_| {
-                                format(true, false);
-                            }
+                            on:click=move |_| { format(true, false); }
                             data-title=" ctrl Enter - Format        \nshift Enter - Format and Run"
                         >
                             {"Format"}
@@ -2503,11 +2542,15 @@ pub fn Editor<'a>(
                         <button
                             class=move || run_button_class
                             on:click=move |_| {
-                                set_show_format_hint.set(false);
-                                run(get_run_on_format(), false)
+                                if output.with(|output| matches!(output, EditorOutput::Running)) {
+                                    worker::client::cancel(id);
+                                } else {
+                                    set_show_format_hint.set(false);
+                                    run(get_run_on_format(), false);
+                                }
                             }
                         >
-                            {"Run"}
+                            {move || if output.with(|output| matches!(output, EditorOutput::Running)) { "Stop" } else { "Run" }}
                         </button>
                         <button
                             id="prev-example"
@@ -2648,7 +2691,6 @@ macro_rules! code_font {
         concat!("code-font ", $class)
     };
 }
-
 pub(crate) use code_font;
 
 fn number_class() -> &'static str {

@@ -1,7 +1,7 @@
 use std::{
     any::Any,
     borrow::Cow,
-    cell::RefCell,
+    cell::{Cell, RefCell},
     collections::{BTreeSet, HashMap, HashSet},
     io::Cursor,
     path::{Path, PathBuf},
@@ -11,15 +11,19 @@ use std::{
     },
 };
 
-use crate::{START_TIME, get_ast_time};
 use futures::future::join_all;
 use js_sys::{Date, Uint8Array};
-use leptos::task::spawn_local;
 use leptos::{prelude::*, *};
+use serde::*;
 use uiua::{BigConstant, EXAMPLE_TXT, EXAMPLE_UA, GitTarget, Handle, Report, SysBackend, now};
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::JsFuture;
-use web_sys::{HtmlAudioElement, Request, RequestInit, RequestMode, Response};
+use wasm_bindgen_futures::{JsFuture, spawn_local};
+use web_sys::{HtmlAudioElement, Request, RequestInit, RequestMode, Response, WorkerGlobalScope};
+
+use crate::{
+    START_TIME, get_ast_time,
+    worker::{self, OutputUpdate},
+};
 
 pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
@@ -28,6 +32,7 @@ pub struct WebBackend {
     vars: Mutex<HashMap<String, String>>,
     streams: Mutex<HashMap<Handle, VirtualStream>>,
     output_enabled: AtomicBool,
+    ast_time: Option<f64>,
 }
 
 struct VirtualStream {
@@ -49,7 +54,11 @@ thread_local! {
     );
 }
 
-fn weewuh() {
+pub(crate) fn weewuh() {
+    if worker::is_worker() {
+        worker::bell();
+        return;
+    }
     let i = (now() % 1.0 * 100.0) as u32;
     let src = match i {
         0 => "/assets/ooh-ee-ooh-ah.mp3",
@@ -84,21 +93,26 @@ impl WebBackend {
             vars: Mutex::default(),
             streams: HashMap::new().into(),
             output_enabled: AtomicBool::new(true),
+            ast_time: None,
         }
+    }
+    pub fn with_ast_time(mut self, ast_time: f64) -> Self {
+        self.ast_time = Some(ast_time);
+        self
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OutputItem {
     String(String),
     Svg(String, Option<String>),
-    Image(Vec<u8>, Option<String>),
-    Gif(Vec<u8>, Option<String>),
-    Apng(Vec<u8>, Option<String>),
-    Audio(Vec<u8>, Option<String>),
+    Image(#[serde(with = "serde_bytes")] Vec<u8>, Option<String>),
+    Gif(#[serde(with = "serde_bytes")] Vec<u8>, Option<String>),
+    Apng(#[serde(with = "serde_bytes")] Vec<u8>, Option<String>),
+    Audio(#[serde(with = "serde_bytes")] Vec<u8>, Option<String>),
     Report(Report),
     Faint(String),
-    Classed(&'static str, String),
+    Classed(String, String),
     Separator,
 }
 
@@ -108,7 +122,26 @@ impl OutputItem {
     }
 }
 
+pub(crate) fn append_stdout(stdout: &mut Vec<OutputItem>, s: &str) {
+    let mut lines = s.split('\n');
+    let Some(first) = lines.next() else {
+        return;
+    };
+    if let Some(OutputItem::String(prev)) = stdout.last_mut() {
+        prev.push_str(first);
+    } else {
+        stdout.push(OutputItem::String(first.into()));
+    }
+    for line in lines {
+        stdout.push(OutputItem::String(line.into()));
+    }
+}
+
 impl WebBackend {
+    fn push_output(&self, item: OutputItem) {
+        item.output();
+        self.stdout.lock().unwrap().push(item);
+    }
     fn new_handle(&self) -> Handle {
         let streams = self.streams.lock().unwrap();
         for handle in (Handle::FIRST_UNRESERVED.0..u64::MAX).map(Handle) {
@@ -154,18 +187,8 @@ impl SysBackend for WebBackend {
             weewuh();
         }
         let mut stdout = self.stdout.lock().unwrap();
-        let mut lines = s.split('\n');
-        let Some(first) = lines.next() else {
-            return Ok(());
-        };
-        if let Some(OutputItem::String(prev)) = stdout.last_mut() {
-            prev.push_str(first);
-        } else {
-            stdout.push(OutputItem::String(first.into()));
-        }
-        for line in lines {
-            stdout.push(OutputItem::String(line.into()));
-        }
+        append_stdout(&mut stdout, s);
+        OutputUpdate::Stdout(s.into()).send();
         Ok(())
     }
     fn print_str_stderr(&self, s: &str) -> Result<(), String> {
@@ -173,6 +196,7 @@ impl SysBackend for WebBackend {
             return Ok(());
         }
         self.stderr.lock().unwrap().push_str(s);
+        OutputUpdate::Stderr(s.into()).send();
         Ok(())
     }
     fn print_str_trace(&self, s: &str) {
@@ -180,10 +204,14 @@ impl SysBackend for WebBackend {
             return;
         }
         self.trace.lock().unwrap().push_str(s);
+        OutputUpdate::Trace(s.into()).send();
     }
     fn scan_line_stdin(&self) -> Result<Option<String>, String> {
         if !self.output_enabled() {
             return Ok(None);
+        }
+        if worker::is_worker() {
+            return worker::input("Enter a line of text for stdin");
         }
         Ok(window()
             .prompt_with_message("Enter a line of text for stdin")
@@ -200,18 +228,15 @@ impl SysBackend for WebBackend {
         image
             .write_to(&mut bytes, image::ImageFormat::Png)
             .map_err(|e| format!("Failed to show image: {e}"))?;
-        self.stdout
-            .lock()
-            .unwrap()
-            .push(OutputItem::Image(bytes.into_inner(), label.map(Into::into)));
+        self.push_output(OutputItem::Image(bytes.into_inner(), label.map(Into::into)));
         Ok(())
     }
     fn show_gif(&self, gif_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
-        (self.stdout.lock().unwrap()).push(OutputItem::Gif(gif_bytes, label.map(Into::into)));
+        self.push_output(OutputItem::Gif(gif_bytes, label.map(Into::into)));
         Ok(())
     }
     fn show_apng(&self, apng_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
-        (self.stdout.lock().unwrap()).push(OutputItem::Apng(apng_bytes, label.map(Into::into)));
+        self.push_output(OutputItem::Apng(apng_bytes, label.map(Into::into)));
         Ok(())
     }
     fn list_dir(&self, mut path: &str) -> Result<Vec<String>, String> {
@@ -385,7 +410,7 @@ impl SysBackend for WebBackend {
         self.delete(path)
     }
     fn play_audio(&self, wav_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
-        (self.stdout.lock().unwrap()).push(OutputItem::Audio(wav_bytes, label.map(Into::into)));
+        self.push_output(OutputItem::Audio(wav_bytes, label.map(Into::into)));
         Ok(())
     }
     fn stream_audio(&self, mut f: uiua::AudioStreamFn) -> Result<(), String> {
@@ -393,7 +418,7 @@ impl SysBackend for WebBackend {
         const SAMPLE_RATE: u32 = 44100;
         const SAMPLES_PER_FRAME: usize = 10000;
         let mut times = Vec::with_capacity(SAMPLES_PER_FRAME);
-        let ast_time = get_ast_time();
+        let ast_time = self.ast_time.unwrap_or_else(get_ast_time);
         let mut i = 0;
         while (i as f64 / SAMPLE_RATE as f64) < ast_time {
             times.clear();
@@ -424,12 +449,19 @@ impl SysBackend for WebBackend {
         *START_TIME.get_or_init(|| 0.0) + now()
     }
     fn clipboard(&self) -> Result<String, String> {
+        if worker::is_worker() {
+            return worker::input("Paste clipboard contents").map(Option::unwrap_or_default);
+        }
         Ok(window()
             .prompt_with_message("Paste clipboard contents")
             .unwrap_or(None)
             .unwrap_or_default())
     }
     fn set_clipboard(&self, contents: &str) -> Result<(), String> {
+        if worker::is_worker() {
+            worker::set_clipboard(contents);
+            return Ok(());
+        }
         _ = window().navigator().clipboard().write_text(contents);
         Ok(())
     }
@@ -522,7 +554,7 @@ impl SysBackend for WebBackend {
                 mark_working(original_url);
                 let original_url = original_url.to_string();
 
-                spawn_local(async move {
+                spawn_fetch(async move {
                     let tree_res = fetch(&format!(
                         "https://api.github.com\
                         /repos/{repo_owner}/{repo_name}/git/trees/{branch_name}?recursive=1",
@@ -601,7 +633,7 @@ impl SysBackend for WebBackend {
                 logging::log!("Fetching url: {url}");
                 mark_working(original_url);
                 let original_url = original_url.to_string();
-                spawn_local(async move {
+                spawn_fetch(async move {
                     let res = fetch(&url).await;
                     cache_url(&url, subfolder, res);
                     unmark_working(&original_url);
@@ -650,7 +682,7 @@ impl SysBackend for WebBackend {
                 return bytes.map(Cow::Owned);
             }
             WORKING.with(|working| working.borrow_mut().insert(key));
-            spawn_local(async move {
+            spawn_fetch(async move {
                 let path = match key {
                     BigConstant::Uiua386 => "/Uiua386.ttf",
                     BigConstant::Elevation => "/assets/elevation.webp",
@@ -676,8 +708,14 @@ pub async fn fetch(url: &str) -> Result<String, String> {
     opts.set_mode(RequestMode::Cors);
     let request = Request::new_with_str_and_init(url, &opts)
         .map_err(|e| format!("Fetch request error: {e:?}"))?;
-    let window = web_sys::window().unwrap();
-    let resp_value = JsFuture::from(window.fetch_with_request(&request))
+    let promise = if let Some(window) = web_sys::window() {
+        window.fetch_with_request(&request)
+    } else {
+        js_sys::global()
+            .unchecked_into::<WorkerGlobalScope>()
+            .fetch_with_request(&request)
+    };
+    let resp_value = JsFuture::from(promise)
         .await
         .map_err(|e| format!("Fetch response error: {e:?}"))?;
     assert!(resp_value.is_instance_of::<Response>());
@@ -699,8 +737,14 @@ pub async fn fetch_bytes(url: &str) -> Result<Vec<u8>, String> {
     opts.set_mode(RequestMode::Cors);
     let request = Request::new_with_str_and_init(url, &opts)
         .map_err(|e| format!("Fetch request error: {e:?}"))?;
-    let window = web_sys::window().unwrap();
-    let resp_value = JsFuture::from(window.fetch_with_request(&request))
+    let promise = if let Some(window) = web_sys::window() {
+        window.fetch_with_request(&request)
+    } else {
+        js_sys::global()
+            .unchecked_into::<WorkerGlobalScope>()
+            .fetch_with_request(&request)
+    };
+    let resp_value = JsFuture::from(promise)
         .await
         .map_err(|e| format!("Fetch response error: {e:?}"))?;
     assert!(resp_value.is_instance_of::<Response>());
@@ -721,4 +765,20 @@ pub async fn fetch_bytes(url: &str) -> Result<Vec<u8>, String> {
                 .map_err(|e| format!("Fetch error: {e:?}"))?,
         )
     }
+}
+
+thread_local! {
+    static PENDING_FETCHES: Cell<usize> = const { Cell::new(0) };
+}
+
+pub(crate) fn pending_fetches() -> usize {
+    PENDING_FETCHES.with(Cell::get)
+}
+
+fn spawn_fetch(task: impl std::future::Future<Output = ()> + 'static) {
+    PENDING_FETCHES.with(|pending| pending.set(pending.get() + 1));
+    spawn_local(async move {
+        task.await;
+        PENDING_FETCHES.with(|pending| pending.set(pending.get() - 1));
+    });
 }

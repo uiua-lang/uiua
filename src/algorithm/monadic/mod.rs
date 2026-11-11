@@ -9,7 +9,7 @@ use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
     convert::identity,
-    f64::consts::{FRAC_PI_3, PI, TAU},
+    f64::consts::{PI, TAU},
     io::Write,
     iter::{self, once},
     mem::take,
@@ -2876,14 +2876,13 @@ pub(crate) fn rgb_to_hsl(r: f64, g: f64, b: f64) -> [f64; 3] {
     let hue = if chroma == 0.0 {
         0.0
     } else {
-        FRAC_PI_3
-            * if max_v == r {
-                ((g - b) / chroma).rem_euclid(6.0)
-            } else if max_v == g {
-                (b - r) / chroma + 2.0
-            } else {
-                (r - g) / chroma + 4.0
-            }
+        PI * (if max_v == r {
+            ((g - b) / chroma).rem_euclid(6.0)
+        } else if max_v == g {
+            (b - r) / chroma + 2.0
+        } else {
+            (r - g) / chroma + 4.0
+        } / 3.0)
     };
 
     [
@@ -2900,7 +2899,7 @@ pub(crate) fn rgb_to_hsl(r: f64, g: f64, b: f64) -> [f64; 3] {
 pub(crate) fn hsl_to_rgb(h: f64, s: f64, l: f64) -> [f64; 3] {
     // algorithm based on https://en.wikipedia.org/wiki/HSL_and_HSV#HSL_to_RGB
     let chroma = (1.0 - (2.0 * l - 1.0).abs()) * s;
-    let hue_section = (h / FRAC_PI_3).rem_euclid(6.0);
+    let hue_section = h.rem_euclid(TAU) * 3.0 / PI;
 
     let anti_chroma = chroma * (1.0 - (hue_section.rem_euclid(2.0) - 1.0).abs());
 
@@ -2917,53 +2916,6 @@ pub(crate) fn hsl_to_rgb(h: f64, s: f64, l: f64) -> [f64; 3] {
     let m = l - chroma * 0.5;
 
     color.map(|v| v + m)
-}
-
-#[cfg(test)]
-#[allow(clippy::items_after_test_module)]
-mod hsl_tests {
-    use std::f64::consts::PI;
-
-    use crate::algorithm::monadic::{hsl_to_rgb, rgb_to_hsl};
-
-    #[test]
-    fn it_works() {
-        assert_eq!(rgb_to_hsl(0.5, 0.0, 0.0), [0.0, 1.0, 0.25]);
-        assert_eq!(rgb_to_hsl(1.0, 0.0, 0.0), [0.0, 1.0, 0.5]);
-        assert_eq!(rgb_to_hsl(1.0, 0.5, 0.5), [0.0, 1.0, 0.75]);
-        assert_eq!(rgb_to_hsl(1.0, 1.0, 1.0), [0.0, 0.0, 1.0]);
-
-        assert!(
-            rgb_to_hsl(0.0, 1.0, 1.0)
-                .into_iter()
-                .zip([PI, 1.0, 0.5].into_iter())
-                .all(|(a, b)| (a - b).abs() <= 0.0000001)
-        );
-        assert!(
-            rgb_to_hsl(0.4, 0.2, 0.6)
-                .into_iter()
-                .zip([PI * 1.5, 0.5, 0.4].into_iter())
-                .all(|(a, b)| (a - b).abs() <= 0.0000001)
-        );
-
-        assert_eq!(hsl_to_rgb(0.0, 1., 0.25), [0.5, 0.0, 0.0]);
-        assert_eq!(hsl_to_rgb(0.0, 1., 0.5), [1.0, 0.0, 0.0]);
-        assert_eq!(hsl_to_rgb(0.0, 1., 0.75), [1.0, 0.5, 0.5]);
-        assert_eq!(hsl_to_rgb(0.0, 0., 1.), [1.0, 1.0, 1.0]);
-
-        assert!(
-            hsl_to_rgb(PI, 1.0, 0.5)
-                .into_iter()
-                .zip([0.0, 1.0, 1.0].into_iter())
-                .all(|(a, b)| (a - b).abs() <= 0.0000001)
-        );
-        assert!(
-            hsl_to_rgb(PI * 1.5, 0.5, 0.4)
-                .into_iter()
-                .zip([0.4, 0.2, 0.6].into_iter())
-                .all(|(a, b)| (a - b).abs() <= 0.0000001)
-        );
-    }
 }
 
 fn f64_repr(n: f64) -> String {

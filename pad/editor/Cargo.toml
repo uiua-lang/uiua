@@ -21,7 +21,7 @@ base64.workspace = true
 flate2.workspace = true
 futures = "0.3.30"
 hound.workspace = true
-image = "0.25"
+image.workspace = true
 js-sys.workspace = true
 leptos = {workspace = true, features = ["csr"]}
 leptos_router.workspace = true

@@ -1,6 +1,6 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_router::*;
+use leptos_router::{components::*, hooks::*, params::*};
 use uiua_editor::lang;
 
 use crate::{markdown::Markdown, other_tutorial::OtherTutorialParams};
@@ -43,7 +43,7 @@ pub fn Tutorial() -> impl IntoView {
             <br/>
             <A href="/docs">"Back to Docs Home"</A>
         }
-        .into_view(),
+        .into_any(),
         Err(_) => {
             let params = use_params::<TutorialParams>().get().unwrap();
             page_view(
@@ -51,7 +51,7 @@ pub fn Tutorial() -> impl IntoView {
                     .filter(|s| !s.is_empty())
                     .unwrap_or("Introduction"),
             )
-            .into_view()
+            .into_any()
         }
     }
 }
@@ -90,18 +90,18 @@ fn TutorialNav<'a>(name: &'a str) -> impl IntoView {
     let next = move || {
         next_page(&nm)
             .map(|p| {
-                view!( <div>"Next: "<A href=format!("/tutorial/{p}")>{p}</A>" 〉"</div>).into_view()
+                view!( <div>"Next: "<A href=format!("/tutorial/{p}")>{p}</A>" 〉"</div>).into_any()
             })
-            .unwrap_or_else(|| view!( <div/>).into_view())
+            .unwrap_or_else(|| view!( <div/>).into_any())
     };
     let nm = name.to_string();
     let previous = move || {
         prev_page(&nm)
             .map(|p| {
                 view!( <div>"〈 Previous: "<A href=format!("/tutorial/{p}")>{p}</A></div>)
-                    .into_view()
+                    .into_any()
             })
-            .unwrap_or_else(|| view!( <div/>).into_view())
+            .unwrap_or_else(|| view!( <div/>).into_any())
     };
 
     view! {

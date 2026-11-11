@@ -15,9 +15,9 @@ use std::{cell::Cell, io::Read, sync::OnceLock, time::Duration};
 use base64::engine::{Engine, general_purpose::URL_SAFE};
 use flate2::read::ZlibDecoder;
 use js_sys::Date;
-use leptos::*;
+use leptos::{prelude::*, *};
 use leptos_meta::*;
-use leptos_router::*;
+use leptos_router::{components::*, hooks::*, *};
 use rand::prelude::*;
 use uiua::{ConstantDef, Primitive, SysOp, now};
 use uiua_editor::{
@@ -52,45 +52,48 @@ pub fn Site() -> impl IntoView {
     provide_meta_context();
     START_TIME.get_or_init(|| Date::now() / 1000.0);
 
-    // Choose a subtitle
-    let subtitles_common = [
-        "A tacit array programming language",
-        "An array-oriented tacit programming language",
-        "A programming language for point-free enjoyers",
-        "A programming language for variable dislikers",
-        "You don't need AI when programming is fun",
-    ];
-    let subtitles_rare = [
-        view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>"!").into_view(),
-        view!(<a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
-        view!("Check out the "<a href="https://www.reddit.com/r/uiua/">"Uiua subreddit"</a>"!").into_view(),
-        view! {
-            <div style="font-style: normal">
-                <a href="/tutorial/More Argument Manipulation#-planet-notation-" style="text-decoration: none">"🌍🪐"</a>" "
-                <code style="font-family: Code Font, font-style: normal">
-                    <span style="padding: 0" class="monadic-modifier">"⋅⋅⊙⋅⋅"</span>
-                    <span style="padding: 0" class="stack-function">"∘"</span>
-                </code>
-            </div>
-        }
-        .into_view(),
-        "That's right! It goes into the array hole.".into_view(),
-        "Abandon nominativity. Embrace relativity.".into_view(),
-        view!(<div style="font-style: normal"><Prim prim=Under glyph_only=true/>"🗄️🍴"</div>).into_view(),
-        "It's got um...I um...arrays".into_view(),
-        view!(<p style="font-size: 0.9em; max-width: 25em; margin: 0;">
-            "A monad is "
-            <s>"a monoid in the category of endofunctors"</s>
-            " a function with 1 argument"
-        </p>)
-        .into_view(),
-    ];
     let mut visits = visits();
-    let subtitle = if visits % 3 < 2 {
-        subtitles_common[(visits as f64 * 2.0 / 3.0).round() as usize % subtitles_common.len()]
-            .into_view()
-    } else {
-        subtitles_rare[visits / 3 % subtitles_rare.len()].clone()
+    let subtitle = move || {
+        // Choose a subtitle
+        let subtitles_common = [
+            "A tacit array programming language",
+            "An array-oriented tacit programming language",
+            "A programming language for point-free enjoyers",
+            "A programming language for variable dislikers",
+            "You don't need AI when programming is fun",
+        ];
+        let subtitles_rare = [
+            view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>"!").into_any(),
+            view!(<a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_any(),
+            view!("Check out the "<a href="https://www.reddit.com/r/uiua/">"Uiua subreddit"</a>"!").into_any(),
+            view! {
+                <div style="font-style: normal">
+                    <a href="/tutorial/More Argument Manipulation#-planet-notation-" style="text-decoration: none">"🌍🪐"</a>" "
+                    <code style="font-family: Code Font, font-style: normal">
+                        <span style="padding: 0" class="monadic-modifier">"⋅⋅⊙⋅⋅"</span>
+                        <span style="padding: 0" class="stack-function">"∘"</span>
+                    </code>
+                </div>
+            }
+            .into_any(),
+            "That's right! It goes into the array hole.".into_any(),
+            "Abandon nominativity. Embrace relativity.".into_any(),
+            view!(<div style="font-style: normal"><Prim prim=Under glyph_only=true/>"🗄️🍴"</div>).into_any(),
+            "It's got um...I um...arrays".into_any(),
+            view!(<p style="font-size: 0.9em; max-width: 25em; margin: 0;">
+                "A monad is "
+                <s>"a monoid in the category of endofunctors"</s>
+                " a function with 1 argument"
+            </p>)
+            .into_any(),
+        ];
+        if visits % 3 < 2 {
+            subtitles_common[(visits as f64 * 2.0 / 3.0).round() as usize % subtitles_common.len()]
+                .into_any()
+        } else {
+            let index = visits / 3 % subtitles_rare.len();
+            subtitles_rare.into_iter().nth(index).unwrap()
+        }
     };
     visits = visits.overflowing_add(1).0;
 
@@ -131,21 +134,21 @@ pub fn Site() -> impl IntoView {
     view! {
         <Router>
             <ScrollToHash/>
-            <Routes>
-                <Route path="embedpad" view=EmbedPad/>
-                <Route path="embed" view=Embed/>
-                <Route path="*" view=move || view! {
+            <Routes fallback=NotFound>
+                <Route path=path!("embedpad") view=EmbedPad/>
+                <Route path=path!("embed") view=Embed/>
+                <ParentRoute path=path!("") view=move || view! {
                     <main>
                         <div id="top">
                             <div id="header">
                                 <div id="header-left">
                                     <h1>
-                                        <A id="header-uiua" href="/">
+                                        <A attr:id="header-uiua" href="/">
                                             <img src=logo_src style="height: 1em" alt={format!("{} logo", lang())} />
                                             " "{lang}
                                         </A>
                                     </h1>
-                                    <p id="subtitle">{ subtitle.clone() }</p>
+                                    <p id="subtitle">{ subtitle() }</p>
                                 </div>
                                 <div id="nav">
                                     {
@@ -171,17 +174,17 @@ pub fn Site() -> impl IntoView {
                         </div>
                     </main>
                 }>
-                    <Route path="" view=MainPage/>
-                    <Route path="tutorial/:page?" view=Tutorial/>
-                    <Route path="docs/:page?" view=Docs/>
-                    <Route path="isms/:search?" view=Uiuisms/>
-                    <Route path="pad" view=PadPage/>
-                    <Route path="install" view=Install/>
-                    <Route path="tour" view=Tour/>
-                    <Route path="isms" view=Uiuisms/>
-                    <Route path="blog/:page?" view=Blog/>
-                    <Route path="*" view=NotFound/>
-                </Route>
+                    <Route path=path!("") view=MainPage/>
+                    <Route path=path!("tutorial/:page?") view=Tutorial/>
+                    <Route path=path!("docs/:page?") view=Docs/>
+                    <Route path=path!("isms/:search?") view=Uiuisms/>
+                    <Route path=path!("pad") view=PadPage/>
+                    <Route path=path!("install") view=Install/>
+                    <Route path=path!("tour") view=Tour/>
+                    <Route path=path!("isms") view=Uiuisms/>
+                    <Route path=path!("blog/:page?") view=Blog/>
+                    <Route path=path!("*any") view=NotFound/>
+                </ParentRoute>
             </Routes>
         </Router>
     }
@@ -214,13 +217,17 @@ pub fn MainPage() -> impl IntoView {
 
     let visits = visits();
 
-    fn rich_prim(prim: Primitive, text: &'static str, example: &'static str) -> impl Fn() -> View {
+    fn rich_prim(
+        prim: Primitive,
+        text: &'static str,
+        example: &'static str,
+    ) -> impl Fn() -> AnyView {
         move || {
             view! {
                 <p><Prim prim=prim/>" "{text}":"</p>
                 <Editor example=example/>
             }
-            .into_view()
+            .into_any()
         }
     }
 
@@ -307,7 +314,7 @@ pub fn MainPage() -> impl IntoView {
                     <A href="/tour">"Language Tour"</A>
                 </div>
                 <div>
-                    <A href="/tutorial/Introduction" class="slow-pulse">"Tutorial"</A>
+                    <A href="/tutorial/Introduction" attr:class="slow-pulse">"Tutorial"</A>
                     <A href="/pad">"Pad"</A>
                     <A href="/blog">"Blog"</A>
                     <a href="https://discord.gg/3r9nrfYhCc">"Discord"</a>
@@ -533,7 +540,7 @@ fn element<T: JsCast>(id: &str) -> T {
 
 #[component]
 pub fn Tour() -> impl IntoView {
-    title_markdown("Language Tour", "/text/tour.md", View::default())
+    title_markdown("Language Tour", "/text/tour.md", ().into_any())
 }
 
 #[component]
@@ -597,7 +604,7 @@ pub fn Embed() -> impl IntoView {
 
 fn pad_src() -> String {
     let src = use_query_map()
-        .with_untracked(|params| params.get("src").cloned())
+        .with_untracked(|params| params.get("src"))
         .unwrap_or_default();
     let mut url_decoded = src.clone().into_bytes();
     if let Some((_, encoded)) = src.split_once("__") {
@@ -798,10 +805,10 @@ fn gen_primitives_json() {
 fn ScrollToHash() -> impl IntoView {
     move || {
         let location = use_location();
-        create_effect(move |_| {
+        Effect::new(move |_| {
             let hash = location.hash.get();
             if !hash.is_empty() {
-                set_timeout(
+                _ = set_timeout(
                     move || {
                         let id = hash.trim_start_matches('#');
                         if let Some(elem) = get_element::<Element>(id) {
@@ -816,7 +823,7 @@ fn ScrollToHash() -> impl IntoView {
 }
 
 #[component]
-pub fn Challenge<'a, P: IntoView + 'a>(
+pub fn Challenge<'a, P: IntoView + Send + 'a>(
     number: u8,
     prompt: P,
     example: &'a str,

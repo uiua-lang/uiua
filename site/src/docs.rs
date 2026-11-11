@@ -5,9 +5,9 @@ use std::{
 };
 
 use enum_iterator::all;
-use leptos::*;
+use leptos::{prelude::*, *};
 use leptos_meta::*;
-use leptos_router::*;
+use leptos_router::{components::*, hooks::*, params::*};
 use uiua::{PrimClass, Primitive, SysOpClass};
 use uiua_editor::lang;
 use wasm_bindgen::JsCast;
@@ -35,6 +35,17 @@ pub enum DocsPage {
     Experimental,
     Idioms,
     Aliases,
+}
+
+impl ParamToString for DocsPage {
+    fn param_to_string(&self, _: &str) -> Option<String> {
+        Some(match self {
+            Self::Search(search) => search.clone(),
+            Self::Uiuisms => "isms".into(),
+            Self::FormatConfig => "format-config".into(),
+            page => format!("{page:?}").to_lowercase(),
+        })
+    }
 }
 
 impl IntoParam for DocsPage {
@@ -70,32 +81,32 @@ pub struct DocsParams {
 pub fn Docs() -> impl IntoView {
     move || {
         let Ok(params) = use_params::<DocsParams>().get() else {
-            return view!( <DocsHome/>).into_view();
+            return view!( <DocsHome/>).into_any();
         };
         let page = params.page;
         let page_view = match page {
-            DocsPage::Search(search) => return view!( <DocsHome search=search/>).into_view(),
-            DocsPage::Tour => Tour().into_view(),
+            DocsPage::Search(search) => return view!( <DocsHome search=search/>).into_any(),
+            DocsPage::Tour => Tour().into_any(),
             DocsPage::Design => {
-                title_markdown("Design", "/text/design.md", View::default()).into_view()
+                title_markdown("Design", "/text/design.md", ().into_any()).into_any()
             }
-            DocsPage::Technical => Technical().into_view(),
-            DocsPage::Install => Install().into_view(),
-            DocsPage::Uiuisms => Uiuisms().into_view(),
-            DocsPage::Changelog => Changelog().into_view(),
-            DocsPage::Constants => Constants().into_view(),
-            DocsPage::Subscripts => Subscripts().into_view(),
-            DocsPage::Combinators => Combinators().into_view(),
-            DocsPage::Optimizations => Optimizations().into_view(),
+            DocsPage::Technical => Technical().into_any(),
+            DocsPage::Install => Install().into_any(),
+            DocsPage::Uiuisms => Uiuisms().into_any(),
+            DocsPage::Changelog => Changelog().into_any(),
+            DocsPage::Constants => Constants().into_any(),
+            DocsPage::Subscripts => Subscripts().into_any(),
+            DocsPage::Combinators => Combinators().into_any(),
+            DocsPage::Optimizations => Optimizations().into_any(),
             DocsPage::FormatConfig => title_markdown(
                 "Formatter Configuration",
                 "/text/format_config.md",
-                View::default(),
+                ().into_any(),
             )
-            .into_view(),
-            DocsPage::Experimental => Experimental().into_view(),
-            DocsPage::Idioms => Idioms().into_view(),
-            DocsPage::Aliases => Aliases().into_view(),
+            .into_any(),
+            DocsPage::Experimental => Experimental().into_any(),
+            DocsPage::Idioms => Idioms().into_any(),
+            DocsPage::Aliases => Aliases().into_any(),
         };
 
         view! {
@@ -107,11 +118,11 @@ pub fn Docs() -> impl IntoView {
             <br/>
             <A href="/docs">"Back to Docs Home"</A>
         }
-        .into_view()
+        .into_any()
     }
 }
 
-pub fn title_markdown(title: &str, src: &str, end: View) -> impl IntoView {
+pub fn title_markdown(title: &str, src: &str, end: AnyView) -> impl IntoView {
     view! {
         <Title text={format!("{} - {} Docs", lang(), title)}/>
         <Markdown src=src/>
@@ -129,25 +140,13 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
     let search = urlencoding::decode(&search)
         .map(|s| s.into_owned())
         .unwrap_or_default();
-    let (results, set_result) = create_signal(None);
-    let (current_prim, set_current_prim) = create_signal(None);
-    let (clear_button, set_clear_button) = create_signal(None);
-    let (old_allowed, set_old_allowed) = create_signal(Allowed::all());
+    let (results, set_result) = signal(None::<Allowed>);
+    let (current_prim, set_current_prim) = signal(None);
+    let (clear_button, set_clear_button) = signal(false);
+    let (old_allowed, set_old_allowed) = signal(Allowed::all());
     let update_search = move |text: &str, update_location: bool| {
         // Update clear button
-        set_clear_button.set(if text.is_empty() {
-            None
-        } else {
-            let clear_search = move |_| {
-                let search_input = element::<HtmlInputElement>("function-search");
-                search_input.set_value("");
-                let init = EventInit::new();
-                init.set_bubbles(true);
-                _ = search_input
-                    .dispatch_event(&Event::new_with_event_init_dict("input", &init).unwrap());
-            };
-            Some(view!( {}<button on:click=clear_search>"✕"</button>).into_view())
-        });
+        set_clear_button.set(!text.is_empty());
 
         // Derive allowed primitives
         let allowed = Allowed::from_search(text);
@@ -158,16 +157,15 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         }
         if update_location {
             let text = text.to_string();
-            set_timeout(
+            _ = set_timeout(
                 move || {
                     let search_input = element::<HtmlInputElement>("function-search").value();
                     if search_input == text {
-                        BrowserIntegration {}.navigate(&LocationChange {
-                            value: format!("/docs/{}", urlencoding::encode(&text)),
-                            scroll: false,
-                            replace: false,
-                            ..Default::default()
-                        })
+                        _ = window().history().unwrap().push_state_with_url(
+                            &wasm_bindgen::JsValue::NULL,
+                            "",
+                            Some(&format!("/docs/{}", urlencoding::encode(&text))),
+                        );
                     }
                 },
                 Duration::from_secs(2),
@@ -179,21 +177,21 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         set_old_allowed.set(allowed.clone());
         if allowed.classes.is_empty() && allowed.prims.is_empty() {
             // No Results
-            set_result.set(Some(view!( <p>"No results"</p>).into_view()));
+            set_result.set(Some(allowed));
             set_current_prim.set(None);
         } else if allowed.prims.len() == 1
             && [PrimClass::all().count(), 1].contains(&allowed.classes.len())
         {
             // Only one result
-            let prim = allowed.prims.into_iter().next().unwrap();
+            let prim = *allowed.prims.iter().next().unwrap();
             let siv_options = ScrollIntoViewOptions::new();
             siv_options.set_behavior(ScrollBehavior::Instant);
             scroll_to_docs_functions(&siv_options);
-            set_result.set(Some(view!( <PrimDocs prim=prim/>).into_view()));
+            set_result.set(Some(allowed));
             set_current_prim.set(Some(prim));
         } else {
             // Multiple results
-            set_result.set(Some(allowed.table().into_view()));
+            set_result.set(Some(allowed));
             set_current_prim.set(None);
         }
     };
@@ -204,7 +202,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             .unwrap_or_else(|| format!("{} Docs", lang()))
     };
 
-    set_timeout(
+    _ = set_timeout(
         {
             let search = search.clone();
             move || update_search(&search, false)
@@ -283,10 +281,28 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
                     on:input=on_search_input
                     pattern="[^0-9]"
                     placeholder="Search by name, glyph, or category..."/>
-                { move || clear_button.get() }
+                { move || clear_button.get().then(|| view! {
+                    <button on:click=move |_| {
+                        let search_input = element::<HtmlInputElement>("function-search");
+                        search_input.set_value("");
+                        let init = EventInit::new();
+                        init.set_bubbles(true);
+                        _ = search_input.dispatch_event(&Event::new_with_event_init_dict("input", &init).unwrap());
+                    }>"✕"</button>
+                }) }
             </div>
         </div>
-        { move || results.get() }
+        { move || results.get().map(|allowed| {
+            if allowed.classes.is_empty() && allowed.prims.is_empty() {
+                view!(<p>"No results"</p>).into_any()
+            } else if allowed.prims.len() == 1
+                && [PrimClass::all().count(), 1].contains(&allowed.classes.len())
+            {
+                view!(<PrimDocs prim=*allowed.prims.iter().next().unwrap()/>).into_any()
+            } else {
+                allowed.table().into_any()
+            }
+        }) }
         <div style="height: 85vh;"></div>
     }
 }
@@ -509,12 +525,12 @@ impl Allowed {
                             </div>
                             {sysop.long_name()}
                         </div>)
-                        .into_view()
+                        .into_any()
                     } else {
                         view!(<div style="display: flex; align-items: center;">
                             <div style=style><Prim prim=p/></div>{exp}
                         </div>)
-                        .into_view()
+                        .into_any()
                     }
                 })
                 .collect();
@@ -522,77 +538,75 @@ impl Allowed {
                 continue;
             }
             let (header, description) = match class {
-                PrimClass::Arguments => ("Arguments".into_view(), "Manipulate function arguments"),
-                PrimClass::Constant => ("Constants".into_view(), "Symbolic constants"),
+                PrimClass::Arguments => ("Arguments".into_any(), "Manipulate function arguments"),
+                PrimClass::Constant => ("Constants".into_any(), "Symbolic constants"),
                 PrimClass::MonadicPervasive => (
-                    "Monadic Pervasive".into_view(),
+                    "Monadic Pervasive".into_any(),
                     "Operate on every element in an array",
                 ),
                 PrimClass::DyadicPervasive => (
-                    "Dyadic Pervasive".into_view(),
+                    "Dyadic Pervasive".into_any(),
                     "Operate on every pair of elements in two arrays",
                 ),
                 PrimClass::MonadicArray => {
-                    ("Monadic Array".into_view(), "Operate on a single array")
+                    ("Monadic Array".into_any(), "Operate on a single array")
                 }
-                PrimClass::DyadicArray => ("Dyadic Array".into_view(), "Operate on two arrays"),
+                PrimClass::DyadicArray => ("Dyadic Array".into_any(), "Operate on two arrays"),
                 PrimClass::MappingModifier => (
-                    "Mapping Modifiers".into_view(),
+                    "Mapping Modifiers".into_any(),
                     "Apply a function to separate rows of an array or arrays",
                 ),
                 PrimClass::IteratingModifier => (
-                    "Iterating Modifiers".into_view(),
+                    "Iterating Modifiers".into_any(),
                     "Apply a function to iteratively transform an array or arrays",
                 ),
                 PrimClass::InversionModifier => (
-                    "Inversion Modifiers".into_view(),
+                    "Inversion Modifiers".into_any(),
                     "Work with the inverses of functions",
                 ),
-                PrimClass::Comptime => ("Comptime".into_view(), "Do things at compile time"),
-                PrimClass::OtherModifier => ("Other Modifiers".into_view(), ""),
-                PrimClass::Debug => ("Debug".into_view(), "Debug your code"),
-                PrimClass::Thread => ("Thread".into_view(), "Work with OS threads"),
+                PrimClass::Comptime => ("Comptime".into_any(), "Do things at compile time"),
+                PrimClass::OtherModifier => ("Other Modifiers".into_any(), ""),
+                PrimClass::Debug => ("Debug".into_any(), "Debug your code"),
+                PrimClass::Thread => ("Thread".into_any(), "Work with OS threads"),
                 PrimClass::GeometricAlgebra => {
-                    ("Geometric Algebra".into_view(), "Operate on multivectors")
+                    ("Geometric Algebra".into_any(), "Operate on multivectors")
                 }
-                PrimClass::Map => ("Map".into_view(), "Use arrays as hash maps"),
+                PrimClass::Map => ("Map".into_any(), "Use arrays as hash maps"),
                 PrimClass::Encoding => (
-                    "Encoding".into_view(),
+                    "Encoding".into_any(),
                     "Convert to and from different encodings",
                 ),
-                PrimClass::Algorithm => ("Algorithms".into_view(), "Useful, specific algorithms"),
+                PrimClass::Algorithm => ("Algorithms".into_any(), "Useful, specific algorithms"),
                 PrimClass::Rng => (
-                    "Random Number Generation".into_view(),
+                    "Random Number Generation".into_any(),
                     "Generate random numbers",
                 ),
-                PrimClass::Time => ("Time".into_view(), "Work with time"),
+                PrimClass::Time => ("Time".into_any(), "Work with time"),
                 PrimClass::Environment => (
-                    "Environment".into_view(),
+                    "Environment".into_any(),
                     "Get information about the environment",
                 ),
-                PrimClass::Misc => ("Miscellaneous".into_view(), ""),
+                PrimClass::Misc => ("Miscellaneous".into_any(), ""),
                 PrimClass::Sys(class) => match class {
                     SysOpClass::Filesystem => (
-                        "System - Filesystem".into_view(),
+                        "System - Filesystem".into_any(),
                         "Work with files and directories",
                     ),
                     SysOpClass::StdIO => (
-                        "System - Standard I/O".into_view(),
+                        "System - Standard I/O".into_any(),
                         "Read and write standard input and output",
                     ),
-                    SysOpClass::Env => {
-                        ("System - Environment".into_view(), "Query the environment")
-                    }
+                    SysOpClass::Env => ("System - Environment".into_any(), "Query the environment"),
                     SysOpClass::Stream => (
-                        "System - Streams".into_view(),
+                        "System - Streams".into_any(),
                         "Read from and write to streams",
                     ),
-                    SysOpClass::Command => ("System - Commands".into_view(), "Execute commands"),
-                    SysOpClass::Media => ("System - Media".into_view(), "Present media"),
-                    SysOpClass::Tcp => ("System - TCP".into_view(), "Work with TCP sockets"),
-                    SysOpClass::Udp => ("System - UDP".into_view(), "Work with UDP sockets"),
-                    SysOpClass::Ffi => ("System - FFI".into_view(), "Foreign function interface"),
-                    SysOpClass::Misc => ("System - Misc".into_view(), ""),
+                    SysOpClass::Command => ("System - Commands".into_any(), "Execute commands"),
+                    SysOpClass::Media => ("System - Media".into_any(), "Present media"),
+                    SysOpClass::Tcp => ("System - TCP".into_any(), "Work with TCP sockets"),
+                    SysOpClass::Udp => ("System - UDP".into_any(), "Work with UDP sockets"),
+                    SysOpClass::Ffi => ("System - FFI".into_any(), "Foreign function interface"),
+                    SysOpClass::Misc => ("System - Misc".into_any(), ""),
                 },
             };
             table_cells.push(view! {

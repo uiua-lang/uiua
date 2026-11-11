@@ -449,8 +449,11 @@ impl SysBackend for NativeSys {
     fn get_raw_mode(&self) -> Result<bool, String> {
         Ok(rawrrr::is_raw())
     }
-    fn var(&self, name: &str) -> Option<String> {
+    fn get_var(&self, name: &str) -> Option<String> {
         env::var(name).ok()
+    }
+    unsafe fn set_var(&self, name: &str, val: &str) {
+        unsafe { env::set_var(name, val) };
     }
     fn file_exists(&self, path: &str) -> bool {
         fs::metadata(path).is_ok()

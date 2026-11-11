@@ -963,6 +963,11 @@ impl Uiua {
     ) -> UiuaResult {
         self.without_fill(|env| env.exec(inner))?;
         let start = self.require_height(len)?;
+        if boxed {
+            for val in &self.rt.stack[start..] {
+                val.validate_boxable(self)?;
+            }
+        }
         let values = self.rt.stack.drain(start..).rev();
         let values: Vec<Value> = if boxed {
             values.map(Boxed).map(Value::from).collect()

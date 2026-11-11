@@ -1030,6 +1030,11 @@ pub trait ArrayValue:
     fn nested_value(&self) -> Option<&Value> {
         None
     }
+    /// Get a glyph indicating the domain of a specific set of values,
+    /// which may be more specific than the glyph for the overall type
+    fn domain_symbol(values: &[Self]) -> char {
+        Self::SYMBOL
+    }
     /// Check if this element has the wildcard value
     fn has_wildcard(&self) -> bool {
         false
@@ -1083,6 +1088,17 @@ impl ArrayValue for f64 {
     fn default_scalar() -> Self {
         0.0
     }
+    fn domain_symbol(values: &[Self]) -> char {
+        if values.iter().any(|&n| n.fract() != 0.0) {
+            'ℝ'
+        } else if values.iter().any(|&n| n < 0.0) {
+            'ℤ'
+        } else if values.iter().any(|&n| n > 1.0) {
+            'ℕ'
+        } else {
+            '𝔹'
+        }
+    }
     fn has_wildcard(&self) -> bool {
         self.to_bits() == WILDCARD_NAN.to_bits()
     }
@@ -1101,8 +1117,19 @@ impl ArrayValue for f64 {
 
 #[cfg(test)]
 #[test]
-fn f64_summarize() {
-    assert_eq!(f64::summarize(&[2.0, 6.0, 1.0]), "1-6 μ3");
+fn f64_summarize_stats() {
+    let arr = [2.0, 6.0, 1.0, 2.5, 3.5, 1.5, 4.5];
+    assert_eq!(f64::summarize(&arr), "1-6 μ3");
+}
+
+#[cfg(test)]
+#[test]
+fn f64_summarize_multiset() {
+    let arr = (0..1000)
+        .map(|n| (f64::from(n).sin() * 2.5).round())
+        .collect::<Vec<_>>();
+
+    assert_eq!(f64::summarize(&arr), "◴ ¯2 ¯1 0 1 2 ⧆ 296 140 127 142 295")
 }
 
 impl ArrayValue for u8 {
@@ -1120,6 +1147,13 @@ impl ArrayValue for u8 {
     }
     fn default_scalar() -> Self {
         0
+    }
+    fn domain_symbol(values: &[Self]) -> char {
+        if values.iter().any(|&n| n > 1) {
+            'ℕ'
+        } else {
+            '𝔹'
+        }
     }
     fn sort_list(list: &mut [Self], up: bool) {
         let mut counts: [usize; 256] = [0; 256];
@@ -1171,6 +1205,13 @@ impl ArrayValue for char {
     }
     fn default_scalar() -> Self {
         ' '
+    }
+    fn domain_symbol(values: &[Self]) -> char {
+        if values.iter().any(|c| !c.is_ascii()) {
+            '𝕌'
+        } else {
+            '@'
+        }
     }
     fn has_wildcard(&self) -> bool {
         *self == WILDCARD_CHAR

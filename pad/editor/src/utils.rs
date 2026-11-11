@@ -250,6 +250,12 @@ impl State {
         self.past.clear();
         self.future.clear();
     }
+    pub fn can_undo(&self) -> bool {
+        !self.past.is_empty()
+    }
+    pub fn can_redo(&self) -> bool {
+        !self.future.is_empty()
+    }
     pub fn undo(&mut self) {
         let prev = self.past.pop();
         if let Some(prev) = prev {

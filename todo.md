@@ -2,9 +2,11 @@
 
 # 0.20
 
+- `anti` inverse list
 - `switch` subscripts
 - `fold` subscripts
 - `under` `on` dyadic constant
+- Sided `reshape`
 - Maps tutorial
 - More Inverses tutorial
 - Document array summary notation

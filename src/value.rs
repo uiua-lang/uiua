@@ -1526,6 +1526,16 @@ impl Value {
             .unwrap_or(0)
             + 1
     }
+    pub(crate) fn is_boxable(&self) -> bool {
+        self.box_nesting() < 256
+    }
+    pub(crate) fn validate_boxable(&self, env: &Uiua) -> UiuaResult {
+        if self.is_boxable() {
+            Ok(())
+        } else {
+            Err(env.error("Box nesting too deep"))
+        }
+    }
 }
 
 macro_rules! value_from {

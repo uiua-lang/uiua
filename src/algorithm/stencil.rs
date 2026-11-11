@@ -74,7 +74,7 @@ pub fn stencil(ops: Ops, side: Option<SubSide>, env: &mut Uiua) -> UiuaResult {
                         SubSide::Right => offset * fill.is_none() as usize,
                     };
                     let mut rows = xs.into_rows().skip(skip);
-                    let arg_bottom = env.stack_height().saturating_sub(n);
+                    let arg_bottom = env.stack_height();
                     let mut start = 0;
                     // Handle left padding for right side
                     if let Some(fill) = &fill

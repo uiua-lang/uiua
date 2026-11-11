@@ -9,6 +9,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`un °`](https://uiua.org/docs/un)[`validate ⊨`](https://uiua.org/docs/validate) for getting the type spec of an array.
 - The formatter will now format text inside comments and strings that is surrounded with `\\(...)`.
 - Add [`anti ⌝`](https://www.uiua.org/docs/anti)[`&var`](https://www.uiua.org/docs/%26var) for setting environment variables.
+- Add [`fill ⬚`](https://uiua.org/docs/fill) support to [`&var`](https://www.uiua.org/docs/%26var)
 - Add native matrix division (spelt `⌝(⊞(/+×)⊙⍉)`) as the [`anti ⌝`](https://www.uiua.org/docs/anti) to matrix multiplication (spelt `⊞(/+×)⊙⍉`).
 - Add [`"f16"`](https://en.wikipedia.org/wiki/Half-precision_floating-point_format) format to [`bytes`](https://www.uiua.org/docs/bytes)
 ### Interpreter
@@ -22,6 +23,7 @@ This version is not yet released. If you are reading this on the website, then t
   - `cot`
   - `avg`
 ### Website
+- Add undo and redo buttons to editors on mobile. Only visible if necessary.
 - Separate [Aliases](https://uiua.org/docs/aliases) page from the [Idioms](https://uiua.org/docs/idioms) page.
 - Add [APL387](https://dyalog.github.io/APL387/) font to pad
 - Remove Pixua font from pad

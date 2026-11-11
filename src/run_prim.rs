@@ -12,7 +12,6 @@ use std::{
     borrow::{BorrowMut, Cow},
     cell::RefCell,
     collections::HashMap,
-    env,
     f64::consts::{PI, TAU},
     iter::repeat_n,
     sync::OnceLock,
@@ -152,9 +151,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         }
         Primitive::Box => {
             let val = env.pop(1)?;
-            if val.box_nesting() > 255 {
-                return Err(env.error("Box nesting too deep"));
-            }
+            val.validate_boxable(env)?;
             env.push(val.box_depth(0));
         }
         Primitive::EncodeBytes => {
@@ -854,9 +851,7 @@ impl ImplPrimitive {
                 let _lock = LOCK.lock();
                 // Safety: `set_var` is unsafe for unix in multithreaded contexts.
                 // Use a lock to ensure serialization and thus safety.
-                unsafe {
-                    env::set_var(key, value);
-                }
+                unsafe { env.backend().set_var(&key, &value) }
             }
             ImplPrimitive::MatrixDiv => env.dyadic_rr_env(Value::matrix_div)?,
             &ImplPrimitive::RangeSub(n) => {

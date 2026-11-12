@@ -1,3 +1,5 @@
+//! Worker communication code that runs from the main thread
+
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
 use leptos::prelude::window;

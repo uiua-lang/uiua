@@ -169,6 +169,7 @@ pub fn Editor<'a>(
     let (settings_open, set_settings_open) = signal(false);
     let (fullscreen_enabled, set_fullscreen_enabled) = signal(false);
     let (show_format_hint, set_show_format_hint) = signal(format_hint);
+    let limit_exec_time = RwSignal::new(get_limit_exec_time());
     let update_token_count = move |code: &str| {
         set_token_count.set(
             lex(code, (), &mut Default::default())
@@ -1781,6 +1782,7 @@ pub fn Editor<'a>(
 
     // Toggle settings
     let toggle_settings_open = move |_| {
+        limit_exec_time.set(get_limit_exec_time());
         set_settings_open.update(|s| *s = !*s);
     };
     let toggle_settings_title = move || {
@@ -1798,6 +1800,11 @@ pub fn Editor<'a>(
         } else {
             ""
         }
+    };
+    let toggle_limit_exec_time = move |_| {
+        let limit = !limit_exec_time.get_untracked();
+        set_limit_exec_time(limit);
+        limit_exec_time.set(limit);
     };
     let on_execution_limit_change = move |event: Event| {
         let event = event.dyn_into::<web_sys::InputEvent>().unwrap();
@@ -2285,8 +2292,21 @@ pub fn Editor<'a>(
                                         "Autoplay audio"
                                     </label>
                                 </div>
+                                <div title="Limit how long a program can run">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            prop:checked=move || limit_exec_time.get()
+                                            on:change=toggle_limit_exec_time
+                                        />
+                                        "Limit exec time"
+                                    </label>
+                                </div>
                                 <div class="settings-group-grid">
-                                    <div title="The maximum number of seconds a program can run for">
+                                    <div
+                                        title="The maximum number of seconds a program can run for"
+                                        style=move || if limit_exec_time.get() { "" } else { "display: none;" }
+                                    >
                                         <label class="setting-name">"Exec limit"</label>
                                         <div>
                                             <input

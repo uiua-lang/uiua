@@ -45,4 +45,6 @@ web-sys = { workspace = true, features = [
     "DedicatedWorkerGlobalScope",
     "MessageEvent",
     "ErrorEvent",
+    "XmlHttpRequest",
+    "XmlHttpRequestResponseType",
 ] }

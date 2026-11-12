@@ -1,24 +1,26 @@
 use std::{
     any::Any,
     borrow::Cow,
-    cell::{Cell, RefCell},
+    cell::RefCell,
     collections::{BTreeSet, HashMap, HashSet},
     io::Cursor,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     sync::{
         Mutex,
         atomic::{AtomicBool, Ordering},
     },
 };
 
-use futures::future::join_all;
 use js_sys::{Date, Uint8Array};
 use leptos::{prelude::*, *};
 use serde::*;
 use uiua::{BigConstant, EXAMPLE_TXT, EXAMPLE_UA, GitTarget, Handle, Report, SysBackend, now};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, spawn_local};
-use web_sys::{HtmlAudioElement, Request, RequestInit, RequestMode, Response, WorkerGlobalScope};
+use web_sys::{
+    HtmlAudioElement, Request, RequestInit, RequestMode, Response, WorkerGlobalScope,
+    XmlHttpRequest, XmlHttpRequestResponseType,
+};
 
 use crate::{
     START_TIME, get_ast_time,
@@ -71,11 +73,26 @@ pub(crate) fn weewuh() {
 }
 
 pub fn drop_file(path: PathBuf, contents: Vec<u8>) {
-    FILES.with(|files| files.borrow_mut().insert(path, contents));
+    FILES.with(|files| files.borrow_mut().insert(normalize_path(&path), contents));
 }
 
-pub fn delete_file(path: &PathBuf) {
-    FILES.with(|files| files.borrow_mut().remove(path));
+pub fn delete_file(path: &Path) {
+    let path = normalize_path(path);
+    FILES.with(|files| files.borrow_mut().remove(&path));
+}
+
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => (),
+            Component::ParentDir => {
+                normalized.pop();
+            }
+            _ => normalized.push(component.as_os_str()),
+        }
+    }
+    normalized
 }
 
 impl Default for WebBackend {
@@ -152,10 +169,10 @@ impl WebBackend {
         panic!("Ran out of file handles");
     }
     fn file<T>(&self, path: &Path, f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
+        let path = normalize_path(path);
         FILES.with(|files| {
-            (files.borrow().get(path))
-                .map(|content| f(content))
-                .ok_or(format!("File not found: {}", path.display()))
+            (files.borrow().get(&path).map(|content| f(content)))
+                .ok_or_else(|| format!("File not found: {}", path.display()))
         })
     }
     fn file_mut<T>(&self, path: &Path, f: impl FnOnce(&mut Vec<u8>) -> T) -> Result<T, String> {
@@ -284,13 +301,7 @@ impl SysBackend for WebBackend {
         self.file(path.as_ref(), |_| {}).is_ok()
     }
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
-        FILES.with(|files| {
-            if !files.borrow().contains_key(path) {
-                files.borrow_mut().insert(path.into(), contents.to_vec());
-            } else {
-                *files.borrow_mut().get_mut(path).unwrap() = contents.to_vec();
-            }
-        });
+        drop_file(path.into(), contents.to_vec());
         Ok(())
     }
     fn file_append_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
@@ -315,7 +326,7 @@ impl SysBackend for WebBackend {
     }
     fn create_file(&self, path: &Path) -> Result<Handle, String> {
         let handle = self.new_handle();
-        FILES.with(|files| files.borrow_mut().insert(path.into(), Vec::new()));
+        drop_file(path.into(), Vec::new());
         self.streams.lock().unwrap().insert(
             handle,
             VirtualStream {
@@ -403,7 +414,7 @@ impl SysBackend for WebBackend {
         Ok(())
     }
     fn delete(&self, path: &str) -> Result<(), String> {
-        FILES.with(|files| files.borrow_mut().remove(Path::new(path)));
+        delete_file(path.as_ref());
         Ok(())
     }
     fn trash(&self, path: &str) -> Result<(), String> {
@@ -479,32 +490,6 @@ impl SysBackend for WebBackend {
         target: GitTarget,
         subfolder: Option<&str>,
     ) -> Result<PathBuf, String> {
-        type CacheKey = (String, Option<String>);
-        thread_local! {
-            static CACHE: RefCell<HashMap<CacheKey, Result<String, String>>> = Default::default();
-            static WORKING: RefCell<HashSet<String>> = Default::default();
-        }
-
-        logging::log!("{target:?}");
-
-        fn cache_url(url: &str, subfolder: Option<String>, res: Result<String, String>) {
-            CACHE.with(|cache| {
-                cache.borrow_mut().insert((url.into(), subfolder), res);
-            });
-        }
-
-        fn mark_working(url: &str) {
-            WORKING.with(|working| working.borrow_mut().insert(url.into()));
-        }
-
-        fn unmark_working(url: &str) {
-            WORKING.with(|working| working.borrow_mut().remove(url));
-        }
-
-        if WORKING.with(|working| working.borrow().contains(original_url)) {
-            return Err("Waiting for module, try running again in a moment...".into());
-        }
-
         let branch_name: String = match &target {
             GitTarget::Default => "main".to_owned(),
             GitTarget::Branch(branch) => branch.clone(),
@@ -528,6 +513,7 @@ impl SysBackend for WebBackend {
 
             (repo_owner.to_string(), repo_name.to_string(), path)
         };
+        let path = normalize_path(&path);
 
         if FILES.with(|files| files.borrow().contains_key(&path)) {
             return Ok(path);
@@ -539,120 +525,64 @@ impl SysBackend for WebBackend {
             .replace("github.com", "raw.githubusercontent.com")
             .replace("src/branch/master", "raw/branch/master");
 
-        if matches!(&target, GitTarget::Branch(_)) {
-            url.push_str("_branch-");
-            url.push_str(&branch_name);
-        }
+        let branch = urlencoding::encode(&branch_name);
+        if original_url.contains("github.com") {
+            logging::log!("Fetching github repo: {url}");
+            let tree = load_bytes(&format!(
+                "https://api.github.com\
+                /repos/{repo_owner}/{repo_name}/git/trees/{branch}?recursive=1",
+            ))?;
+            let tree: serde_json::Value = serde_json::from_slice(&tree).unwrap();
+            let tree = tree.get("tree").unwrap().as_array().unwrap();
+            let paths = tree
+                .iter()
+                .filter(|entry| {
+                    entry.get("type").and_then(serde_json::Value::as_str) == Some("blob")
+                })
+                .filter_map(|entry| entry.get("path")?.as_str())
+                .collect::<HashSet<_>>();
 
-        let res = CACHE.with(|cache| {
-            let subfolder = subfolder.map(str::to_string);
-            if let Some(res) = cache.borrow().get(&(url.clone(), subfolder.clone())) {
-                logging::log!("Using cached module for {url:?}");
-                Some(res.clone())
-            } else if original_url.contains("github.com") {
-                logging::log!("Fetching github repo: {url}");
-                mark_working(original_url);
-                let original_url = original_url.to_string();
+            let mut lib_path = PathBuf::from("lib.ua");
+            if let Some(subfolder) = subfolder {
+                lib_path = PathBuf::from(subfolder).join(lib_path);
+            }
+            let lib_path = lib_path.to_string_lossy();
+            if !paths.contains(&*lib_path) {
+                return Err(format!("{lib_path} not found"));
+            }
 
-                spawn_fetch(async move {
-                    let tree_res = fetch(&format!(
-                        "https://api.github.com\
-                        /repos/{repo_owner}/{repo_name}/git/trees/{branch_name}?recursive=1",
-                    ))
-                    .await;
-
-                    let Ok(tree) = tree_res else {
-                        cache_url(&url, subfolder, tree_res);
-                        unmark_working(&original_url);
-                        return;
-                    };
-
-                    let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
-                    let tree = tree.get("tree").unwrap().as_array().unwrap();
-                    let paths = tree
-                        .iter()
-                        .filter_map(|entry| entry.get("path")?.as_str())
-                        .collect::<HashSet<_>>();
-
-                    let mut lib_path = PathBuf::from("lib.ua");
-                    if let Some(subfolder) = &subfolder {
-                        lib_path = PathBuf::from(subfolder).join(lib_path);
-                    }
-                    let lib_path = lib_path.to_string_lossy();
-                    if !paths.contains(&*lib_path) {
-                        cache_url(&url, subfolder, Err(format!("{lib_path} not found")));
-                        unmark_working(&original_url);
-                        return;
-                    }
-
-                    let results = join_all(paths.iter().map(|path| {
-                        logging::log!("path: {path}");
-                        let repo_owner = repo_owner.clone();
-                        let repo_name = repo_name.clone();
-                        let branch_name = branch_name.clone();
-                        async move {
-                            let fetch_url = format!(
-                                "https://raw.githubusercontent.com\
-                                        /{repo_owner}/{repo_name}/{branch_name}/{path}",
-                            );
-                            let internal_path = Path::new("uiua-modules")
-                                .join(repo_owner)
-                                .join(repo_name)
-                                .join(branch_name)
-                                .join(path);
-
-                            (path, internal_path, fetch_bytes(fetch_url.as_str()).await)
-                        }
-                    }))
-                    .await;
-
-                    for (&original_path, internal_path, res) in results {
-                        if subfolder.is_none() && original_path == "lib.ua"
-                            || subfolder.is_some() && original_path.ends_with("/lib.ua")
-                        {
-                            let text = res.clone().map(|b| {
-                                String::from_utf8(b).unwrap_or_else(|e| {
-                                    String::from_utf8_lossy(e.as_bytes()).into_owned()
-                                })
-                            });
-                            logging::log!("{} text: {:?}", original_path, text);
-                            cache_url(&url, subfolder.clone(), text);
-                        }
-                        if let Ok(contents) = res {
-                            drop_file(internal_path.clone(), contents);
-                        }
-                    }
-
-                    unmark_working(&original_url);
-                });
-                None
-            } else {
-                if !url.ends_with(".ua") {
-                    url = format!("{url}/main/lib.ua");
+            let mut downloaded = Vec::new();
+            for path in paths {
+                let file = path
+                    .split('/')
+                    .map(urlencoding::encode)
+                    .collect::<Vec<_>>()
+                    .join("/");
+                let fetch_url = format!(
+                    "https://raw.githubusercontent.com\
+                    /{repo_owner}/{repo_name}/{branch}/{file}",
+                );
+                let internal_path = Path::new("uiua-modules")
+                    .join(&repo_owner)
+                    .join(&repo_name)
+                    .join(&branch_name)
+                    .join(path);
+                if !FILES.with(|files| files.borrow().contains_key(&internal_path)) {
+                    downloaded.push((internal_path, load_bytes(&fetch_url)?));
                 }
-                logging::log!("Fetching url: {url}");
-                mark_working(original_url);
-                let original_url = original_url.to_string();
-                spawn_fetch(async move {
-                    let res = fetch(&url).await;
-                    cache_url(&url, subfolder, res);
-                    unmark_working(&original_url);
-                });
-                None
             }
-        });
-
-        match res {
-            Some(Ok(text)) => {
-                let contents = text.as_bytes().to_vec();
-                drop_file(path.clone(), contents);
-                Ok(path)
+            // Publish the repo only after every download succeeds, so failed loads can be retried.
+            FILES.with(|files| files.borrow_mut().extend(downloaded));
+        } else {
+            if !url.ends_with(".ua") {
+                let subpath = subfolder.map(|path| format!("{path}/")).unwrap_or_default();
+                url = format!("{url}/{branch}/{subpath}lib.ua");
             }
-            Some(Err(err)) => Err(err),
-            None => Err("Waiting for module, try running again in a moment...".into()),
+            logging::log!("Fetching url: {url}");
+            drop_file(path.clone(), load_bytes(&url)?);
         }
+        Ok(path)
     }
-
     fn timezone(&self) -> Result<f64, String> {
         if !cfg!(target_arch = "wasm32") {
             return Ok(0.0);
@@ -666,39 +596,13 @@ impl SysBackend for WebBackend {
                 "../../../src/assets/Uiua386.ttf"
             )));
         }
-
-        thread_local! {
-            static CACHE: RefCell<HashMap<BigConstant, Result<Vec<u8>, String>>> = Default::default();
-            static WORKING: RefCell<HashSet<BigConstant>> = Default::default();
-        }
-
-        if WORKING.with(|working| working.borrow().contains(&key)) {
-            return Err("Waiting for data, try running again in a moment...".into());
-        }
-
-        CACHE.with(|cache| {
-            if let Some(bytes) = cache.borrow().get(&key).cloned() {
-                WORKING.with(|working| working.borrow_mut().remove(&key));
-                return bytes.map(Cow::Owned);
-            }
-            WORKING.with(|working| working.borrow_mut().insert(key));
-            spawn_fetch(async move {
-                let path = match key {
-                    BigConstant::Uiua386 => "/Uiua386.ttf",
-                    BigConstant::Elevation => "/assets/elevation.webp",
-                    BigConstant::BadAppleGif => "/assets/bad-apple.gif",
-                    BigConstant::Amen => "/assets/amen-break.wav",
-                };
-                let fetch_res = fetch_bytes(path).await;
-                CACHE.with(|cache| cache.borrow_mut().insert(key, fetch_res.clone()));
-                WORKING.with(|working| working.borrow_mut().remove(&key));
-            });
-            match cache.borrow().get(&key).cloned() {
-                Some(Ok(bytes)) => Ok(Cow::Owned(bytes)),
-                Some(Err(err)) => Err(err),
-                None => Err("Waiting for module, try running again in a moment...".into()),
-            }
+        load_bytes(match key {
+            BigConstant::Uiua386 => "/Uiua386.ttf",
+            BigConstant::Elevation => "/assets/elevation.webp",
+            BigConstant::BadAppleGif => "/assets/bad-apple.gif",
+            BigConstant::Amen => "/assets/amen-break.wav",
         })
+        .map(Cow::Owned)
     }
 }
 
@@ -767,18 +671,42 @@ pub async fn fetch_bytes(url: &str) -> Result<Vec<u8>, String> {
     }
 }
 
-thread_local! {
-    static PENDING_FETCHES: Cell<usize> = const { Cell::new(0) };
-}
-
-pub(crate) fn pending_fetches() -> usize {
-    PENDING_FETCHES.with(Cell::get)
-}
-
-fn spawn_fetch(task: impl std::future::Future<Output = ()> + 'static) {
-    PENDING_FETCHES.with(|pending| pending.set(pending.get() + 1));
-    spawn_local(async move {
-        task.await;
-        PENDING_FETCHES.with(|pending| pending.set(pending.get() - 1));
-    });
+/// Load synchronously in the execution worker, asynchronously for syntax highlighting.
+fn load_bytes(url: &str) -> Result<Vec<u8>, String> {
+    if !cfg!(target_arch = "wasm32") {
+        return Err(format!("Cannot fetch {url} outside the browser"));
+    }
+    if worker::is_worker() {
+        let request = XmlHttpRequest::new().unwrap();
+        request.open_with_async("GET", url, false).unwrap();
+        request.set_response_type(XmlHttpRequestResponseType::Arraybuffer);
+        (request.send()).map_err(|e| format!("Request failed for {url}: {e:?}"))?;
+        let status = request.status().unwrap();
+        let bytes = Uint8Array::new(&request.response().unwrap()).to_vec();
+        return match status {
+            200..300 => Ok(bytes),
+            _ => Err(format!(
+                "HTTP {status} for {url}: {}",
+                String::from_utf8_lossy(&bytes)
+            )),
+        };
+    }
+    // Cache loads
+    // None means loading
+    type Cache = HashMap<String, Option<Result<Vec<u8>, String>>>;
+    thread_local! {
+        static CACHE: RefCell<Cache> = RefCell::default();
+    }
+    if let Some(result) = CACHE.with(|cache| cache.borrow().get(url).cloned().flatten()) {
+        return result;
+    }
+    let working = CACHE.with(|cache| cache.borrow_mut().insert(url.into(), None).is_some());
+    if !working {
+        let url = url.to_string();
+        spawn_local(async move {
+            let result = fetch_bytes(&url).await;
+            CACHE.with(|cache| cache.borrow_mut().insert(url, Some(result)));
+        });
+    }
+    Err(format!("Loading {url}"))
 }

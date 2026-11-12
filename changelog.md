@@ -31,6 +31,7 @@ This version is not yet released. If you are reading this on the website, then t
   - `cot`
   - `avg`
 ### Website
+- Run interpreter in a web worker so it doesn't block the page.
 - Add undo and redo buttons to editors on mobile. Only visible if necessary.
 - Separate [Aliases](https://uiua.org/docs/aliases) page from the [Idioms](https://uiua.org/docs/idioms) page
 - Add [APL387](https://dyalog.github.io/APL387/) font to pad

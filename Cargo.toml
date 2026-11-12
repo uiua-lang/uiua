@@ -252,6 +252,7 @@ invoke = ["open"]
 lsp = ["tower-lsp", "tokio", "native_sys"]
 native_sys = []
 no_self_update = [] # Disable the `uiua update` command
+non_web = [] # For non-web wasm builds
 ogg = ["vorbis_rs"]
 opt = [] # Enables some optimizations but increases binary size
 profile = ["serde_yaml"]

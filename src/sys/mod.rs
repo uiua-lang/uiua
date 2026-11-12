@@ -1674,18 +1674,30 @@ pub fn now() -> f64 {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        #[cfg(not(feature = "web"))]
-        {
-            compile_error!("Web target requires the `web` feature")
-        }
         #[cfg(feature = "web")]
         {
+            #[cfg(feature = "non_web")]
+            compile_error!("Cannot have both the `web` and `non_web` features enabled");
             use wasm_bindgen::{JsCast, prelude::*};
             js_sys::Reflect::get(&js_sys::global(), &JsValue::from_str("performance"))
                 .expect("failed to get performance from global object")
                 .unchecked_into::<web_sys::Performance>()
                 .now()
                 / 1000.0
+        }
+        #[cfg(not(feature = "web"))]
+        {
+            #[cfg(feature = "non_web")]
+            {
+                // For non-web wasm, just return a growing small number
+                use portable_atomic::AtomicU64;
+                use std::sync::atomic::Ordering;
+                static COUNTER: AtomicU64 = AtomicU64::new(0);
+                let val = COUNTER.fetch_add(1, Ordering::Relaxed);
+                val as f64 * 0.001
+            }
+            #[cfg(not(feature = "non_web"))]
+            compile_error!("WASM target requires either the `web` or `non_web` feature")
         }
     }
 }

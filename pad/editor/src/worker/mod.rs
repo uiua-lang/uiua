@@ -81,7 +81,8 @@ impl Output {
 
 #[derive(Serialize, Deserialize)]
 pub struct Settings {
-    pub execution_limit: f64,
+    pub execution_limit: Option<f64>,
+    /// Time to sample `&ast`
     pub ast_time: f64,
     pub top_at_top: bool,
     pub animation_format: String,

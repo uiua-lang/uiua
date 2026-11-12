@@ -47,6 +47,12 @@ pub(crate) fn run(
 pub(crate) fn cancel(editor: u64) {
     let canceled = CLIENT.with(|client| {
         let client = &mut client.borrow_mut();
+        if client.status == WorkerStatus::Running
+            && client.queue.front().is_some_and(|job| job.editor == editor)
+        {
+            client.worker.take();
+            client.status = WorkerStatus::Initializing;
+        }
         let mut canceled = Vec::new();
         for _ in 0..client.queue.len() {
             let job = client.queue.pop_front().unwrap();
@@ -55,11 +61,6 @@ pub(crate) fn cancel(editor: u64) {
             } else {
                 client.queue.push_back(job);
             }
-        }
-        if (client.active.as_ref()).is_some_and(|job| job.editor == editor) {
-            canceled.push(client.active.take().unwrap().on_complete);
-            client.worker.take();
-            client.ready = false;
         }
         canceled
     });
@@ -72,9 +73,16 @@ pub(crate) fn cancel(editor: u64) {
 #[derive(Default)]
 struct Client {
     worker: Option<WorkerHandle>,
-    ready: bool,
-    active: Option<ActiveJob>,
+    status: WorkerStatus,
     queue: VecDeque<Job>,
+}
+
+#[derive(Default, PartialEq, Eq)]
+enum WorkerStatus {
+    #[default]
+    Initializing,
+    Idle,
+    Running,
 }
 
 thread_local! {
@@ -82,19 +90,13 @@ thread_local! {
 }
 
 type OnComplete = Box<dyn FnOnce(Result<RunResult, String>)>;
+type OnOutput = Rc<dyn Fn(OutputUpdate)>;
 
 struct Job {
     editor: u64,
     request: RunRequest,
     on_complete: OnComplete,
-    on_output: Rc<dyn Fn(OutputUpdate)>,
-}
-
-struct ActiveJob {
-    editor: u64,
-    files: Files,
-    on_complete: OnComplete,
-    on_output: Rc<dyn Fn(OutputUpdate)>,
+    on_output: OnOutput,
 }
 
 struct WorkerHandle {
@@ -122,26 +124,21 @@ impl Request {
 }
 
 fn fail(error: String) {
-    let on_completes = CLIENT.with(|client| {
+    let jobs = CLIENT.with(|client| {
         let client = &mut client.borrow_mut();
         client.worker.take();
-        client.ready = false;
-        let mut on_completes: Vec<_> = (client.active.take())
-            .map(|job| job.on_complete)
-            .into_iter()
-            .collect();
-        on_completes.extend(client.queue.drain(..).map(|job| job.on_complete));
-        on_completes
+        client.status = WorkerStatus::Initializing;
+        take(&mut client.queue)
     });
-    for on_complete in on_completes {
-        on_complete(Err(error.clone()));
+    for job in jobs {
+        (job.on_complete)(Err(error.clone()));
     }
 }
 
 fn next_job() {
     let res = CLIENT.with(|client| {
-        let client = &mut client.borrow_mut();
-        if client.active.is_some() || client.queue.is_empty() {
+        let client = &mut *client.borrow_mut();
+        if client.status == WorkerStatus::Running || client.queue.is_empty() {
             return Ok(());
         }
         if client.worker.is_none() {
@@ -165,10 +162,12 @@ fn next_job() {
                 _on_error: on_error,
             });
         }
-        if !client.ready {
+        if client.status != WorkerStatus::Idle {
             return Ok(());
         }
-        let mut job = client.queue.pop_front().unwrap();
+        let Some(mut job) = client.queue.pop_front() else {
+            return Ok(());
+        };
         job.request.files = FILES.with(|files| {
             (files.borrow().iter())
                 .map(|(path, bytes)| (path.clone(), ByteBuf::from(bytes.clone())))
@@ -179,12 +178,11 @@ fn next_job() {
         let Request::Run(request) = request else {
             unreachable!()
         };
-        client.active = Some(ActiveJob {
-            editor: job.editor,
-            files: request.files,
-            on_complete: job.on_complete,
-            on_output: job.on_output,
-        });
+        job.request = *request;
+        client.queue.push_front(job);
+        if result.is_ok() {
+            client.status = WorkerStatus::Running;
+        }
         result
     });
     if let Err(error) = res {
@@ -196,7 +194,7 @@ impl Response {
     fn receive(self) {
         match self {
             Response::Ready => {
-                CLIENT.with(|client| client.borrow_mut().ready = true);
+                CLIENT.with(|client| client.borrow_mut().status = WorkerStatus::Idle);
                 next_job();
             }
             Response::Failed(error) => fail(error),
@@ -213,21 +211,25 @@ impl Response {
             Response::Output(update) => {
                 let on_output = CLIENT.with(|client| {
                     let client = client.borrow();
-                    client.active.as_ref().map(|job| job.on_output.clone())
+                    client.queue.front().map(|job| job.on_output.clone())
                 });
                 if let Some(on_output) = on_output {
                     on_output(update);
                 }
             }
             Response::Done(result) => {
-                let job = CLIENT.with(|client| client.borrow_mut().active.take());
+                let job = CLIENT.with(|client| {
+                    let client = &mut client.borrow_mut();
+                    client.status = WorkerStatus::Idle;
+                    client.queue.pop_front()
+                });
                 let Some(job) = job else {
                     return;
                 };
                 FILES.with(|files| {
                     let mut files = files.borrow_mut();
                     for (path, contents) in &result.files {
-                        let before = (job.files.iter())
+                        let before = (job.request.files.iter())
                             .find(|(p, _)| p == path)
                             .map(|(_, bytes)| bytes.as_ref());
                         if files.get(path).map(Vec::as_slice) != before {

@@ -149,6 +149,8 @@ The `uiua` crate has the following noteable feature flags:
 #![warn(missing_docs)]
 #![recursion_limit = "512"]
 
+pub extern crate ecow;
+
 mod algorithm;
 mod array;
 mod assembly;
@@ -157,8 +159,8 @@ mod check;
 mod compile;
 mod constant;
 #[doc(hidden)]
-mod context;
-mod cowslice;
+pub mod context;
+pub mod cowslice;
 mod empty_types;
 mod error;
 mod ffi;
@@ -210,6 +212,7 @@ pub use uiua_parser::*;
 
 use self::algorithm::get_ops;
 pub(crate) use crate::context::*;
+pub use crate::stack::StackArg;
 use crate::stack::*;
 
 /// The Uiua version

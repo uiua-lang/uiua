@@ -33,7 +33,7 @@ use crate::{
     IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, MvMode, Node, NumericSubscript,
     OTHER_SUBSCRIPT_NUMBERS, PrimClass, Primitive, Purity, RunMode, SUBSCRIPT_DIGITS,
     SemanticComment, SidedSubscript, SigNode, Signature, Sp, Span, SubSide, Subscript,
-    SubscriptNumber, SubscriptToken, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
+    SubscriptNumber, SubscriptToken, SysBackend, Type, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
     VERSION, Value,
     algorithm::try_sig,
     ast::*,
@@ -294,6 +294,8 @@ pub(crate) struct Scope {
     is_data_func: bool,
     /// Names of data variants
     data_variants: IndexSet<EcoString>,
+    /// Types of data variants
+    variant_types: Vec<Type>,
     /// Whether to allow experimental features
     pub experimental: bool,
     /// Whether to type check all functions
@@ -343,6 +345,7 @@ impl Default for Scope {
             has_data_def: false,
             is_data_func: false,
             data_variants: IndexSet::new(),
+            variant_types: Vec::new(),
             experimental: false,
             type_check: false,
             experimental_error: false,

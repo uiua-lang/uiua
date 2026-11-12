@@ -487,7 +487,11 @@ impl Compiler {
                 comment: Some(DocComment::from(comment.as_str())),
                 ..Default::default()
             };
-            self.compile_bind_const(name, bind, Some(ty.spec_val()), span, meta);
+            self.compile_bind_const(name, bind, Some(ty.clone().spec_val()), span, meta);
+            if data.variant {
+                let module_scope = self.higher_scopes.last_mut().unwrap_or(&mut self.scope);
+                module_scope.variant_types.push(ty);
+            }
         }
         let constructor_name = Ident::from("New");
         let constr_bind = Bind {
@@ -673,6 +677,63 @@ impl Compiler {
                 ..Default::default()
             };
             self.compile_bind_const("Variants".into(), bind, Some(value), 0, meta);
+            if !self
+                .scope
+                .names
+                .get("t", LookupPreference::Function, &self.asm)
+                .is_some_and(|ln| ln.public)
+            {
+                let index = self.next_bindex;
+                self.next_bindex += 1;
+                let bind = Bind {
+                    index,
+                    public: true,
+                };
+                let spec = Type {
+                    scalar: Scalar::Or(
+                        self.scope
+                            .variant_types
+                            .iter()
+                            .map(|t| {
+                                let scal = match t {
+                                    Type {
+                                        scalar: Scalar::Box(ScalarBox::Def(name, tys)),
+                                        shape: sh,
+                                    } if sh.rank() == 0 => {
+                                        let mut newtypevec = vec![Type {
+                                            scalar: Scalar::Nat,
+                                            shape: DynShape::SCALAR,
+                                        }];
+                                        newtypevec.extend_from_slice(tys);
+                                        Scalar::Box(ScalarBox::Def(name.clone(), newtypevec))
+                                    }
+                                    other => Scalar::Box(ScalarBox::Def(
+                                        None,
+                                        vec![
+                                            Type {
+                                                scalar: Scalar::Nat,
+                                                shape: DynShape::SCALAR,
+                                            },
+                                            other.clone(),
+                                        ],
+                                    )),
+                                };
+                                Type {
+                                    scalar: scal,
+                                    shape: t.shape.clone(),
+                                }
+                            })
+                            .collect(),
+                    ),
+                    shape: DynShape::SCALAR,
+                }
+                .spec_val();
+                let meta = BindingMeta {
+                    comment: Some("Type of the Variant".into()),
+                    ..Default::default()
+                };
+                self.compile_bind_const("t".into(), bind, Some(spec), 0, meta);
+            }
         }
         Ok(())
     }

@@ -1,6 +1,7 @@
 use leptos::*;
 use leptos_meta::*;
-use uiua::{CONSTANTS, ConstClass, Primitive, SysOp};
+use leptos_router::*;
+use uiua::{CONSTANTS, ConstClass, PrimComponent, Primitive, SysOp};
 use uiua_editor::{Editor, lang};
 
 use crate::{
@@ -168,7 +169,7 @@ pub fn Optimizations() -> impl IntoView {
         <p>"The "{lang}" interpreter contains a number of optimizations that you can take advantage of to improve the performance of your code."</p>
 
         <Hd id="pervasive-functions">"Pervasive Functions"</Hd>
-        <p>"All pervasive functions run on arrays in hot loops that should have performance comparable to an implementation in a languages like C or Rust. This includes all mathematical and comparison functions."</p>
+        <p>"All pervasive functions run on arrays in hot loops that should have performance comparable to an implementation in a language like C or Rust. This includes all mathematical and comparison functions."</p>
         <p>"The interpreter does its best to re-use allocated memory when possible instead of copying. Arrays are reference-counted, so an array's memory is only copied when it is modified "<em>"and"</em>" a duplicate exists somewhere. Duplicating an array with "<Prim prim=On/>"/"<Prim prim=By/>"/etc does not copy actual array memory. It only copies pointers and increments reference counts."</p>
         <p>"In this example, only the last line results in a copy:"</p>
         <Editor no_run=true example="+1 ⇡10\n˙× ⇡10\n×+1⇡10⇡10\n+1⊸⇡10"/>
@@ -533,7 +534,7 @@ pub fn Subscripts() -> impl IntoView {
             "# Experimental!\n△ ⍉₃ °△1_2_3_4_5",
         ),
         subscript(Sqrt, "Nth root", "√₃ [8 27 125]"),
-        subscript(Neg, "Turn one Nth in the complex plane", "⁅₃ ⍥₄⊸¯₄ 1"),
+        subscript(Neg, "Turn one Nth in the complex plane", "⍥₄⊸¯₄ 1"),
         subscript(Exp, "Base N exponential", "ₑ₂ 8"),
         subscript(Round, "To N decimal places", "⁅₃ π"),
         subscript(Floor, "To N decimal places", "# Experimental!\n⌊₄ π\n⌊₄ τ"),
@@ -560,7 +561,11 @@ pub fn Subscripts() -> impl IntoView {
         subscript(With, "Last N values", "{⤙₂[⊙⊙∘] 1 2 3}"),
         subscript(Off, "First N values", "{⤚₂[⊙⊙∘] 1 2 3}"),
         subscript(Both, "Apply to N argument sets", "[∩₃+ 1 2 3 4 5 6]"),
-        subscript(Reach, "Include first N values", "∪₂⊟₃ 1 2 3 4"),
+        subscript(
+            Reach,
+            "# Experimental!\nInclude first N values",
+            "∪₂⊟₃ 1 2 3 4",
+        ),
         subscript(Rows, "Apply to rank-N subarrays", "≡₁□ °△2_3_4"),
         subscript(Inventory, "Apply to rank-N subarrays", "⍚₁⇡ °△2_3"),
         subscript(
@@ -740,4 +745,135 @@ pub fn Experimental() -> impl IntoView {
 
         <Markdown src="/text/ga.md"/>
     }
+}
+
+#[component]
+pub fn Idioms() -> impl IntoView {
+    fn idioms() -> impl IntoView {
+        let src = include_str!("../text/idioms.ua");
+        let mut idioms = Vec::new();
+        for text in src.split("\n\n").flat_map(|s| s.split("\r\n\r\n")) {
+            let mut comment = String::new();
+            let mut code = String::new();
+            let mut lines = text.split('\n').filter(|line| !line.is_empty());
+            for (i, line) in lines.by_ref().enumerate() {
+                if line.starts_with("# ") {
+                    if i > 0 {
+                        comment.push('\n');
+                    }
+                    comment.push_str(line.trim_start_matches("# "));
+                } else {
+                    code.push_str(line);
+                    for line in lines {
+                        code.push('\n');
+                        code.push_str(line);
+                    }
+                    break;
+                }
+            }
+            idioms.push(view!(<tr>
+                <td style="white-space: pre-wrap">{comment}</td>
+                <td><Editor example={&code}/></td>
+            </tr>));
+        }
+        idioms
+    }
+
+    view! {
+        <Title text=format!("Idioms - {} Docs", lang())/>
+        <h1>"Idioms"</h1>
+        <p>"This page contains short "{lang}" idioms that may be non-obvious from simply knowing the primitives themselves."</p>
+        <p>"You can contribute to this list by submitting a PR to the repo. The list is defined "<a href="https://github.com/uiua-lang/uiua/blob/main/site/text/idioms.ua">"here"</a>". Keep in mind these are meant to be both short and useful. Idioms above 10 characters in length (without inputs), or which are not useful for everyday tasks, will not be accepted."</p>
+        <table class="bordered-table" style="width: 100%; table-layout: fixed">
+            <colgroup>
+                <col style="width: 50%"/>
+                <col style="width: max(50%, 10em)"/>
+            </colgroup>
+            { idioms() }
+        </table>
+    }
+}
+
+#[component]
+pub fn Aliases() -> impl IntoView {
+    use Primitive::*;
+    view! {
+        <Title text=format!("Aliases - {} Docs", lang())/>
+        <h1>"Aliases"</h1>
+        <div>
+            <p>"Below are listed the various ways the Uiua formatter converts lowercase ASCII text into glyphs."</p>
+            <p>"Note that these are in "<em>"addition"</em>" to prefix names for glyphs."</p>
+        </div>
+        <div class="wider">
+            <div>
+                <Hd id="aliases">"Aliases"</Hd>
+                <p>"Some primitives have aliases that are not prefixes of the primitive's name, not unique, or less than 3 characters long. These aliases are listed in the table below."</p>
+                <table class="bordered-table" style="width: 100%">
+                    <tr><th>"Primitive"</th><th>"Aliases"</th></tr>
+                    { aliases() }
+                </table>
+            </div>
+            <div>
+                <Hd id="planet-aliases">"Planet Aliases"</Hd>
+                <p>"As discussed in the "<A href="/tutorial/More Argument Manipulation#planet-notation">"Planet Notation"</A>" tutorial, sequences of some primitives can be represented by sequences of corresponding characters. These compose arbitrarily long."</p>
+                <p>"The rules are:"</p>
+                <table class="bordered-table all-centered-table" style="width: 100%">
+                    <tr><th>"Where"</th><th>"Characters"</th><th>"Formats to"</th></tr>
+                    <tr><td>"Inner Sequence"</td><td><code>"d"</code>" / "<code>"g"</code></td><td><Prim prim=Dip/>" / "<Prim prim=Gap/></td></tr>
+                    <tr><td>"Ending"</td><td><code>"i"</code>" / "<code>"p"</code>" / "<code>"f"</code></td><td><Prim prim=Identity/>" / "<Prim prim=Pop/>" / "<Prim prim=Fix/></td></tr>
+                    <tr><td>"Beginning"</td><td><code>"f"</code></td><td><Prim prim=Fork/></td></tr>
+                </table>
+                <p>"Some examples:"</p>
+                <Editor example="[dgdi] 1 2 3 4 # Try formatting!"/>
+                <Editor example="[fggiddp] 1 2 3"/>
+                <Editor example="{ddf} 1 2 3"/>
+            </div>
+            <div>
+                <Hd id="multi-aliases">"Multi-aliases"</Hd>
+                <p>"Some words serve as an alias for a sequence of primitives. Each primitive is typically represented by a single character in the word."</p>
+                <Editor example="dor 10 # Try formatting!"/>
+                <p>"These words are listed in the table below."</p>
+                <table class="bordered-table" style="width: 100%">
+                    <tr><th>"Word"</th><th>"Primitives"</th></tr>
+                    { multi_aliases() }
+                </table>
+            </div>
+        </div>
+    }
+}
+
+fn aliases() -> impl IntoView {
+    Primitive::non_deprecated()
+        .filter(|p| !p.aliases().is_empty())
+        .map(|p| {
+            view!(<tr><td><Prim prim=p/></td><td>{
+                (p.aliases().iter())
+                    .map(|&s| view!(<code>{s}</code>" "))
+                    .collect::<Vec<_>>()
+            }{
+                (p.aliases().iter().any(|a| a.contains("&")) || matches!(p, Primitive::Sys(_)))
+                    .then(|| view!(<span style="opacity: 0.7">"Temporary"</span>))
+            }</td></tr>)
+        })
+        .collect::<Vec<_>>()
+}
+
+fn multi_aliases() -> impl IntoView {
+    Primitive::multi_aliases()
+        .iter()
+        .map(|(name, prims)| {
+            view!(<tr>
+                <td><code>{*name}</code></td>
+                <td>{
+                    prims
+                        .iter()
+                        .map(|(p, _)| match p {
+                            PrimComponent::Prim(p) => view!(<Prim prim=*p/>" ").into_view(),
+                            p => view!(<code>{p.name()}</code>).into_view(),
+                        })
+                        .collect::<Vec<_>>()
+                }</td>
+            </tr>)
+        })
+        .collect::<Vec<_>>()
 }

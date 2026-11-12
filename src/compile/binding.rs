@@ -67,25 +67,24 @@ impl Compiler {
                 }
                 _ => None,
             })
-            && let Ok(Some((path_locals, local))) = self.ref_local(r)
+            && let Ok(Some((path_binds, bind))) = self.ref_bind(r)
         {
-            let allow_alias = match &self.asm.bindings[local.index].kind {
+            let allow_alias = match &self.asm.bindings[bind.index].kind {
                 BindingKind::Func(f) if f.sig.args() == 0 => false,
                 BindingKind::Scope(_) => false,
                 _ => true,
             };
             if allow_alias {
-                self.validate_local(&r.name.value, local, &r.name.span);
-                (self.code_meta.global_references).insert(binding.name.span.clone(), local.index);
-                for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                    (self.code_meta.global_references)
-                        .insert(comp.module.span.clone(), local.index);
+                self.validate_bind(&r.name.value, bind, &r.name.span);
+                (self.code_meta.global_references).insert(binding.name.span.clone(), bind.index);
+                for (bind, comp) in path_binds.into_iter().zip(&r.path) {
+                    (self.code_meta.global_references).insert(comp.module.span.clone(), bind.index);
                 }
-                (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
-                let local = if let Some(comment) = meta.comment {
+                (self.code_meta.global_references).insert(r.name.span.clone(), bind.index);
+                let bind = if let Some(comment) = meta.comment {
                     // If a comment is present on the new binding, we must copy the old one
-                    let kind = self.asm.bindings[local.index].kind.clone();
-                    let old_meta = self.asm.bindings[local.index].meta.clone();
+                    let kind = self.asm.bindings[bind.index].kind.clone();
+                    let old_meta = self.asm.bindings[bind.index].meta.clone();
                     let meta = BindingMeta {
                         comment: Some(comment),
                         counts: old_meta.counts.or(meta.counts),
@@ -93,29 +92,41 @@ impl Compiler {
                         types: old_meta.types,
                         external: old_meta.external || meta.external,
                     };
-                    let local = LocalIndex {
+                    let new_bind = Bind {
                         public,
-                        index: self.next_global,
+                        index: self.next_bindex,
                     };
-                    self.next_global += 1;
+                    self.next_bindex += 1;
+                    if let Some(sig) = kind.sig()
+                        && sig == (0, 1)
+                    {
+                        let spandex = self.add_span(span.clone());
+                        self.asm.root.extend([
+                            Node::CallGlobal(bind.index, sig),
+                            Node::BindGlobal {
+                                index: new_bind.index,
+                                span: spandex,
+                            },
+                        ]);
+                    }
                     self.asm
-                        .add_binding_at(local, kind, Some(span.clone()), meta);
-                    local
+                        .add_binding_at(new_bind, kind, Some(span.clone()), meta);
+                    new_bind
                 } else {
                     // If there is no comment, it's a simple name insertion
-                    LocalIndex { public, ..local }
+                    Bind { public, ..bind }
                 };
-                self.scope.names.insert(name, local);
+                self.scope.names.insert(name, bind);
                 return Ok(());
             }
         }
 
         let spandex = self.add_span(span.clone());
-        let local = LocalIndex {
-            index: self.next_global,
+        let bind = Bind {
+            index: self.next_bindex,
             public,
         };
-        self.next_global += 1;
+        self.next_bindex += 1;
 
         // Handle macro
         let max_placeholder = max_placeholder(&binding.words);
@@ -203,9 +214,9 @@ impl Compiler {
                     ),
                 );
             }
-            self.scope.names.insert(name.clone(), local);
+            self.scope.names.insert(name.clone(), bind);
             self.asm.add_binding_at(
-                local,
+                bind,
                 BindingKind::CodeMacro(node.clone()),
                 Some(span.clone()),
                 meta,
@@ -214,7 +225,7 @@ impl Compiler {
                 root: SigNode::new(sig, node),
                 names: self.scope.names.clone().into(),
             };
-            Arc::make_mut(&mut self.asm.code_macros).insert(local.index, mac);
+            Arc::make_mut(&mut self.asm.code_macros).insert(bind.index, mac);
             return Ok(());
         }
         // Index macro
@@ -269,9 +280,9 @@ impl Compiler {
                 self.add_error(span.clone(), "Macros cannot be external");
             }
 
-            self.scope.names.insert(name.clone(), local);
+            self.scope.names.insert(name.clone(), bind);
             self.asm.add_binding_at(
-                local,
+                bind,
                 BindingKind::IndexMacro {
                     args: ident_margs,
                     subscript: custom_subscript,
@@ -281,14 +292,14 @@ impl Compiler {
             );
             let words = binding.words.clone();
             let mut recursive = false;
-            let mut locals = EcoVec::new();
+            let mut scoped = EcoVec::new();
             self.analyze_macro_body(
                 &name,
                 &words,
                 false,
                 custom_subscript,
                 &mut recursive,
-                &mut locals,
+                &mut scoped,
             );
             if recursive {
                 self.experimental_error(span, || {
@@ -305,11 +316,11 @@ impl Compiler {
             }
             let mac = IndexMacro {
                 words,
-                locals,
+                scoped,
                 sig: binding.signature.map(|s| s.value),
                 recursive,
             };
-            Arc::make_mut(&mut self.asm.index_macros).insert(local.index, mac);
+            Arc::make_mut(&mut self.asm.index_macros).insert(bind.index, mac);
             return Ok(());
         }
 
@@ -343,7 +354,7 @@ impl Compiler {
                     node = Node::NoInline(node.into());
                 }
                 comp.asm
-                    .add_function(FunctionId::Named(name), sig, node, local.index)
+                    .add_function(FunctionId::Named(name), sig, node, bind.index)
             }
         };
         let words_span = (binding.words.first())
@@ -356,21 +367,19 @@ impl Compiler {
             });
 
         // Compile the body
-        let in_function = self
-            .scopes()
-            .any(|sc| matches!(sc.kind, ScopeKind::Function));
+        let in_function = (self.scopes()).any(|sc| matches!(sc.kind, ScopeKind::Function));
         let no_code_words = binding.words.iter().all(|w| !w.value.is_code());
         self.current_bindings.push(CurrentBinding {
             name: name.clone(),
             signature: binding.signature.as_ref().map(|s| s.value),
             recurses: 0,
-            global_index: local.index,
+            bindex: bind.index,
         });
         // Compile the words
         let (_, mut node) = self.in_scope(ScopeKind::Binding, |comp| {
             comp.line(binding.words).inspect_err(|_| {
                 comp.asm
-                    .add_binding_at(local, BindingKind::Error, Some(span.clone()), meta.clone())
+                    .add_binding_at(bind, BindingKind::Error, Some(span.clone()), meta.clone())
             })
         })?;
         let self_referenced = self.current_bindings.pop().unwrap().recurses > 0;
@@ -403,11 +412,11 @@ impl Compiler {
                     node.push(Node::Prim(Primitive::Pop, span));
                 }
                 for _ in 0..sig.outputs() {
-                    node.push(Node::Push(zero.clone()));
+                    node.push(Node::Push(zero.clone(), span));
                 }
                 node.prepend(Node::Prim(Primitive::Assert, span));
-                node.prepend(Node::new_push("Unbound external function"));
-                node.prepend(Node::Push(zero));
+                node.prepend(Node::new_push("Unbound external function", span));
+                node.prepend(Node::Push(zero, span));
             } else {
                 node = Node::NoInline(node.into());
             }
@@ -415,23 +424,37 @@ impl Compiler {
                 .insert(name.clone(), self.asm.functions.len());
         }
 
-        // Apply doc comment
-        if let Some(comment) = &meta.comment
-            && let Some(sig) = &comment.sig
-        {
-            match sig {
-                Ok(sig) => self.apply_node_comment(&mut node, sig, &name, span),
-                Err(e) => {
-                    self.emit_diagnostic(e.message.clone(), DiagnosticKind::Warning, span.clone())
-                }
-            }
-        }
-
         // Resolve signature
         match node.sig() {
             Ok(mut sig) => {
                 let binds_above = !in_function && node.is_empty() && no_code_words;
-                if !binds_above {
+                if binds_above {
+                    // Binding binds the value above
+                    let mut has_stack_value = false;
+                    for i in 0..self.asm.root.len() {
+                        let nodes = &self.asm.root[self.asm.root.len() - 1 - i..];
+                        let Ok(sig) = nodes_sig(nodes) else {
+                            break;
+                        };
+                        if sig.outputs() > 0 {
+                            has_stack_value = true;
+                            break;
+                        }
+                    }
+                    if has_stack_value {
+                        sig = (0, 1).into();
+                    }
+                    if let Some(Node::Push(..)) = self.asm.root.last() {
+                        // Actually binds the constant
+                        node.extend(self.asm.root.pop());
+                    } else if has_stack_value {
+                        self.asm.root.push(Node::BindGlobal {
+                            index: bind.index,
+                            span: spandex,
+                        });
+                        node = Node::CallGlobal(bind.index, sig);
+                    }
+                } else {
                     // Validate signature
                     if let Some(declared_sig) = &binding.signature {
                         if self_referenced && declared_sig.value.outputs() > 10 {
@@ -447,6 +470,20 @@ impl Compiler {
                             node = self.force_sig(node, declared_sig.value, &declared_sig.span)?;
                             sig = declared_sig.value;
                         }
+                    }
+                }
+
+                // Apply doc comment
+                if let Some(comment) = &meta.comment
+                    && let Some(sig) = &comment.sig
+                {
+                    match sig {
+                        Ok(sig) => self.apply_node_comment(&mut node, sig, &name, span),
+                        Err(e) => self.emit_diagnostic(
+                            e.message.clone(),
+                            DiagnosticKind::Warning,
+                            span.clone(),
+                        ),
                     }
                 }
 
@@ -492,9 +529,9 @@ impl Compiler {
                     && !prelude.track_caller
                 {
                     // Binding is a constant
-                    let val = if let [Node::Push(v)] = node.as_slice() {
+                    let val = if let [Node::Push(v, _)] = node.as_slice() {
                         Some(v.clone())
-                    } else if node.is_pure(&self.asm) {
+                    } else if !node.is_pure(&self.asm) {
                         match self.comptime_node(&node) {
                             Ok(Some(vals)) => vals.into_iter().next(),
                             Ok(None) => None,
@@ -508,65 +545,26 @@ impl Compiler {
                     };
 
                     let is_const = val.is_some();
-                    self.compile_bind_const(name, local, val, spandex, meta);
+                    self.compile_bind_const(name, bind, val, spandex, meta);
                     if !is_const {
                         // Add binding instrs to unevaluated constants
                         if node.is_pure(&self.asm) {
                             self.macro_env
                                 .rt
                                 .unevaluated_constants
-                                .insert(local.index, node.clone());
+                                .insert(bind.index, node.clone());
                         }
                         // Add binding instrs to root
                         self.asm.root.push_no_inline(node);
                         self.asm.root.push(Node::BindGlobal {
-                            index: local.index,
-                            span: spandex,
-                        });
-                    }
-                } else if binds_above {
-                    // Binding binds the value above
-                    let mut has_stack_value = false;
-                    for i in 0..self.asm.root.len() {
-                        let nodes = &self.asm.root[self.asm.root.len() - 1 - i..];
-                        let Ok(sig) = nodes_sig(nodes) else {
-                            break;
-                        };
-                        if sig.outputs() > 0 {
-                            has_stack_value = true;
-                            break;
-                        }
-                    }
-                    if has_stack_value {
-                        sig = Signature::new(0, 1);
-                    }
-                    if let Some(Node::Push(val)) = self.asm.root.last() {
-                        // Actually binds the constant
-                        let val = val.clone();
-                        self.asm.root.pop();
-                        self.compile_bind_const(name, local, Some(val), spandex, meta);
-                    } else if sig == (0, 0) {
-                        // Empty function
-                        let mut node = Node::empty();
-                        // Validate signature
-                        if let Some(declared_sig) = &binding.signature {
-                            node = self.force_sig(node, declared_sig.value, &declared_sig.span)?;
-                            sig = declared_sig.value;
-                        }
-                        let func = make_fn(node, sig, self);
-                        self.compile_bind_function(name, local, func, spandex, meta)?;
-                    } else {
-                        // Binds some |0.1 code
-                        self.compile_bind_const(name, local, None, spandex, meta);
-                        self.asm.root.push(Node::BindGlobal {
-                            index: local.index,
+                            index: bind.index,
                             span: spandex,
                         });
                     }
                 } else {
                     // Binding is a normal function
                     let func = make_fn(node, sig, self);
-                    self.compile_bind_function(name, local, func, spandex, meta)?;
+                    self.compile_bind_function(name, bind, func, spandex, meta)?;
                 }
 
                 self.code_meta.function_sigs.insert(
@@ -588,12 +586,12 @@ impl Compiler {
     }
     pub(super) fn module(&mut self, m: Sp<ScopedModule>, prelude: BindingPrelude) -> UiuaResult {
         let m = m.value;
-        let (scope_kind, name_and_local) = match m.kind {
+        let (scope_kind, name_and_bind) = match m.kind {
             ModuleKind::Named(name) => {
                 self.validate_binding_name(&name.value, &name.span);
-                let global_index = self.next_global;
-                self.next_global += 1;
-                let local = LocalIndex {
+                let global_index = self.next_bindex;
+                self.next_bindex += 1;
+                let bind = Bind {
                     index: global_index,
                     public: m.public,
                 };
@@ -603,15 +601,15 @@ impl Compiler {
                     ..Default::default()
                 };
                 self.asm.add_binding_at(
-                    local,
+                    bind,
                     BindingKind::Scope(self.higher_scopes.len() + 1),
                     Some(name.span.clone()),
                     meta,
                 );
-                // Add local
-                self.scope.add_module_name(name.value.clone(), local);
-                (self.code_meta.global_references).insert(name.span.clone(), local.index);
-                (ScopeKind::Module(name.value.clone()), Some((name, local)))
+                // Add bind
+                self.scope.add_module_name(name.value.clone(), bind);
+                (self.code_meta.global_references).insert(name.span.clone(), bind.index);
+                (ScopeKind::Module(name.value.clone()), Some((name, bind)))
             }
             ModuleKind::Test => (ScopeKind::Test, None),
         };
@@ -621,15 +619,15 @@ impl Compiler {
             comp.end_enum()?;
             Ok(())
         })?;
-        if let Some((name, local)) = name_and_local {
+        if let Some((name, bind)) = name_and_bind {
             // Named module
-            // Add local imports
+            // Add scoped imports
             if let Some(line) = m.imports {
                 for item in line.items {
-                    if let Some(mut local) = module.names.get_last(&item.value) {
-                        local.public = line.public;
-                        (self.code_meta.global_references).insert(item.span.clone(), local.index);
-                        self.scope.names.insert(item.value, local);
+                    if let Some(mut bind) = module.names.get_last(&item.value) {
+                        bind.public = line.public;
+                        (self.code_meta.global_references).insert(item.span.clone(), bind.index);
+                        self.scope.names.insert(item.value, bind);
                     } else {
                         self.add_error(
                             item.span.clone(),
@@ -639,7 +637,7 @@ impl Compiler {
                 }
             }
             // Update global
-            self.asm.bindings.make_mut()[local.index].kind = BindingKind::Module(module);
+            self.asm.bindings.make_mut()[bind.index].kind = BindingKind::Module(module);
         } else {
             // Test module
             if let Some(line) = &m.imports {
@@ -658,19 +656,19 @@ impl Compiler {
         mut code_macro: bool,
         subn: bool,
         recursive: &mut bool,
-        mod_locals: &mut EcoVec<(CodeSpan, usize)>,
+        scoped: &mut EcoVec<(CodeSpan, usize)>,
     ) {
         for word in words {
-            let loc = &mut *mod_locals;
-            let mut path_locals = None;
-            let mut name_local = None;
+            let scp = &mut *scoped;
+            let mut path_binds = None;
+            let mut name_bind = None;
             match &word.value {
                 Word::Strand(items) => {
-                    self.analyze_macro_body(mac_name, items, code_macro, subn, recursive, loc)
+                    self.analyze_macro_body(mac_name, items, code_macro, subn, recursive, scp)
                 }
                 Word::Array(arr)
                     if self.analyze_macro_items(
-                        mac_name, &arr.lines, code_macro, subn, recursive, loc,
+                        mac_name, &arr.lines, code_macro, subn, recursive, scp,
                     ) =>
                 {
                     return;
@@ -682,7 +680,7 @@ impl Compiler {
                         code_macro,
                         subn,
                         recursive,
-                        loc,
+                        scp,
                     ) =>
                 {
                     return;
@@ -696,17 +694,17 @@ impl Compiler {
                             code_macro,
                             subn,
                             recursive,
-                            loc,
+                            scp,
                         ) {
                             return;
                         }
                     }
                 }
                 Word::Ref(r, _) if r.name.value.contains('ₙ') && subn => {}
-                Word::Ref(r, chained) if chained.is_empty() => match self.ref_local(r) {
+                Word::Ref(r, chained) if chained.is_empty() => match self.ref_bind(r) {
                     Ok(Some((pl, l))) => {
-                        path_locals = Some((&r.path, pl));
-                        name_local = Some((&r.name, &word.span, l));
+                        path_binds = Some((&r.path, pl));
+                        name_bind = Some((&r.name, &word.span, l));
                     }
                     Ok(None) => {}
                     Err(e) => self.errors.push(e),
@@ -717,29 +715,27 @@ impl Compiler {
                         .chain_refs(chained.iter().cloned())
                         .map(|r| r.span().sp(Word::Ref(r, Vec::new())))
                         .collect();
-                    self.analyze_macro_body(
-                        mac_name, &words, code_macro, subn, recursive, mod_locals,
-                    );
+                    self.analyze_macro_body(mac_name, &words, code_macro, subn, recursive, scoped);
                 }
                 Word::IncompleteRef(path) => match self.ref_path(path) {
-                    Ok(Some((_, pl))) => path_locals = Some((path, pl)),
+                    Ok(Some((_, pl))) => path_binds = Some((path, pl)),
                     Ok(None) => {}
                     Err(e) => self.errors.push(e),
                 },
                 Word::Modified(m) => {
                     if let Modifier::Ref(r) = &m.modifier.value {
-                        match self.ref_local(r) {
+                        match self.ref_bind(r) {
                             Ok(Some((pl, l))) => {
-                                path_locals = Some((&r.path, pl));
-                                name_local = Some((&r.name, &m.modifier.span, l));
+                                path_binds = Some((&r.path, pl));
+                                name_bind = Some((&r.name, &m.modifier.span, l));
                                 code_macro |= self.asm.code_macros.contains_key(&l.index);
                             }
                             Ok(None) => {}
                             Err(e) => self.errors.push(e),
                         }
-                        if let Some(BindingKind::Module(module)) = name_local
+                        if let Some(BindingKind::Module(module)) = name_bind
                             .as_ref()
-                            .and_then(|(.., local)| self.asm.bindings.get(local.index))
+                            .and_then(|(.., bind)| self.asm.bindings.get(bind.index))
                             .map(|b| &b.kind)
                         {
                             let names = module.names.clone();
@@ -752,7 +748,7 @@ impl Compiler {
                                     false,
                                     subn,
                                     recursive,
-                                    loc,
+                                    scp,
                                 );
                                 Ok(())
                             }) {
@@ -767,7 +763,7 @@ impl Compiler {
                                 code_macro,
                                 subn,
                                 recursive,
-                                loc,
+                                scp,
                             );
                             if code_macro {
                                 self.errors.truncate(error_count);
@@ -780,7 +776,7 @@ impl Compiler {
                             code_macro,
                             subn,
                             recursive,
-                            loc,
+                            scp,
                         )
                     }
                 }
@@ -790,26 +786,25 @@ impl Compiler {
                     code_macro,
                     subn,
                     recursive,
-                    loc,
+                    scp,
                 ),
                 _ => {}
             }
-            if let Some((nm, name_span, local)) = name_local {
+            if let Some((nm, name_span, bind)) = name_bind {
                 if !subn
                     && nm.value == mac_name
-                    && path_locals.as_ref().is_none_or(|(pl, _)| pl.is_empty())
+                    && path_binds.as_ref().is_none_or(|(pl, _)| pl.is_empty())
                 {
                     *recursive = true;
                 }
-                mod_locals.push((name_span.clone(), local.index));
-                self.validate_local(&nm.value, local, &nm.span);
-                (self.code_meta.global_references).insert(nm.span.clone(), local.index);
+                scoped.push((name_span.clone(), bind.index));
+                self.validate_bind(&nm.value, bind, &nm.span);
+                (self.code_meta.global_references).insert(nm.span.clone(), bind.index);
             }
-            if let Some((path, locals)) = path_locals {
-                for (local, comp) in locals.into_iter().zip(path) {
-                    mod_locals.push((comp.module.span.clone(), local.index));
-                    (self.code_meta.global_references)
-                        .insert(comp.module.span.clone(), local.index);
+            if let Some((path, binds)) = path_binds {
+                for (bind, comp) in binds.into_iter().zip(path) {
+                    scoped.push((comp.module.span.clone(), bind.index));
+                    (self.code_meta.global_references).insert(comp.module.span.clone(), bind.index);
                 }
             }
         }
@@ -822,12 +817,12 @@ impl Compiler {
         code_macro: bool,
         subn: bool,
         recursive: &mut bool,
-        locals: &mut EcoVec<(CodeSpan, usize)>,
+        scoped: &mut EcoVec<(CodeSpan, usize)>,
     ) -> bool {
         for item in items {
             match item {
                 Item::Words(words) => {
-                    self.analyze_macro_body(macro_name, words, code_macro, subn, recursive, locals)
+                    self.analyze_macro_body(macro_name, words, code_macro, subn, recursive, scoped)
                 }
                 item => {
                     self.add_error(

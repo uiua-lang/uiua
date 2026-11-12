@@ -202,6 +202,7 @@ pub use self::{
     shape::*,
     sys::*,
     tree::*,
+    types::{Dim, DynShape, Scalar, ScalarBox, Type},
     value::*,
 };
 #[doc(inline)]

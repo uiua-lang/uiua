@@ -1253,7 +1253,7 @@ pub mod exp2 {
         Complex::from(2.0).powc(a)
     }
     pub fn error<T: Display>(a: T) -> String {
-        format!("Cannot raise {a} to the 2nd")
+        format!("Cannot raise 2 to a {a}")
     }
 }
 pub mod exp10 {
@@ -1269,7 +1269,7 @@ pub mod exp10 {
         Complex::from(10.0).powc(a)
     }
     pub fn error<T: Display>(a: T) -> String {
-        format!("Cannot raise {a} to the 10th")
+        format!("Cannot raise 10 to a {a}")
     }
 }
 pub mod log2 {
@@ -1797,7 +1797,7 @@ pub mod div {
 pub mod modulo {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
-        b.rem_euclid(a).abs()
+        b - (b / a).floor() * a
     }
     pub fn byte_byte(a: u8, b: u8) -> f64 {
         num_num(a.into(), b.into())

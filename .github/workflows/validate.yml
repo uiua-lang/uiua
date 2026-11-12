@@ -65,6 +65,7 @@ jobs:
             ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-
       - name: Install deps
         run: |
+          sudo rm -rf /var/lib/apt/lists/*
           sudo apt-get update -y
           sudo apt-get --fix-missing install -y
           sudo apt-get install libasound2-dev

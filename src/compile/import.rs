@@ -10,13 +10,13 @@ impl Compiler {
         let module = self.import_module_from_path(&import.path.value, &import.path.span)?;
         // Bind items
         for (item, public) in import.items() {
-            if let Some(local) = module.names.get_last(item.value.as_str()) {
-                self.validate_local(&item.value, local, &item.span);
-                (self.code_meta.global_references).insert(item.span.clone(), local.index);
+            if let Some(bind) = module.names.get_last(item.value.as_str()) {
+                self.validate_bind(&item.value, bind, &item.span);
+                (self.code_meta.global_references).insert(item.span.clone(), bind.index);
                 self.scope.names.insert(
                     item.value.clone(),
-                    LocalIndex {
-                        index: local.index,
+                    Bind {
+                        index: bind.index,
                         public,
                     },
                 );
@@ -29,9 +29,9 @@ impl Compiler {
         }
         // Bind name
         if let Some(name) = import.name {
-            let global_index = self.next_global;
-            self.next_global += 1;
-            let local = LocalIndex {
+            let global_index = self.next_bindex;
+            self.next_bindex += 1;
+            let bind = Bind {
                 index: global_index,
                 public: import.public,
             };
@@ -42,13 +42,13 @@ impl Compiler {
                 ..Default::default()
             };
             self.asm.add_binding_at(
-                local,
+                bind,
                 BindingKind::Module(module),
                 Some(name.span.clone()),
                 meta,
             );
             self.add_span(name.span);
-            self.scope.add_module_name(name.value.clone(), local);
+            self.scope.add_module_name(name.value.clone(), bind);
         }
         Ok(())
     }
@@ -240,8 +240,8 @@ impl Compiler {
                 (asm, ua_hash)
             };
             let mut module = asm.module();
-            for local in module.names.0.values_mut().flatten() {
-                local.index += self.asm.bindings.len();
+            for bind in module.names.0.values_mut().flatten() {
+                bind.index += self.asm.bindings.len();
             }
             self.import_assembly(asm);
             (self.asm.dependencies).push((path.clone(), ua_hash));
@@ -319,7 +319,7 @@ impl Compiler {
                     }
                 }
                 BindingKind::Module(module) => (module.names.0.values_mut().flatten())
-                    .for_each(|local| local.index += bind_offset),
+                    .for_each(|bind| bind.index += bind_offset),
                 BindingKind::CodeMacro(node) => {
                     offset_indices(node, span_offset, bind_offset, func_offset)
                 }
@@ -329,7 +329,7 @@ impl Compiler {
         // Offset and append index macros
         Arc::make_mut(&mut self.asm.index_macros).extend(
             (Arc::unwrap_or_clone(asm.index_macros).into_iter()).map(|(i, mut mac)| {
-                for (_, index) in mac.locals.make_mut() {
+                for (_, index) in mac.scoped.make_mut() {
                     *index += bind_offset
                 }
                 (i + bind_offset, mac)
@@ -339,14 +339,14 @@ impl Compiler {
         Arc::make_mut(&mut self.asm.code_macros).extend(
             (Arc::unwrap_or_clone(asm.code_macros).into_iter()).map(|(i, mut mac)| {
                 offset_indices(&mut mac.root.node, span_offset, bind_offset, func_offset);
-                for local in &mut Arc::make_mut(&mut mac.names).0.values_mut().flatten() {
-                    local.index += bind_offset;
+                for bind in &mut Arc::make_mut(&mut mac.names).0.values_mut().flatten() {
+                    bind.index += bind_offset;
                 }
                 (i + bind_offset, mac)
             }),
         );
         // Append everything else
-        self.next_global += asm.bindings.len();
+        self.next_bindex += asm.bindings.len();
         self.asm.root.extend(asm.root);
         self.asm.spans.extend(asm.spans.into_iter().skip(1));
         self.asm.functions.extend(asm.functions);

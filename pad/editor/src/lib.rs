@@ -838,10 +838,10 @@ pub fn Editor<'a>(
                 state.update(|state| remove_code(state, start, end));
             }
             // Redo
-            "y" if os_ctrl(event) => state.update(|state| state.redo()),
-            "z" | "Z" if os_ctrl(event) && event.shift_key() => state.update(|state| state.redo()),
+            "y" if os_ctrl(event) => state.update(State::redo),
+            "z" | "Z" if os_ctrl(event) && event.shift_key() => state.update(State::redo),
             // Undo
-            "z" if os_ctrl(event) => state.update(|state| state.undo()),
+            "z" if os_ctrl(event) => state.update(State::undo),
             // Remove # Experimental! comment
             "e" | "E" if os_ctrl(event) && event.shift_key() => remove_experimental(),
             // Insert # Experimental! comment
@@ -2176,6 +2176,12 @@ pub fn Editor<'a>(
                                             <option value="Uiua386" selected=get_font_name() == "Uiua386">
                                                 {format!("{}386", lang())}
                                             </option>
+                                            <option value="Uiua386_Tall" selected=get_font_name() == "Uiua386_Tall">
+                                                {format!("{}386 Tall", lang())}
+                                            </option>
+                                            <option value="https://dyalog.github.io/APL387/APL387.ttf" selected=get_font_name() == "https://dyalog.github.io/APL387/APL387.ttf">
+                                                "APL387"
+                                            </option>
                                             <option value="TerminusUiua_14" selected=get_font_name() == "TerminusUiua_14">
                                                 "TerminusUiua 14"
                                             </option>
@@ -2310,6 +2316,27 @@ pub fn Editor<'a>(
                     </div>
 
                     <div id="code-right-side">
+                        {move || (get_state.get().can_undo() || get_state.get().can_redo()).then(|| view!{
+                            <button
+                                id="undo-button"
+                                class="editor-right-button mobile-only"
+                                data-title="undo"
+                                on:click=move |_| state.update(State::undo)
+                                disabled=move || !get_state.get().can_undo()
+                            >
+                                <span class="material-symbols-rounded">"undo"</span>
+                            </button>
+                            <button
+                                id="redo-button"
+                                class="editor-right-button mobile-only"
+                                data-title="redo"
+                                on:click=move |_| state.update(State::redo)
+                                disabled=move || !get_state.get().can_redo()
+                            >
+                                <span class="material-symbols-rounded">"redo"</span>
+                            </button>
+                        })}
+
                         <button
                             id="glyphs-toggle-button"
                             class="editor-right-button"

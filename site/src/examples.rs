@@ -3,7 +3,13 @@ use std::collections::HashMap;
 use include_dir::{Dir, include_dir};
 use uiua_editor::examples::{PadExample, PadExampleCategory, parse_example};
 
-pub const LOGO: &str = include_str!("examples/logo.ua");
+pub fn logo() -> &'static str {
+    include_str!("examples/logo.ua")
+        .split_once('\n')
+        .unwrap()
+        .1
+        .trim()
+}
 static EXAMPLES_DIRECTORY: Dir = include_dir!("site/src/examples");
 
 const EXAMPLE_CATEGORY_ORDER: &[&str] = &["Basics", "Image", "Animation", "Audio"];

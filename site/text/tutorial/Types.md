@@ -27,6 +27,20 @@ In cases where a number with a fractional part has repeating decimals, or when f
 + 0.1 0.2
 ```
 
+You can also make natural number literals in binary, octal, and hexidecimal with prefixes `0b`, `0o`, and `0x` respectively. These cannot be negative or part of a fraction.
+
+```uiua
+0b10000000
+0o100
+0xbeef
+```
+
+The `0v` prefix creates a vector of numbers.
+
+```uiua
+0v123A
+```
+
 Even though numbers can have a fractional part, many built-in functions require whole numbers. These functions will return an error if given a non-integer number.
 
 One such example is [pick]().

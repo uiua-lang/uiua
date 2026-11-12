@@ -39,9 +39,9 @@ impl Compiler {
             if let Some(name) = data.name.clone() {
                 self.validate_binding_name(&name.value, &name.span);
 
-                let global_index = self.next_global;
-                self.next_global += 1;
-                let local = LocalIndex {
+                let global_index = self.next_bindex;
+                self.next_bindex += 1;
+                let bind = Bind {
                     index: global_index,
                     public: data.public,
                 };
@@ -54,7 +54,7 @@ impl Compiler {
 
                 // Add global
                 self.asm.add_binding_at(
-                    local,
+                    bind,
                     BindingKind::Module(module),
                     Some(name.span.clone()),
                     BindingMeta {
@@ -62,9 +62,9 @@ impl Compiler {
                         ..Default::default()
                     },
                 );
-                // Add local
-                self.scope.add_module_name(name.value.clone(), local);
-                (self.code_meta.global_references).insert(name.span.clone(), local.index);
+                // Add binding
+                self.scope.add_module_name(name.value.clone(), bind);
+                (self.code_meta.global_references).insert(name.span.clone(), bind.index);
                 return Ok(());
             } else if self.scope.has_data_def {
                 return Err(self.error(
@@ -311,13 +311,13 @@ impl Compiler {
             let span = field.span;
             let mut node = Node::empty();
             if data.variant {
-                node.push(Node::new_push(variant_index));
+                node.push(Node::new_push(variant_index, span));
                 if let Some(name) = &data.name {
                     node.push(Node::Label(name.value.clone(), span));
                 }
                 node.push(Node::ImplPrim(ImplPrimitive::ValidateVariant, span));
             }
-            node.push(Node::new_push(i));
+            node.push(Node::new_push(i, span));
             node.push(Node::Prim(Primitive::Pick, span));
             node = Node::TrackCaller(node.sig_node().unwrap().into());
             if boxed {
@@ -326,15 +326,15 @@ impl Compiler {
             }
             // Add validator
             node.extend(field.validator_inv.take());
-            let local = LocalIndex {
-                index: self.next_global,
+            let bind = Bind {
+                index: self.next_bindex,
                 public: true,
             };
-            field.global_index = local.index;
-            self.next_global += 1;
+            field.global_index = bind.index;
+            self.next_bindex += 1;
             let func = self
                 .asm
-                .add_function(id.clone(), Signature::new(1, 1), node, local.index);
+                .add_function(id.clone(), Signature::new(1, 1), node, bind.index);
             let comment = match (&def_name, &field.comment) {
                 (Some(def_name), Some(comment)) => {
                     format!("Get {def_name}'s {field_name}\n{comment}")
@@ -347,10 +347,10 @@ impl Compiler {
                 comment: Some(DocComment::from(comment.as_str())),
                 ..Default::default()
             };
-            self.compile_bind_function(field_name.clone(), local, func, span, meta)?;
+            self.compile_bind_function(field_name.clone(), bind, func, span, meta)?;
             self.code_meta
                 .global_references
-                .insert(field.name_span.clone(), local.index);
+                .insert(field.name_span.clone(), bind.index);
         }
 
         // Make field names
@@ -359,11 +359,11 @@ impl Compiler {
         } else {
             data.init_span.clone()
         });
-        let local = LocalIndex {
-            index: self.next_global,
+        let bind = Bind {
+            index: self.next_bindex,
             public: true,
         };
-        self.next_global += 1;
+        self.next_bindex += 1;
         let comment = match &def_name {
             Some(def_name) => format!("Names of {def_name}'s fields"),
             None => "Names of fields".into(),
@@ -371,7 +371,7 @@ impl Compiler {
         let name = Ident::from("Fields");
         self.compile_bind_const(
             name,
-            local,
+            bind,
             Some(Array::from_iter(fields.iter().map(|f| f.name.as_str())).into()),
             span,
             BindingMeta {
@@ -450,7 +450,7 @@ impl Compiler {
         if data.variant {
             // Handle variant
             for node in no_init_node.as_mut().into_iter().chain([&mut con_node]) {
-                node.push(Node::new_push(variant_index));
+                node.push(Node::new_push(variant_index, span));
                 if let Some(name) = &data.name {
                     node.push(Node::Label(name.value.clone(), span));
                 } else {
@@ -460,7 +460,8 @@ impl Compiler {
                     node.push(Node::ImplPrim(ImplPrimitive::TagVariant, span));
                 }
             }
-        } else if self.allow_experimental() {
+        }
+        if self.allow_experimental() {
             // Bind type
             let ty = Type {
                 scalar: Scalar::Box(ScalarBox::Def(
@@ -472,11 +473,11 @@ impl Compiler {
                     suffix: None,
                 },
             };
-            let local = LocalIndex {
-                index: self.next_global,
+            let bind = Bind {
+                index: self.next_bindex,
                 public: true,
             };
-            self.next_global += 1;
+            self.next_bindex += 1;
             let comment = match &def_name {
                 Some(def_name) => format!("{def_name}'s type"),
                 None => "Data definition's type".into(),
@@ -486,19 +487,19 @@ impl Compiler {
                 comment: Some(DocComment::from(comment.as_str())),
                 ..Default::default()
             };
-            self.compile_bind_const(name, local, Some(ty.spec_val()), span, meta);
+            self.compile_bind_const(name, bind, Some(ty.spec_val()), span, meta);
         }
         let constructor_name = Ident::from("New");
-        let constr_local = LocalIndex {
-            index: self.next_global,
+        let constr_bind = Bind {
+            index: self.next_bindex,
             public: true,
         };
-        self.next_global += 1;
+        self.next_bindex += 1;
         let constructor_func = self.asm.add_function(
             FunctionId::Named(constructor_name.clone()),
             Signature::new(constructor_args, 1),
             con_node,
-            constr_local.index,
+            constr_bind.index,
         );
         let mut constr_comment = match (&def_name, data.func.is_some()) {
             (Some(name), false) => format!("Create a new {name}\n{name} ?"),
@@ -552,11 +553,11 @@ impl Compiler {
                 let span = comp.add_span(word_span.clone());
                 // Compile function
                 let names = fields.iter().map(|field| {
-                    let local = LocalIndex {
+                    let bind = Bind {
                         index: field.global_index,
                         public: false,
                     };
-                    (field.name.clone(), local)
+                    (field.name.clone(), bind)
                 });
                 let (_, mut sn) = comp.in_scope(ScopeKind::AllInModule, move |comp| {
                     comp.scope.names.extend(names);
@@ -566,49 +567,49 @@ impl Compiler {
                 // Make with args function
                 if !fields.iter().any(|field| field.name == "Args") {
                     let sn = sn.clone();
-                    let local = LocalIndex {
-                        index: comp.next_global,
+                    let bind = Bind {
+                        index: comp.next_bindex,
                         public: true,
                     };
-                    comp.next_global += 1;
+                    comp.next_bindex += 1;
                     let func = comp.asm.add_function(
                         FunctionId::Named("Args".into()),
                         sn.sig,
                         sn.node,
-                        local.index,
+                        bind.index,
                     );
-                    args_function_stuff = Some((local, func, span));
+                    args_function_stuff = Some((bind, func, span));
                 }
 
                 // Add constructor
                 sn.node.prepend(Node::Call(constructor_func.clone(), span));
                 sn.sig = sn.sig.compose(Signature::new(constructor_args, 1));
                 // Make function
-                let local = LocalIndex {
-                    index: comp.next_global,
+                let bind = Bind {
+                    index: comp.next_bindex,
                     public: true,
                 };
-                comp.next_global += 1;
+                comp.next_bindex += 1;
                 let func = comp.asm.add_function(
                     FunctionId::Named(constructor_name.clone()),
                     sn.sig,
                     sn.node,
-                    local.index,
+                    bind.index,
                 );
-                function_stuff = Some((local, func, span));
+                function_stuff = Some((bind, func, span));
                 Ok(())
             })?;
         }
 
         // Bind the call function
-        if let Some((local, func, span)) = function_stuff {
+        if let Some((bind, func, span)) = function_stuff {
             let meta = BindingMeta {
                 comment: def_comment,
                 ..Default::default()
             };
-            self.compile_bind_function("Call".into(), local, func, span, meta)?;
+            self.compile_bind_function("Call".into(), bind, func, span, meta)?;
         }
-        if let Some((local, func, span)) = args_function_stuff {
+        if let Some((bind, func, span)) = args_function_stuff {
             let meta = BindingMeta {
                 comment: Some(DocComment::from(if let Some(name) = &def_name {
                     format!("Call {name}'s function from its constructed array")
@@ -617,28 +618,28 @@ impl Compiler {
                 })),
                 ..Default::default()
             };
-            self.compile_bind_function("Args".into(), local, func, span, meta)?;
+            self.compile_bind_function("Args".into(), bind, func, span, meta)?;
         }
 
         // Bind the no-init constructor
         if let Some(node) = no_init_node {
             let name = Ident::from("NoInit");
-            let local = LocalIndex {
-                index: self.next_global,
+            let bind = Bind {
+                index: self.next_bindex,
                 public: true,
             };
-            self.next_global += 1;
+            self.next_bindex += 1;
             let func = self.asm.add_function(
                 FunctionId::Named(constructor_name.clone()),
                 Signature::new(fields.len(), 1),
                 node,
-                local.index,
+                bind.index,
             );
             let meta = BindingMeta {
                 comment: Some(DocComment::from(no_init_comment.as_str())),
                 ..Default::default()
             };
-            self.compile_bind_function(name, local, func, span, meta)?;
+            self.compile_bind_function(name, bind, func, span, meta)?;
         }
 
         // Bind the constructor
@@ -646,7 +647,7 @@ impl Compiler {
             comment: Some(DocComment::from(constr_comment.as_str())),
             ..Default::default()
         };
-        self.compile_bind_function(constructor_name, constr_local, constructor_func, span, meta)?;
+        self.compile_bind_function(constructor_name, constr_bind, constructor_func, span, meta)?;
 
         Ok(())
     }
@@ -657,9 +658,9 @@ impl Compiler {
                 .get("Variants", LookupPreference::Function, &self.asm)
                 .is_some_and(|ln| ln.public)
         {
-            let index = self.next_global;
-            self.next_global += 1;
-            let local = LocalIndex {
+            let index = self.next_bindex;
+            self.next_bindex += 1;
+            let bind = Bind {
                 index,
                 public: true,
             };
@@ -671,7 +672,7 @@ impl Compiler {
                 comment: Some("Names of the data variants of the module".into()),
                 ..Default::default()
             };
-            self.compile_bind_const("Variants".into(), local, Some(value), 0, meta);
+            self.compile_bind_const("Variants".into(), bind, Some(value), 0, meta);
         }
         Ok(())
     }

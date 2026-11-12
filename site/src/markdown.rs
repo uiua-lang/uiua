@@ -11,7 +11,7 @@ use leptos_router::*;
 use uiua::{EXAMPLE_UA, Inputs, Primitive, Token};
 use uiua_editor::{Editor, backend::fetch, lang, replace_lang_name, utils::ChallengeDef};
 
-use crate::{Hd, Hd3, NotFound, Prim, ScrollToHash, examples::LOGO};
+use crate::{Hd, Hd3, NotFound, Prim, ScrollToHash, examples::logo};
 
 #[component]
 #[allow(unused_braces)]
@@ -375,7 +375,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
         NodeValue::CodeBlock(block) => {
             let lit = block.literal.trim_end_matches("\n");
             if lit.trim() == "LOGO" {
-                view!(<Editor example=LOGO/>).into_view()
+                view!(<Editor example=logo()/>).into_view()
             } else if block.info.starts_with("uiua")
                 || block.info.is_empty()
                     && uiua::parse(lit, (), &mut Default::default()).1.is_empty()
@@ -575,7 +575,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
         NodeValue::LineBreak => "<br/>".into(),
         NodeValue::CodeBlock(block) => {
             let mut lines: Vec<String> = if block.literal.trim() == "LOGO" {
-                LOGO
+                logo()
             } else {
                 block.literal.as_str()
             }
@@ -731,7 +731,7 @@ fn text_code_blocks() {
                             Expect::Success
                         };
                         let literal = if block.literal.trim() == "LOGO" {
-                            LOGO
+                            logo()
                         } else {
                             block.literal.as_str()
                         };

@@ -24,6 +24,7 @@ uiua.tmLanguage.json
 !/examples/*
 !/site/**/*.ua
 !/site/assets/**
+!/site/test.txt
 
 # symlink created by `nix build`
 result

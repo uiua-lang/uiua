@@ -1,3 +1,4 @@
+mod preanti;
 mod un;
 mod under;
 
@@ -62,14 +63,14 @@ impl AsNode for ImplPrimitive {
 }
 
 impl AsNode for i32 {
-    fn as_node(&self, _: usize) -> Node {
-        Node::new_push(*self)
+    fn as_node(&self, span: usize) -> Node {
+        Node::new_push(*self, span)
     }
 }
 
 impl AsNode for crate::Complex {
-    fn as_node(&self, _: usize) -> Node {
-        Node::new_push(*self)
+    fn as_node(&self, span: usize) -> Node {
+        Node::new_push(*self, span)
     }
 }
 
@@ -137,7 +138,7 @@ impl SpanFromNodes for i32 {
         _: &Assembly,
     ) -> Option<(&'a [Node], Option<usize>)> {
         match nodes {
-            [Node::Push(n), rest @ ..] if *n == *self => Some((rest, None)),
+            [Node::Push(n, _), rest @ ..] if *n == *self => Some((rest, None)),
             _ => None,
         }
     }
@@ -191,10 +192,11 @@ pub enum InversionError {
     UnderExperimental,
     AlgebraError(AlgebraError),
     ReduceFormat,
-    Pretty,
     SidedBoth,
     LateBinding(String),
     UnderNonMonadicFork(usize),
+    Pretty,
+    Now,
 }
 
 pub type InversionResult<T = ()> = Result<T, InversionError>;
@@ -240,6 +242,7 @@ impl fmt::Display for InversionError {
                 and text only between them can be inverted"
             ),
             InversionError::Pretty => write!(f, "Nah, let's keep things pretty"),
+            InversionError::Now => write!(f, "Time travel is not yet implemented"),
             InversionError::SidedBoth => {
                 write!(f, "Cannot invert sided {}", Primitive::Both.format())
             }

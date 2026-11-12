@@ -171,7 +171,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
             [
                 Node::Prim(Primitive::Pop, _),
                 Node::Prim(Primitive::Pop, _),
-                Node::Push(val),
+                Node::Push(val, _),
             ] => {
                 if let Ok(reps) = val.as_nat(env, None) {
                     if k > 2 && reps > 1 {

@@ -7,7 +7,7 @@ use std::{
     env,
     fmt::Display,
     fs,
-    iter::repeat_n,
+    iter::{once, repeat_n},
     path::{Path, PathBuf},
     sync::Arc,
     time::Duration,
@@ -1056,6 +1056,19 @@ impl Formatter<'_> {
                 }
                 self.push(&word.span, s.trim_end_matches(","));
             }
+            Word::BasedInt(int) => {
+                let mut s = format!("0{}", int.base);
+                let upper_count = int.digits.chars().filter(|c| c.is_uppercase()).count();
+                let lower_count = int.digits.chars().filter(|c| c.is_lowercase()).count();
+                if upper_count == 0 || lower_count == 0 {
+                    s.push_str(&int.digits)
+                } else if lower_count > upper_count {
+                    s.extend(int.digits.chars().flat_map(char::to_lowercase))
+                } else {
+                    s.extend(int.digits.chars().flat_map(char::to_uppercase))
+                }
+                self.push(&word.span, &s);
+            }
             Word::Label(Some(label)) => self.push(&word.span, &format!("${label}")),
             Word::Label(None) => self.push(&word.span, "$_"),
             Word::Char(_) | Word::String(_) | Word::FormatString(_) => {
@@ -1065,7 +1078,7 @@ impl Formatter<'_> {
                         s = s.replace(esc, c).into();
                     }
                 }
-                self.output.push_str(&s)
+                self.output.push_str(&self.resolve_inner_format(&s, false))
             }
             Word::MultilineString(lines) => {
                 let curr_line_pos = self.curr_line_pos();
@@ -1081,7 +1094,8 @@ impl Formatter<'_> {
                         }
                     }
                     self.output.push_str("$ ");
-                    self.output.push_str(line);
+                    self.output
+                        .push_str(&self.resolve_inner_format(line, false));
                 }
             }
             Word::MultilineFormatString(lines) => {
@@ -1099,8 +1113,10 @@ impl Formatter<'_> {
                             self.output.push(' ');
                         }
                     }
-                    self.output
-                        .push_str(&self.inputs.get(&line.span.src)[line.span.byte_range()]);
+                    self.output.push_str(&self.resolve_inner_format(
+                        &self.inputs.get(&line.span.src)[line.span.byte_range()],
+                        false,
+                    ));
                 }
             }
             Word::Ref(r, chained) => {
@@ -1337,6 +1353,7 @@ impl Formatter<'_> {
                 }
                 self.push(&mac.ident.span, &mac.ident.value);
             }
+            Word::Underscore => self.push(&word.span, "_"),
         }
     }
     fn format_primitive(&mut self, prim: Primitive, span: &CodeSpan) {
@@ -1476,14 +1493,76 @@ impl Formatter<'_> {
         }
     }
     fn format_comment(&mut self, comment: &Sp<EcoString>) {
-        self.push(
-            &comment.span,
-            &if self.config.comment_space_after_hash && !comment.value.starts_with('!') {
-                format!("# {}", comment.value)
-            } else {
-                format!("#{}", comment.value)
-            },
-        );
+        let value = self.resolve_inner_format(&comment.value, true);
+        let text = if self.config.comment_space_after_hash && !value.starts_with('!') {
+            format!("# {value}")
+        } else {
+            format!("#{value}")
+        };
+        self.push(&comment.span, &text);
+    }
+    fn resolve_inner_format<'a>(&self, input: &'a str, comment: bool) -> Cow<'a, str> {
+        if !input.contains('\\') {
+            return Cow::Borrowed(input);
+        }
+        let mut s = String::new();
+        let mut chars = input.chars().peekable();
+        while let Some(c) = chars.next() {
+            match c {
+                '\\' if chars.next_if_eq(&'\\').is_some() => {
+                    if let Some(first) = chars.next() {
+                        let mut depth = 1;
+                        let frag = if first == '(' {
+                            let mut frag = String::new();
+                            for c in chars.by_ref() {
+                                match c {
+                                    '(' => depth += 1,
+                                    ')' => depth -= 1,
+                                    _ => {}
+                                }
+                                if depth == 0 {
+                                    break;
+                                }
+                                frag.push(c);
+                            }
+                            frag
+                        } else if comment && first != '\\' {
+                            once(first)
+                                .chain(chars.by_ref().take_while(|c| !c.is_whitespace()))
+                                .collect()
+                        } else {
+                            s.push_str("\\\\");
+                            s.push(first);
+                            continue;
+                        };
+                        match format_str(&frag, self.config) {
+                            Ok(mut o) => {
+                                if o.output.ends_with('\n') {
+                                    o.output.pop();
+                                }
+                                s.push_str(&o.output)
+                            }
+                            Err(_) => {
+                                if first == '(' {
+                                    s.push_str("\\\\(");
+                                    s.push_str(&frag);
+                                    if depth == 0 {
+                                        s.push(')');
+                                    }
+                                } else {
+                                    s.push_str("\\\\");
+                                    s.push_str(&frag);
+                                }
+                            }
+                        }
+                    } else {
+                        s.push_str("\\\\");
+                    }
+                }
+                c => s.push(c),
+            }
+        }
+        Cow::Owned(s)
     }
     fn eval_type_sig_comment(&mut self, index: usize) -> Option<TypeSig> {
         let values = self.type_sig_comments.get_or_insert_with(|| {
@@ -1709,6 +1788,7 @@ fn item_is_multiline(item: &Item) -> bool {
 pub(crate) fn word_is_multiline(word: &Word) -> bool {
     match word {
         Word::Number(..) => false,
+        Word::BasedInt(_) => false,
         Word::Char(_) => false,
         Word::Label(_) => false,
         Word::String(_) => false,
@@ -1756,6 +1836,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::SemanticComment(_) => true,
         Word::TypeSigComment { .. } => true,
         Word::OutputComment { .. } => true,
+        Word::Underscore => false,
     }
 }
 
@@ -1877,8 +1958,8 @@ impl SysBackend for FormatterBackend {
     fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
         self.sys().write(handle, contents)
     }
-    fn var(&self, name: &str) -> Option<String> {
-        self.sys().var(name)
+    fn get_var(&self, name: &str) -> Option<String> {
+        self.sys().get_var(name)
     }
     fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
         self.sys().tcp_connect(addr)

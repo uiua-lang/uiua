@@ -267,9 +267,15 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("Getting raw mode is not supported in this environment".into())
     }
     /// Get an environment variable
-    fn var(&self, name: &str) -> Option<String> {
+    fn get_var(&self, name: &str) -> Option<String> {
         None
     }
+    /// Set an environment variable
+    ///
+    /// # Safety
+    /// Should take into account race conditions from setting env vars on certain platforms.
+    /// Note that when called by the Uiua interpreter, a lock is used.
+    unsafe fn set_var(&self, name: &str, val: &str) {}
     /// Get the size of the terminal
     fn term_size(&self) -> Result<(usize, usize), String> {
         Err("Getting the terminal size is not supported in this environment".into())
@@ -452,11 +458,17 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     /// Fetch a URL, respecting protocol and port (defaults to https and 443)
     fn fetch(&self, url: &str) -> Result<Vec<u8>, String> {
-        let is_https = url.starts_with("https://");
-        let is_http = url.starts_with("http://");
-        let no_protocol = url
-            .trim_start_matches("https://")
-            .trim_start_matches("http://");
+        let lower = url.to_ascii_lowercase();
+        let (is_https, is_http, scheme_len) = if lower.starts_with("https://") {
+            (true, false, 8)
+        } else if lower.starts_with("http://") {
+            (false, true, 7)
+        } else if let Some(i) = lower.find("://") {
+            return Err(format!("Unsupported URL scheme: {}", &url[..i]));
+        } else {
+            (false, false, 0)
+        };
+        let no_protocol = &url[scheme_len..];
         let (host, route) = match no_protocol.find('/') {
             Some(i) => no_protocol.split_at(i),
             None => (no_protocol, "/"),
@@ -470,11 +482,12 @@ pub trait SysBackend: Any + Send + Sync + 'static {
             }
         };
         let addr = format!("{host_only}:{port}");
-        let default_port = if use_tls { "443" } else { "80" };
-        let host_header = if port == default_port {
+        let port_num: u16 = port.parse().map_err(|_| "invalid port")?;
+        let default_port_num: u16 = if use_tls { 443 } else { 80 };
+        let host_header = if port_num == default_port_num {
             host_only.to_owned()
         } else {
-            format!("{host_only}:{port}")
+            format!("{host_only}:{port_num}")
         };
         let req = format!(
             "\
@@ -523,8 +536,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
             .map(|i| i + 4)
             .or(bytes.windows(2).position(|w| w == b"\n\n").map(|i| i + 2))
             .ok_or("Invalid HTTP response: missing header separator")?;
-        bytes.rotate_left(body_start);
-        bytes.truncate(bytes.len() - body_start);
+        bytes.drain(..body_start);
         Ok(bytes)
     }
     /// Create a UDP socket and bind it to an address
@@ -801,13 +813,9 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             env.push(Array::<Boxed>::from_iter(args));
         }
         SysOp::Var => {
-            let key = env
-                .pop(1)?
-                .as_string(env, "Augument to var must be a string")?;
-            let var = env
-                .rt
-                .backend
-                .var(&key)
+            let key = (env.pop(1)?).as_string(env, "Augument to var must be a string")?;
+            let var = (env.rt.backend.get_var(&key).map(Into::into))
+                .or_else(|| env.value_fill().map(|fv| fv.value.clone()))
                 .ok_or_else(|| env.error(format!("Environment variable `{key}` is not set")))?;
             env.push(var);
         }

@@ -186,7 +186,7 @@ fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMo
             });
             (f, 0)
         }
-        [Node::Prim(Pop, _), Node::Push(repl)] => {
+        [Node::Prim(Pop, _), Node::Push(repl, _)] => {
             let replacement = repl.clone();
             (
                 Rc::new(move |val, depth, _| Ok(val.replace_depth(replacement.clone(), depth))),
@@ -285,7 +285,7 @@ fn f_mon2_fast_fn_impl(nodes: &[Node], env: &Uiua) -> Option<(ValueMon2Fn, usize
             (f, 0)
         }
         // By constant
-        [Node::Prim(Identity, _), Node::Push(repl)] => {
+        [Node::Prim(Identity, _), Node::Push(repl, _)] => {
             let repl = repl.clone();
             let f = std::boxed::Box::new(move |val: Value, depth: usize, _: &mut Uiua| {
                 let replaced = val.replace_depth(repl.clone(), depth);
@@ -294,7 +294,7 @@ fn f_mon2_fast_fn_impl(nodes: &[Node], env: &Uiua) -> Option<(ValueMon2Fn, usize
             (f, 0)
         }
         // On constant
-        [Node::Push(repl), Node::Prim(Flip, _)] => {
+        [Node::Push(repl, _), Node::Prim(Flip, _)] => {
             let repl = repl.clone();
             let f = std::boxed::Box::new(move |val: Value, depth: usize, _: &mut Uiua| {
                 let replaced = val.replace_depth(repl.clone(), depth);
@@ -303,7 +303,7 @@ fn f_mon2_fast_fn_impl(nodes: &[Node], env: &Uiua) -> Option<(ValueMon2Fn, usize
             (f, 0)
         }
         // Push after mon1
-        [rest @ .., Node::Push(repl)] => {
+        [rest @ .., Node::Push(repl, _)] => {
             let (before, d1) = f_mon_fast_fn_impl(rest, false, env)?;
             let repl = repl.clone();
             let f = std::boxed::Box::new(move |val: Value, depth: usize, env: &mut Uiua| {
@@ -933,7 +933,7 @@ pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let mut acc = if let Some(fv) = env.value_fill() {
         fv.value.clone()
     } else if row_count == 0 {
-        env.push(Array::<Boxed>::default());
+        env.push(Array::<f64>::default());
         return Ok(());
     } else if all_scalar {
         for rows in rows.into_iter().rev() {
@@ -969,6 +969,9 @@ pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
             env.exec(f.clone())?;
             let item = env.pop("accumulator")?;
             acc = acc.join(item, true, env)?;
+        }
+        if row_count == 1 && acc.rank() == 0 {
+            acc.fix();
         }
         env.push(acc);
         Ok(())

@@ -63,7 +63,7 @@ D! ←^ $"_" d ◌
 ! ← ^0
 !(^0)
 
-F ← |0 spawn!F
+F ← |0 spawnF
 F
 
 ┌─╴Foo
@@ -82,7 +82,7 @@ F
 
 °binary 0_1_10
 
-comptime!(⍤@@@@)
+comptime(⍤@@@@)
 
 F! ← ^2
 
@@ -133,26 +133,6 @@ F! ← (
 )
 
 aπ
-
-# Experimental!
-~F {A B ← 0} ≡°□
-≡F B:5 ⇡3
-
-# Experimental!
-~F {A B ← 0} ≡°□
-F ≡F B:5 ⇡3
-
-# Experimental!
-~F {A ← 0|B C ← 0} ∘
-F (F) A:5 ⇡3
-
-# Experimental!
-~F {A ← 5} ∘
-F A:[1] B:2
-
-# Experimental!
-~F {A ← 1|B ← 1} ∘
-F.Args [] A:5 B:2
 
 # Thing $ A B
 F ← (⚂)
@@ -208,7 +188,7 @@ F 1 2 3
 
 ⍤⤙≍ [3 2 1 3 3 2] ⍜⊜(□◴)(↘1⍚⇌) [1 1 1 1 2 2] [1 2 3 1 2 3]
 
-comptime!((
+comptime((
     ⍤⤙≍ 3 ^ 1 2
   )!)
 
@@ -232,3 +212,8 @@ G
 ⨬∘⊢ ¤ 0_1_0 [0_1 2_3 4_5]
 
 ♭ °⊸△ ▽64 10 1
+
+# Experimental!
+⊨ {""}
+
+⍥{∘}257 5

@@ -845,6 +845,12 @@
     "class": "Map",
     "description": "Check if a map array has a key"
   },
+  "hsl": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Algorithm",
+    "description": "Convert a color array from RGB to HSL"
+  },
   "hsv": {
     "args": 1,
     "outputs": 1,
@@ -1093,6 +1099,12 @@
     "modifier_args": 1,
     "class": "Arguments",
     "description": "Call a function but keep its first argument after its outputs"
+  },
+  "oklab": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Algorithm",
+    "description": "Convert a color array from RGB to Oklab"
   },
   "oklch": {
     "args": 1,

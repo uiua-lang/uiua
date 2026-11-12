@@ -3,6 +3,7 @@
 use std::{collections::BTreeMap, fmt, iter::once, mem::discriminant};
 
 use ecow::EcoString;
+use enum_iterator::Sequence;
 use serde::*;
 
 use crate::{
@@ -123,7 +124,7 @@ pub struct ScopedModule {
     pub kind: ModuleKind,
     /// The items
     pub items: Vec<Item>,
-    /// The local imports exported from the module
+    /// The scoped imports exported from the module
     pub imports: Option<ImportLine>,
     /// The span of the closing delimiter
     pub close_span: Option<CodeSpan>,
@@ -338,6 +339,7 @@ pub struct InlineMacro {
 #[serde(tag = "type", content = "value")]
 pub enum Word {
     Number(NumWord, String),
+    BasedInt(BasedInt),
     Char(String),
     String(String),
     MultilineString(Vec<Sp<String>>),
@@ -359,16 +361,24 @@ pub enum Word {
     BreakLine,
     FlipLine,
     SemanticComment(SemanticComment),
-    TypeSigComment { i: usize },
-    OutputComment { i: usize, n: usize },
+    TypeSigComment {
+        i: usize,
+    },
+    OutputComment {
+        i: usize,
+        n: usize,
+    },
     Subscripted(Box<Subscripted>),
     InlineMacro(Box<InlineMacro>),
+    /// Doesn't compile, but useful for formatting format strings
+    Underscore,
 }
 
 impl PartialEq for Word {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Number(a_n, a_s), Self::Number(b_n, b_s)) => a_n == b_n && a_s == b_s,
+            (Self::BasedInt(a), Self::BasedInt(b)) => a == b,
             (Self::Char(a), Self::Char(b)) => a == b,
             (Self::String(a), Self::String(b)) => a == b,
             (Self::Label(a), Self::Label(b)) => a == b,
@@ -435,6 +445,7 @@ impl fmt::Debug for Word {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Word::Number(s, ..) => write!(f, "{s:?}"),
+            Word::BasedInt(int) => write!(f, "{int:?}"),
             Word::Char(char) => write!(f, "{char:?}"),
             Word::String(string) => write!(f, "{string:?}"),
             Word::MultilineString(string) => write!(f, "$ {string:?}"),
@@ -490,11 +501,12 @@ impl fmt::Debug for Word {
             Word::InlineMacro(mac) => {
                 write!(f, "inline_macro({:?}{}))", mac.func.value, mac.ident.value)
             }
+            Word::Underscore => write!(f, "_"),
         }
     }
 }
 
-/// A refered-to item
+/// A referred-to item
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Ref {
     /// The module path of the item
@@ -836,28 +848,6 @@ impl Modifier {
     }
 }
 
-/// An argument setter
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ArgSetter {
-    /// The name of the field
-    pub ident: Sp<Ident>,
-    /// The span of the colon
-    pub colon_span: CodeSpan,
-}
-
-impl fmt::Debug for ArgSetter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:", self.ident.value)
-    }
-}
-
-impl ArgSetter {
-    /// Get the full span
-    pub fn span(&self) -> CodeSpan {
-        self.ident.span.clone().merge(self.colon_span.clone())
-    }
-}
-
 /// A subscripted word
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Subscripted {
@@ -1002,5 +992,68 @@ impl fmt::Display for NumWord {
             NumWord::Blade(mv) => write!(f, "{mv}"),
             NumWord::Err(e) => write!(f, "error({e})"),
         }
+    }
+}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct Local {
+    pub name: Ident,
+}
+
+impl fmt::Debug for Local {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:", self.name)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BasedInt {
+    pub base: IntBase,
+    pub digits: String,
+}
+
+impl fmt::Display for BasedInt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "0{}{}", self.base, self.digits)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Sequence)]
+pub enum IntBase {
+    Binary,
+    Octal,
+    Hex,
+    Vector,
+}
+
+impl IntBase {
+    pub fn contains_digit(&self, digit: char) -> bool {
+        match self {
+            IntBase::Binary => "01",
+            IntBase::Octal => "01234567",
+            IntBase::Hex | IntBase::Vector => "0123456789abcdefABCDEF",
+        }
+        .contains(digit)
+    }
+    pub fn base(&self) -> u32 {
+        match self {
+            IntBase::Binary => 2,
+            IntBase::Octal => 8,
+            IntBase::Hex | IntBase::Vector => 16,
+        }
+    }
+    pub fn char(&self) -> char {
+        match self {
+            IntBase::Binary => 'b',
+            IntBase::Octal => 'o',
+            IntBase::Hex => 'x',
+            IntBase::Vector => 'v',
+        }
+    }
+}
+
+impl fmt::Display for IntBase {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.char().fmt(f)
     }
 }

@@ -11,10 +11,12 @@ use std::{
 };
 
 use crate::{
-    Assembly, BindingInfo, BindingKind, BindingMeta, CONSTANTS, CodeSpan, Compiler, Ident,
-    InputSrc, Inputs, LocalIndex, PreEvalMode, Primitive, SafeSys, Shape, Signature, Sp,
-    SubscriptToken, SysBackend, UiuaError, Value, ast::*, is_custom_glyph, parse,
-    parse::ident_modifier_args,
+    Assembly, Bind, BindingInfo, BindingKind, BindingMeta, CONSTANTS, CodeSpan, Compiler, Ident,
+    InputSrc, Inputs, PreEvalMode, Primitive, SafeSys, Shape, Signature, Sp, SubscriptToken,
+    SysBackend, UiuaError, Value,
+    ast::*,
+    is_custom_glyph,
+    parse::{ident_modifier_args, parse},
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -50,7 +52,6 @@ pub enum SpanKind {
     Subscript(Option<Primitive>, Option<SubscriptToken>),
     /// `obverse` primitive. Contains which inverses are set.
     Obverse(SetInverses),
-    ArgSetter(Option<EcoString>),
 }
 
 /// Documentation information for a binding
@@ -164,7 +165,7 @@ impl Spans {
 pub struct CodeMeta {
     /// A map of references to global bindings
     pub global_references: HashMap<CodeSpan, usize>,
-    /// A map of references to shadowable constants
+    /// A set of references to shadowable constants
     pub constant_references: HashSet<Sp<Ident>>,
     /// A map of identifiers to possible completions
     pub completions: HashMap<CodeSpan, Vec<Completion>>,
@@ -175,7 +176,7 @@ pub struct CodeMeta {
     /// A map of inline macro functions to their number of arguments
     pub inline_macros: HashMap<CodeSpan, usize>,
     /// A map of top-level binding names to their indices
-    pub top_level_names: HashMap<Ident, LocalIndex>,
+    pub top_level_names: HashMap<Ident, Bind>,
     /// A map of the spans of top-level lines to values
     pub top_level_values: HashMap<CodeSpan, Vec<Value>>,
     /// A map of strand spans
@@ -480,6 +481,8 @@ impl Spanner {
                     pure: false,
                 }
             }
+            // Don't show character counts on references
+            docs.meta.counts = None;
             return Some(docs.into());
         }
         // Look in constant references
@@ -611,6 +614,7 @@ impl Spanner {
                     }
                     spans.push(word.span.clone().sp(SpanKind::Number))
                 }
+                Word::BasedInt(_) => spans.push(word.span.clone().sp(SpanKind::Number)),
                 Word::Char(_) | Word::String(_) | Word::FormatString(_) => {
                     spans.push(word.span.clone().sp(SpanKind::String))
                 }
@@ -818,6 +822,7 @@ impl Spanner {
                     }
                     spans.push(mac.ident.span.clone().sp(mac_delim_kind));
                 }
+                Word::Underscore => spans.push(word.span.clone().sp(SpanKind::Strand)),
             }
         }
         spans.retain(|sp| !sp.span.as_str(self.inputs(), str::is_empty));
@@ -1701,7 +1706,6 @@ mod server {
                         stt
                     }
                     SpanKind::Placeholder(_) => SemanticTokenType::PARAMETER,
-                    SpanKind::ArgSetter(_) => MONADIC_FUNCTION_STT,
                     _ => continue,
                 };
                 let mut token_type = UIUA_SEMANTIC_TOKEN_TYPES
@@ -2377,6 +2381,7 @@ mod server {
             };
             let (line, col) = lsp_pos_to_uiua(params.text_document_position.position, &doc.input);
             let path = uri_path(&params.text_document_position.text_document.uri);
+            // Binding references
             for (i, binfo) in doc.asm.bindings.iter().enumerate() {
                 if binfo.span.contains_line_col(line, col) && binfo.span.src == path {
                     let mut locations = Vec::new();

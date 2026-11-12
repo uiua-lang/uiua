@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use super::*;
 
+#[doc(hidden)]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub enum ScalarBox {
     #[default]
@@ -26,6 +27,7 @@ impl ScalarBox {
     }
 }
 
+#[doc(hidden)]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub enum Scalar {
     Bool,

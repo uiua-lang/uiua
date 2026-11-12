@@ -14,8 +14,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
 use crate::{
-    Hd, Prim, Tour, element, idioms::Idioms, markdown::Markdown, other::*,
-    other_tutorial::OtherTutorialPage, primitive::*, tutorial::TUTORIAL_NAMES, uiuisms::Uiuisms,
+    Hd, Prim, Tour, element, markdown::Markdown, other::*, other_tutorial::OtherTutorialPage,
+    primitive::*, tutorial::TUTORIAL_NAMES, uiuisms::Uiuisms,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,6 +34,7 @@ pub enum DocsPage {
     FormatConfig,
     Experimental,
     Idioms,
+    Aliases,
 }
 
 impl IntoParam for DocsPage {
@@ -54,6 +55,7 @@ impl IntoParam for DocsPage {
             "format-config" => Ok(Self::FormatConfig),
             "experimental" => Ok(Self::Experimental),
             "idioms" => Ok(Self::Idioms),
+            "aliases" => Ok(Self::Aliases),
             value => Ok(Self::Search(value.into())),
         }
     }
@@ -93,6 +95,7 @@ pub fn Docs() -> impl IntoView {
             .into_view(),
             DocsPage::Experimental => Experimental().into_view(),
             DocsPage::Idioms => Idioms().into_view(),
+            DocsPage::Aliases => Aliases().into_view(),
         };
 
         view! {
@@ -249,7 +252,8 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the "{lang}" formatter"</li>
             <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
             <li><A href="/docs/experimental">"Experimental Features"</A>" - an overview of experimental features"</li>
-            <li><A href="/docs/idioms">"Idioms"</A>" - commonly useful, non-obvious idioms. Also "<A href="/docs/idioms#aliases">"aliases"</A>"."</li>
+            <li><A href="/docs/idioms">"Idioms"</A>" - commonly useful, non-obvious idioms"</li>
+            <li><A href="/docs/aliases">"Aliases"</A>" - patterns that get converted by the formatter"</li>
         </ul>
 
         <Hd id="other-pages">"Other Pages"</Hd>

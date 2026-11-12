@@ -1,6 +1,6 @@
 # Even More Argument Manipulation
 
-In the [More Argument Manipulation](/tutorial/More Argument Manipulation) tutorial, we learned about various ways of working with arguments including [fork](), [bracket]() and [both](). At the beginning of this tutorial, we touched briefly on [on]() and [by]().
+In the [More Argument Manipulation](</tutorial/More Argument Manipulation>) tutorial, we learned about various ways of working with arguments including [fork](), [bracket]() and [both](). At the beginning of this tutorial, we touched briefly on [on]() and [by]().
 
 But [on]() and [by]() are just two modifiers in a larger category.
 
@@ -62,7 +62,7 @@ For example, if we wanted to keep all indices in an array that have `1`s in some
 
 ## [with]()
 
-[with]() has fewer common patterns that come up often, (other than `<Prims prims=[Assert, With, Match]/>` for [testing](/tutorial/Testing)), but it can still be useful in some situations.
+[with]() has fewer common patterns that come up often, (other than `⍤⤙≍` for [testing](/tutorial/Testing)), but it can still be useful in some situations.
 
 Its name was chosen because after using it, you end up with an array *with* a transformed version of it.
 

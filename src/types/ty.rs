@@ -1,6 +1,7 @@
 use super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+#[doc(hidden)]
 pub struct Type {
     pub scalar: Scalar,
     pub shape: DynShape,
@@ -31,8 +32,8 @@ impl Type {
         let ty = if let Value::Box(arr) = val
             && arr.rank() == 1
             && let Some((first, rest)) = arr.data.split_first()
-            && let Some(mut scalar) = value_as_scalar_spec(&first.0)
         {
+            let mut scalar = value_as_scalar_spec(&first.0)?;
             if let [Boxed(arr)] = rest
                 && arr.type_id() == f64::TYPE_ID
                 && arr.shape == [0]
@@ -41,12 +42,12 @@ impl Type {
                     scalar = Scalar::Box(ScalarBox::All(scalar.scalar_type().into()));
                 }
                 scalar.scalar_type()
-            } else if let Some(dims) = (rest.iter())
-                .map(|Boxed(val)| value_as_dim(val))
-                .collect::<Option<Vec<_>>>()
+            } else if val.meta.label.is_none()
+                && let Some(dims) = (rest.iter())
+                    .map(|Boxed(val)| value_as_dim(val))
+                    .collect::<Option<Vec<_>>>()
             {
-                let suffix = dims.is_empty().then(Vec::new);
-                scalar.shaped(DynShape { suffix, dims })
+                scalar.shaped(dims)
             } else {
                 let shape = DynShape::from(arr.row_count());
                 let fields = (arr.data.iter())
@@ -74,7 +75,7 @@ impl Type {
                     _ => {}
                 }
             }
-            DynShape::SCALAR.with_scalar(value_as_scalar_spec(val)?)
+            DynShape::ANY.with_scalar(value_as_scalar_spec(val)?)
         };
         Some(ty)
     }
@@ -248,9 +249,9 @@ impl Type {
             }
             val
         } else if self.shape.is_scalar() {
-            scalar_to_val(self.scalar)
-        } else if self.shape.is_any() {
             [Boxed(scalar_to_val(self.scalar))].into()
+        } else if self.shape.is_any() {
+            scalar_to_val(self.scalar)
         } else {
             let mut items = eco_vec![Boxed(scalar_to_val(self.scalar))];
             for dim in self.shape.dims {

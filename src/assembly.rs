@@ -20,10 +20,10 @@ use uiua_parser::{
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
-    BindingCounts, CodeSpan, FunctionId, Ident, InputSrc, Inputs, LocalNames, Node, SigNode,
+    BindingCounts, CodeSpan, FunctionId, Ident, InputSrc, Inputs, Node, ScopedBindings, SigNode,
     Signature, Sp, Span, Uiua, UiuaResult, Value,
     ast::Word,
-    compile::{LocalIndex, Module},
+    compile::{Bind, Module},
     is_ident_char,
     types::TypeVal,
 };
@@ -70,6 +70,17 @@ pub struct Function {
     pub(crate) index: usize,
     hash: u64,
     pub(crate) origin: FunctionOrigin,
+}
+
+impl Function {
+    /// Unique hash of this function
+    pub fn hash(&self) -> u64 {
+        self.hash
+    }
+    /// The function's index in the bindings list
+    pub fn index(&self) -> usize {
+        self.index
+    }
 }
 
 impl fmt::Debug for Function {
@@ -158,7 +169,7 @@ pub struct IndexMacro {
     /// for name resolution. It is keyed by span rather than by name so
     /// that names in both the declaration and invocation's scope can
     /// be disambiguated.
-    pub locals: EcoVec<(CodeSpan, usize)>,
+    pub scoped: EcoVec<(CodeSpan, usize)>,
     /// The provided signature
     pub sig: Option<Signature>,
     /// Whether the macro is recursive
@@ -171,7 +182,7 @@ pub struct CodeMacro {
     /// The root node of the macro
     pub root: SigNode,
     /// The names that are in scope for the macro
-    pub names: Arc<LocalNames>,
+    pub names: Arc<ScopedBindings>,
 }
 
 impl Assembly {
@@ -203,22 +214,22 @@ impl Assembly {
     }
     pub(crate) fn add_binding_at(
         &mut self,
-        local: LocalIndex,
+        bind: Bind,
         kind: BindingKind,
         span: Option<CodeSpan>,
         meta: BindingMeta,
     ) {
         let binding = BindingInfo {
-            public: local.public,
+            public: bind.public,
             kind,
             span: span.unwrap_or_else(CodeSpan::dummy),
             meta,
-            used: local.public,
+            used: bind.public,
         };
-        if local.index < self.bindings.len() {
-            self.bindings.make_mut()[local.index] = binding;
+        if bind.index < self.bindings.len() {
+            self.bindings.make_mut()[bind.index] = binding;
         } else {
-            while self.bindings.len() < local.index {
+            while self.bindings.len() < bind.index {
                 self.bindings.push(BindingInfo {
                     kind: BindingKind::Const(None),
                     public: false,
@@ -232,19 +243,19 @@ impl Assembly {
     }
     pub(crate) fn bind_const(
         &mut self,
-        local: LocalIndex,
+        bind: Bind,
         value: Option<Value>,
         span: usize,
         meta: BindingMeta,
     ) {
         let span = self.spans[span].clone();
-        self.add_binding_at(local, BindingKind::Const(value), span.code(), meta);
+        self.add_binding_at(bind, BindingKind::Const(value), span.code(), meta);
     }
     pub(crate) fn module(&self) -> Module {
         let mut module = Module::default();
         for (name, &index) in &*self.exports {
             let public = self.bindings[index].public;
-            (module.names).insert(name.clone(), LocalIndex { index, public });
+            (module.names).insert(name.clone(), Bind { index, public });
         }
         module
     }

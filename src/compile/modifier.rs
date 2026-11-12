@@ -345,8 +345,8 @@ impl Compiler {
             }
             m => {
                 if let Modifier::Ref(name) = m {
-                    if let Ok(Some((_, local))) = self.ref_local(name) {
-                        if self.asm.code_macros.contains_key(&local.index) {
+                    if let Ok(Some((_, bind))) = self.ref_bind(name) {
+                        if self.asm.code_macros.contains_key(&bind.index) {
                             return Ok(None);
                         }
                     } else {
@@ -448,9 +448,8 @@ impl Compiler {
                 Modifier::Primitive(Primitive::Fork | Primitive::Bracket) => false,
                 Modifier::Primitive(_) => true,
                 Modifier::Macro(..) => false,
-                Modifier::Ref(name) => self
-                    .ref_local(name)?
-                    .is_some_and(|(_, local)| self.asm.index_macros.contains_key(&local.index)),
+                Modifier::Ref(name) => (self.ref_bind(name)?)
+                    .is_some_and(|(_, bind)| self.asm.index_macros.contains_key(&bind.index)),
             };
             if strict_args {
                 // Validate operand count
@@ -490,7 +489,7 @@ impl Compiler {
         let span = self.add_span(modified.modifier.span.clone());
 
         // Compile operands
-        let ops = self.args(modified.operands)?;
+        let ops = self.modifier_operands(&modified.modifier.value, modified.operands)?;
 
         Ok(Node::Mod(prim, ops, span))
     }
@@ -504,10 +503,28 @@ impl Compiler {
         self.print_diagnostics = print_diagnostics;
         res
     }
+    /// Compile modifier args
+    fn modifier_operands(
+        &mut self,
+        modifier: &Modifier,
+        mut words: Vec<Sp<Word>>,
+    ) -> UiuaResult<EcoVec<SigNode>> {
+        words.reverse();
+        let mut nodes: EcoVec<_> = (words.into_iter())
+            .filter(|w| w.value.is_code())
+            .map(|w| self.modifier_operand(modifier, w))
+            .collect::<UiuaResult<_>>()?;
+        nodes.make_mut().reverse();
+        Ok(nodes)
+    }
+    fn modifier_operand(&mut self, _modifier: &Modifier, word: Sp<Word>) -> UiuaResult<SigNode> {
+        self.word_sig(word)
+    }
     fn monadic_modifier_op(&mut self, m: &Modified) -> UiuaResult<(SigNode, CodeSpan)> {
         let operand = m.code_operands().next().unwrap().clone();
         let span = operand.span.clone();
-        self.word_sig(operand).map(|sn| (sn, span))
+        self.modifier_operand(&m.modifier.value, operand)
+            .map(|sn| (sn, span))
     }
     fn dyadic_modifier_ops(
         &mut self,
@@ -519,8 +536,8 @@ impl Compiler {
         let b_op = operands.next().unwrap();
         let a_span = a_op.span.clone();
         let b_span = b_op.span.clone();
-        let a = self.word_sig(a_op)?;
-        let b = self.word_sig(b_op)?;
+        let b = self.modifier_operand(&m.modifier.value, b_op)?;
+        let a = self.modifier_operand(&m.modifier.value, a_op)?;
         Ok((a, b, a_span, b_span))
     }
     /// Inline a modifier
@@ -698,7 +715,7 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 match (f.sig.args(), g.sig.args()) {
                     (0, _) => Node::from_iter([g.node, f.node]),
-                    (1, 0) => Node::from_iter([Node::Mod(Dip, eco_vec![g], span), f.node]),
+                    (n, 0) => Node::from_iter([g.dipped(n, span).node, f.node]),
                     _ => Node::Mod(Fork, eco_vec![f, g], span),
                 }
             }
@@ -788,7 +805,10 @@ impl Compiler {
                             node
                         }
                     } else {
-                        let ops = self.args(modified.operands.clone())?;
+                        let ops = self.modifier_operands(
+                            &Modifier::Primitive(Bracket),
+                            modified.operands.clone(),
+                        )?;
                         Node::ImplMod(ImplPrimitive::SidedBracket(sided), ops, span)
                     }
                 })
@@ -1145,7 +1165,7 @@ impl Compiler {
                 if let Some(n) =
                     subscript.and_then(|sub| self.subscript_int_only(&sub, &Repeat.format()))
                 {
-                    node.prepend(Node::new_push(n));
+                    node.prepend(Node::new_push(n, spandex));
                 }
                 node
             }
@@ -1173,7 +1193,7 @@ impl Compiler {
                             );
                         }
                         Node::from([
-                            Node::new_push(n),
+                            Node::new_push(n, span),
                             Node::Mod(Primitive::Tuples, eco_vec![sn], span),
                         ])
                     }
@@ -1220,7 +1240,7 @@ impl Compiler {
                     Node::Mod(Stencil, eco_vec![sn], span)
                 };
                 if let Some(n) = n {
-                    node.prepend(Node::new_push(n));
+                    node.prepend(Node::new_push(n, span));
                 }
                 node
             }
@@ -1229,10 +1249,12 @@ impl Compiler {
                 invert::dbgln!("\n//////////////\n// begin UN //\n//////////////");
                 self.add_span(span.clone());
                 let mut normal = sn.un_inverse(&self.asm);
-                if let Node::Prim(Pretty, _) = sn.node
-                    && let Err(e) = &mut normal
-                {
-                    *e = InversionError::Pretty;
+                if let Err(e) = &mut normal {
+                    match sn.node {
+                        Node::Prim(Pretty, _) => *e = InversionError::Pretty,
+                        Node::Prim(Now, _) => *e = InversionError::Now,
+                        _ => {}
+                    }
                 }
                 invert::dbgln!("////////////\n// end UN //\n////////////\n");
                 if let Ok(Node::CustomInverse(..)) = normal.as_ref().map(|sn| &sn.node) {
@@ -1648,10 +1670,10 @@ impl Compiler {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let node = self.do_comptime("quote's", operand, &modified.modifier.span)?;
                 let code: String = match node {
-                    Node::Push(Value::Char(chars)) if chars.rank() == 1 => {
+                    Node::Push(Value::Char(chars), _) if chars.rank() == 1 => {
                         chars.data.iter().collect()
                     }
-                    Node::Push(Value::Char(chars)) => {
+                    Node::Push(Value::Char(chars), _) => {
                         return Err(self.error(
                             modified.modifier.span.clone(),
                             format!(
@@ -1661,7 +1683,7 @@ impl Compiler {
                             ),
                         ));
                     }
-                    Node::Push(value) => {
+                    Node::Push(value, _) => {
                         return Err(self.error(
                             modified.modifier.span.clone(),
                             format!(
@@ -1770,17 +1792,17 @@ impl Compiler {
         modifier_span: CodeSpan,
         operands: Vec<Sp<Word>>,
     ) -> UiuaResult<Node> {
-        let Some((path_locals, local)) = self.ref_local_impl(&r, LookupPreference::Macro)? else {
+        let Some((path_binds, bind)) = self.ref_bind_impl(&r, LookupPreference::Macro)? else {
             return Ok(Node::empty());
         };
-        self.validate_local(&r.name.value, local, &r.name.span);
+        self.validate_bind(&r.name.value, bind, &r.name.span);
         self.code_meta
             .global_references
-            .insert(r.name.span.clone(), local.index);
-        for (local, comp) in path_locals.into_iter().zip(&r.path) {
-            (self.code_meta.global_references).insert(comp.module.span.clone(), local.index);
+            .insert(r.name.span.clone(), bind.index);
+        for (bind, comp) in path_binds.into_iter().zip(&r.path) {
+            (self.code_meta.global_references).insert(comp.module.span.clone(), bind.index);
         }
-        let binfo = &mut self.asm.bindings.make_mut()[local.index];
+        let binfo = &mut self.asm.bindings.make_mut()[bind.index];
         binfo.used = true;
         // Handle recursion depth
         self.comptime_depth += 1;
@@ -1790,14 +1812,14 @@ impl Compiler {
                 "Macro makes compilation recur too deep",
             ));
         }
-        let node = if let Some(mac) = self.asm.index_macros.get(&local.index).cloned() {
+        let node = if let Some(mac) = self.asm.index_macros.get(&bind.index).cloned() {
             // Index macros
-            self.index_macro(mac, operands, None, r.name, local, modifier_span)?
-        } else if let Some(mac) = self.asm.code_macros.get(&local.index).cloned() {
+            self.index_macro(mac, operands, None, r.name, bind, modifier_span)?
+        } else if let Some(mac) = self.asm.code_macros.get(&bind.index).cloned() {
             // Code macros
             self.code_macro(Some(r.name.value), modifier_span, operands, mac)?
         } else if let Some((names, data_func)) =
-            (self.asm.bindings.get(local.index)).and_then(|binfo| match &binfo.kind {
+            (self.asm.bindings.get(bind.index)).and_then(|binfo| match &binfo.kind {
                 BindingKind::Module(m) => Some((m.names.clone(), m.data_func)),
                 BindingKind::Scope(i) => {
                     let scope = self.higher_scopes.get(*i).unwrap_or(&self.scope);
@@ -1868,15 +1890,15 @@ impl Compiler {
                 let key = (prim, name.clone());
                 if !comp.prim_arg_bindings.contains_key(&key) {
                     let node = Node::from([
-                        Node::new_push(index),
+                        Node::new_push(index, span),
                         Node::Prim(Primitive::Pick, span),
                         Node::ImplPrim(ImplPrimitive::UnBox, span),
                     ]);
-                    let local = LocalIndex {
-                        index: comp.next_global,
+                    let bind = Bind {
+                        index: comp.next_bindex,
                         public: true,
                     };
-                    comp.next_global += 1;
+                    comp.next_bindex += 1;
                     let func = comp.asm.add_function(
                         FunctionId::Named(name.clone()),
                         Signature::new(1, 1),
@@ -1888,14 +1910,14 @@ impl Compiler {
                         ..Default::default()
                     };
                     comp.asm
-                        .add_binding_at(local, BindingKind::Func(func), None, meta);
-                    comp.prim_arg_bindings.insert(key.clone(), local.index);
+                        .add_binding_at(bind, BindingKind::Func(func), None, meta);
+                    comp.prim_arg_bindings.insert(key.clone(), bind.index);
                 }
-                let local = LocalIndex {
+                let bind = Bind {
                     index: comp.prim_arg_bindings[&key],
                     public: true,
                 };
-                comp.scope.names.insert(name.clone(), local);
+                comp.scope.names.insert(name.clone(), bind);
             }
             // Compile words
             comp.words_sig(operands)
@@ -1906,7 +1928,7 @@ impl Compiler {
             .rev()
             .flat_map(|arg| {
                 [
-                    Node::new_push(arg.default),
+                    Node::new_push(arg.default, span),
                     Node::Label(arg.name.into(), span),
                 ]
             })
@@ -1932,15 +1954,15 @@ impl Compiler {
         operands: Vec<Sp<Word>>,
         subscript: Option<SubscriptNumber>,
         name: Sp<Ident>,
-        local: LocalIndex,
+        bindex: Bind,
         ref_span: CodeSpan,
     ) -> UiuaResult<Node> {
         let span = self.add_span(ref_span.clone());
         Ok(match self.scope.kind {
-            ScopeKind::Macro(Some(MacroLocal {
+            ScopeKind::Macro(Some(MacroBind {
                 macro_index,
                 expansion_index: Some(index),
-            })) if macro_index == local.index => {
+            })) if macro_index == bindex.index => {
                 // Recursive
                 if let Some(sig) = mac.sig {
                     Node::CallMacro { index, sig, span }
@@ -1963,11 +1985,11 @@ impl Compiler {
                 // We know that this is a recursive call if the scope tracks
                 // a macro with the same index.
                 let expansion_index = mac.recursive.then(|| {
-                    let expansion_index = self.next_global;
+                    let expansion_index = self.next_bindex;
                     let args = ident_modifier_args(&name.value);
                     // Add temporary binding
                     self.asm.add_binding_at(
-                        LocalIndex {
+                        Bind {
                             index: expansion_index,
                             public: false,
                         },
@@ -1978,16 +2000,16 @@ impl Compiler {
                         Some(ref_span.clone()),
                         BindingMeta::default(),
                     );
-                    self.next_global += 1;
+                    self.next_bindex += 1;
                     expansion_index
                 });
-                let macro_local = MacroLocal {
-                    macro_index: local.index,
+                let macro_bind = MacroBind {
+                    macro_index: bindex.index,
                     expansion_index,
                 };
                 // Compile
                 let SigNode { node, sig } = self.suppress_diagnostics(|comp| {
-                    comp.macro_scope(LocalNames::default(), Some(macro_local), |comp| {
+                    comp.macro_scope(ScopedBindings::default(), Some(macro_bind), |comp| {
                         comp.words_sig(mac.words)
                     })
                 })?;
@@ -1999,7 +2021,7 @@ impl Compiler {
                 // Add
                 let id = FunctionId::Macro(Some(name.value), name.span);
                 let func = self.asm.add_function(id, sig, node, FunctionOrigin::Macro);
-                if let Some(exp_index) = macro_local.expansion_index {
+                if let Some(exp_index) = macro_bind.expansion_index {
                     self.asm.bindings.make_mut()[exp_index].kind = BindingKind::Func(func.clone());
                 }
                 Node::Call(func, span)
@@ -2067,8 +2089,8 @@ impl Compiler {
         let mut code: Option<String> = None;
         (|| -> UiuaResult {
             if let Some(index) = self.node_unbound_index(&mac.root.node) {
-                let name = self.scope.names.all_iter().find_map(|(name, local)| {
-                    if local.index == index {
+                let name = self.scope.names.all_iter().find_map(|(name, bind)| {
+                    if bind.index == index {
                         Some(name)
                     } else {
                         None
@@ -2282,8 +2304,14 @@ impl Compiler {
         operand: Sp<Word>,
         span: &CodeSpan,
     ) -> UiuaResult<Node> {
+        let spandex = self.add_span(span.clone());
         self.do_comptime_vals(possesive, operand, span)
-            .map(|(values, _)| values.into_iter().map(Node::new_push).collect())
+            .map(|(values, _)| {
+                values
+                    .into_iter()
+                    .map(|val| Node::new_push(val, spandex))
+                    .collect()
+            })
     }
     fn do_comptime_vals(
         &mut self,
@@ -2305,7 +2333,7 @@ impl Compiler {
         }
         if let Some(index) = self.node_unbound_index(&sn.node) {
             let name = (self.scope.names.visible_iter())
-                .find_map(|(ident, local)| (local.index == index).then_some(ident));
+                .find_map(|(ident, bind)| (bind.index == index).then_some(ident));
             return Err(if let Some(name) = name {
                 let name_span = self.asm.bindings[index].span.clone();
                 self.error(
@@ -2349,14 +2377,14 @@ impl Compiler {
     /// Newly created bindings will be added to the current scope after the function is run.
     fn macro_scope<T>(
         &mut self,
-        names: LocalNames,
-        macro_local: Option<MacroLocal>,
+        names: ScopedBindings,
+        mac_index: Option<MacroBind>,
         f: impl FnOnce(&mut Self) -> T,
     ) -> T {
         let orig_names = names.clone();
         // Create temp scope
         let temp_scope = Scope {
-            kind: ScopeKind::Macro(macro_local),
+            kind: ScopeKind::Macro(mac_index),
             names,
             experimental: self.scope.experimental,
             experimental_error: self.scope.experimental_error,
@@ -2369,12 +2397,12 @@ impl Compiler {
         let mut replaced_scope = self.higher_scopes.pop().unwrap();
         // If temp scope has a new name, or if its binding index changed,
         // then it is a new binding and should be added to the current scope
-        for (name, local) in take(&mut self.scope.names).into_visible_iter() {
+        for (name, bind) in take(&mut self.scope.names).into_visible_iter() {
             if orig_names
                 .get_last(&name)
-                .is_none_or(|l| l.index != local.index)
+                .is_none_or(|l| l.index != bind.index)
             {
-                replaced_scope.names.insert(name, local);
+                replaced_scope.names.insert(name, bind);
             }
         }
         self.scope = replaced_scope;
@@ -2389,7 +2417,7 @@ fn construct_extracted_monadic_modifier<T>(
     span: usize,
     comp: &Compiler,
 ) -> Node {
-    if comp.in_fill {
+    if comp.in_fill || !sn.node.is_pure(&comp.asm) {
         return node_kind(m, eco_vec![sn], span);
     }
     let (node, extracted) = extract_node_pervasives(sn.node);
@@ -2420,7 +2448,7 @@ fn extract_node_pervasives(mut node: Node) -> (Node, Node) {
         if split_index >= 2
             && matches!(
                 &node[split_index - 2..split_index],
-                [Node::Push(val), Node::Prim(prim, _)]
+                [Node::Push(val, _), Node::Prim(prim, _)]
                     if val.rank() == 0 && prim.class() == PrimClass::DyadicPervasive
             )
         {

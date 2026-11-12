@@ -936,6 +936,8 @@ impl Value {
                 |a, b| a.undo_first(b, env).map(Into::into),
                 |a, b| a.undo_first(b, env).map(Into::into),
                 |a, b| a.undo_first(b, env).map(Into::into),
+                #[cfg(feature = "ga")]
+                |a, b| a.undo_first(b, env).map(Into::into),
                 |a, b| {
                     env.error(format!(
                         "Cannot unfirst {} into {}",
@@ -954,6 +956,8 @@ impl Value {
                 |a, b| a.undo_last(b, env).map(Into::into),
                 |a, b| a.undo_last(b, env).map(Into::into),
                 |a, b| a.undo_last(b, env).map(Into::into),
+                |a, b| a.undo_last(b, env).map(Into::into),
+                #[cfg(feature = "ga")]
                 |a, b| a.undo_last(b, env).map(Into::into),
                 |a, b| {
                     env.error(format!(
@@ -2408,10 +2412,17 @@ impl Array<f64> {
             .max_by(|a, b| a.total_cmp(b))
             .expect("Empty case already checked");
 
+        let limit = max.sqrt().floor() as usize;
+
+        let mut is_prime = vec![true; limit + 1];
+
         let mut primes = vec![2u32];
-        for n in 3..=max.sqrt().floor() as u32 {
-            if primes.iter().all(|p| n % p != 0) {
-                primes.push(n);
+        for n in (3..=limit).step_by(2) {
+            if is_prime[n] {
+                primes.push(n as u32);
+                for m in (n * n..=limit).step_by(2 * n) {
+                    is_prime[m] = false;
+                }
             }
         }
 
@@ -2419,8 +2430,8 @@ impl Array<f64> {
             self.shape.clone(),
             self.data.iter().map(|n| {
                 for prime in &primes {
-                    if (*n as u32).is_multiple_of(*prime) {
-                        if *n as u32 == *prime {
+                    if (*n as u64).is_multiple_of(*prime as u64) {
+                        if *n as u64 == *prime as u64 {
                             return 1u8;
                         }
                         return 0u8;
@@ -2437,9 +2448,7 @@ impl Array<f64> {
             check_number(n, env, u64::MAX as f64)?;
 
             let mut n = n as u64; // note: u64, not usize
-
             let mut divisors = eco_vec![];
-
             while n.is_multiple_of(2) {
                 n /= 2;
                 divisors.push(2.0f64);
@@ -2542,6 +2551,7 @@ impl Value {
             val => Err(env.error(format!("Cannot convert {} to RGB", val.type_name_plural()))),
         }
     }
+
     /// Convert a value from RGB to Oklch
     pub fn rgb_to_oklch(self, env: &Uiua) -> UiuaResult<Self> {
         match self {
@@ -2559,6 +2569,43 @@ impl Value {
             Value::Num(arr) => arr.oklch_to_rgb(env).map(Into::into),
             Value::Byte(arr) => arr.convert_ref::<f64>().oklch_to_rgb(env).map(Into::into),
             val => Err(env.error(format!("Cannot convert {} to RGB", val.type_name_plural()))),
+        }
+    }
+
+    /// Convert a value from RGB to HSL
+    pub fn rgb_to_hsl(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Num(arr) => arr.rgb_to_hsl(env).map(Into::into),
+            Value::Byte(arr) => arr.convert_ref::<f64>().rgb_to_hsl(env).map(Into::into),
+            val => Err(env.error(format!("Cannot convert {} to HSL", val.type_name_plural()))),
+        }
+    }
+    /// Convert a value from HSL to RGB
+    pub fn hsl_to_rgb(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Num(arr) => arr.hsl_to_rgb(env).map(Into::into),
+            Value::Byte(arr) => arr.convert_ref::<f64>().hsl_to_rgb(env).map(Into::into),
+            val => Err(env.error(format!("Cannot convert {} to RGB", val.type_name_plural()))),
+        }
+    }
+
+    /// Convert a value from RGB to Oklab
+    pub fn rgb_to_oklab(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Num(arr) => arr.rgb_to_oklab(env).map(Into::into),
+            Value::Byte(arr) => arr.convert_ref::<f64>().rgb_to_oklab(env).map(Into::into),
+            val => Err(env.error(format!(
+                "Cannot convert {} to Oklab",
+                val.type_name_plural()
+            ))),
+        }
+    }
+    /// Convert a value from Oklab to RGB
+    pub fn oklab_to_rgb(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Num(arr) => arr.oklab_to_rgb(env).map(Into::into),
+            Value::Byte(arr) => arr.convert_ref::<f64>().oklab_to_rgb(env).map(Into::into),
+            val => Err(env.error(format!("Cannot convert {} to HSL", val.type_name_plural()))),
         }
     }
 }
@@ -2600,6 +2647,7 @@ impl Array<f64> {
             rgb[2] = v;
         }
         self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
         self.validate();
         Ok(self)
     }
@@ -2623,9 +2671,11 @@ impl Array<f64> {
             hsv[2] = b;
         }
         self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
         self.validate();
         Ok(self)
     }
+
     /// Convert an array from RGB to Oklch
     pub fn rgb_to_oklch(mut self, env: &Uiua) -> UiuaResult<Self> {
         if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
@@ -2643,6 +2693,7 @@ impl Array<f64> {
             rgb[2] = h;
         }
         self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
         self.validate();
         Ok(self)
     }
@@ -2663,6 +2714,101 @@ impl Array<f64> {
             oklch[2] = b;
         }
         self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
+        self.validate();
+        Ok(self)
+    }
+
+    /// Convert an array from RGB to Oklab
+    pub fn rgb_to_oklab(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
+            return Err(env.error(format!(
+                "Array to convert to Oklab must have a shape \
+                ending with 3 or 4, but its shape is {}",
+                self.shape
+            )));
+        }
+
+        let channels = *self.shape.last().unwrap();
+        for rgb in self.data.as_mut_slice().chunks_exact_mut(channels) {
+            let [l, a, b] = rgb_to_oklab(rgb[0], rgb[1], rgb[2]);
+            rgb[0] = l;
+            rgb[1] = a;
+            rgb[2] = b;
+        }
+
+        self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
+        self.validate();
+        Ok(self)
+    }
+    /// Convert an array from HSL to RGB
+    pub fn oklab_to_rgb(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
+            return Err(env.error(format!(
+                "Array to convert to RGB must have a shape \
+                ending with 3 or 4, but its shape is {}",
+                self.shape
+            )));
+        }
+
+        let channels = *self.shape.last().unwrap();
+        for oklab in self.data.as_mut_slice().chunks_exact_mut(channels) {
+            let [r, g, b] = oklab_to_rgb(oklab[0], oklab[1], oklab[2]);
+            oklab[0] = r;
+            oklab[1] = g;
+            oklab[2] = b;
+        }
+
+        self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
+        self.validate();
+        Ok(self)
+    }
+
+    /// Convert an array from RGB to HSL
+    pub fn rgb_to_hsl(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
+            return Err(env.error(format!(
+                "Array to convert to HSL must have a shape \
+                ending with 3 or 4, but its shape is {}",
+                self.shape
+            )));
+        }
+
+        let channels = *self.shape.last().unwrap();
+        for rgb in self.data.as_mut_slice().chunks_exact_mut(channels) {
+            let [h, s, l] = rgb_to_hsl(rgb[0], rgb[1], rgb[2]);
+            rgb[0] = h;
+            rgb[1] = s;
+            rgb[2] = l;
+        }
+
+        self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
+        self.validate();
+        Ok(self)
+    }
+    /// Convert an array from HSL to RGB
+    pub fn hsl_to_rgb(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
+            return Err(env.error(format!(
+                "Array to convert to RGB must have a shape \
+                ending with 3 or 4, but its shape is {}",
+                self.shape
+            )));
+        }
+
+        let channels = *self.shape.last().unwrap();
+        for hsl in self.data.as_mut_slice().chunks_exact_mut(channels) {
+            let [r, g, b] = hsl_to_rgb(hsl[0], hsl[1], hsl[2]);
+            hsl[0] = r;
+            hsl[1] = g;
+            hsl[2] = b;
+        }
+
+        self.meta.take_sorted_flags();
+        self.meta.take_value_flags();
         self.validate();
         Ok(self)
     }
@@ -2701,6 +2847,75 @@ pub(crate) fn oklch_to_rgb(l: f64, c: f64, h: f64) -> [f64; 3] {
     let oklch = Oklch::new(l as f32, c as f32, OklabHue::from_radians(h as f32));
     let rgb: Srgb = oklch.into_color_unclamped();
     [rgb.red as f64, rgb.green as f64, rgb.blue as f64]
+}
+
+pub(crate) fn rgb_to_oklab(r: f64, g: f64, b: f64) -> [f64; 3] {
+    use palette::{Oklab, Srgb, convert::FromColorUnclamped};
+    let rgb = Srgb::new(r, g, b);
+    let oklab = Oklab::from_color_unclamped(rgb);
+
+    [oklab.l, oklab.a, oklab.b]
+}
+
+pub(crate) fn oklab_to_rgb(l: f64, a: f64, b: f64) -> [f64; 3] {
+    use palette::{Oklab, Srgb, convert::FromColorUnclamped};
+    let oklab = Oklab::new(l, a, b);
+    let rgb = Srgb::from_color_unclamped(oklab);
+
+    [rgb.red, rgb.green, rgb.blue]
+}
+
+pub(crate) fn rgb_to_hsl(r: f64, g: f64, b: f64) -> [f64; 3] {
+    let min_v = r.min(g).min(b);
+    let max_v = r.max(g).max(b);
+
+    let chroma = max_v - min_v;
+
+    let lightness = (max_v + min_v) * 0.5;
+
+    let hue = if chroma == 0.0 {
+        0.0
+    } else {
+        PI * (if max_v == r {
+            ((g - b) / chroma).rem_euclid(6.0)
+        } else if max_v == g {
+            (b - r) / chroma + 2.0
+        } else {
+            (r - g) / chroma + 4.0
+        } / 3.0)
+    };
+
+    [
+        hue,
+        if lightness == 0.0 || lightness == 1.0 {
+            0.0
+        } else {
+            0.5 * chroma / lightness.min(1.0 - lightness)
+        },
+        lightness,
+    ]
+}
+
+pub(crate) fn hsl_to_rgb(h: f64, s: f64, l: f64) -> [f64; 3] {
+    // algorithm based on https://en.wikipedia.org/wiki/HSL_and_HSV#HSL_to_RGB
+    let chroma = (1.0 - (2.0 * l - 1.0).abs()) * s;
+    let hue_section = h.rem_euclid(TAU) * 3.0 / PI;
+
+    let anti_chroma = chroma * (1.0 - (hue_section.rem_euclid(2.0) - 1.0).abs());
+
+    let color = match hue_section {
+        0.0..1.0 => [chroma, anti_chroma, 0.],
+        1.0..2.0 => [anti_chroma, chroma, 0.],
+        2.0..3.0 => [0., chroma, anti_chroma],
+        3.0..4.0 => [0., anti_chroma, chroma],
+        4.0..5.0 => [anti_chroma, 0., chroma],
+        5.0..6.0 => [chroma, 0., anti_chroma],
+        _ => unreachable!(),
+    };
+
+    let m = l - chroma * 0.5;
+
+    color.map(|v| v + m)
 }
 
 fn f64_repr(n: f64) -> String {
@@ -2940,13 +3155,6 @@ impl Value {
                 hour += minute / 60.0;
                 minute = 60.0 + (minute % 60.0);
             }
-            if hour >= 24.0 {
-                day += (hour / 24.0).floor();
-                hour %= 24.0;
-            } else if hour < 0.0 {
-                day += hour / 24.0;
-                hour = 24.0 + (hour % 24.0);
-            }
             let day_delta = if day >= 28.0 {
                 let delta = day - 27.0;
                 day -= delta;
@@ -2958,6 +3166,13 @@ impl Value {
             } else {
                 day.fract()
             };
+            if hour >= 24.0 {
+                day += (hour / 24.0).floor();
+                hour %= 24.0;
+            } else if hour < 0.0 {
+                day += hour / 24.0;
+                hour = 24.0 + (hour % 24.0);
+            }
             if month >= 12.0 {
                 year += (month / 12.0).floor();
                 month %= 12.0;

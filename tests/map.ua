@@ -121,6 +121,9 @@ C     ← Entry "C"
 ⍤⤙≍ 1 get1 map 1 1
 ⍤⤙≍ 0 ⍣(get5)0 map 1 1
 
+# Errors
+⍤⤙≍ "error" ⍣insert"error" @c {5 6} insert {3 4} @b insert {1 2} @a {}
+
 # Optional map arguments
 ⍤⤙≍ map 1_2_3 10_5_6 insert 1 10 map!°⊸Capacity 3 1_2_3 4_5_6
 

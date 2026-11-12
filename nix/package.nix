@@ -48,7 +48,7 @@ let
       rustPlatform.bindgenHook
       makeBinaryWrapper
     ];
-    buildInputs = [ libffi ] ++ lib.optionals stdenv.isLinux [ alsa-lib ];
+    buildInputs = [ libffi ] ++ lib.optionals stdenv.hostPlatform.isLinux [ alsa-lib ];
     # https://crane.dev/faq/rebuilds-bindgen.html
     env.NIX_OUTPATH_USED_AS_RANDOM_SEED = "uiuarustbg";
   };

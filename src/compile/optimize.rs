@@ -160,7 +160,7 @@ opt!(
     cust.normal.clone().unwrap().node
 );
 
-opt!(PopConst, [Push(_), Prim(Pop, _)], []);
+opt!(PopConst, [Push(_, _), Prim(Pop, _)], []);
 
 opt!(
     TransposeOpt,
@@ -198,14 +198,24 @@ opt!(
         [
             Prim(Dup, _),
             Prim(Type, _),
-            Push(val),
+            Push(val, push_span),
             ImplPrim(MatchPattern, span)
         ],
-        [Push(val.clone()), ImplPrim(ValidateTypeOld, *span)]
+        [
+            Push(val.clone(), *push_span),
+            ImplPrim(ValidateTypeOld, *span)
+        ]
     ),
     (
-        [Prim(Type, _), Push(val), ImplPrim(MatchPattern, span)],
-        [Push(val.clone()), ImplPrim(ValidateTypeConsume, *span)]
+        [
+            Prim(Type, _),
+            Push(val, push_span),
+            ImplPrim(MatchPattern, span)
+        ],
+        [
+            Push(val.clone(), *push_span),
+            ImplPrim(ValidateTypeConsume, *span)
+        ]
     )
 );
 
@@ -304,8 +314,11 @@ opt!(
         ImplMod(PathSignLen, args.clone(), *span)
     ),
     (
-        [Mod(Path, args, span), Push(n), Prim(Take, _)],
-        [Push(n.clone()), ImplMod(PathTake, args.clone(), *span)]
+        [Mod(Path, args, span), Push(n, push_span), Prim(Take, _)],
+        [
+            Push(n.clone(), *push_span),
+            ImplMod(PathTake, args.clone(), *span)
+        ]
     ),
     (
         [Mod(Path, args, span), Prim(Pop, _)],
@@ -320,8 +333,15 @@ opt!(
         ImplMod(AstarSignLen, args.clone(), *span)
     ),
     (
-        [ImplMod(Astar, args, span), Push(n), Prim(Take, _)],
-        [Push(n.clone()), ImplMod(AstarTake, args.clone(), *span)]
+        [
+            ImplMod(Astar, args, span),
+            Push(n, push_span),
+            Prim(Take, _)
+        ],
+        [
+            Push(n.clone(), *push_span),
+            ImplMod(AstarTake, args.clone(), *span)
+        ]
     ),
     (
         [ImplMod(Astar, args, span), Prim(Pop, _)],
@@ -381,7 +401,7 @@ impl Optimization for AllSameOpt {
         match_and_replace(nodes, |nodes| match nodes {
             [
                 Prim(Dup, span),
-                Push(val),
+                Push(val, _),
                 Prim(Rotate, _),
                 Prim(Match, _),
                 ..,
@@ -391,18 +411,18 @@ impl Optimization for AllSameOpt {
                     return None;
                 };
                 match f.node.as_slice() {
-                    [Push(val), Prim(Rotate, _)] if *val == 1 || *val == -1 => {}
+                    [Push(val, _), Prim(Rotate, _)] if *val == 1 || *val == -1 => {}
                     _ => return None,
                 }
                 Some((2, ImplPrim(AllSame, *span)))
             }
-            [ImplPrim(CountUnique, span), Push(val), Prim(Le, _), ..] if *val == 1 => {
+            [ImplPrim(CountUnique, span), Push(val, _), Prim(Le, _), ..] if *val == 1 => {
                 Some((3, ImplPrim(AllSame, *span)))
             }
-            [ImplPrim(CountUnique, span), Push(val), Prim(Eq, _), ..] if *val == 1 => {
+            [ImplPrim(CountUnique, span), Push(val, _), Prim(Eq, _), ..] if *val == 1 => {
                 Some((3, ImplPrim(OneUnique, *span)))
             }
-            [ImplPrim(CountUnique, span), Push(val), Prim(Ne, _), ..] if *val == 1 => Some((
+            [ImplPrim(CountUnique, span), Push(val, _), Prim(Ne, _), ..] if *val == 1 => Some((
                 3,
                 Node::from([ImplPrim(OneUnique, *span), Prim(Not, *span)]),
             )),
@@ -468,25 +488,27 @@ impl Optimization for SplitByOpt {
                 let (f, span) = par_f(last)?;
                 Some((3, ImplMod(SplitBy, eco_vec![f], span)))
             }
-            [Prim(Dup, _), Push(delim), Prim(Ne, _), last, ..] => {
+            [Prim(Dup, _), Push(delim, push_span), Prim(Ne, _), last, ..] => {
                 let (f, span) = par_f(last)?;
                 let new = Node::from_iter([
-                    Push(delim.clone()),
+                    Push(delim.clone(), *push_span),
                     ImplMod(SplitByScalar, eco_vec![f], span),
                 ]);
                 Some((4, new))
             }
             [
                 Prim(Dup, _),
-                Push(delim),
+                Push(delim, push_span),
                 Prim(Mask, _),
                 Prim(Not, _),
                 last,
                 ..,
             ] => {
                 let (f, span) = par_f(last)?;
-                let new =
-                    Node::from_iter([Push(delim.clone()), ImplMod(SplitBy, eco_vec![f], span)]);
+                let new = Node::from_iter([
+                    Push(delim.clone(), *push_span),
+                    ImplMod(SplitBy, eco_vec![f], span),
+                ]);
                 Some((5, new))
             }
             _ => None,
@@ -615,7 +637,7 @@ impl OptPattern for ImplPrimitive {
 impl OptPattern for i32 {
     fn match_nodes(&self, nodes: &[Node]) -> Option<(usize, Option<usize>)> {
         match nodes {
-            [Node::Push(n), ..] if n == self => Some((1, None)),
+            [Node::Push(n, _), ..] if n == self => Some((1, None)),
             _ => None,
         }
     }
@@ -623,7 +645,7 @@ impl OptPattern for i32 {
 impl OptPattern for crate::Complex {
     fn match_nodes(&self, nodes: &[Node]) -> Option<(usize, Option<usize>)> {
         match nodes {
-            [Node::Push(n), ..] if n == self => Some((1, None)),
+            [Node::Push(n, _), ..] if n == self => Some((1, None)),
             _ => None,
         }
     }
@@ -656,8 +678,8 @@ impl OptReplace for ImplPrimitive {
     }
 }
 impl OptReplace for i32 {
-    fn replacement_node(&self, _: usize) -> Node {
-        Node::new_push(*self)
+    fn replacement_node(&self, span: usize) -> Node {
+        Node::new_push(*self, span)
     }
 }
 

@@ -10,9 +10,10 @@ use std::{
 };
 
 use ecow::EcoString;
+use smallvec::SmallVec;
 
 use crate::{
-    ArrayMeta, Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
+    ArrayCmp, ArrayMeta, Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
     algorithm::map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
     boxed::Boxed,
@@ -31,6 +32,7 @@ pub struct GridFmtParams {
     pub(crate) max_boxed_rank: usize,
     pub(crate) max_boxed_len: usize,
     pub(crate) soa_row: bool,
+    pub(crate) multiline: bool,
 }
 
 pub trait GridFmt: Sized {
@@ -83,6 +85,10 @@ pub trait GridFmt: Sized {
     fn summary_min_elems() -> usize {
         3600
     }
+    /// The maximum number of distinct elements that can be summarized using the multiset format
+    fn summary_multiset_max_distinct() -> usize {
+        5
+    }
     /// How to align elements when formatting
     fn alignment() -> ElemAlign {
         ElemAlign::Left
@@ -104,6 +110,9 @@ impl GridFmt for u8 {
     fn summarize(elems: &[Self]) -> String {
         if elems.is_empty() {
             return String::new();
+        }
+        if let Some(s) = multiset_summary(elems) {
+            return s;
         }
         let mut min = u8::MAX;
         let mut max = 0;
@@ -202,7 +211,7 @@ impl GridFmt for f64 {
             .into_iter()
             .find(|(sqrt, ..)| (sqrt - positive).abs() <= f64::EPSILON)
         {
-            format!("√{sqr}")
+            format!("{minus}√{sqr}")
         } else {
             let mut pos_formatted = positive.to_string();
             if pos_formatted.len() >= 17 {
@@ -247,6 +256,9 @@ impl GridFmt for f64 {
     fn summarize(elems: &[Self]) -> String {
         if elems.is_empty() {
             return String::new();
+        }
+        if let Some(s) = multiset_summary(elems) {
+            return s;
         }
         if elems.iter().all(|&n| n.is_nan()) {
             return "all NaN".into();
@@ -357,6 +369,9 @@ impl GridFmt for Complex {
     fn summarize(elems: &[Self]) -> String {
         if elems.is_empty() {
             return String::new();
+        }
+        if let Some(s) = multiset_summary(elems) {
+            return s;
         }
         let (mut re_min, mut im_min) = (f64::INFINITY, f64::INFINITY);
         let (mut re_max, mut im_max) = (f64::NEG_INFINITY, f64::NEG_INFINITY);
@@ -560,12 +575,23 @@ impl GridFmt for Value {
             Value::Char(c) => c.fmt_grid(params),
             #[cfg(feature = "ga")]
             Value::Mv(m) => m.fmt_grid(params),
-            Value::Box(v) => {
-                let max_boxed_rank = v.data.iter().map(|Boxed(v)| v.rank()).max().unwrap_or(0);
-                v.fmt_grid(GridFmtParams {
+            Value::Box(arr) => {
+                fn val_is_multiline(val: &Value) -> bool {
+                    if val.rank() > 1 {
+                        return true;
+                    }
+                    match val {
+                        Value::Box(arr) => (arr.data.iter())
+                            .any(|Boxed(v)| v.meta.label.is_some() || val_is_multiline(v)),
+                        _ => false,
+                    }
+                }
+                let max_boxed_rank = arr.data.iter().map(|Boxed(v)| v.rank()).max().unwrap_or(0);
+                arr.fmt_grid(GridFmtParams {
                     depth: params.depth + 1,
                     max_boxed_rank,
-                    max_boxed_len: (v.data.iter())
+                    multiline: val_is_multiline(self),
+                    max_boxed_len: (arr.data.iter())
                         .filter(|Boxed(v)| v.rank() == max_boxed_rank)
                         .map(|Boxed(v)| v.row_count())
                         .max()
@@ -631,6 +657,9 @@ impl GridFmt for char {
     fn summarize(elems: &[Self]) -> String {
         if elems.is_empty() {
             return String::new();
+        }
+        if let Some(s) = multiset_summary(elems) {
+            return s;
         }
         let mut parts = Vec::new();
         let lowercase = elems.iter().any(|c| c.is_lowercase());
@@ -706,9 +735,9 @@ impl GridFmt for Boxed {
         //     params.parent_rank,
         //     matches!(self.0, Value::Box(_))
         // );
-        if params.parent_rank == 0
-            || self.0.shape.is_empty()
-                && !(params.parent_rank == 1 && matches!(self.0, Value::Box(_) | Value::Char(_)))
+        if (params.soa_row || params.multiline || params.parent_rank == 0)
+            && (params.parent_rank == 0
+                || self.0.shape.is_empty() && !(matches!(self.0, Value::Box(_) | Value::Char(_))))
         {
             let symbol = if params.parent_rank == 0 {
                 Primitive::Box.glyph().unwrap()
@@ -805,6 +834,9 @@ impl GridFmt for Boxed {
         }
         Some(rows)
     }
+    fn grid_fmt_delims() -> (char, char) {
+        ('{', '}')
+    }
 }
 
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
@@ -866,19 +898,11 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 if metagrid.is_empty() {
                     let mut keys_row_shape = keys.keys.shape.clone();
                     keys_row_shape.make_row();
-                    let mut row = match &keys.keys {
-                        Value::Num(_) => shape_row::<f64>(&keys_row_shape),
-                        Value::Byte(_) => shape_row::<u8>(&keys_row_shape),
-                        Value::Complex(_) => shape_row::<Complex>(&keys_row_shape),
-                        Value::Char(_) => shape_row::<char>(&keys_row_shape),
-                        Value::Box(_) => shape_row::<Boxed>(&keys_row_shape),
-                        #[cfg(feature = "ga")]
-                        Value::Mv(_) => shape_row::<crate::Multivector>(&keys_row_shape),
-                    };
+                    let mut row = shape_row(&keys_row_shape, keys.keys.domain_symbol());
                     row.extend([' ', '→', ' ']);
                     let mut value_row_shape = self.shape.clone();
                     value_row_shape.make_row();
-                    row.extend(shape_row::<T>(&value_row_shape));
+                    row.extend(shape_row(&value_row_shape, self.domain_symbol()));
                     metagrid.push(vec![vec![row]]);
                 }
             }
@@ -1036,12 +1060,18 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                             && (j + 1 < metagrid_width
                                 || self.shape[self.rank() - 1 - horiz * 2] == 1)
                         {
-                            for mut line in Line::set(horiz) {
-                                if j + 1 == metagrid_width {
-                                    line = line.singleton();
+                            if !is_soa && self.rank() == 1 && row_height == 1 && !params.multiline {
+                                if self.row_count() > 1 {
+                                    subrow.push(' ');
                                 }
-                                div_pos.insert(subrow.len(), *line);
-                                subrow.push(line.vert());
+                            } else {
+                                for mut line in Line::set(horiz) {
+                                    if j + 1 == metagrid_width {
+                                        line = line.singleton();
+                                    }
+                                    div_pos.insert(subrow.len(), *line);
+                                    subrow.push(line.vert());
+                                }
                             }
                         }
                     }
@@ -1080,12 +1110,13 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 // Don't surround maplings
             } else if !params.soa_row
                 && (params.parent_rank == 0
+                    || self.rank() <= 1 && params.parent_rank == 1 && !params.multiline
                     || T::box_lines() && self.rank() <= 1 && params.parent_rank <= 1
                     || !T::box_lines() && self.rank() < params.max_boxed_rank)
                 || T::compress_list_grid() && self.rank() <= 1
             {
                 // Normal surrounding
-                if grid_row_count == 1 && self.rank() == 1 {
+                if grid_row_count == 1 && self.rank() == 1 && !params.multiline {
                     outlined = true;
                     // Add brackets to lists
                     let (left, right) = if requires_summary || self.is_map() {
@@ -1286,29 +1317,27 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 impl<T: ArrayValue> Array<T> {
     /// Get a string representation of the shape of the array
     pub fn shape_string(&self) -> String {
-        let base: String = shape_row::<T>(&self.shape).into_iter().collect();
-        if let Some(keys) = &self.meta.map_keys {
-            let mut keys_shape = keys.keys.shape.clone();
-            if let Some(len) = keys_shape.first_mut() {
-                *len = self.row_count();
-            }
-            let mut s: String = match keys.keys {
-                Value::Num(_) => shape_row::<f64>(&keys_shape),
-                Value::Byte(_) => shape_row::<u8>(&keys_shape),
-                Value::Complex(_) => shape_row::<Complex>(&keys_shape),
-                Value::Char(_) => shape_row::<char>(&keys_shape),
-                Value::Box(_) => shape_row::<Boxed>(&keys_shape),
-                #[cfg(feature = "ga")]
-                Value::Mv(_) => shape_row::<crate::Multivector>(&keys_shape),
-            }
-            .into_iter()
-            .collect();
-            s.push_str(" → ");
-            s.push_str(&base);
-            s
-        } else {
-            base
+        let base = shape_row(&self.shape, self.domain_symbol());
+
+        let Some(keys) = &self.meta.map_keys else {
+            return String::from_iter(base);
+        };
+
+        let mut keys_shape = keys.keys.shape.clone();
+        if let Some(len) = keys_shape.first_mut() {
+            *len = self.row_count();
         }
+
+        shape_row(&keys_shape, keys.keys.domain_symbol())
+            .into_iter()
+            .chain([' ', '→', ' '])
+            .chain(base)
+            .collect()
+    }
+
+    /// Get a glyph indicating the domain of the array's elements
+    pub fn domain_symbol(&self) -> char {
+        T::domain_symbol(&self.data)
     }
 }
 
@@ -1317,9 +1346,14 @@ impl Value {
     pub fn shape_string(&self) -> String {
         val_as_arr!(self, Array::shape_string)
     }
+
+    /// Get a glyph indicating the domain of the value's array elements
+    pub fn domain_symbol(&self) -> char {
+        val_as_arr!(self, Array::domain_symbol)
+    }
 }
 
-fn shape_row<T: ArrayValue>(shape: &[usize]) -> Vec<char> {
+fn shape_row(shape: &[usize], symbol: char) -> Vec<char> {
     let mut shape_row = Vec::new();
     const MAX_RENDERED_RANK: usize = 40;
     if shape.len() <= MAX_RENDERED_RANK {
@@ -1343,7 +1377,7 @@ fn shape_row<T: ArrayValue>(shape: &[usize]) -> Vec<char> {
     if !shape.is_empty() {
         shape_row.push(' ');
     }
-    shape_row.push(T::SYMBOL);
+    shape_row.push(symbol);
     shape_row
 }
 
@@ -1373,20 +1407,21 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     metagrid: &mut Metagrid,
 ) {
     if data.is_empty() {
-        metagrid.push(vec![vec![shape_row::<T>(shape)]]);
+        metagrid.push(vec![vec![shape_row(shape, T::SYMBOL)]]);
         return;
     }
     if requires_summary::<T>(shape) {
         let summary = T::summarize(data);
         if !summary.is_empty() {
-            metagrid.push(vec![if shape.len() == 1 {
-                let mut chars = shape_row::<T>(shape);
-                chars.extend(": ".chars());
-                chars.extend(summary.chars());
-                vec![chars]
+            let mut first_row = shape_row(shape, T::domain_symbol(data));
+            let grid: Grid = if shape.len() == 1 {
+                first_row.extend(": ".chars());
+                first_row.extend(summary.chars());
+                vec![first_row]
             } else {
-                vec![shape_row::<T>(shape), summary.chars().collect()]
-            }]);
+                vec![first_row, summary.chars().collect()]
+            };
+            metagrid.push(vec![grid]);
             return;
         }
     }
@@ -1653,4 +1688,41 @@ fn round_sig_dec(f: f64, n: i32) -> f64 {
     }
     let mul = 10f64.powf(n as f64 - f.fract().abs().log10().ceil());
     (f * mul).round() / mul
+}
+
+fn multiset_summary<T: ArrayCmp + GridFmt + Clone>(elems: &[T]) -> Option<String> {
+    if elems.is_empty() {
+        return None;
+    }
+
+    // Typically, one would use a BTreeMap here.
+    // However, this function bails at a size limit that is expected to be very small.
+    // So small, in fact, that a BTreeMap would only have one node anyway. (B = 6 -> node capacity = 11)
+    // In addition, the usage of non-Ord keys (f64, Complex) would require a newtype.
+    // This is plenty doable, but gets more annoying in a generic context.
+    let max_distinct = T::summary_multiset_max_distinct();
+    let mut pairs = SmallVec::<[(T, usize); 8]>::with_capacity(max_distinct);
+    for elem in elems.iter().cloned() {
+        match pairs.binary_search_by(|p| T::array_cmp(&p.0, &elem)) {
+            Ok(i) => pairs[i].1 += 1,
+            Err(_) if pairs.len() >= max_distinct => return None,
+            Err(i) => pairs.insert(i, (elem, 1)),
+        }
+    }
+
+    if let [(val, _)] = &pairs[..] {
+        return Some(format!("all {}", val.grid_string(false)));
+    }
+
+    let mut s = String::from("◴");
+    for (val, _) in &pairs {
+        s += " ";
+        s += &val.grid_string(false);
+    }
+    s += " ⧆";
+    for (_, count) in &pairs {
+        s += " ";
+        s += &count.to_string();
+    }
+    Some(s)
 }

@@ -14,7 +14,7 @@ use js_sys::{Array, Object, Uint8Array};
 use serde::*;
 use serde_bytes::ByteBuf;
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
-use wasm_bindgen_futures::{JsFuture, spawn_local};
+use wasm_bindgen_futures::spawn_local;
 use web_sys::{DedicatedWorkerGlobalScope, MessageEvent};
 
 use crate::{
@@ -247,18 +247,6 @@ impl Response {
     }
 }
 
-async fn wait() {
-    let promise = js_sys::Promise::new(&mut |resolve, reject| {
-        if let Err(error) = js_sys::global()
-            .unchecked_into::<DedicatedWorkerGlobalScope>()
-            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, 10)
-        {
-            _ = reject.call1(&JsValue::NULL, &error);
-        }
-    });
-    _ = JsFuture::from(promise).await;
-}
-
 impl RunRequest {
     async fn execute(mut self) -> Result<RunResult, String> {
         state_mut(take);
@@ -284,12 +272,6 @@ impl RunRequest {
                 Response::Input(prompt).send()?;
                 let answer = (reply.await).map_err(|_| "Input request canceled".to_string())?;
                 state_mut(|state| state.inputs.push(answer));
-                continue;
-            }
-            if backend::pending_fetches() > 0 {
-                while backend::pending_fetches() > 0 {
-                    wait().await;
-                }
                 continue;
             }
             let mut before: HashMap<_, _> = self.files.drain(..).collect();

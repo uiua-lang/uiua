@@ -30,7 +30,7 @@ pub(crate) fn run(
                 challenge,
                 seed,
                 settings: Settings {
-                    execution_limit: utils::get_execution_limit(),
+                    execution_limit: utils::get_limit_exec_time().then(utils::get_execution_limit),
                     ast_time: utils::get_ast_time(),
                     top_at_top: utils::get_top_at_top(),
                     animation_format: utils::get_animation_format(),

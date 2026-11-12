@@ -1104,7 +1104,7 @@ pub fn gen_code_view(code: &str, hidden: &str) -> AnyView {
 
 fn init_rt(settings: &worker::Settings) -> Uiua {
     Uiua::with_backend(WebBackend::new().with_ast_time(settings.ast_time))
-        .with_execution_limit(Duration::from_secs_f64(settings.execution_limit))
+        .maybe_with_execution_limit(settings.execution_limit.map(Duration::from_secs_f64))
         .with_recursion_limit(50)
 }
 
@@ -1612,6 +1612,13 @@ where
         .unwrap()
         .set_item(name, &value.to_string())
         .unwrap();
+}
+
+pub fn get_limit_exec_time() -> bool {
+    get_local_var("limit-exec-time", || false)
+}
+pub fn set_limit_exec_time(limit: bool) {
+    set_local_var("limit-exec-time", limit);
 }
 
 pub fn get_execution_limit() -> f64 {

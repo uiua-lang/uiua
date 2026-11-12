@@ -395,17 +395,9 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <Hd id="multimedia-output">"Multimedia Output"</Hd>
                     <p>{lang}" has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples. You can even make GIFs!"</p>
-                    {
-                        if cfg!(debug_assertions) {
-                            None
-                        } else {
-                            Some(view!{
-                                <Editor example="⍉⊞<⊞+⇡3∿∩(÷25)⇡240⇡80"/>
-                                <Editor example="÷3/+∿⊞×⊟⊸×1.5 220×τ÷⟜⇡&asr"/>
-                                <Editor example="Xy ← °⍉˙⊞⊟÷⟜⇡\nF  ← ⍉◿1⊂⊃(+/÷|÷3+1∿×τ+)Xy\n≡F100 ÷⟜⇡10"/>
-                            })
-                        }
-                    }
+                    <Editor example="⍉⊞<⊞+⇡3∿∩(÷25)⇡240⇡80"/>
+                    <Editor example="÷3/+∿⊞×⊟⊸×1.5 220×τ÷⟜⇡&asr"/>
+                    <Editor example="Xy ← °⍉˙⊞⊟÷⟜⇡\nF  ← ⍉◿1⊂⊃(+/÷|÷3+1∿×τ+)Xy\n≡F100 ÷⟜⇡10"/>
                     <p>"The "{lang}" logo was made with "{lang}"! Check example 5 at the top of the page."</p>
                 </div>
                 <div>

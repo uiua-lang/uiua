@@ -8,7 +8,7 @@ keywords = ["uiua", "array", "tacit", "language", "apl"]
 license = "MIT"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
-rust-version = "1.92.0"
+rust-version = "1.93.0"
 version = "0.20.0-dev.1"
 
 [dependencies.uiua_parser]

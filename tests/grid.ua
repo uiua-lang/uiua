@@ -61,90 +61,78 @@ Unique!(
 )
 
 Lines    ← ⌅(⬚@\s⊜∘ ⊸≠@\n|◌ ⬚@\n°⊜□)
-Diff     ← °Lines ⍚$"_:\n_" {"Input" "Expected" "Got"} ↻2□₃ ∩°Lines ∩≡$"\"_\"" ⊙⊙repr
-Snapshot ← ⊃Diff≍ ⊸⊓Lines pretty
+Diff     ← °Lines ⍚$"_:\n_" {"Input" "Expected" "Got"} □₃ ⊓repr∩(°Lines ≡$"\"_\"")
+Snapshot ← ⊃Diff⋅≍ ⟜⊓prettyLines
 
 # SoA
 
-{$a {$b 5 6}}
 $ ┌─        
 $      a │  
 $   ─────┤  
 $   □b: 5│  
 $      □6│  
 $          ┘
-⍤Snapshot
+⍤Snapshot {$a {$b 5 6}}
 
 # Boxed fixed arrays
-{¤"1"}
 $ ┌─       
 $   ¤"1"│  
 $         ┘
-⍤Snapshot
-{¤"23"}
+⍤Snapshot {¤"1"}
 $ ┌─        
 $   ¤"23"│  
 $          ┘
-⍤Snapshot
-{¤¤"23"}
+⍤Snapshot {¤"23"}
 $ ┌─         
 $   ¤¤"23"│  
 $           ┘
-⍤Snapshot
-{¤"23" 1}
+⍤Snapshot {¤¤"23"}
 $ ┌─          
 $   ¤"23"│∙1  
 $            ┘
-⍤Snapshot
+⍤Snapshot {¤"23" 1}
 
 # Labels
-{$a 5 $b 6}
 $ ┌─       
 $    a│ b  
 $   ∙5│∙6  
 $         ┘
-⍤Snapshot
+⍤Snapshot {$a 5 $b 6}
 
-{$a 5 $b @x}
 $ ┌─       
 $    a│b   
 $   ∙5│@x  
 $         ┘
-⍤Snapshot
+⍤Snapshot {$a 5 $b @x}
 
-{$x⇡5 $y5}
 $ ┌─              
 $   x        │ y  
 $   0 1 2 3 4│∙5  
 $                ┘
-⍤Snapshot
+⍤Snapshot {$x⇡5 $y5}
 
-⍉¤{1 2_3}
 $ ┌─      
 $ ╷ ∙1 │  
 $   ───┤  
 $   2 3│  
 $        ┘
-⍤Snapshot
+⍤Snapshot ⍉¤{1 2_3}
 
-⍉¤{¤1 2_3}
 $ ┌─      
 $ ╷ 1  │  
 $   ───┤  
 $   2 3│  
 $        ┘
-⍤Snapshot
+⍤Snapshot ⍉¤{¤1 2_3}
 
-map [10000.125 10.25 100.5] [1 10 100]
 $ ╭─
 $   10000.125 →   1
 $      10.25  →  10
 $     100.5   → 100
 $                   ╯
-⍤Snapshot
+⍤Snapshot map [10000.125 10.25 100.5] [1 10 100]
 
 # Basic nontrivial SoA
-□₂ ⊓$foo$bar ⊸≡⌞+"Aa" ⇡5
 $ ┌─
 $   foo │bar
 $   ────┼───
@@ -154,11 +142,10 @@ $   "Cc"│2
 $   "Dd"│3
 $   "Ee"│4
 $            ┘
-⍤Snapshot
+⍤Snapshot □₂ ⊓$foo$bar ⊸≡⌞+"Aa" ⇡5
 
 # "Compressed" string layout rules out SoA formatting for rank-1 text arrays
 # The current state of this test documents a known bug.
-□₂ ⊓$foo$bar ⊸≡⌞+@A ⇡3
 $ ┌─
 $   ╭─ foo │bar
 $     ABC  │0 1 2
@@ -168,10 +155,9 @@ $                 ┘
 # $   foo  │bar
 # $   "ABC"│0 1 2
 # $               ┘
-⍤Snapshot
+⍤Snapshot □₂ ⊓$foo$bar ⊸≡⌞+@A ⇡3
 
 # Canonical example of the above bug
-≡¤{"a" "bc" "d"}
 $ ┌─         
 $ ╷ ╭─    │  
 $     a   │  
@@ -192,11 +178,10 @@ $           ┘
 # $   ────┤
 # $   "d" │
 # $         ┘
-⍤Snapshot
+⍤Snapshot ≡¤{"a" "bc" "d"}
 
 # Mismatching lengths rule out SoA formatting,
 # but foo being multiline forces bar to follow suit
-□₂ ⊓$foo$bar ≡⌞+"Aa" ⊸↙5 ⇡6
 $ ┌─
 $   foo │╭─ bar
 $   "Aa"│  0 1 2 3 4 5
@@ -205,10 +190,9 @@ $   "Cc"│
 $   "Dd"│
 $   "Ee"│
 $                        ┘
-⍤Snapshot
+⍤Snapshot □₂ ⊓$foo$bar ≡⌞+"Aa" ⊸↙5 ⇡6
 
 # Hashmap rules out SoA formatting
-□₂ ˙map ⊓$foo$bar ⊸+@a ⇡4
 $ ┌─
 $   ╭─ foo     │bar
 $     @a → @a  │0 1 2 3
@@ -217,10 +201,9 @@ $     @c → @c  │
 $     @d → @d  │
 $             ╯│
 $                       ┘
-⍤Snapshot
+⍤Snapshot □₂ ˙map ⊓$foo$bar ⊸+@a ⇡4
 
 # High-rank non-box array
-°△ ↯6 2
 $ ╭─
 $ ╷  0  1   4  5   16 17  20 21
 $ ╷  2  3   6  7   18 19  22 23
@@ -235,10 +218,9 @@ $
 $   40 41  44 45   56 57  60 61
 $   42 43  46 47   58 59  62 63
 $                               ╯
-⍤Snapshot
+⍤Snapshot °△ ↯6 2
 
 # High-rank box array
-≡₀(□⇌⊥10) °△ ↯6 2
 $ ┌─                                  
 $ ╷ [] │1  ║4  │5  ││1 6│1 7║2 0│2 1  
 $ ╷ ───┼───╫───┼───┤├───┼───╫───┼───  
@@ -257,10 +239,9 @@ $   4 0│4 1║4 4│4 5││5 6│5 7║6 0│6 1
 $   ───┼───╫───┼───┤├───┼───╫───┼───  
 $   4 2│4 3║4 6│4 7││5 8│5 9║6 2│6 3  
 $                                    ┘
-⍤Snapshot
+⍤Snapshot ≡₀(□⇌⊥10) °△ ↯6 2
 
 # 2D box array with labels
-⍜⧋⊡₁⍚$b ⍜⊡₂⍚$a ≡₀□ °△ 4_4
 $ ┌─
 $ ╷ ∙0 │ b │∙2 │∙3
 $      │∙1 │   │
@@ -274,7 +255,7 @@ $   ───┼───┼───┼───
 $   ∙12│ b │∙14│∙15
 $      │∙13│   │
 $                   ┘
-⍤Snapshot
+⍤Snapshot ⍜⧋⊡₁⍚$b ⍜⊡₂⍚$a ≡₀□ °△ 4_4
 
 Roundtrip!     ← ⍤⟜≍⊃(|0 pretty^0||0 ¤(repr°□₁)^!^0)
 RoundtripRepr! ← ⍤⟜≍⊃(|0 repr^0||0 (repr°□₁)^!^0)
@@ -288,15 +269,14 @@ RoundtripRepr!@\_
 RoundtripRepr!@\u{100001}
 RoundtripRepr!@\u{100002}
 
-⍤Snapshot "@ " @\s
-⍤Snapshot "@\\∅" @\u{2ffff}
-⍤Snapshot "@\\⊥" @\u{2fffe}
+⍤Snapshot @\s "@ "
+⍤Snapshot @\u{2ffff} $ @\∅
+⍤Snapshot @\u{2fffe} $ @\⊥
 
-¤ $label [1]
 $ ╭─ label
 $ ╷ 1
 $     ╯
-⍤Snapshot
+⍤Snapshot ¤ $label [1]
 
 # Experimental!
-⍤Snapshot "∅" ⍜(bytes"f64")⍜⊢+₁NaN
+⍤Snapshot ⍜(bytes"f64")⍜⊢+₁NaN "∅"

@@ -14,6 +14,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`"f16"`](https://en.wikipedia.org/wiki/Half-precision_floating-point_format) format to [`bytes`](https://www.uiua.org/docs/bytes)
 - Add [`hsl`](https://uiua.org/docs/hsl) and [`oklab`](https://uiua.org/docs/oklab)
 ### Interpreter
+- Add `uiua new` command for creating a new Uiua project
+  - `--lib` option to make a `lib.ua` instead of a `main.ua`
+  - `--git` option to initialize a Git repo and `.gitignore`
+  - These options have also been added to `uiua init`
 - The pretty printer now shows simple box lists using `{}`s and spaces instead of box drawing characters.
   - This make reading simple box arrays much easier
 - Add aliases

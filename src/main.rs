@@ -140,14 +140,44 @@ fn main() {
 
     // Main command parsing
     let app = App::parse();
-    match app.command {
-        Some(Comm::Init) => {
-            if let Ok(path) = working_file_path() {
-                eprintln!("File already exists: {}", path.display());
-            } else {
-                fs::write("main.ua", "\"Hello, World!\"").unwrap();
+
+    let new_file_name = |lib: bool| if lib { "lib.ua" } else { "main.ua" };
+    let new_contents = |lib: bool| if lib { "" } else { r#"&p "Hello, World!"# };
+    const GITIGNORE: &str = "uiua-modules";
+    let init = |lib: bool, git: bool| {
+        fs::write(new_file_name(lib), new_contents(lib)).unwrap_or_else(fail);
+        if git {
+            if !Path::new(".gitignore").exists() {
+                fs::write(".gitignore", GITIGNORE).unwrap_or_else(fail);
             }
+            _ = Command::new("git").arg("init").output();
         }
+    };
+
+    match app.command {
+        Some(Comm::New { name, lib, git }) => {
+            let path = Path::new(&name);
+            if path.exists() {
+                eprintln!(
+                    "{} {} already exists",
+                    if path.is_dir() { "Folder" } else { "File" },
+                    path.display()
+                );
+                exit(1);
+            }
+            fs::create_dir_all(path).unwrap_or_else(fail);
+            env::set_current_dir(path).unwrap_or_else(fail);
+            init(lib, git);
+            eprintln!("Uiua project created");
+        }
+        Some(Comm::Init { lib, git }) => match working_file_path() {
+            Err(NoWorkingFile::NoFile) => {
+                init(lib, git);
+                eprintln!("Uiua project initialized");
+            }
+            Ok(path) => fail(format!("A {} file already exists", path.display())),
+            Err(e) => fail(e),
+        },
         Some(Comm::Fmt {
             path,
             formatter_options,
@@ -554,7 +584,7 @@ impl fmt::Display for NoWorkingFile {
                 current directory with `uiua init`"
             }
             NoWorkingFile::MultipleFiles(_) => {
-                "No main.ua file found nearby, and multiple other \
+                "No main.ua or lib.ua file found nearby, and multiple other \
                 .ua files found. Please specify which file to run \
                 with `uiua run <PATH>`"
             }
@@ -564,28 +594,26 @@ impl fmt::Display for NoWorkingFile {
 }
 
 fn working_file_path() -> Result<PathBuf, NoWorkingFile> {
-    let main_in_src = PathBuf::from("src/main.ua");
-    let main = if main_in_src.exists() {
-        main_in_src
-    } else {
-        PathBuf::from("main.ua")
-    };
-    if main.exists() {
-        Ok(main)
-    } else {
-        let paths: Vec<_> = fs::read_dir(".")
-            .into_iter()
-            .chain(fs::read_dir("src"))
-            .flatten()
-            .filter_map(Result::ok)
-            .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "ua"))
-            .map(|entry| entry.path())
-            .collect();
-        match paths.len() {
-            0 => Err(NoWorkingFile::NoFile),
-            1 => Ok(paths.into_iter().next().unwrap()),
-            _ => Err(NoWorkingFile::MultipleFiles(paths)),
+    for parent in ["", "src/"] {
+        for name in ["main.ua", "lib.ua"] {
+            let path = PathBuf::from(format!("{parent}{name}"));
+            if path.exists() {
+                return Ok(path);
+            }
         }
+    }
+    let paths: Vec<_> = fs::read_dir(".")
+        .into_iter()
+        .chain(fs::read_dir("src"))
+        .flatten()
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "ua"))
+        .map(|entry| entry.path())
+        .collect();
+    match paths.len() {
+        0 => Err(NoWorkingFile::NoFile),
+        1 => Ok(paths.into_iter().next().unwrap()),
+        _ => Err(NoWorkingFile::MultipleFiles(paths)),
     }
 }
 
@@ -794,8 +822,21 @@ struct App {
 
 #[derive(Subcommand)]
 enum Comm {
-    #[clap(about = "Initialize a new main.ua file")]
-    Init,
+    #[clap(about = "Create a new uiua project")]
+    New {
+        name: PathBuf,
+        #[clap(long, help = "Make a lib.ua instead of a main.ua")]
+        lib: bool,
+        #[clap(long, help = "Initialize a git repo and .gitignore")]
+        git: bool,
+    },
+    #[clap(about = "Initialize a new uiua project in the current directory")]
+    Init {
+        #[clap(long, help = "Make a lib.ua instead of a main.ua")]
+        lib: bool,
+        #[clap(long, help = "Initialize a git repo and .gitignore")]
+        git: bool,
+    },
     #[clap(about = "Format and run a file (- for stdin)")]
     Run {
         path: Option<PathBuf>,

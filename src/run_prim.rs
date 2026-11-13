@@ -2132,6 +2132,7 @@ fn dump(ops: Ops, env: &mut Uiua, inverse: bool) -> UiuaResult {
         format!("{} {}", Primitive::Dump, env.span())
     };
     let unprocessed = env.stack().to_vec();
+    let bottom = env.stack_height();
     let mut items = Vec::new();
     for item in unprocessed {
         env.push(item);
@@ -2140,6 +2141,7 @@ fn dump(ops: Ops, env: &mut Uiua, inverse: bool) -> UiuaResult {
             Err(e) => items.push(e.value()),
         }
     }
+    env.rt.stack.drain(bottom..);
     let max_line_len = span.chars().count() + 2;
     let boundaries = stack_boundaries(env);
     let item_lines: Vec<Vec<String>> = items

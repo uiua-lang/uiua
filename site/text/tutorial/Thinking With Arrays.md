@@ -127,7 +127,7 @@ Here is another example using [partition]()[box]() with the inputs explicitly de
 ⊜□
 ```
 
-Notice that `0`s in the keys arrays cause the corresponding sections of the input array to be skipped, so `3` and `7` are omitted form the output.
+Notice that `0`s in the keys arrays cause the corresponding sections of the input array to be skipped, so `3` and `7` are omitted from the output.
 
 We use [box]() here because the resulting sections have different lengths. If we expect the sections to have the same lengths, we can use [identity]() instead.
 

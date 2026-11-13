@@ -115,7 +115,9 @@ The formatter will align consecutive end-of-line comments. Try it out!
 
 ## Output Comments
 
-A comment that starts with additional `#`s is an *output comment*. The formatter replaces the text of an output comment with as many values as there are extra `#`s. These are the values that can be used by the next function that is called.
+If you write a comment that starts with additional `#`s, the formatter replaces the text of the comment with as many values as there are extra `#`s. These are the values that can be used by the next function that is called.
+
+The formatter also replaces the extra `#`s with a subscript number showing how many values are being listed.
 
 Click Run to try it out!
 
@@ -131,8 +133,8 @@ Click Run to try it out!
 Output comments on the same line as other code show the values output after that line is run. This is useful for debugging.
 
 ```uiua
-+1 2 ##
-×3 4 ##
++1 2 #₁
+×3 4 #₁
 ```
 
 ## Manipulating Data with Modifiers

@@ -28,7 +28,7 @@ pub const SIDED_SUBSCRIPTS: [char; 2] = ['⌞', '⌟'];
 pub const PRIME_CHARS: [char; 3] = ['′', '″', '‴'];
 pub const OTHER_SUBSCRIPT_NUMBERS: [char; 2] = ['ᵣ', 'ᵢ'];
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub(crate) struct FormatSubscript(pub i32);
+pub struct FormatSubscript(pub i32);
 impl fmt::Display for FormatSubscript {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let &FormatSubscript(n) = self;
@@ -1268,7 +1268,7 @@ impl<'a> Lexer<'a> {
                     self.end(TypeSigComment, start);
                 }
                 "#" => {
-                    let mut n = 0;
+                    let mut n = self.sub_nat().unwrap_or(0);
                     while self.next_char_exact("#") {
                         n += 1;
                     }
@@ -1311,7 +1311,9 @@ impl<'a> Lexer<'a> {
                                 .next_char_if(|c| c.chars().all(char::is_whitespace))
                                 .is_some()
                             {}
-                            if !self.next_chars_exact(["#", "#"]) {
+                            if !self.next_chars_exact(["#", "#"])
+                                && !(self.next_char_exact("#") && self.sub_nat().is_some())
+                            {
                                 self.loc = restore;
                                 self.end(OutputComment(n), start);
                                 continue 'main;
@@ -1735,7 +1737,7 @@ impl<'a> Lexer<'a> {
             "⌟" => side = Some(SubSide::Right),
             "₋" => got_neg = true,
             "__" | "," => can_parse_ascii = true,
-            c if c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)) => {
+            c if !c.is_empty() && c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)) => {
                 let n = (SUBSCRIPT_DIGITS.iter())
                     .position(|&d| d == c.chars().next().unwrap())
                     .map(|i| i as i32)
@@ -1806,6 +1808,18 @@ impl<'a> Lexer<'a> {
                 side,
                 n: side_num.flatten().map(|n| n.as_int().unwrap_or(0) as usize),
             }),
+        }
+    }
+    fn sub_nat(&mut self) -> Option<usize> {
+        let reset = self.loc;
+        let sub = self.subscript("");
+        if sub.side.is_none()
+            && let Some(n) = sub.n().flatten().and_then(|n| n.as_nat())
+        {
+            Some(n)
+        } else {
+            self.loc = reset;
+            None
         }
     }
     fn blade_subscript(&mut self) -> bool {

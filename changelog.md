@@ -12,7 +12,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`fill ⬚`](https://uiua.org/docs/fill) support to [`&var`](https://www.uiua.org/docs/%26var)
 - Add native matrix division (spelt `⌝(⊞(/+×)⊙⍉)`) as the [`anti ⌝`](https://www.uiua.org/docs/anti) to matrix multiplication (spelt `⊞(/+×)⊙⍉`).
 - Add [`"f16"`](https://en.wikipedia.org/wiki/Half-precision_floating-point_format) format to [`bytes`](https://www.uiua.org/docs/bytes)
-- Add [`hsl`](https://uiua.org/docs/hsl) and [`oklab`](https://uiua.org/docs/oklab)
+- Add [`hsl`](https://uiua.org/docs/hsl) and [`oklab`](https://uiua.org/docs/oklab) functions
+- Output comments now use subscripts instead of extra `#`s. They can still be typed as extra `#`s and will be formatted to use subscripts.
 ### Interpreter
 - Add `uiua new` command for creating a new Uiua project
   - `--lib` option to make a `lib.ua` instead of a `main.ua`

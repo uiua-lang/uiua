@@ -19,8 +19,9 @@ use uiua_parser::SubscriptToken;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
-    CodeSpan, Compiler, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode, Primitive, RunMode,
-    SUBSCRIPT_DIGITS, SafeSys, Signature, Sp, SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value,
+    CodeSpan, Compiler, FormatSubscript, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode,
+    Primitive, RunMode, SUBSCRIPT_DIGITS, SafeSys, Signature, Sp, SysBackend, Uiua, UiuaErrorKind,
+    UiuaResult, Value,
     ast::*,
     is_ident_char,
     parse::{flip_unsplit_items, flip_unsplit_lines, parse, split_words, trim_spaces},
@@ -515,7 +516,7 @@ struct Formatter<'a> {
     eval_output_comments: bool,
 }
 
-type EoLComment = (usize, usize, String);
+type EoLComment = (usize, Option<usize>, String);
 type GlyphMap = Vec<(CodeSpan, (Loc, Loc))>;
 
 impl Formatter<'_> {
@@ -586,23 +587,23 @@ impl Formatter<'_> {
                     }
                 })
                 .collect();
-            for (line_number, octos, comment) in self.end_of_line_comments.drain(..) {
+            for (line_number, subn, comment) in self.end_of_line_comments.drain(..) {
                 let line = &lines[line_number - 1];
                 let line_len = line.graphemes(true).count();
                 if let Some((max, group)) = groups.last_mut() {
                     if line_number - group.last().unwrap().0 == 1 {
                         *max = (*max).max(line_len);
-                        group.push((line_number, octos, comment));
+                        group.push((line_number, subn, comment));
                     } else {
-                        groups.push((line_len, vec![(line_number, octos, comment)]));
+                        groups.push((line_len, vec![(line_number, subn, comment)]));
                     }
                 } else {
-                    groups.push((line_len, vec![(line_number, octos, comment)]));
+                    groups.push((line_len, vec![(line_number, subn, comment)]));
                 }
             }
             // Append comments to lines
             for (max, group) in groups {
-                for (line_number, octos, comment) in group {
+                for (line_number, subn, comment) in group {
                     // Add comment back to line
                     let line = &mut lines[line_number - 1];
                     let start_byte_len = line.len();
@@ -610,7 +611,10 @@ impl Formatter<'_> {
                     let spaces = (max + 1).saturating_sub(line.graphemes(true).count());
                     // line.push_str(&" ".repeat(spaces));
                     line.extend(repeat_n(' ', spaces));
-                    line.extend(repeat_n('#', octos));
+                    line.push('#');
+                    if let Some(n) = subn {
+                        line.push_str(&FormatSubscript(n as i32).to_string());
+                    }
                     if self.config.comment_space_after_hash
                         && !comment.is_empty()
                         // Shebang
@@ -1209,7 +1213,7 @@ impl Formatter<'_> {
                 } else {
                     let line_number = self.output.split('\n').count();
                     self.end_of_line_comments
-                        .push((line_number, 1, comment.to_string()));
+                        .push((line_number, None, comment.to_string()));
                 }
             }
             Word::BreakLine => self.output.push_str(";;"),
@@ -1315,14 +1319,16 @@ impl Formatter<'_> {
                     .trim()
                     .is_empty();
                 if beginning_of_line || !self.config.align_comments {
-                    s.extend(repeat_n('#', n + 1));
+                    s.push('#');
+                    s.push_str(&FormatSubscript(n as i32).to_string());
                     for (i, line) in lines.into_iter().enumerate() {
                         if i > 0 {
                             s.push('\n');
                             for _ in 0..start_line_pos {
                                 s.push(' ');
                             }
-                            s.extend(repeat_n('#', n + 1));
+                            s.push('#');
+                            s.push_str(&FormatSubscript(n as i32).to_string());
                         }
                         s.push(' ');
                         s.push_str(&line);
@@ -1332,7 +1338,7 @@ impl Formatter<'_> {
                     let start_line = self.output.split('\n').count();
                     if lines.is_empty() {
                         self.end_of_line_comments
-                            .push((start_line, n + 1, String::new()))
+                            .push((start_line, Some(n), String::new()))
                     }
                     for (i, line) in lines.into_iter().enumerate() {
                         if i > 0 {
@@ -1342,7 +1348,7 @@ impl Formatter<'_> {
                             }
                         }
                         self.end_of_line_comments
-                            .push((start_line + i, n + 1, line));
+                            .push((start_line + i, Some(n), line));
                     }
                 }
             }
@@ -2022,9 +2028,9 @@ fn formatter_edge_case_newline_free() {
 #[cfg(test)]
 fn formatter_idempotence() {
     let input = r#"\
-⊃( ## "82:2: Unknown identifier `Dir`"
-|  ##
-)  ##
+⊃( #₁ "82:2: Unknown identifier `Dir`"
+|  #₁
+)  #₁
 ⊃(|)
 ⊃(+|-|×|÷)
 F ← (

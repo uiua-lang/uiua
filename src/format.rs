@@ -603,7 +603,7 @@ impl Formatter<'_> {
             }
             // Append comments to lines
             for (max, group) in groups {
-                for (line_number, subn, comment) in group {
+                for (i, (line_number, subn, comment)) in group.into_iter().enumerate() {
                     // Add comment back to line
                     let line = &mut lines[line_number - 1];
                     let start_byte_len = line.len();
@@ -613,7 +613,11 @@ impl Formatter<'_> {
                     line.extend(repeat_n(' ', spaces));
                     line.push('#');
                     if let Some(n) = subn {
-                        line.push_str(&FormatSubscript(n as i32).to_string());
+                        if i == 0 {
+                            line.push_str(&FormatSubscript(n as i32).to_string());
+                        } else {
+                            line.extend(repeat_n('#', (n + 1).div_ceil(10)));
+                        }
                     }
                     if self.config.comment_space_after_hash
                         && !comment.is_empty()
@@ -1327,8 +1331,7 @@ impl Formatter<'_> {
                             for _ in 0..start_line_pos {
                                 s.push(' ');
                             }
-                            s.push('#');
-                            s.push_str(&FormatSubscript(n as i32).to_string());
+                            s.extend(repeat_n('#', (n + 1).div_ceil(10) + 1));
                         }
                         s.push(' ');
                         s.push_str(&line);
@@ -2029,8 +2032,8 @@ fn formatter_edge_case_newline_free() {
 fn formatter_idempotence() {
     let input = r#"\
 ⊃( #₁ "82:2: Unknown identifier `Dir`"
-|  #₁
-)  #₁
+|  ##
+)  ##
 ⊃(|)
 ⊃(+|-|×|÷)
 F ← (

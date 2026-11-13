@@ -115,9 +115,9 @@ The formatter will align consecutive end-of-line comments. Try it out!
 
 ## Output Comments
 
-If you write a comment that starts with additional `#`s, the formatter replaces the text of the comment with as many values as there are extra `#`s. These are the values that can be used by the next function that is called.
+If you write a comment that starts with additional `#`s, the formatter replaces the text of the comment with as many values as there are extra `#`s. These are the values that can be used by the next function that is called. These kinds of comments are called *output comments*.
 
-The formatter also replaces the extra `#`s with a subscript number showing how many values are being listed.
+The formatter also replaces the first set of extra `#`s with a subscript number showing how many values are being listed.
 
 Click Run to try it out!
 

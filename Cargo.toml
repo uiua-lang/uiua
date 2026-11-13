@@ -183,6 +183,7 @@ vorbis_rs = {workspace = true, optional = true}
 # Web-only dependencies
 js-sys = {workspace = true, optional = true}
 wasm-bindgen = {workspace = true, optional = true}
+web-sys = {version = "0.3.60", optional = true}
 
 # Window dependencies
 eframe = {version = "0.34.0", optional = true, features = ["persistence"]}
@@ -259,7 +260,7 @@ raw_mode = ["rawrrr", "native_sys"]
 stand = ["native_sys"]
 terminal_image = ["viuer", "image", "icy_sixel"]
 tls = ["rustls", "webpki-roots", "rustls-pki-types"]
-web = ["wasm-bindgen", "js-sys"]
+web = ["wasm-bindgen", "js-sys", "web-sys"]
 webcam = ["image", "nokhwa"]
 window = ["eframe", "rmp-serde", "image", "native-dialog"]
 xlsx = ["calamine", "simple_excel_writer"]

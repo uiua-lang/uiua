@@ -6947,6 +6947,7 @@ dependencies = [
  "viuer",
  "vorbis_rs",
  "wasm-bindgen",
+ "web-sys",
  "webpki-roots",
 ]
 

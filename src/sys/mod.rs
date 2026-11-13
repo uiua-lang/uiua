@@ -1665,6 +1665,11 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
 ///
 /// This function works on both native and web targets.
 pub fn now() -> f64 {
+    #[cfg(feature = "web")]
+    {
+        // Supresses a false-positive unused crate warning from cargo
+        _ = web_sys::window;
+    }
     #[cfg(not(target_arch = "wasm32"))]
     {
         std::time::SystemTime::now()

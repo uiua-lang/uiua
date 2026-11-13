@@ -3,7 +3,7 @@ use std::{
     borrow::Cow,
     env::{self, set_current_dir},
     fs::{self, File, OpenOptions},
-    io::{BufRead, BufReader, Read, Write, stderr, stdin, stdout},
+    io::{BufRead, BufReader, Read, Seek, Write, stderr, stdin, stdout},
     iter::repeat_n,
     mem::take,
     net::*,
@@ -665,8 +665,6 @@ impl SysBackend for NativeSys {
         }
     }
     fn seek(&self, handle: Handle, offset: super::StreamSeek) -> Result<(), String> {
-        use std::io::Seek;
-
         match NATIVE_SYS.get_stream(handle)? {
             SysStream::File(mut file) => file
                 .seek(offset.into())

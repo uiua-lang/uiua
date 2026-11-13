@@ -365,6 +365,14 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         self.close(handle)?;
         Ok(())
     }
+    /// Write all bytes to the end of an existing file
+    fn file_append_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
+        let handle = self.open_file(path, true)?;
+        self.seek(handle, StreamSeek::End(0))?;
+        self.write(handle, contents)?;
+        self.close(handle)?;
+        Ok(())
+    }
     /// Get the clipboard contents
     fn clipboard(&self) -> Result<String, String> {
         Err("Getting the clipboard is not supported in this environment".into())
@@ -1088,6 +1096,38 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                     }
                 })
                 .map_err(|e| env.error(e))?;
+        }
+        SysOp::FAppendAll => {
+            let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+            let data = env.pop(2)?;
+            let bytes: Vec<u8> = match data {
+                Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
+                Value::Byte(arr) => arr.data.into(),
+                Value::Char(arr) => arr.data.iter().collect::<String>().into(),
+                val => {
+                    return Err(
+                        env.error(format!("Cannot write {} array to file", val.type_name()))
+                    );
+                }
+            };
+            if env.rt.backend.file_exists(&path) || path == "example.ua" {
+                (env.rt.backend)
+                    .file_append_all(path.as_ref(), &bytes)
+                    .or_else(|e| {
+                        if path == "example.ua" {
+                            let new_ex = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+                            example_ua(move |ex| ex.push_str(&new_ex));
+                            Ok(())
+                        } else {
+                            Err(e)
+                        }
+                    })
+                    .map_err(|e| env.error(e))?;
+            } else {
+                (env.rt.backend)
+                    .file_write_all(path.as_ref(), &bytes)
+                    .map_err(|e| env.error(e))?;
+            }
         }
         SysOp::FExists => {
             let path = env.pop(1)?.as_string(env, "Path must be a string")?;

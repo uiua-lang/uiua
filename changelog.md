@@ -6,14 +6,15 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - Add based integer literals ([numbers tutorial](https://uiua.org/tutorial/Types#numbers))
-- Add [`un °`](https://uiua.org/docs/un)[`validate ⊨`](https://uiua.org/docs/validate) for getting the type spec of an array.
+- Add [`un °`](https://uiua.org/docs/un)[`validate ⊨`](https://uiua.org/docs/validate) for getting the type spec of an array
 - The formatter will now format text inside comments and strings that is surrounded with `\\(...)`.
-- Add [`anti ⌝`](https://www.uiua.org/docs/anti)[`&var`](https://www.uiua.org/docs/%26var) for setting environment variables.
+- Add [`anti ⌝`](https://www.uiua.org/docs/anti)[`&var`](https://www.uiua.org/docs/%26var) for setting environment variables
 - Add [`fill ⬚`](https://uiua.org/docs/fill) support to [`&var`](https://www.uiua.org/docs/%26var)
-- Add native matrix division (spelt `⌝(⊞(/+×)⊙⍉)`) as the [`anti ⌝`](https://www.uiua.org/docs/anti) to matrix multiplication (spelt `⊞(/+×)⊙⍉`).
+- Add native matrix division (spelt `⌝(⊞(/+×)⊙⍉)`) as the [`anti ⌝`](https://www.uiua.org/docs/anti) to matrix multiplication (spelt `⊞(/+×)⊙⍉`)
 - Add [`"f16"`](https://en.wikipedia.org/wiki/Half-precision_floating-point_format) format to [`bytes`](https://www.uiua.org/docs/bytes)
 - Add [`hsl`](https://uiua.org/docs/hsl) and [`oklab`](https://uiua.org/docs/oklab) functions
 - Output comments now use subscripts instead of extra `#`s. They can still be typed as extra `#`s and will be formatted to use subscripts.
+- Add [`&faa`](https://uiua.org/docs/&faa) to append to the end of a file, creating it if it doesn't exist
 ### Interpreter
 - Add `uiua new` command for creating a new Uiua project
   - `--lib` option to make a `lib.ua` instead of a `main.ua`
@@ -30,7 +31,7 @@ This version is not yet released. If you are reading this on the website, then t
   - `avg`
 ### Website
 - Add undo and redo buttons to editors on mobile. Only visible if necessary.
-- Separate [Aliases](https://uiua.org/docs/aliases) page from the [Idioms](https://uiua.org/docs/idioms) page.
+- Separate [Aliases](https://uiua.org/docs/aliases) page from the [Idioms](https://uiua.org/docs/idioms) page
 - Add [APL387](https://dyalog.github.io/APL387/) font to pad
 - Remove Pixua font from pad
 

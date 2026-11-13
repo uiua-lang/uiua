@@ -4205,6 +4205,17 @@ sys_op! {
     ///   : &fwa Path +@A⇡26
     ///   : &fras Path
     (2(0), FWriteAll, Filesystem, "&fwa", "file - write all", Mutating),
+    /// Append the entire contents of an array to a file
+    ///
+    /// Expects a path and a rank-`1` array of either numbers or characters.
+    /// The file will be created if it does not exist
+    ///
+    /// The editor on the website has a virtual filesystem. Files written with [&faa] can be read with [&fras] or [&frab].
+    /// ex: Path ← "test.txt"
+    ///   : &faa Path "Hello, "
+    ///   : &faa Path "World!"
+    ///   : &fras Path
+    (2(0), FAppendAll, Filesystem, "&faa", "file - append all", Mutating),
     /// Show an image
     ///
     /// How the image is shown depends on the system backend.

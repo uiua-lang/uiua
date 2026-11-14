@@ -234,6 +234,14 @@ impl SysBackend for WebBackend {
             .prompt_with_message("Enter a line of text for stdin")
             .unwrap_or(None))
     }
+    fn clear(&self, _clear_scrollback: bool) {
+        if worker::is_worker() {
+            OutputUpdate::Reset.send();
+            self.stdout.lock().unwrap().clear();
+            self.stderr.lock().unwrap().clear();
+            self.trace.lock().unwrap().clear();
+        }
+    }
     fn get_var(&self, name: &str) -> Option<String> {
         self.vars.lock().unwrap().get(name).map(Into::into)
     }

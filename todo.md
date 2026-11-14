@@ -1,9 +1,8 @@
 # Uiua Todo
 
-# 0.20
+# 0.20 - 202?-??-??
 
 - `anti` inverse list
-- `switch` subscripts
 - `fold` subscripts
 - `under` `on` dyadic constant
 - Sided `reshape`

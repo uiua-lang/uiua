@@ -433,6 +433,7 @@ F ← ⍜⊙⊙⊢ ⋅⊙∘
 G ← ⍜(⊙⊙⊢) ⋅⊙∘
 ⍤⤙≍ {F 1 2 [3]} {G 1 2 [3]}
 
+# Switch
 ⍤⤙≍ [10 2 3] ⍜(⨬⊢⊣|×10) 0 [1 2 3]
 ⍤⤙≍ [1 2 30] ⍜(⨬⊢⊣|×10) 1 [1 2 3]
 ⍤⤙≍ [1 20 3] ⍜⨬(⊡|⊏)(×10) 0 1 [1 2 3]
@@ -557,3 +558,14 @@ H ← "Hello,   world!!"
 
 # Sided under
 ⍤⤙≍ [0.25 ¯1] [⍜⌟¯°+ ¯1.25]
+
+# Under under w/ nested context
+⍤⤙≍ "Ello" ⍜⍜⊢(¯⌵)(↘1) "Hello"
+⍤⤙≍ ["359" "WNS" "1E7"] ⍜⍜♭⍆⍉ ["7N9" "W5E" "1S3"]
+⍤⤙≍ ⟜⍜⍜◴⍆∘ "Mints and cola!"
+⍤⤙≍ "acborrw" ⍜⍜(↙4)⍆⍆ "crowbar"
+$ baboon
+$ Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo
+$ Never gonna give you up
+$ ⍤⤙≍ ⍚⊃⍜⍜◴⊛⇌⍜⊛⇌ °/$"_\n_" 
+⍤⤙≍ ⍚⊃⍜⍜◴⊛⇌⍜⊛⇌ °/$"_\n_"

@@ -175,8 +175,7 @@ impl SigNode {
     }
     /// Gap before calling this node
     pub fn gapped(mut self, depth: usize, span: usize) -> SigNode {
-        let mut sig = self.sig;
-        sig.update_args(|a| a + depth);
+        self.sig.update_args(|a| a + depth);
         for _ in 0..depth {
             self.node.prepend(Node::Prim(Primitive::Pop, span));
         }
@@ -867,15 +866,11 @@ impl Node {
                 Node::ImplPrim(prim, _) => prim.purity() >= purity,
                 Node::Mod(prim, args, _) => {
                     prim.purity() >= purity
-                        && args
-                            .iter()
-                            .all(|arg| recurse(&arg.node, purity, asm, visited))
+                        && (args.iter()).all(|arg| recurse(&arg.node, purity, asm, visited))
                 }
                 Node::ImplMod(prim, args, _) => {
                     prim.purity() >= purity
-                        && args
-                            .iter()
-                            .all(|arg| recurse(&arg.node, purity, asm, visited))
+                        && (args.iter()).all(|arg| recurse(&arg.node, purity, asm, visited))
                 }
                 Node::Array { inner, .. } => recurse(inner, purity, asm, visited),
                 Node::Call(func, _) => {
@@ -885,22 +880,20 @@ impl Node {
                         visited.insert(func) && recurse(&asm[func], purity, asm, visited)
                     }
                 }
+                Node::BindGlobal { index, .. } => (asm.bindings.get(*index))
+                    .is_some_and(|binding| matches!(binding.kind, BindingKind::Const(Some(_)))),
                 Node::CallGlobal(index, _) => {
-                    if let Some(binding) = asm.bindings.get(*index) {
-                        match &binding.kind {
-                            BindingKind::Const(_) => true,
-                            BindingKind::Func(f) => {
-                                visited.insert(f) && recurse(&asm[f], purity, asm, visited)
-                            }
-                            _ => false,
+                    (asm.bindings.get(*index)).is_some_and(|binding| match &binding.kind {
+                        BindingKind::Const(_) => true,
+                        BindingKind::Func(f) => {
+                            visited.insert(f) && recurse(&asm[f], purity, asm, visited)
                         }
-                    } else {
-                        false
-                    }
+                        _ => false,
+                    })
                 }
-                Node::Switch { branches, .. } => branches
-                    .iter()
-                    .all(|br| recurse(&br.node, purity, asm, visited)),
+                Node::Switch { branches, .. } => {
+                    (branches.iter()).all(|br| recurse(&br.node, purity, asm, visited))
+                }
                 Node::CustomInverse(cust, _) => (cust.normal.as_ref().ok())
                     .or(cust.un.as_ref())
                     .is_some_and(|sn| recurse(&sn.node, purity, asm, visited)),

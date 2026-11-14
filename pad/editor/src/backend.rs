@@ -119,10 +119,14 @@ impl WebBackend {
     }
     fn file<T>(&self, path: &Path, f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
         FILES.with(|files| {
-            let files = files.borrow();
-            files
-                .get(path)
+            (files.borrow().get(path))
                 .map(|content| f(content))
+                .ok_or(format!("File not found: {}", path.display()))
+        })
+    }
+    fn file_mut<T>(&self, path: &Path, f: impl FnOnce(&mut Vec<u8>) -> T) -> Result<T, String> {
+        FILES.with(|files| {
+            (files.borrow_mut().get_mut(path).map(f))
                 .ok_or(format!("File not found: {}", path.display()))
         })
     }
@@ -262,6 +266,9 @@ impl SysBackend for WebBackend {
             }
         });
         Ok(())
+    }
+    fn file_append_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
+        self.file_mut(path, |file| file.extend_from_slice(contents))
     }
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
         self.file(path, |contents| contents.to_vec())

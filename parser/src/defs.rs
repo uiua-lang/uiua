@@ -2667,6 +2667,12 @@ primitive!(
     /// ex: ⨬(+|-|×|÷) [0 1 2 3] 2 5
     /// In this case, [switch] behaves similarly to [rows]. The index will be iterated along with other arguments.
     /// ex: ⨬(+|-|×|÷) [0 1 2 3] [1 6 10 2] 5
+    ///
+    /// Numeric subscripts turn [switch] into a function that switches over the input arguments
+    /// ex: ⨬₂ 0 @a@b
+    ///   : ⨬₂ 1 @a@b
+    ///   : ⨬₂ 0_1_0 "abc" "def"
+    ///   : ⨬₃ 0_1_2 "abc" "def" "ghi"
     ([2], Switch, OtherModifier, ("switch", '⨬')),
     /// Call a function and catch errors
     ///
@@ -4018,6 +4024,13 @@ sys_op! {
     /// [un][&raw] will return the current state of the terminal.
     /// [under][&raw] will set raw mode, and then revert it to the previous state.
     (1(0), RawMode, Env, "&raw", "set raw mode", Mutating),
+    /// Clear the terminal/output/window
+    ///
+    /// Clears the place where functions like `&p` show their output. This may be the terminal, pad output section, or native window.
+    ///
+    /// In the terminal, this does not purge the scrollback buffer.
+    /// To purge it, use a left subscript `⌞`.
+    (0(0), Clear, Env, "&clear", "clear output", Mutating),
     /// Get the command line arguments
     ///
     /// The first element will always be the name of your script
@@ -4205,6 +4218,17 @@ sys_op! {
     ///   : &fwa Path +@A⇡26
     ///   : &fras Path
     (2(0), FWriteAll, Filesystem, "&fwa", "file - write all", Mutating),
+    /// Append the entire contents of an array to a file
+    ///
+    /// Expects a path and a rank-`1` array of either numbers or characters.
+    /// The file will be created if it does not exist
+    ///
+    /// The editor on the website has a virtual filesystem. Files written with [&faa] can be read with [&fras] or [&frab].
+    /// ex: Path ← "test.txt"
+    ///   : &faa Path "Hello, "
+    ///   : &faa Path "World!"
+    ///   : &fras Path
+    (2(0), FAppendAll, Filesystem, "&faa", "file - append all", Mutating),
     /// Show an image
     ///
     /// How the image is shown depends on the system backend.

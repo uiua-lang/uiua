@@ -219,6 +219,12 @@ F ← ⨬(¯|+1|×10|∞)
 ⍤⤙≍ ⊃≡⨬∘∘⨬∘∘ °△2_1 ×10+1°△2_1
 ⍤⤙≍ ⊃≡⨬∘∘⨬∘∘ °△2_1 ×10+1°△2_1_2
 
+# Switch subscripts
+⍤⤙≍ "afch" ⨬₂ 0_1_0_1 "abcd" "efgh"
+⍤⤙≍ ["af""gd"] ⨬₂ [0_1 1_0] ["ab""cd"] ["ef""gh"]
+⍤⤙≍ "abcbac" ⨬₃0_1_2_1_0_2 @a@b@c
+⍤⤙≍ "ahojer" ⨬₃ 0_1_2_1_0_2 "abcdef" "ghijkl" "mnopqr"
+
 # Character arithmatic edge cases
 ⍤⤙≍ @\0 -MaxInt @B
 ⍤⤙≍ @\_ +MaxInt @B
@@ -490,6 +496,12 @@ B ← A # New binding
 F ← ⋅∘
 G ← F # New binding
 ⍤⤙≍ 2 G 1 2
+
+F ← (
+  X ← ¬1
+  X 5
+)
+⍤⤙≍ [0 5] [F]
 
 # Euler's identity
 ⍤⤙≍ 0 ⍜(×1000000000000)⁅ ⌵+1 ⁿiπ e

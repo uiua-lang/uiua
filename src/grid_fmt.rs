@@ -85,10 +85,6 @@ pub trait GridFmt: Sized {
     fn summary_min_elems() -> usize {
         3600
     }
-    /// The maximum number of distinct elements that can be summarized using the multiset format
-    fn summary_multiset_max_distinct() -> usize {
-        5
-    }
     /// How to align elements when formatting
     fn alignment() -> ElemAlign {
         ElemAlign::Left
@@ -101,6 +97,8 @@ pub trait GridFmt: Sized {
     fn soa_rows(_arr: &Array<Self>) -> Option<Vec<(&EcoString, &Value)>> {
         None
     }
+    /// The maximum number of distinct elements that can be summarized using the multiset format
+    const SUMMARY_MULTISET_MAX_DISTINCT: usize = 5;
 }
 
 impl GridFmt for u8 {
@@ -1700,15 +1698,21 @@ fn multiset_summary<T: ArrayCmp + GridFmt + Clone>(elems: &[T]) -> Option<String
     // So small, in fact, that a BTreeMap would only have one node anyway. (B = 6 -> node capacity = 11)
     // In addition, the usage of non-Ord keys (f64, Complex) would require a newtype.
     // This is plenty doable, but gets more annoying in a generic context.
-    let max_distinct = T::summary_multiset_max_distinct();
-    let mut pairs = SmallVec::<[(T, usize); 8]>::with_capacity(max_distinct);
+    let mut pairs = SmallVec::<[(T, usize);
+    5 // can be replaced with T::SUMMARY_MULTISET_MAX_DISTINCT on nightly compiler
+      // but this is just a lower bound so it's ok
+    ]>::new();
     for elem in elems.iter().cloned() {
-        match pairs.binary_search_by(|p| T::array_cmp(&p.0, &elem)) {
-            Ok(i) => pairs[i].1 += 1,
-            Err(_) if pairs.len() >= max_distinct => return None,
-            Err(i) => pairs.insert(i, (elem, 1)),
+        match pairs
+            .iter_mut()
+            .position(|p| T::array_cmp(&p.0, &elem).is_eq())
+        {
+            Some(i) => pairs[i].1 += 1,
+            None if pairs.len() >= T::SUMMARY_MULTISET_MAX_DISTINCT => return None,
+            None => pairs.push((elem, 1)),
         }
     }
+    pairs.sort_unstable_by(|a, b| T::array_cmp(&a.0, &b.0));
 
     if let [(val, _)] = &pairs[..] {
         return Some(format!("all {}", val.grid_string(false)));

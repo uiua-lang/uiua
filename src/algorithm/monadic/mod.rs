@@ -511,6 +511,8 @@ impl Value {
                     return Ok("A".to_string());
                 }
 
+                let negative = n < 0.0;
+                n = n.abs();
                 let mut num = Vec::new();
                 while n != 0.0 {
                     num.push(
@@ -520,6 +522,9 @@ impl Value {
                             .unwrap(),
                     );
                     n = (n / 64.0).floor();
+                }
+                if negative {
+                    num.push('-');
                 }
 
                 Ok(num.into_iter().rev().collect())

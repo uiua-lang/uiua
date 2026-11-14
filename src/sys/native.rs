@@ -3,7 +3,7 @@ use std::{
     borrow::Cow,
     env::{self, set_current_dir},
     fs::{self, File, OpenOptions},
-    io::{BufRead, BufReader, Read, Write, stderr, stdin, stdout},
+    io::{BufRead, BufReader, Read, Seek, Write, stderr, stdin, stdout},
     iter::repeat_n,
     mem::take,
     net::*,
@@ -449,6 +449,20 @@ impl SysBackend for NativeSys {
     fn get_raw_mode(&self) -> Result<bool, String> {
         Ok(rawrrr::is_raw())
     }
+    #[allow(clippy::print_stdout)]
+    fn clear(&self, clear_scrollback: bool) {
+        #[cfg(feature = "window")]
+        if crate::window::use_window() {
+            _ = crate::window::Request::ClearBeforeNext.send();
+            return;
+        }
+        if clear_scrollback {
+            print!("\x1B[3J");
+        }
+        print!("\x1B[2J"); // Clear screen
+        print!("\x1B[1;1H"); // Reset cursor
+        std::io::stdout().flush().unwrap();
+    }
     fn get_var(&self, name: &str) -> Option<String> {
         env::var(name).ok()
     }
@@ -665,8 +679,6 @@ impl SysBackend for NativeSys {
         }
     }
     fn seek(&self, handle: Handle, offset: super::StreamSeek) -> Result<(), String> {
-        use std::io::Seek;
-
         match NATIVE_SYS.get_stream(handle)? {
             SysStream::File(mut file) => file
                 .seek(offset.into())

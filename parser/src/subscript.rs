@@ -103,6 +103,13 @@ impl SubscriptNumber {
             _ => None,
         }
     }
+    /// Get the natural
+    pub fn as_nat(&self) -> Option<usize> {
+        match self {
+            &SubscriptNumber::Int(i) if i >= 0 => Some(i as usize),
+            _ => None,
+        }
+    }
     /// Get a mutable reference to the integer
     pub fn as_int_mut(&mut self) -> Option<&mut i32> {
         match self {

@@ -1168,10 +1168,18 @@ impl Parser<'_> {
         let mut subscript = None;
         if let Some(n) = self.next_token_map(Token::as_subscript) {
             subscript = Some(n);
-            self.spaces();
         }
-        let mut args = Vec::new();
         let margs = modifier.subscript_margs(subscript.as_ref().map(|s| &s.value));
+        if margs == 0
+            && let Modifier::Primitive(prim) = modifier
+            && let Some(script) = subscript
+        {
+            let span = mod_span.clone().merge(script.span.clone());
+            let word = mod_span.sp(Word::Primitive(prim));
+            return Some(span.sp(Word::Subscripted(Subscripted { script, word }.into())));
+        }
+        self.spaces();
+        let mut args = Vec::new();
         for i in 0..margs {
             loop {
                 args.extend(self.spaces());

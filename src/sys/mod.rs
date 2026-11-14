@@ -266,6 +266,8 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn get_raw_mode(&self) -> Result<bool, String> {
         Err("Getting raw mode is not supported in this environment".into())
     }
+    /// Clear the output
+    fn clear(&self, clear_scrollback: bool) {}
     /// Get an environment variable
     fn get_var(&self, name: &str) -> Option<String> {
         None
@@ -361,6 +363,14 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Write all bytes to a file
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
         let handle = self.create_file(path)?;
+        self.write(handle, contents)?;
+        self.close(handle)?;
+        Ok(())
+    }
+    /// Write all bytes to the end of an existing file
+    fn file_append_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
+        let handle = self.open_file(path, true)?;
+        self.seek(handle, StreamSeek::End(0))?;
         self.write(handle, contents)?;
         self.close(handle)?;
         Ok(())
@@ -806,6 +816,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 .set_raw_mode(raw_mode)
                 .map_err(|e| env.error(e))?;
         }
+        SysOp::Clear => env.rt.backend.clear(false),
         SysOp::EnvArgs => {
             let mut args = Vec::new();
             args.push(env.file_path().to_string_lossy().into_owned());
@@ -1088,6 +1099,38 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                     }
                 })
                 .map_err(|e| env.error(e))?;
+        }
+        SysOp::FAppendAll => {
+            let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+            let data = env.pop(2)?;
+            let bytes: Vec<u8> = match data {
+                Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
+                Value::Byte(arr) => arr.data.into(),
+                Value::Char(arr) => arr.data.iter().collect::<String>().into(),
+                val => {
+                    return Err(
+                        env.error(format!("Cannot write {} array to file", val.type_name()))
+                    );
+                }
+            };
+            if env.rt.backend.file_exists(&path) || path == "example.ua" {
+                (env.rt.backend)
+                    .file_append_all(path.as_ref(), &bytes)
+                    .or_else(|e| {
+                        if path == "example.ua" {
+                            let new_ex = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+                            example_ua(move |ex| ex.push_str(&new_ex));
+                            Ok(())
+                        } else {
+                            Err(e)
+                        }
+                    })
+                    .map_err(|e| env.error(e))?;
+            } else {
+                (env.rt.backend)
+                    .file_write_all(path.as_ref(), &bytes)
+                    .map_err(|e| env.error(e))?;
+            }
         }
         SysOp::FExists => {
             let path = env.pop(1)?.as_string(env, "Path must be a string")?;
@@ -1665,6 +1708,11 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
 ///
 /// This function works on both native and web targets.
 pub fn now() -> f64 {
+    #[cfg(feature = "web")]
+    {
+        // Supresses a false-positive unused crate warning from cargo
+        _ = web_sys::window;
+    }
     #[cfg(not(target_arch = "wasm32"))]
     {
         std::time::SystemTime::now()
@@ -1674,18 +1722,30 @@ pub fn now() -> f64 {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        #[cfg(not(feature = "web"))]
-        {
-            compile_error!("Web target requires the `web` feature")
-        }
         #[cfg(feature = "web")]
         {
+            #[cfg(feature = "non_web")]
+            compile_error!("Cannot have both the `web` and `non_web` features enabled");
             use wasm_bindgen::{JsCast, prelude::*};
             js_sys::Reflect::get(&js_sys::global(), &JsValue::from_str("performance"))
                 .expect("failed to get performance from global object")
                 .unchecked_into::<web_sys::Performance>()
                 .now()
                 / 1000.0
+        }
+        #[cfg(not(feature = "web"))]
+        {
+            #[cfg(feature = "non_web")]
+            {
+                // For non-web wasm, just return a growing small number
+                use portable_atomic::AtomicU64;
+                use std::sync::atomic::Ordering;
+                static COUNTER: AtomicU64 = AtomicU64::new(0);
+                let val = COUNTER.fetch_add(1, Ordering::Relaxed);
+                val as f64 * 0.001
+            }
+            #[cfg(not(feature = "non_web"))]
+            compile_error!("WASM target requires either the `web` or `non_web` feature")
         }
     }
 }

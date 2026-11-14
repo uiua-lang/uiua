@@ -262,6 +262,7 @@ impl Primitive {
             }
             (Multivector, Some(SubscriptNumber::I | SubscriptNumber::R)) => Signature::new(2, 1),
             (Neg | Validate | Multivector, _) => return self.sig(),
+            (Switch, Some(SubscriptNumber::Int(n))) if n >= 0 => Signature::new(n as usize + 1, 1),
             _ => return None,
         })
     }
@@ -278,6 +279,7 @@ impl Primitive {
             Bracket | Under | Fill => 2,
             Reach if sub.side.is_some() => 2,
             Reach => 1,
+            Switch => 0,
             _ => return None,
         })
     }

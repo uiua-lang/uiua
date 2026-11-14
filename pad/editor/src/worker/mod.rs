@@ -36,6 +36,12 @@ pub enum OutputUpdate {
     Item(OutputItem),
 }
 
+impl OutputUpdate {
+    pub fn is_reset(&self) -> bool {
+        matches!(self, OutputUpdate::Reset)
+    }
+}
+
 /// Output from an editor execution, including challenge sections.
 #[derive(Default, Serialize, Deserialize)]
 pub struct Output {

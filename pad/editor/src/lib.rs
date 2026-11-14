@@ -4,7 +4,14 @@ pub mod utils;
 pub mod worker;
 
 use std::{
-    borrow::Cow, cell::Cell, iter::repeat_n, path::PathBuf, rc::Rc, sync::Arc, sync::OnceLock,
+    borrow::Cow,
+    cell::Cell,
+    iter::repeat_n,
+    mem::{swap, take},
+    path::PathBuf,
+    rc::Rc,
+    sync::Arc,
+    sync::OnceLock,
     time::Duration,
 };
 
@@ -13,6 +20,7 @@ use ev::mousemove;
 use js_sys::Date;
 use leptos::{
     ev::{keydown, keyup},
+    leptos_dom::helpers::TimeoutHandle,
     prelude::*,
     *,
 };
@@ -49,6 +57,12 @@ enum EditorOutput {
         allow_autoplay: bool,
         flex_wrap: &'static str,
     },
+}
+
+impl EditorOutput {
+    pub fn is_running(&self) -> bool {
+        matches!(self, Self::Running)
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -492,6 +506,8 @@ pub fn Editor<'a>(
         let (hidden, challenge) =
             get_state.with_untracked(|st| (st.hidden.clone(), st.challenge.clone()));
         let frame_pending = Rc::new(Cell::new(false));
+        let pending_clear = Rc::new(Cell::new(None::<TimeoutHandle>));
+        let output_pending_clear = pending_clear.clone();
         worker::client::run(
             id,
             input,
@@ -500,15 +516,39 @@ pub fn Editor<'a>(
             seed,
             move |update| {
                 if latest_run.try_get_value() == Some(ticket) {
+                    // Handle pending clear
+                    if let Some(timeout) = output_pending_clear.take() {
+                        timeout.clear();
+                        if !update.is_reset() {
+                            output_data.update_untracked(take);
+                        }
+                    }
+                    if update.is_reset() {
+                        let pending_clear = output_pending_clear.clone();
+                        output_pending_clear.set(Some(
+                            set_timeout(
+                                move || {
+                                    pending_clear.take();
+                                    if latest_run.try_get_value() == Some(ticket)
+                                        && output.with_untracked(EditorOutput::is_running)
+                                    {
+                                        output_data.set(Output::default());
+                                    }
+                                },
+                                Duration::from_millis(30),
+                            )
+                            .unwrap(),
+                        ));
+                        return;
+                    }
+                    // Update output
                     output_data.update_untracked(|output| output.update(update));
                     if !frame_pending.replace(true) {
                         let frame_pending = frame_pending.clone();
                         _ = request_animation_frame(move || {
                             frame_pending.set(false);
                             if latest_run.try_get_value() == Some(ticket)
-                                && output.with_untracked(|output| {
-                                    matches!(output, EditorOutput::Running)
-                                })
+                                && output.with_untracked(EditorOutput::is_running)
                             {
                                 output_data.notify();
                             }
@@ -519,6 +559,10 @@ pub fn Editor<'a>(
             move |result| {
                 if latest_run.try_get_value() != Some(ticket) {
                     return;
+                }
+                if let Some(timeout) = pending_clear.take() {
+                    timeout.clear();
+                    output_data.update_untracked(take);
                 }
                 match result {
                     Ok(result) => {
@@ -533,7 +577,7 @@ pub fn Editor<'a>(
                     }
                     Err(error) => {
                         let mut data = Output::default();
-                        output_data.update_untracked(|output| std::mem::swap(output, &mut data));
+                        output_data.update_untracked(|output| swap(output, &mut data));
                         data.section().reports.push(OutputItem::String(error));
                         update_output(data);
                     }
@@ -2562,7 +2606,7 @@ pub fn Editor<'a>(
                         <button
                             class=move || run_button_class
                             on:click=move |_| {
-                                if output.with(|output| matches!(output, EditorOutput::Running)) {
+                                if output.with(EditorOutput::is_running) {
                                     worker::client::cancel(id);
                                 } else {
                                     set_show_format_hint.set(false);
@@ -2570,7 +2614,7 @@ pub fn Editor<'a>(
                                 }
                             }
                         >
-                            {move || if output.with(|output| matches!(output, EditorOutput::Running)) { "Stop" } else { "Run" }}
+                            {move || if output.with(EditorOutput::is_running) { "Stop" } else { "Run" }}
                         </button>
                         <button
                             id="prev-example"

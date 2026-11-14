@@ -33,7 +33,7 @@ use crate::{
     IndexMacro, InputSrc, IntoInputSrc, IntoSysBackend, MvMode, Node, NumericSubscript,
     OTHER_SUBSCRIPT_NUMBERS, PrimClass, Primitive, Purity, RunMode, SUBSCRIPT_DIGITS,
     SemanticComment, SidedSubscript, SigNode, Signature, Sp, Span, SubSide, Subscript,
-    SubscriptNumber, SubscriptToken, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
+    SubscriptNumber, SubscriptToken, SysBackend, SysOp, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
     VERSION, Value,
     algorithm::try_sig,
     ast::*,
@@ -2574,6 +2574,16 @@ impl Compiler {
                     SubSide::Right => ImplPrimitive::RightContraction,
                 };
                 Node::ImplPrim(prim, self.add_span(span))
+            }
+            Sys(SysOp::Clear) => {
+                if self
+                    .subscript_side_only(&scr, &InnerProduct.format())
+                    .is_some_and(|side| side == SubSide::Left)
+                {
+                    Node::ImplPrim(ImplPrimitive::ClearScrollback, self.add_span(span))
+                } else {
+                    self.primitive(Sys(SysOp::Clear), span)
+                }
             }
             Switch => {
                 let n = self.subscript_int_only(&scr, &Switch.format()).unwrap_or(0);

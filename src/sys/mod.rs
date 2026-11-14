@@ -266,6 +266,8 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn get_raw_mode(&self) -> Result<bool, String> {
         Err("Getting raw mode is not supported in this environment".into())
     }
+    /// Clear the output
+    fn clear(&self, clear_scrollback: bool) {}
     /// Get an environment variable
     fn get_var(&self, name: &str) -> Option<String> {
         None
@@ -814,6 +816,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 .set_raw_mode(raw_mode)
                 .map_err(|e| env.error(e))?;
         }
+        SysOp::Clear => env.rt.backend.clear(false),
         SysOp::EnvArgs => {
             let mut args = Vec::new();
             args.push(env.file_path().to_string_lossy().into_owned());

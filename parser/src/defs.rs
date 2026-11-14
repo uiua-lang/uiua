@@ -4024,6 +4024,13 @@ sys_op! {
     /// [un][&raw] will return the current state of the terminal.
     /// [under][&raw] will set raw mode, and then revert it to the previous state.
     (1(0), RawMode, Env, "&raw", "set raw mode", Mutating),
+    /// Clear the terminal/output/window
+    ///
+    /// Clears the place where functions like `&p` show their output. This may be the terminal, pad output section, or native window.
+    ///
+    /// In the terminal, this does not purge the scrollback buffer.
+    /// To purge it, use a left subscript `⌞`.
+    (0(0), Clear, Env, "&clear", "clear output", Mutating),
     /// Get the command line arguments
     ///
     /// The first element will always be the name of your script

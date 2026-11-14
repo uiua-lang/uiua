@@ -145,39 +145,20 @@ $            ┘
 ⍤Snapshot □₂ ⊓$foo$bar ⊸≡⌞+"Aa" ⇡5
 
 # "Compressed" string layout rules out SoA formatting for rank-1 text arrays
-# The current state of this test documents a known bug.
 $ ┌─
-$   ╭─ foo │bar
-$     ABC  │0 1 2
-$         ╯│
-$                 ┘
-# $ ┌─
-# $   foo  │bar
-# $   "ABC"│0 1 2
-# $               ┘
+$   foo  │bar
+$   "ABC"│0 1 2
+$               ┘
 ⍤Snapshot □₂ ⊓$foo$bar ⊸≡⌞+@A ⇡3
 
-# Canonical example of the above bug
-$ ┌─         
-$ ╷ ╭─    │  
-$     a   │  
-$       ╯ │  
-$   ──────┤  
-$   ╭─    │  
-$     bc  │  
-$        ╯│  
-$   ──────┤  
-$   ╭─    │  
-$     d   │  
-$       ╯ │  
-$           ┘
-# $ ┌─
-# $ ╷ "a" │
-# $   ────┤
-# $   "bc"│
-# $   ────┤
-# $   "d" │
-# $         ┘
+# This was a bug related to rank-1 strings inside rank-2+ box arrays getting 2D box outlines instead of quotes.
+$ ┌─
+$ ╷ "a" │
+$   ────┤
+$   "bc"│
+$   ────┤
+$   "d" │
+$         ┘
 ⍤Snapshot ≡¤{"a" "bc" "d"}
 
 # Mismatching lengths rule out SoA formatting,

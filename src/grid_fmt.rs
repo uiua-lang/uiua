@@ -991,6 +991,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         &params,
                         is_summary,
                         T::box_lines(),
+                        T::compress_list_grid(),
                         list_brackets,
                     );
                 } else if !T::box_lines() && !is_summary {
@@ -1768,12 +1769,15 @@ fn outline_grid(
     params: &GridFmtParams,
     is_summary: bool,
     box_lines: bool,
+    compress_list_grid: bool,
     list_brackets: (char, char),
 ) {
     let rank = shape.len();
     let grid_row_count = grid.len();
 
-    if grid_row_count == 1 && rank == 1 && !params.multiline {
+    let force_multiline = params.multiline && !compress_list_grid;
+
+    if grid_row_count == 1 && rank == 1 && !force_multiline {
         grid[0].insert(0, list_brackets.0);
         grid[0].push(list_brackets.1);
         if box_lines && shape[0] == 0 && params.parent_rank == 0 {

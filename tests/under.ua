@@ -433,6 +433,7 @@ F ← ⍜⊙⊙⊢ ⋅⊙∘
 G ← ⍜(⊙⊙⊢) ⋅⊙∘
 ⍤⤙≍ {F 1 2 [3]} {G 1 2 [3]}
 
+# Switch
 ⍤⤙≍ [10 2 3] ⍜(⨬⊢⊣|×10) 0 [1 2 3]
 ⍤⤙≍ [1 2 30] ⍜(⨬⊢⊣|×10) 1 [1 2 3]
 ⍤⤙≍ [1 20 3] ⍜⨬(⊡|⊏)(×10) 0 1 [1 2 3]
@@ -567,4 +568,4 @@ $ baboon
 $ Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo
 $ Never gonna give you up
 $ ⍤⤙≍ ⍚⊃⍜⍜◴⊛⇌⍜⊛⇌ °/$"_\n_" 
-⍤⤙≍ ⍚⊃⍜⍜◴⊛⇌⍜⊛⇌ °/$"_\n_" 
+⍤⤙≍ ⍚⊃⍜⍜◴⊛⇌⍜⊛⇌ °/$"_\n_"

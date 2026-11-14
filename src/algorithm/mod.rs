@@ -12,8 +12,8 @@ use ecow::{EcoString, EcoVec};
 use smallvec::SmallVec;
 
 use crate::{
-    Array, ArrayValue, Context, ExactDoubleIterator, Ops, PersistentMeta, Shape, SigNode,
-    Signature, Uiua, UiuaResult, Value, cowslice::ecovec_extend_cowslice,
+    Array, ArrayValue, Context, ExactDoubleIterator, Node, Ops, PersistentMeta, Primitive, Shape,
+    SigNode, Signature, Uiua, UiuaResult, Value, cowslice::ecovec_extend_cowslice,
     empty_types::push_empty_rows_value, grid_fmt::GridFmt, val_as_arr,
 };
 
@@ -345,10 +345,7 @@ pub fn switch(
         let i = selector.data[0];
         // Get function
         let Some(f) = branches.into_iter().nth(i) else {
-            return Err(env.error(
-                "Function stack was empty when getting switch function. \
-                This is a bug in the interpreter.",
-            ));
+            return Err(env.error("Not enough switch functions. This is a bug in the interpreter."));
         };
         // Discard unused arguments
         let discard_start = env.rt.stack.len().saturating_sub(sig.args());
@@ -474,18 +471,23 @@ pub fn switch(
             for sel_row_slice in selector.row_slices() {
                 for &sel_elem in sel_row_slice {
                     // println!("  sel_elem: {}", sel_elem);
-                    let node = &branches[sel_elem];
-                    let arg_count = args[sel_elem];
-                    for (i, row) in rows_to_sel.iter_mut().rev().enumerate().rev() {
-                        let row = row.next().unwrap();
-                        // println!("  row: {:?}", row);
-                        if i < arg_count {
-                            env.push(row);
+                    let br = &branches[sel_elem];
+                    if matches!(br.node, Node::Prim(Primitive::Identity, _)) {
+                        let rows = rows_to_sel.iter_mut().map(|row| row.next().unwrap());
+                        outputs[0].push(rows.last().unwrap());
+                    } else {
+                        let arg_count = args[sel_elem];
+                        for (i, row) in rows_to_sel.iter_mut().rev().enumerate().rev() {
+                            let row = row.next().unwrap();
+                            // println!("  row: {:?}", row);
+                            if i < arg_count {
+                                env.push(row);
+                            }
                         }
-                    }
-                    env.exec(node.clone())?;
-                    for i in 0..sig.outputs() {
-                        outputs[i].push(env.pop("switch output")?);
+                        env.exec(br.clone())?;
+                        for i in 0..sig.outputs() {
+                            outputs[i].push(env.pop("switch output")?);
+                        }
                     }
                 }
             }

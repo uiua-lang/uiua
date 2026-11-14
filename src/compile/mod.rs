@@ -2248,11 +2248,6 @@ impl Compiler {
         Ok(root)
     }
     fn switch(&mut self, branches: Vec<Sp<Word>>, span: CodeSpan) -> UiuaResult<Node> {
-        let count = branches.len();
-        // Compile branches
-        let mut br = EcoVec::with_capacity(count);
-        let mut rigid_indices = Vec::new();
-        let mut flex_indices = Vec::new();
         let mut signodes: Vec<_> = (branches.into_iter().rev())
             .map(|br| {
                 let span = br.span.clone();
@@ -2260,9 +2255,19 @@ impl Compiler {
             })
             .collect::<UiuaResult<_>>()?;
         signodes.reverse();
-        for (i, (SigNode { node, sig }, span)) in signodes.into_iter().enumerate() {
-            let is_flex = node
-                .iter()
+        self.switch_nodes(signodes, span)
+    }
+    fn switch_nodes(
+        &mut self,
+        branches: Vec<(SigNode, CodeSpan)>,
+        span: CodeSpan,
+    ) -> UiuaResult<Node> {
+        // Compile branches
+        let mut br = EcoVec::with_capacity(branches.len());
+        let mut rigid_indices = Vec::new();
+        let mut flex_indices = Vec::new();
+        for (i, (SigNode { node, sig }, span)) in branches.into_iter().enumerate() {
+            let is_flex = (node.iter())
                 .rposition(|node| matches!(node, Node::Prim(Primitive::Assert, _)))
                 .is_some_and(|end| {
                     (0..end).rev().any(|start| {
@@ -2569,6 +2574,37 @@ impl Compiler {
                     SubSide::Right => ImplPrimitive::RightContraction,
                 };
                 Node::ImplPrim(prim, self.add_span(span))
+            }
+            Switch => {
+                let n = self.subscript_int_only(&scr, &Switch.format()).unwrap_or(0);
+                let n = self.positive_subscript(n, Switch, &scr.span);
+                let spandex = self.add_span(span.clone());
+                if n == 0 {
+                    self.emit_diagnostic(
+                        format!("{} of 0 values is just {}", Switch.format(), Pop.format()),
+                        DiagnosticKind::Advice,
+                        span,
+                    );
+                    Node::Prim(Pop, spandex)
+                } else {
+                    if n == 1 {
+                        self.emit_diagnostic(
+                            format!("{} of 1 value is just {}", Switch.format(), Pop.format()),
+                            DiagnosticKind::Advice,
+                            span.clone(),
+                        );
+                    }
+                    self.switch_nodes(
+                        (0..n)
+                            .map(|i| {
+                                let sn = Node::Prim(Identity, spandex).sig_node();
+                                let sn = sn.unwrap().gapped(i, spandex);
+                                (sn, span.clone())
+                            })
+                            .collect(),
+                        span,
+                    )?
+                }
             }
             prim => {
                 let Some(n) = self.subscript_int_only(&scr, &prim.format()) else {

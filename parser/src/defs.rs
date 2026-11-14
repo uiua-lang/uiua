@@ -223,7 +223,7 @@ primitive!(
     ///   : F 10 [1 27 8 3 14 9]
     /// Here are some more examples of [by] in action.
     /// ex: ⊂⊸↙ 2 [1 2 3 4 5]
-    ///   : ⊜□⊸≠ @  "Hey there buddy"
+    ///   : ⦶□⊸≠ @  "Hey there buddy"
     ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
     /// Subscripted [by] keeps the last N arguments after the outputs.
     /// ex: {⊸₂[⊙⊙∘] 1 2 3}
@@ -1297,7 +1297,7 @@ primitive!(
     /// The more important use case of [box] is for jagged or nested data.
     /// If you want to collect unevenly-sized groups from [partition] or [group], without [fill]ing, you must use [box].
     /// ex: $ Words of different lengths
-    ///   : ⊜□⊸≠@ #
+    ///   : ⦶□⊸≠@ #
     ///
     /// Pervasive functions work through boxes and preserve the maximum [box] depth of their arguments.
     /// ex: ¯ 1
@@ -1321,7 +1321,7 @@ primitive!(
     /// ex: ⊢ °□ □[1 2 3]
     /// [under][un][box] is useful when you want to re-[box] the result.
     /// ex: $ Reverse these words
-    ///   : ⊜□⊸≠@ #
+    ///   : ⦶□⊸≠@ #
     ///   : ⊸≡⍜°□⇌
     /// ex: {"Hey" "there" "world"}
     ///   : ≡⍜°□˙(⊂⊢)
@@ -1330,7 +1330,7 @@ primitive!(
     ///   : ⊸≡⍜°□(⬚0↙3)
     /// However, [rows][under][un][box] is such a common pattern, that this is what the [inventory] modifier does.
     /// ex: PrepLen ← $"_ _"⊸⧻
-    ///   : ⊜□⊸≠@  $ Prepend the word length
+    ///   : ⦶□⊸≠@  $ Prepend the word length
     ///   : ⊸⍚PrepLen
     /// If you do not need to re-[box] the result, you can use [content] instead.
     /// [content] [un][box]es all box elements that are passed to a function before calling it.
@@ -1726,47 +1726,6 @@ primitive!(
     /// [under][anti][orient] will put diagonals back into the original array.
     /// ex: ⍜⌝⤸¯ 0_0 +1°△4_4
     (2, Orient, DyadicArray, ("orient", '⤸')),
-    /// The n-wise windows of an array
-    ///
-    /// [windows] has been deprecated. Use [stencil] instead.
-    ///
-    /// ex: ◫2 .⇡4
-    /// ex: ◫4 .⇡6
-    ///
-    /// Multi-dimensional window sizes are supported.
-    /// ex: ◫2_2 .[1_2_3 4_5_6 7_8_9]
-    ///
-    /// Negative window sizes gives the absolute value number of windows.
-    /// ex: ◫¯2 ↯4_4⇡16
-    /// ex: ◫¯3 ↯4_4⇡16
-    /// This can be useful when you want to get horizontal windows.
-    /// ex: ◫¯1_2 ↯4_4⇡16
-    ///
-    /// Usually, [windows] "materializes" the windows. This means that the windows are copied into a new array. While this is very general, it can be slow and wasteful if you end up immediately reducing the windows.
-    /// For this reason, the pattern `rows``reduce``F``windows` is optimized for scalar window sizes to [reduce] windows as they are generated.
-    /// ex: ≡/+◫ 5 [1 8 2 9 3 0 2 4 4 5 1] # Fast!
-    ///
-    /// You can use [fill] to pad the array with a value.
-    /// This can be useful for things like convolutions.
-    /// ex: +1↯2_3⇡6
-    ///   : ⬚0◫2_3
-    ///   : ≡≡□
-    ///
-    /// [windows] with a scalar or list window size will always produce overlapping windows that shift by one row at a time.
-    /// 2-dimensional windows sizes allow more control over the windows.
-    /// A rank-2 array with only one row will "chunk" the array with non-overlapping windows.
-    /// ex: ◫[[4]] ⇡12
-    /// ex: ◫¤¤4   ⇡12
-    /// ex: ≡≡□ ◫¤[2 2] . °△4_6
-    /// Negative sizes still specify the number of windows desired.
-    /// ex: ◫¤¤¯4 ⇡12
-    /// ex: ≡≡□ ◫¤[¯2 ¯2] . °△4_6
-    /// A rank-2 array with two rows allows the "stride" of the windows to be specified.
-    /// The first row specifies the window size, and the second row specifies the stride.
-    /// ex: ◫[[3] [4]] ⇡12
-    /// ex: ◫[[4] [2]] ⇡12
-    /// ex: ≡≡□ ◫[2_2 1_3] . °△4_6
-    (2, Windows, DyadicArray, ("windows", '◫')),
     /// Discard or copy some rows of an array
     ///
     /// Takes two arrays. The first array is the number of copies to keep of each row of the second array.
@@ -1830,21 +1789,21 @@ primitive!(
     ///
     /// Occurrences of the first array in the second array will be marked with increasing numbers.
     /// While [find] only marks the start of each occurrence, [mask] marks the entire occurrence.
-    /// ex: ⦷ "ab" "abracadabra"
-    /// ex: ⊸⦷ [1 2 3] [0 1 2 3 1 2 3 4 5 1 2 3 4 5 6]
+    /// ex: ⚇ "ab" "abracadabra"
+    /// ex: ⊸⚇ [1 2 3] [0 1 2 3 1 2 3 4 5 1 2 3 4 5 6]
     /// Increasing numbers are used so that adjacent occurrences can be distinguished.
     /// An occurrence that would overlap with a previous occurrence is not marked.
-    /// ex: ⊸⦷ [3 4 3 4] [0 3 4 3 4 3 4 0 0 3 4 3 4 0]
+    /// ex: ⊸⚇ [3 4 3 4] [0 3 4 3 4 3 4 0 0 3 4 3 4 0]
     ///
     /// Arbitrary rank arrays are supported.
     /// The first array's rank must be `less or equal` the rank of the second.
-    /// ex: ◡⦷ 3_4 ↯2_3⇡6
-    /// ex: ◡⦷ [1_2 5_6] [1_2_3_4 5_6_1_2 7_8_5_6 4_3_1_2]
+    /// ex: ◡⚇ 3_4 ↯2_3⇡6
+    /// ex: ◡⚇ [1_2 5_6] [1_2_3_4 5_6_1_2 7_8_5_6 4_3_1_2]
     ///
     /// [mask] works well with [partition] in a way that [find] does not.
     /// Here, we [not] the [mask] of a non-scalar delimiter to split a string.
-    /// ex: ⊜∘ ¬⊸⦷ " - " "foo - bar - baz"
-    (2, Mask, DyadicArray, ("mask", '⦷')),
+    /// ex: ⦶∘ ¬⊸⚇ " - " "foo - bar - baz"
+    (2, Mask, DyadicArray, ("mask", '⚇')),
     /// Check if each row of one array exists in another
     ///
     /// The second argument is checked for membership in the first argument.
@@ -2199,59 +2158,59 @@ primitive!(
     /// The first argument is the window size.
     /// The second argument is the array to be windowed.
     /// Sliding windows of the given size are passed to the function.
-    /// ex: ⧈∘ 2 ⇡4
-    ///   : ⧈∘ 3 ⇡6
-    /// ex: ⧈□ 2 ⇡4
-    ///   : ⧈□ 3 ⇡6
+    /// ex: ◫∘ 2 ⇡4
+    ///   : ◫∘ 3 ⇡6
+    /// ex: ◫□ 2 ⇡4
+    ///   : ◫□ 3 ⇡6
     /// Multi-dimensional window sizes are supported.
-    /// ex: ⧈□ 3_3 °△5_5
+    /// ex: ◫□ 3_3 °△5_5
     ///
     /// [fill] will pad the sides of the windows
-    /// ex: ⬚0⧈∘ 3 [1 2 3]
-    /// ex: ⬚0⧈□ 2_3 +1°△3_3
+    /// ex: ⬚0◫∘ 3 [1 2 3]
+    /// ex: ⬚0◫□ 2_3 +1°△3_3
     ///
     /// A numeric subscript sets the window size.
-    /// ex: ⧈₃∘ ⇡6
+    /// ex: ◫₃∘ ⇡6
     ///
     /// [stencil] only takes a window size if its function is monadic. For functions with 2 or more arguments, the window size is the number of arguments.
     /// This is useful for things like getting adjacent differences.
-    /// ex: ⧈- [3 1 5 6 8]
-    /// ex: ⧈⊟ [3 1 5 6 8]
-    /// ex: ⧈{⊙⊟} ⇡5
+    /// ex: ◫- [3 1 5 6 8]
+    /// ex: ◫⊟ [3 1 5 6 8]
+    /// ex: ◫{⊙⊟} ⇡5
     ///
     /// Negative window sizes gives the absolute value number of windows.
-    /// ex: ⧈□¯2 °△4_4
-    /// ex: ⧈□¯3 °△4_4
+    /// ex: ◫□¯2 °△4_4
+    /// ex: ◫□¯3 °△4_4
     /// This can be useful when you want to get horizontal windows.
-    /// ex: ⧈□¯1_2 °△4_4
+    /// ex: ◫□¯1_2 °△4_4
     ///
     /// A sided subscript will "chunk" the array. The side indicates to which side of the array the chunks will be aligned.
-    /// ex: ⧈⌞∘ 4 ⇡10
-    ///   : ⧈⌟∘ 4 ⇡10
+    /// ex: ◫⌞∘ 4 ⇡10
+    ///   : ◫⌟∘ 4 ⇡10
     /// This works for multidimensional chunking as well.
-    /// ex: ⧈⌞□ 2_3 °△7_7
+    /// ex: ◫⌞□ 2_3 °△7_7
     ///
     /// If we want full control over the window size, stride, and fill amount, we can pass [stencil] a rank-2 array for the window size.
     /// A rank-2 array with only one row will chunk the array with non-overlapping windows.
-    /// ex: ⧈∘[[4]] ⇡12
-    /// ex: ⧈∘ ¤¤4  ⇡12
-    /// ex: ⊸⧈□ ¤[2 2] °△4_6
+    /// ex: ◫∘[[4]] ⇡12
+    /// ex: ◫∘ ¤¤4  ⇡12
+    /// ex: ⊸◫□ ¤[2 2] °△4_6
     /// Negative sizes still specify the number of windows desired.
-    /// ex: ⧈∘ ¤¤¯4 ⇡12
-    /// ex: ⊸⧈□ ¤[¯2 ¯2] °△4_6
+    /// ex: ◫∘ ¤¤¯4 ⇡12
+    /// ex: ⊸◫□ ¤[¯2 ¯2] °△4_6
     /// A rank-2 array with two rows allows the stride of the windows to be specified.
     /// The first row specifies the window size, and the second row specifies the stride.
-    /// ex: ⧈□ [¤3¤4] ⇡12
-    /// ex: ⧈□ [¤4¤2] ⇡12
-    /// ex: ⊸⧈□ [2_2 1_3] °△4_6
+    /// ex: ◫□ [¤3¤4] ⇡12
+    /// ex: ◫□ [¤4¤2] ⇡12
+    /// ex: ⊸◫□ [2_2 1_3] °△4_6
     /// By default, [fill]ed [stencil] pads each side of an axis with a number equal to the axis's window size [subtract]`1`.
     /// This number is then [multiply]d by the specified stride.
-    /// ex: ⬚0⧈□ 2_2 +1°△2_2
-    /// ex: ⬚0⧈□ ¤2_2 +1°△4_6
+    /// ex: ⬚0◫□ 2_2 +1°△2_2
+    /// ex: ⬚0◫□ ¤2_2 +1°△4_6
     /// Adding a third row to the array allows the fill amount to be specified for each axis.
-    /// ex: ⬚0⧈□ [2_2 1_1 0_1] +1°△2_2
-    /// ex: ⬚0⧈□ [2_2 2_2 0_1] +1°△4_6
-    (2[1], Stencil, MappingModifier, ("stencil", '⧈')),
+    /// ex: ⬚0◫□ [2_2 1_1 0_1] +1°△2_2
+    /// ex: ⬚0◫□ [2_2 2_2 0_1] +1°△4_6
+    (2[1], Stencil, MappingModifier, ("stencil", '◫')),
     /// Repeat a function a number of times
     ///
     /// ex: ⍥(+2)5 0
@@ -2345,47 +2304,47 @@ primitive!(
     /// Keys `less or equal``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.
     /// If the function takes 0 or 1 arguments, then [partition] behaves like [rows].
-    /// ex: ⊜∘ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
+    /// ex: ⦶∘ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
     /// If the values returned by the function do not have the same [shape], concatenation will fail unless a [fill] is supplied.
-    /// ex! ⊜∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
-    /// ex: ⬚∞⊜∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    /// ex! ⦶∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    /// ex: ⬚∞⦶∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     /// It is common to use [box] to encapsulate groups of different [shape]s.
-    /// ex: ⊜□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    /// ex: ⦶□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// This can be used to split an array by a delimiter.
-    /// ex: ⊜□ ⊸≠@  $ Hey there friendo
+    /// ex: ⦶□ ⊸≠@  $ Hey there friendo
     /// You can nest [partition]s to split by multiple delimiters and create a multi-dimensional array.
     /// ex: $ 1 1 2 3
     ///   : $ 5 8 13 21
-    ///   : ⊜(⊜⋕⊸≠@ )⊸≠@\n
+    ///   : ⦶(⦶⋕⊸≠@ )⊸≠@\n
     ///
     /// If the function takes more than 1 argument, groups are extracted for each argument.
     /// This example couples each word from a string with its start index.
-    /// ex: ⊜{⊢⊙∘} ≠@  ⟜°⊏ "Hello, how are you?"
+    /// ex: ⦶{⊢⊙∘} ≠@  ⟜°⊏ "Hello, how are you?"
     /// Note that multiple values can be returned in this way instead of combining them inside the function.
-    /// ex: ⊜⊓⊢□ ≠@  ⟜°⊏ "Hello, how are you?"
+    /// ex: ⦶⊓⊢□ ≠@  ⟜°⊏ "Hello, how are you?"
     ///
     /// [partition] also works with multidimensional markers. Groups are formed from markers that are adjacent along any axis.
     /// Each group will be flattened before being passed to the function.
-    /// ex: ⊸˙⊜□ ↯4_4 [0 1 1 2 2]
+    /// ex: ⊸˙⦶□ ↯4_4 [0 1 1 2 2]
     /// If we wanted to group the indices that are adjacent, we could use the array to [partition] its own indices.
-    /// ex: ⊜□⟜°⊡ ↯4_4 [0 1 1 2 2]
+    /// ex: ⦶□⟜°⊡ ↯4_4 [0 1 1 2 2]
     ///
     /// [un][partition] works if [partition]'s function is monadic and [un]-invertible.
     /// A list of markers and a list of unpartitioned values will be returned.
     /// The most common function to use with this is [box].
     /// By default, the markers will be increasing integers starting from `1`.
-    /// ex: °⊜□ {"Hey" "there" "buddy"}
+    /// ex: °⦶□ {"Hey" "there" "buddy"}
     /// If a [fill] value is provided, the markers will all be `1`, and the gaps will be filled with the fill value.
-    /// ex: ⬚@-°⊜□ {"Hey" "there" "buddy"}
+    /// ex: ⬚@-°⦶□ {"Hey" "there" "buddy"}
     ///
     /// [under][partition] works if [partition]'s function is [under]able.
-    /// ex: ⍜⊜□⇌  ⊸≠@  $ These are some words
-    /// ex: ⍜⊜□⍚⇌ ⊸≠@  $ These are some words
-    /// ex: ⍜⊜⊢⌵  ⊸≠@  $ These are some words
+    /// ex: ⍜⦶□⇌  ⊸≠@  $ These are some words
+    /// ex: ⍜⦶□⍚⇌ ⊸≠@  $ These are some words
+    /// ex: ⍜⦶⊢⌵  ⊸≠@  $ These are some words
     ///
     /// [partition] is closely related to [group].
-    ([1], Partition, MappingModifier, ("partition", '⊜')),
+    ([1], Partition, MappingModifier, ("partition", '⦶')),
     /// Call a function with its arguments' axes reversed
     ///
     /// Uiua primitives tend to treat axes near the front of the shape as spanning items in a collection. Axes near the end of the shape are often treated as the items or components of the items.
@@ -2443,21 +2402,21 @@ primitive!(
     /// Call a function skipping the second argument
     ///
     /// ex: # Experimental!
-    ///   : ∪+ 1 2 3
+    ///   : ⦵+ 1 2 3
     /// ex: # Experimental!
-    ///   : ∪⊂₃ 1_2 3_4 5_6 7_8
+    ///   : ⦵⊂₃ 1_2 3_4 5_6 7_8
     /// You can chain [reach] to skip more arguments
     /// ex: # Experimental!
-    ///   : ∪∪⊟ 1 2 3 4
-    ///   : ∪∪∪⊟ 1 2 3 4 5
+    ///   : ⦵⦵⊟ 1 2 3 4
+    ///   : ⦵⦵⦵⊟ 1 2 3 4 5
     /// Numeric subscripts make [reach] include additional leading arguments.
     /// ex: # Experimental!
-    ///   : ∪₂⊟₃ 1 2 3 4
+    ///   : ⦵₂⊟₃ 1 2 3 4
     /// Sided subscripts cause [reach] to take 2 functions instead of one. The function on the given side will operate on the skipped arguments.
     /// ex: # Experimental!
-    ///   : ∪⌞⊟⊟₃ 1 2 3 4 5
-    ///   : ∪⌟⊟⊟₃ 1 2 3 4 5
-    ([1], Reach, Arguments, ("reach", '∪'), { experimental: true }),
+    ///   : ⦵⌞⊟⊟₃ 1 2 3 4 5
+    ///   : ⦵⌟⊟⊟₃ 1 2 3 4 5
+    ([1], Reach, Arguments, ("reach", '⦵'), { experimental: true }),
     /// Define the various inverses of a function
     ///
     /// [obverse] defines how a function should interact with [un], [anti], and [under].
@@ -3606,7 +3565,7 @@ primitive!(
     ///
     /// Append commas to whitespace for a more traditional notation:
     /// ex: -5↯2_2_3⇡12
-    ///   : ⍜⊜□⍚(⊂@,)⊸∊" \n" repr # add commas
+    ///   : ⍜⦶□⍚(⊂@,)⊸∊" \n" repr # add commas
     ///   : &p ⍜▽≡⋅@-⊸=@¯        # replace negate glyphs with minus signs
     (1, Repr, Misc, "repr"),
     /// Convert a value to its pretty-printed output representation
@@ -3786,7 +3745,7 @@ primitive!(
     ///   :  {"multiple" "lines"}}
     ///   : layout 30
     /// ex: # Experimental!
-    ///   : layout 15 ⬚""↯∞_12 ⊜□⊸≠@  Lorem
+    ///   : layout 15 ⬚""↯∞_12 ⦶□⊸≠@  Lorem
     ///
     /// 4 optionals arguments are accepted:
     /// - `LineHeight` - The height of a line relative to the font size (default 1)

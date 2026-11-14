@@ -240,7 +240,7 @@ impl Primitive {
         };
         Some(match (self, n) {
             (prim, Some(_)) if prim.class() == PrimClass::DyadicPervasive => Signature::new(1, 1),
-            (Select | Pick | Take | Drop | Rerank | Rotate | Orient | Windows | Base, Some(_)) => {
+            (Select | Pick | Take | Drop | Rerank | Rotate | Orient | Base, Some(_)) => {
                 Signature::new(1, 1)
             }
             (First | Last, Some(SubscriptNumber::Int(n))) if n >= 0 => {
@@ -304,7 +304,6 @@ impl Primitive {
                     Deshape.format()
                 )
             },
-            Windows => || format!("use {} {} instead", Stencil.format(), Identity.format()),
             Each => || format!("use {} instead", Rows.format()),
             Unique => || format!("use {Occurrences}₁"),
             // Complex => || {

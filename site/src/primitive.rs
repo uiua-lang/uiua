@@ -157,7 +157,7 @@ fn all_fills() -> impl IntoView {
             { fill_row(Reduce, "Sets initial value", "⬚10/+ [1 2 3]") }
             { fill_row(Scan, "Sets initial value and fills row shapes", "⬚10\\⊂ [1 2 3]") }
             { fill_row(Rows, "Fills row shapes", "⬚0≡⇡ [4 7 3]") }
-            { fill_row(Partition, "Fills row shapes", "⬚@ ⊜∘ ⊸≠@  \"Hey there\"") }
+            { fill_row(Partition, "Fills row shapes", "⬚@ ⦶∘ ⊸≠@  \"Hey there\"") }
             { fill_row(Group, "Fills row shapes", "⬚0⊕∘ ⊸◿3 [1 8 4 9 3 8 2]") }
             { fill_row(Base, "Repeating base", "⬚10base[12 20] 999999") }
             { fill_row_impl(view!(<Prims prims=[Un, Pop]/>), "Get fill value", "⬚5°◌") }
@@ -269,7 +269,7 @@ fn all_uns() -> impl IntoView {
             ) }
             { inverse_row_impl(view!(<code class="string-literal-span">"$\"_…_\""</code>), No, "Pattern match and extract", "{°$\"_ - _(_)_\"} \"a - bc(de) - f\"") }
             { inverse_row_impl(view!(<Prims prims=[Reduce]/><code class="string-literal-span">"$\"_…_\""</code>), No, "Must have 2 args and only text between", "°/$\"_ - _\" \"a - bc - d\"") }
-            { inverse_row([Partition], No, "Inner function must be invertible", "°⊜□ {\"Hey\" \"there\" \"buddy\"}") }
+            { inverse_row([Partition], No, "Inner function must be invertible", "°⦶□ {\"Hey\" \"there\" \"buddy\"}") }
             { inverse_row([Group], No, "Inner function must be invertible", "°⊕□ {1 2_3_4 5_6}") }
             { inverse_row([Repeat], Required, "Inner function must be invertible", "°(⍥(×2)5) 1024") }
             { inverse_row([Args], No, "", "°? 5") }
@@ -340,14 +340,14 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Pick], Optional, "Duplicate indices must have the same value", "⍜(⊡1_1|×10) [1_2_3 4_5_6]") }
             { inverse_row([Join], No, view!(<Prim prim=Len/>" may not change"), "⍜⊂\\+ 1_2_3 4_5_6") }
             { inverse_row([Base], Optional, "", "⍜⊥(⊂1) 10 123") }
-            { inverse_row([Stencil, Identity], Optional, "Chunking only", "⍜⧈∘≡⇌ ¤¤3 ⇡9") }
+            { inverse_row([Stencil, Identity], Optional, "Chunking only", "⍜◫∘≡⇌ ¤¤3 ⇡9") }
             { inverse_row([Dip], No, "Inner function must be invertible", "⍜⊙⊂× 10 2 3") }
             { inverse_row([Both], No, "Inner function must be invertible", "⍜∩⊡∩(×10) 1 [1 2 3] 2 [4 5 6]") }
             { inverse_row([Pop], No, "", "⍜◌(×2) 1 2") }
             { inverse_row([Rows], No, "Inner function must be invertible", "⍜≡⊢(×10) [1_2_3 4_5_6]") }
             { inverse_row([Inventory], No, "Inner function must be invertible", "⍜⍚△⇌ {1 2_3 4_5_6}") }
             { inverse_row([Group], No, "Inner function must be invertible", "⍜⊕□⍚⇌ ⊸≠@ \"I love arrays\"") }
-            { inverse_row([Partition], No, "Inner function must be invertible", "⍜⊜□⍚⇌ ⊸≠@ \"Hello World\"") }
+            { inverse_row([Partition], No, "Inner function must be invertible", "⍜⦶□⍚⇌ ⊸≠@ \"Hello World\"") }
             { inverse_row([Fold], No, "Inner function must be invertible", "⍜∧⊏(×10) [0 2] ↯2_3⇡6") }
             { inverse_row([Repeat], Required, "Inner function must be invertible", "⍜⍥(×2)⟜∘ 5 1") }
             { inverse_row([Repeat], No, "Inner function must be invertible", "°⍥°(↧1000×2) 5") }

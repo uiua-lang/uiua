@@ -88,7 +88,7 @@ F ← ↯3 ℂ
 ```uiua
 # Experimental!
 #? _□str ? str
-F ← ⊜□⊸≠@\n &fras
+F ← ⦶□⊸≠@\n &fras
 ```
 
 This system is meant to often be used in conjunction with [validate](/docs/validate), which can more explicitly verify type/shape information. See its documentation for detail on how to use it.

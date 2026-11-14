@@ -157,7 +157,7 @@ Sometimes [`⊨ validate`](https://uiua.org/docs/validate) is not even necessary
 ```uiua
 # Experimental!
 #? ℝ ? str
-SumFile ← /+⊜⋕¬⊸∊" \t\n\r" &fras
+SumFile ← /+⦶⋕¬⊸∊" \t\n\r" &fras
 ```
 You can type check all function in a scope with the `# Type check!` semantic comment.
 ```uiua should diag

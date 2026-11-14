@@ -61,10 +61,10 @@ You can read more in the updated [Modules](https://uiua.org/tutorial/Modules) tu
 [`mask`](https://uiua.org/docs/mask) is a new function that is similar to [`find`](https://uiua.org/docs/find), but it returns full masks of matches rather than just the first positions.
 
 ```uiua
-⦷ " - " "Hey - how-are -  you"
+⚇ " - " "Hey - how-are -  you"
 ```
 ```uiua
-⊜□¬⦷⊙. " - " "Hey - how-are -  you"
+⦶□¬⚇⊙. " - " "Hey - how-are -  you"
 ```
 
 This simplifies a lot of string-processing code in particular. A new [strings](https://uiua.org/tutorial/strings) tutorial has been added as well.

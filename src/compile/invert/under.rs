@@ -220,11 +220,6 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
         (Over, Shape, PushUnd(1), Reshape),
         (PopUnd(1), UndoReshape),
     )),
-    &MaybeVal((
-        Windows,
-        (CopyUnd(1), Windows),
-        (PopUnd(1), UndoWindows(false)),
-    )),
     &MaybeVal(StencilPat),
     &MaybeVal(SidedStencilPat),
     // Classify and deduplicate

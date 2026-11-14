@@ -1091,16 +1091,16 @@ impl<'a> Lexer<'a> {
                 "⮌" => self.end(Primitive::Orient, start),
                 "¨" | "𝄈" => self.end(Primitive::Backward, start),
                 "⍛" => self.end(Primitive::Obverse, start),
-                "◫" => {
-                    self.end(Primitive::Stencil, start);
-                    self.end(Primitive::Identity, self.loc);
-                }
                 "∈" => self.end(Primitive::MemberOf, start),
                 "⨂" => self.end(Primitive::IndexIn, start),
                 "◰" => {
                     self.end(Primitive::Occurrences, start);
                     self.end(Subscr(Subscript::from(1)), self.loc);
                 }
+                "⧈" => self.end(Primitive::Stencil, start),
+                "⦷" => self.end(Primitive::Mask, start),
+                "∪" => self.end(Primitive::Reach, start),
+                "⊜" => self.end(Primitive::Partition, start),
 
                 "(" => self.end(OpenParen, start),
                 ")" => self.end(CloseParen, start),

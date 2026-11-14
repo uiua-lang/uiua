@@ -23,7 +23,7 @@ The formatter that displays arrays in output has been overhauled. High-rank arra
 ```
 
 ```uiua
-⧈□ 2_3 °△3_5
+◫□ 2_3 °△3_5
 ```
 
 You can read more about how axes are laid out [here](https://www.uiua.org/tutorial/Arrays#output). You can also gaze upon the [*G R I D*](https://www.uiua.org/pad?src=0_16_0-rc_1__4omh4oKB4pahwrDilrMyXzJfMl8yXzJfMl8yXzJfMQo=).

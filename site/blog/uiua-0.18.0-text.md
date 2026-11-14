@@ -98,25 +98,25 @@ Player "Jin-woo" 2 Bars 205 22 0
 $"Hp is _" Player~Bars~~Hp # Try formatting
 ```
 
-## Sided [`stencil ⧈`](https://uiua.org/docs/stencil)
+## Sided [`stencil ◫`](https://uiua.org/docs/stencil)
 
-[`stencil ⧈`](https://uiua.org/docs/stencil) chunks its input if the window size was rank 2. This often requires double [`fix ¤`](https://uiua.org/docs/fix)ing a scalar number.
+[`stencil ◫`](https://uiua.org/docs/stencil) chunks its input if the window size was rank 2. This often requires double [`fix ¤`](https://uiua.org/docs/fix)ing a scalar number.
 
 ```uiua
-⧈□ ¤¤3 ⇡10
+◫□ ¤¤3 ⇡10
 ```
 
 Using a sided subscript now forces chunking behavior.
 
 ```uiua
-⧈⌞□ 3 ⇡10
+◫⌞□ 3 ⇡10
 ```
 
 Why is this the behavior of sided subscripts? Because changing the side changes how the chunks are aligned when the window size does not evenly divide the length.
 
 ```uiua
-⧈⌞□ 3 ⇡8
-⧈⌟□ 3 ⇡8
+◫⌞□ 3 ⇡8
+◫⌟□ 3 ⇡8
 ```
 
 ## Sided [`join ⊂`](https://uiua.org/docs/join)

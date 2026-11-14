@@ -18,11 +18,11 @@
 ⌝⊸⊡ 2 10 [1 2 3 4]
 
 # Split on a scalar
-⊜□⊸≠ @, "a,bc,d"
+⦶□⊸≠ @, "a,bc,d"
 °/$"_,_" "a,bc,d"
 
 # Split on a list
-⊜□¬⊸⦷ " - " "a - bc - d"
+⦶□¬⊸⚇ " - " "a - bc - d"
 °/$"_ - _" "a - bc - d"
 
 # Check that all rows of an array are equal

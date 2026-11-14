@@ -51,7 +51,7 @@ pub(crate) mod enabled {
         (
             "AUTOMATA",
             "\
-Rule ← ˜⊏⊓⋯₈(°⋯⧈⇌3⊂⊂⊃⊣⟜⊢)
+Rule ← ˜⊏⊓⋯₈(°⋯◫⇌3⊂⊂⊃⊣⟜⊢)
 =⌊⊃÷₂⇡ 500        # Init
 ⍥⟜⊸Rule ⌊÷2◡⋅⧻ 30 # Run",
         ),

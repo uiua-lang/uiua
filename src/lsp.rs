@@ -1654,7 +1654,7 @@ mod server {
                     PrimClass::Constant => UIUA_NUMBER_STT,
                     _ if margs == Some(1) => MONADIC_MODIFIER_STT,
                     _ if margs == Some(2) => DYADIC_MODIFIER_STT,
-                    _ if margs.is_some() => TRIADIC_MODIFIER_STT,
+                    _ if margs.is_some_and(|m| m != 0) => TRIADIC_MODIFIER_STT,
                     _ if args == Some(0) => NOADIC_FUNCTION_STT,
                     _ if args == Some(1) => MONADIC_FUNCTION_STT,
                     _ if args == Some(2) => DYADIC_FUNCTION_STT,

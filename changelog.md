@@ -15,6 +15,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`hsl`](https://uiua.org/docs/hsl) and [`oklab`](https://uiua.org/docs/oklab) functions
 - Output comments now use subscripts instead of extra `#`s. They can still be typed as extra `#`s and will be formatted to use subscripts.
 - Add [`&faa`](https://uiua.org/docs/&faa) to append to the end of a file, creating it if it doesn't exist
+- Add numeric subscripts for [`switch ⨬`](https://uiua.org/docs/switch), which switch over that many argument
 ### Interpreter
 - Add `uiua new` command for creating a new Uiua project
   - `--lib` option to make a `lib.ua` instead of a `main.ua`

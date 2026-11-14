@@ -78,6 +78,12 @@
     "class": "Misc",
     "description": "Exit the program with a status code"
   },
+  "&faa": {
+    "args": 2,
+    "outputs": 0,
+    "class": "Filesystem",
+    "description": "Append the entire contents of an array to a file"
+  },
   "&fc": {
     "args": 1,
     "outputs": 1,

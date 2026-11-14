@@ -175,8 +175,7 @@ impl SigNode {
     }
     /// Gap before calling this node
     pub fn gapped(mut self, depth: usize, span: usize) -> SigNode {
-        let mut sig = self.sig;
-        sig.update_args(|a| a + depth);
+        self.sig.update_args(|a| a + depth);
         for _ in 0..depth {
             self.node.prepend(Node::Prim(Primitive::Pop, span));
         }

@@ -2667,6 +2667,12 @@ primitive!(
     /// ex: ⨬(+|-|×|÷) [0 1 2 3] 2 5
     /// In this case, [switch] behaves similarly to [rows]. The index will be iterated along with other arguments.
     /// ex: ⨬(+|-|×|÷) [0 1 2 3] [1 6 10 2] 5
+    ///
+    /// Numeric subscripts turn [switch] into a function that switches over the input arguments
+    /// ex: ⨬₂ 0 @a@b
+    ///   : ⨬₂ 1 @a@b
+    ///   : ⨬₂ 0_1_0 "abc" "def"
+    ///   : ⨬₃ 0_1_2 "abc" "def" "ghi"
     ([2], Switch, OtherModifier, ("switch", '⨬')),
     /// Call a function and catch errors
     ///

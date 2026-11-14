@@ -641,6 +641,7 @@ pub fn Subscripts() -> impl IntoView {
             "⧈⌞□ 2 ⇡5\n⧈⌟□ 2 ⇡5",
         ),
         subscript(Tuples, "Prefixes or suffixes", "⧅⌞□ \"abcd\"\n⧅⌟□ \"abcd\""),
+        subscript(Switch, "Switch on args", "⨬₂ 0_1_0 \"abc\" \"def\""),
         subscript(
             EncodeBytes,
             "Choose little or big endian",

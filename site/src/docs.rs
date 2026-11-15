@@ -35,6 +35,7 @@ pub enum DocsPage {
     Experimental,
     Idioms,
     Aliases,
+    ArraySummary,
 }
 
 impl IntoParam for DocsPage {
@@ -56,6 +57,7 @@ impl IntoParam for DocsPage {
             "experimental" => Ok(Self::Experimental),
             "idioms" => Ok(Self::Idioms),
             "aliases" => Ok(Self::Aliases),
+            "array-summary" => Ok(Self::ArraySummary),
             value => Ok(Self::Search(value.into())),
         }
     }
@@ -96,6 +98,12 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Experimental => Experimental().into_view(),
             DocsPage::Idioms => Idioms().into_view(),
             DocsPage::Aliases => Aliases().into_view(),
+            DocsPage::ArraySummary => title_markdown(
+                "Array Summary Notation",
+                "/text/array-summary.md",
+                View::default(),
+            )
+            .into_view(),
         };
 
         view! {
@@ -254,6 +262,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/experimental">"Experimental Features"</A>" - an overview of experimental features"</li>
             <li><A href="/docs/idioms">"Idioms"</A>" - commonly useful, non-obvious idioms"</li>
             <li><A href="/docs/aliases">"Aliases"</A>" - patterns that get converted by the formatter"</li>
+            <li><A href="/docs/array-summary">"Array Summary Notation"</A>" - how to read the large array summary format"</li>
         </ul>
 
         <Hd id="other-pages">"Other Pages"</Hd>

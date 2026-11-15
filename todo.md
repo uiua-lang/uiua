@@ -8,7 +8,6 @@
 - Sided `reshape`
 - Maps tutorial
 - More Inverses tutorial
-- Document array summary notation
 - Maybe:
   - Special glyph for labels
   - Syntax-aware strings/format strings

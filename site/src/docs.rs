@@ -262,7 +262,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/experimental">"Experimental Features"</A>" - an overview of experimental features"</li>
             <li><A href="/docs/idioms">"Idioms"</A>" - commonly useful, non-obvious idioms"</li>
             <li><A href="/docs/aliases">"Aliases"</A>" - patterns that get converted by the formatter"</li>
-            <li><A href="/docs/array-summary">"Array Summary Notation"</A>" - a description of what the displayed text output of larger arrays mean"</li>
+            <li><A href="/docs/array-summary">"Array Summary Notation"</A>" - how to read the large array summary format"</li>
         </ul>
 
         <Hd id="other-pages">"Other Pages"</Hd>

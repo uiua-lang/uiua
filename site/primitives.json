@@ -1269,7 +1269,7 @@
     "description": "Make an array of all natural numbers less than a number"
   },
   "reach": {
-    "glyph": "⚆",
+    "glyph": "∪",
     "outputs": 1,
     "modifier_args": 1,
     "class": "Arguments",

@@ -11,7 +11,7 @@ Date ← $"_, _ +0000" ⊃(
 
 # Parse out Path, Guid, Date, Title
 &fras $ site/blog/list.txt
-⚆□⊸≠@\n
+⊜□⊸≠@\n
 ⍚°$"_(_): _ - _"
 
 Rss      ← $ rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"
@@ -23,7 +23,7 @@ Tag Rss Tag "channel" ⊂ {
   Tag AtomLink ""
   Tag "lastBuildDate" Date now
 } ⍚(
-  ⊙⊙(Date °datetime ⋕⚆□⊸≠@-) # Convert date
+  ⊙⊙(Date °datetime ⋕⊜□⊸≠@-) # Convert date
   Tag "item" {
     ⊓(Tag "link" $"https://uiua.org/blog/_"
     | Tag "guid isPermaLink=\"false\""

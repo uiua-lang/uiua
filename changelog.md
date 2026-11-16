@@ -9,7 +9,6 @@ This version is not yet released. If you are reading this on the website, then t
 - Change a few glyphs:
   - Change [`stencil ◫`](https://uiua.org/docs/stencil)'s glyph from `⧈` to `◫`
   - Change [`mask ⚇`](https://uiua.org/docs/mask)'s glyph from `⦷` to `⚇`
-  - Change [`reach ⚆`](https://uiua.org/docs/reach)'s glyph from `∪` to `⚆`
   - These changes are all backward compatible and will be automatically updated by the formatter.
 - Add [`un °`](https://uiua.org/docs/un)[`validate ⊨`](https://uiua.org/docs/validate) for getting the type spec of an array
 - The formatter will now format text inside comments and strings that is surrounded with `\\(...)`.
@@ -89,7 +88,7 @@ This version is not yet released. If you are reading this on the website, then t
   - As planned, [`indexin ⊗`](https://uiua.org/docs/indexin)'s glyph has been changed, and the old one will format to `⊗`.
 - Remove experimental `&b` (breakpoint)
   - It was half-baked and poorly implemented
-- Remove old version of [`reach ⚆`](https://uiua.org/docs/reach) that used the `𝄐` glyph
+- Remove old version of [`reach ∪`](https://uiua.org/docs/reach) that used the `𝄐` glyph
 ### Interpreter
 - Tweak the formatter to make indentation always a multiple of 2
 - Add number output rules for some square roots
@@ -139,8 +138,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`compress`](https://uiua.org/docs/compress) function to compress arrays of bytes
 - A function/constant and a module with the same name can now be in scope at the same time
 - Allow `≁` for private imports/exports from modules
-- Change [`reach ⚆`](https://uiua.org/docs/reach)'s glyph from `𝄐` to `∪`
-- Change how sided [`reach ⚆`](https://uiua.org/docs/reach) works
+- Change [`reach ∪`](https://uiua.org/docs/reach)'s glyph from `𝄐` to `∪`
+- Change how sided [`reach ∪`](https://uiua.org/docs/reach) works
 - Add `shuf` and `shuffle` aliases for [`un °`](https://uiua.org/docs/un)[`sort ⍆`](https://uiua.org/docs/sort)
 - Remove the 2-character ASCII aliases for comparison functions in favor of 2-letter aliases
   - These symbolic aliases created conflicts with other language syntax
@@ -440,7 +439,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.15.0).
   - You can find a short blog post about this change [here](https://uiua.org/blog/its-so-over)
 - Stabilize [sided subscripts](https://uiua.org/tutorial/evenmoreargument#sided-subscripts) for [`both ∩`](https://uiua.org/docs/both) and [`bracket ⊓`](https://uiua.org/docs/bracket)
 - Add [`un °`](https://uiua.org/docs/un) [`with ⤙`](https://uiua.org/docs/with) and [`un °`](https://uiua.org/docs/un) [`off ⤚`](https://uiua.org/docs/off)
-- Add sided subscripts for [`reach ⚆`](https://uiua.org/docs/reach)
+- Add sided subscripts for [`reach ∪`](https://uiua.org/docs/reach)
 - Add the [`# External!`](https://www.uiua.org/tutorial/documentation#external) semantic comment to mark functions that are provided via Rust code
   - These functions don't require a Uiua implementation and will show up in the LSP
   - Calling an `# External!` function that hasn't been bound will throw an error

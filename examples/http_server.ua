@@ -16,7 +16,7 @@ Listener ← &tcpl "0.0.0.0:8080"
 &p $ Server started
 
 # Mime types
-GetExt ← °□⊣ ⚆□ ⊸≠@.
+GetExt ← °□⊣ ⊜□ ⊸≠@.
 °⊟⍉[
   {"js" "text/javascript"}
   {"wasm" "application/wasm"}
@@ -52,7 +52,7 @@ Home ← (Page "/index.html")
 Respond ← ◌pool(
   &p $"Request from _" ⊸&tcpaddr
   # Extract path from request
-  °□⊡1 ⚆□⊸≠@ ⊸&ru "\r\n\r\n"
+  °□⊡1 ⊜□⊸≠@ ⊸&ru "\r\n\r\n"
   &p⊸$"Request:\n_"
 
   # Route to handler

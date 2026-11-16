@@ -22,7 +22,7 @@ pub(crate) fn run(
     on_output: impl Fn(OutputUpdate) + 'static,
     on_complete: impl FnOnce(Result<RunResult, String>) + 'static,
 ) {
-    cancel(editor);
+    cancel(editor, false);
     CLIENT.with(|client| {
         client.borrow_mut().queue.push_back(Job {
             editor,
@@ -46,7 +46,8 @@ pub(crate) fn run(
     next_job();
 }
 
-pub(crate) fn cancel(editor: u64) {
+/// Cancel the worker for an editor. `notify` determines whether the job's `on_complete` closure should run.
+pub(crate) fn cancel(editor: u64, notify: bool) {
     let canceled = CLIENT.with(|client| {
         let client = &mut client.borrow_mut();
         if client.status == WorkerStatus::Running
@@ -55,19 +56,11 @@ pub(crate) fn cancel(editor: u64) {
             client.worker.take();
             client.status = WorkerStatus::Initializing;
         }
-        let mut canceled = Vec::new();
-        for _ in 0..client.queue.len() {
-            let job = client.queue.pop_front().unwrap();
-            if job.editor == editor {
-                canceled.push(job.on_complete);
-            } else {
-                client.queue.push_back(job);
-            }
-        }
-        canceled
+        let index = client.queue.iter().position(|job| job.editor == editor)?;
+        client.queue.remove(index)
     });
-    for on_complete in canceled {
-        on_complete(Err("Execution stopped".into()));
+    if notify && let Some(job) = canceled {
+        (job.on_complete)(Err("Execution stopped".into()));
     }
     next_job();
 }
@@ -167,9 +160,7 @@ fn next_job() {
         if client.status != WorkerStatus::Idle {
             return Ok(());
         }
-        let Some(mut job) = client.queue.pop_front() else {
-            return Ok(());
-        };
+        let mut job = client.queue.pop_front().unwrap();
         job.request.files = FILES.with(|files| {
             (files.borrow().iter())
                 .map(|(path, bytes)| (path.clone(), ByteBuf::from(bytes.clone())))

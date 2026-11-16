@@ -69,13 +69,13 @@ impl Compiler {
             })
             && let Ok(Some((path_binds, bind))) = self.ref_bind(r)
         {
-            let allow_alias = match &self.asm.bindings[bind.index].kind {
+            let old_bind = &self.asm.bindings[bind.index];
+            let allow_alias = match &old_bind.kind {
                 BindingKind::Func(f) if f.sig.args() == 0 => false,
                 BindingKind::Scope(_) => false,
                 _ => true,
             };
             if allow_alias {
-                self.validate_bind(&r.name.value, bind, &r.name.span);
                 (self.code_meta.global_references).insert(binding.name.span.clone(), bind.index);
                 for (bind, comp) in path_binds.into_iter().zip(&r.path) {
                     (self.code_meta.global_references).insert(comp.module.span.clone(), bind.index);
@@ -83,8 +83,8 @@ impl Compiler {
                 (self.code_meta.global_references).insert(r.name.span.clone(), bind.index);
                 let bind = if let Some(comment) = meta.comment {
                     // If a comment is present on the new binding, we must copy the old one
-                    let kind = self.asm.bindings[bind.index].kind.clone();
-                    let old_meta = self.asm.bindings[bind.index].meta.clone();
+                    let kind = old_bind.kind.clone();
+                    let old_meta = old_bind.meta.clone();
                     let meta = BindingMeta {
                         comment: Some(comment),
                         counts: old_meta.counts.or(meta.counts),
@@ -116,8 +116,13 @@ impl Compiler {
                     // If there is no comment, it's a simple name insertion
                     Bind { public, ..bind }
                 };
+                self.validate_bind(&r.name.value, bind, &r.name.span);
                 self.scope.names.insert(name, bind);
                 return Ok(());
+            } else if meta.comment.is_none()
+                && let Some(comment) = &old_bind.meta.comment
+            {
+                meta.comment = Some(comment.clone())
             }
         }
 

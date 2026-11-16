@@ -6,6 +6,11 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - Add based integer literals ([numbers tutorial](https://uiua.org/tutorial/Types#numbers))
+- Change a few glyphs:
+  - Change [`stencil ◫`](https://uiua.org/docs/stencil)'s glyph from `⧈` to `◫`
+  - Change [`mask ⚇`](https://uiua.org/docs/mask)'s glyph from `⦷` to `⚇`
+  - Change [`reach ⚆`](https://uiua.org/docs/reach)'s glyph from `∪` to `⚆`
+  - These changes are all backward compatible and will be automatically updated by the formatter.
 - Add [`un °`](https://uiua.org/docs/un)[`validate ⊨`](https://uiua.org/docs/validate) for getting the type spec of an array
 - The formatter will now format text inside comments and strings that is surrounded with `\\(...)`.
 - Add [`anti ⌝`](https://www.uiua.org/docs/anti)[`&var`](https://www.uiua.org/docs/%26var) for setting environment variables

@@ -1316,6 +1316,12 @@ impl Compiler {
                 let val: Value = if c.chars().count() == 1 {
                     c.chars().next().unwrap().into()
                 } else {
+                    let message = format!(
+                        "`{c}` is {} codepoints and cannot fit in a single character. \
+                        Try using a string instead.",
+                        c.chars().count()
+                    );
+                    self.add_error(word.span.clone(), message);
                     c.into()
                 };
                 Node::new_push(val, self.add_span(word.span))

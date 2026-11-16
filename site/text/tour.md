@@ -430,7 +430,7 @@ Here, we [multiply](/docs/multiply) only the numbers that correspond to `1`s in 
 Here, we get the [first](/docs/first) character of each word, capitalize them with [absolute value](/docs/absolute), then put them back.
 
 ```uiua
-⍜⦶⊢⌵ ⊸≠@  "under is very useful!"
+⍜⊜⊢⌵ ⊸≠@  "under is very useful!"
 ```
 
 ## Multimedia

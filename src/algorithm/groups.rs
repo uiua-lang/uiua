@@ -149,7 +149,7 @@ pub fn partition(f: SigNode, env: &mut Uiua) -> UiuaResult {
         |val, markers, _| Ok(val.partition_firsts(markers)),
         |val, markers, _| Ok(val.partition_lasts(markers)),
         partition_lens,
-        "⦶ partition indices array must be a list of integers",
+        "⊜ partition indices array must be a list of integers",
         env,
     )
 }
@@ -450,7 +450,7 @@ pub fn undo_partition_part2(env: &mut Uiua) -> UiuaResult {
     let untransformed = env.pop(1)?;
     let markers = env
         .pop(2)?
-        .as_number_array(env, "⦶ partition markers must be an array of integers")?;
+        .as_number_array(env, "⊜ partition markers must be an array of integers")?;
     let mut original = env.pop(3)?;
     if markers.rank() == 1 {
         if original.row_count() == 0 {

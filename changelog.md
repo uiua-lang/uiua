@@ -84,7 +84,7 @@ This version is not yet released. If you are reading this on the website, then t
   - As planned, [`indexin ⊗`](https://uiua.org/docs/indexin)'s glyph has been changed, and the old one will format to `⊗`.
 - Remove experimental `&b` (breakpoint)
   - It was half-baked and poorly implemented
-- Remove old version of [`reach ⦵`](https://uiua.org/docs/reach) that used the `𝄐` glyph
+- Remove old version of [`reach ⚆`](https://uiua.org/docs/reach) that used the `𝄐` glyph
 ### Interpreter
 - Tweak the formatter to make indentation always a multiple of 2
 - Add number output rules for some square roots
@@ -134,8 +134,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`compress`](https://uiua.org/docs/compress) function to compress arrays of bytes
 - A function/constant and a module with the same name can now be in scope at the same time
 - Allow `≁` for private imports/exports from modules
-- Change [`reach ⦵`](https://uiua.org/docs/reach)'s glyph from `𝄐` to `∪`
-- Change how sided [`reach ⦵`](https://uiua.org/docs/reach) works
+- Change [`reach ⚆`](https://uiua.org/docs/reach)'s glyph from `𝄐` to `∪`
+- Change how sided [`reach ⚆`](https://uiua.org/docs/reach) works
 - Add `shuf` and `shuffle` aliases for [`un °`](https://uiua.org/docs/un)[`sort ⍆`](https://uiua.org/docs/sort)
 - Remove the 2-character ASCII aliases for comparison functions in favor of 2-letter aliases
   - These symbolic aliases created conflicts with other language syntax
@@ -338,7 +338,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.16.0).
   - Implemented for [`both ∩`](https://uiua.org/docs/both), [`rows ≡`](https://uiua.org/docs/rows), and [`inventory ⍚`](https://uiua.org/docs/inventory)
 - Stabilize sided subscripts for [`rows ≡`](https://uiua.org/docs/rows) and [`inventory ⍚`](https://uiua.org/docs/inventory)
 - Stabilize [`un °`](https://uiua.org/docs/un) [`under ⍜`](https://uiua.org/docs/under) for monadic functions
-- Add [`un °`](https://uiua.org/docs/un) [`group ⊕`](https://uiua.org/docs/group) and [`un °`](https://uiua.org/docs/un) [`partition ⦶`](https://uiua.org/docs/partition) for monadic functions
+- Add [`un °`](https://uiua.org/docs/un) [`group ⊕`](https://uiua.org/docs/group) and [`un °`](https://uiua.org/docs/un) [`partition ⊜`](https://uiua.org/docs/partition) for monadic functions
 - Stabilize [`negate ¯`](https://uiua.org/docs/negate) subscripts
 - Stabilize [`base ⊥`](https://uiua.org/docs/fft)
 - Stabilize [`fft`](https://uiua.org/docs/fft)
@@ -435,7 +435,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.15.0).
   - You can find a short blog post about this change [here](https://uiua.org/blog/its-so-over)
 - Stabilize [sided subscripts](https://uiua.org/tutorial/evenmoreargument#sided-subscripts) for [`both ∩`](https://uiua.org/docs/both) and [`bracket ⊓`](https://uiua.org/docs/bracket)
 - Add [`un °`](https://uiua.org/docs/un) [`with ⤙`](https://uiua.org/docs/with) and [`un °`](https://uiua.org/docs/un) [`off ⤚`](https://uiua.org/docs/off)
-- Add sided subscripts for [`reach ⦵`](https://uiua.org/docs/reach)
+- Add sided subscripts for [`reach ⚆`](https://uiua.org/docs/reach)
 - Add the [`# External!`](https://www.uiua.org/tutorial/documentation#external) semantic comment to mark functions that are provided via Rust code
   - These functions don't require a Uiua implementation and will show up in the LSP
   - Calling an `# External!` function that hasn't been bound will throw an error
@@ -461,7 +461,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.15.0).
 ## 0.14.0 - 2024-12-20
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.14.0).
 ### Language
-- **Breaking Change**: Multi-argument [`group ⊕`](https://uiua.org/docs/group) and [`partition ⦶`](https://uiua.org/docs/partition) no longer do reduction. Instead, multiple groups are passed to the function.
+- **Breaking Change**: Multi-argument [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) no longer do reduction. Instead, multiple groups are passed to the function.
   - The reducing versions were rarely used
   - This new behavior is more useful
 - **Breaking Change**: [`un °`](https://uiua.org/docs/un) [`json`](https://uiua.org/docs/json) no longer attempts to form multidimensional arrays
@@ -537,7 +537,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.14.0).
 - Improve pattern matching error messages
 - Optimize the "root" pattern `ⁿ%:1`
 - Optimize format strings applied to strings or boxed strings
-- Optimize common [`partition ⦶`](https://uiua.org/docs/partition) patterns
+- Optimize common [`partition ⊜`](https://uiua.org/docs/partition) patterns
 - Add an `-e`/`--experimental` flag to the `uiua eval` command to enable experimental features
 - Add the `uiua check` command, which checks that Uiua files compile
 - More system functions are now run for output comments
@@ -772,7 +772,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
   - Optimize [`length ⧻`](https://uiua.org/docs/length)[`where ⊚`](https://uiua.org/docs/where)
   - Optimize [`≡`](https://uiua.org/docs/rows)[`□`](https://uiua.org/docs/box)[`◫`](https://uiua.org/docs/windows)
   - Small optimizations to rank-1 cases of [`find ⌕`](https://uiua.org/docs/find) and [`mask ⚇`](https://uiua.org/docs/mask)
-  - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⦶`](https://uiua.org/docs/partition) with [`⋅`](https://uiua.org/docs/gap)[`identity ∘`](https://uiua.org/docs/identity) and [`dip ⊙`](https://uiua.org/docs/dip)[`pop ◌`](https://uiua.org/docs/pop)
+  - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`⋅`](https://uiua.org/docs/gap)[`identity ∘`](https://uiua.org/docs/identity) and [`dip ⊙`](https://uiua.org/docs/dip)[`pop ◌`](https://uiua.org/docs/pop)
   - Optimize [`rows ≡`](https://uiua.org/docs/rows) [`first ⊢`](https://uiua.org/docs/first)
 - Git modules are now cloned instead of being added as submodules
   - Add the `uiua module` command to list or update cloned modules
@@ -878,7 +878,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.11.0).
 ### Interpreter
 - Lots of optimizations
   - Optimize the pattern `/F⊞F` to use much less memory and be an order of magnitude faster in some cases
-  - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⦶`](https://uiua.org/docs/partition) with [`length ⧻`](https://uiua.org/docs/length), [`first ⊢`](https://uiua.org/docs/first), and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
+  - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`length ⧻`](https://uiua.org/docs/length), [`first ⊢`](https://uiua.org/docs/first), and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
   - Optimize iterating modifiers with a top-level [`fork ⊃`](https://uiua.org/docs/fork) or [`bracket ⊓`](https://uiua.org/docs/bracket)
   - Optimize [`≡`](https://uiua.org/docs/rows)[`⋅`](https://uiua.org/docs/gap)`constant` and [`∵`](https://uiua.org/docs/each)[`⋅`](https://uiua.org/docs/gap)`constant` patterns
     - The speed improvement is on the order of 70x
@@ -939,7 +939,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - [`under ⍜`](https://uiua.org/docs/under) [`join ⊂`](https://uiua.org/docs/join) now works with arrays of the same rank as long as the row count does not change
 - [`un °`](https://uiua.org/docs/un) [`scan \`](https://uiua.org/docs/scan) now works with [`equals =`](https://uiua.org/docs/equals) and [`not equals ≠`](https://www.uiua.org/docs/not%20equals)
 - [`group ⊕`](https://uiua.org/docs/group) can now take multidimensional index arrays
-- [`partition ⦶`](https://uiua.org/docs/partition) can now take multidimensional marker arrays
+- [`partition ⊜`](https://uiua.org/docs/partition) can now take multidimensional marker arrays
 - [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`pick ⊡`](https://uiua.org/docs/pick) now work with duplicate indices if the values at those indices are the same
 - [`rotate ↻`](https://uiua.org/docs/rotate) now works through boxes
 - [`fold ∧`](https://uiua.org/docs/fold) now works with [`under ⍜`](https://uiua.org/docs/under) if its function does
@@ -1149,8 +1149,8 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - You never wanted element-wise combinations of multi-dimensional arrays anyway
   - Deprecate `cross ⊠`, as it is now redundant
   - This is technically a breaking change, but it is unlikely to break much code
-- [`fill ⬚`](https://uiua.org/docs/fill) can now be used to specify default accumulators for [`reduce /`](https://uiua.org/docs/reduce), [`group ⊕`](https://uiua.org/docs/group), and [`partition ⦶`](https://uiua.org/docs/partition)
-  - **Breaking Change** - Reducing [`group ⊕`](https://uiua.org/docs/group) and [`partition ⦶`](https://uiua.org/docs/partition) no longer take a required accumulator
+- [`fill ⬚`](https://uiua.org/docs/fill) can now be used to specify default accumulators for [`reduce /`](https://uiua.org/docs/reduce), [`group ⊕`](https://uiua.org/docs/group), and [`partition ⊜`](https://uiua.org/docs/partition)
+  - **Breaking Change** - Reducing [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) no longer take a required accumulator
   - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill) can no longer be temporarily disabled. Try to scope it to the smallest function.
 - **Breaking Change** - Most non-pervasive monadic functions no longer implicitly unbox their argument
   - This implicitness led to some unexpected behavior, particularly when getting the [`length ⧻`](https://uiua.org/docs/length) or [`shape △`](https://uiua.org/docs/shape) of a boxed array
@@ -1394,7 +1394,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 ## 0.0.23 - 2023-10-25
 ### Language
 - Implement [`under ⍜`](https://uiua.org/docs/under) multi-index [`pick ⊡`](https://uiua.org/docs/pick)
-- Implement [`under ⍜`](https://uiua.org/docs/under) [`partition ⦶`](https://uiua.org/docs/partition)
+- Implement [`under ⍜`](https://uiua.org/docs/under) [`partition ⊜`](https://uiua.org/docs/partition)
 - Implement [`under ⍜`](https://uiua.org/docs/under) [`group ⊕`](https://uiua.org/docs/group)
 - Add [`send`](https://uiua.org/docs/send), [`recv`](https://uiua.org/docs/recv), and [`tryrecv`](https://uiua.org/docs/tryrecv) functions for sending values between threads
 - Add [`&fde`](https://uiua.org/docs/&fde) and [`&ftr`](https://uiua.org/docs/&ftr) system functions for deleting/trashing files and directories
@@ -1493,7 +1493,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - Add [`where ⊚`](https://uiua.org/docs/where) function, which returns the indices of an array that have non-zero values
 - `if ?`'s branches can now have a different number of arguments (but not outputs)
 - `if ?`'s condition can now be a list of conditions, and the branch will be chosen for each row in the argument(s)
-- The reducing versions of [`group ⊕`](https://uiua.org/docs/group) and [`partition ⦶`](https://uiua.org/docs/partition) now take accumulators. Aggregating versions are unchanged.
+- The reducing versions of [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) now take accumulators. Aggregating versions are unchanged.
 - [`spawn`](https://uiua.org/docs/spawn) and [`wait`](https://uiua.org/docs/wait) no longer have glyphs. Code using `↰` and `↲` will continue to work and will be formatted as `spawn` and `wait`.
 - `&n` is no longer a system function and is now called [`now`](https://uiua.org/docs/now)
 - [`under ⍜`](https://uiua.org/docs/under) [`now`](https://uiua.org/docs/now) can be used to time things
@@ -1569,7 +1569,7 @@ You may want to read the new version of the [Advanced Stack Manipulation Tutoria
 ### Language
 - Add the `share ⊃` modifier, which unifies and deprecates [`fork ⊃`](https://uiua.org/docs/fork) and `trident ∋`
 - `bind '` no longer calls its functions immediately. This should not change any reasonable existing code.
-- Change how [`partition ⦶`](https://uiua.org/docs/partition) and [`group ⊕`](https://uiua.org/docs/group) work with dyadic functions to be consistent with [`reduce /`](https://uiua.org/docs/reduce)
+- Change how [`partition ⊜`](https://uiua.org/docs/partition) and [`group ⊕`](https://uiua.org/docs/group) work with dyadic functions to be consistent with [`reduce /`](https://uiua.org/docs/reduce)
 - Deprecate `restack ⇵`. It was never a good idea.
 - Remove the overloaded behavior of `call !`. It no longer behaves like an if-else when used with a list of functions.
   - You can replace all existing instances of that use case with `!⊡:`

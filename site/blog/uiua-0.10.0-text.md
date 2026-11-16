@@ -64,7 +64,7 @@ You can read more in the updated [Modules](https://uiua.org/tutorial/Modules) tu
 ⚇ " - " "Hey - how-are -  you"
 ```
 ```uiua
-⦶□¬⚇⊙. " - " "Hey - how-are -  you"
+⊜□¬⚇⊙. " - " "Hey - how-are -  you"
 ```
 
 This simplifies a lot of string-processing code in particular. A new [strings](https://uiua.org/tutorial/strings) tutorial has been added as well.

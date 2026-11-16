@@ -31,19 +31,19 @@ First, we create a mask of places where the delimiter is *not* using [`by`]() [`
 ```
 [`partition`]() will then split the strings at the places where the mask changes, omitting `0`s.
 ```uiua
-⦶□ ⊸≠@  "Split this string"
+⊜□ ⊸≠@  "Split this string"
 ```
 Notice that this reads almost as a description of what it does: "Partition box by not equals space"
 
 This can be nested to split by multiple delimiters.
 ```uiua
 "A string\nwith multiple\nlines"
-⦶(□⦶□⊸≠@ )⊸≠@\n
+⊜(□⊜□⊸≠@ )⊸≠@\n
 ```
 
 For parts of the string that are not the first or last, we can simply [`box`]() and [`select`]().
 ```uiua
-⊏1_3 ⦶□⊸≠@, "lorem,ipsum,dolor,sit,amet"
+⊏1_3 ⊜□⊸≠@, "lorem,ipsum,dolor,sit,amet"
 ```
 
 [`partition`]() can be nested to split by multiple delimiters.
@@ -56,7 +56,7 @@ Here, the contents of the file will be represented as a multi-line string. We us
 $ 1  8   4 99
 $ 5  20  0 0
 $ 78 101 1 8
-⦶(⦶⋕⊸≠@ )⊸≠@\n
+⊜(⊜⋕⊸≠@ )⊸≠@\n
 ```
 
 This assumes that the two delimiters delimit different dimensions of the array. If they delimit the same dimension, we can use [`not`]() and [`memberof`]().
@@ -64,19 +64,19 @@ This assumes that the two delimiters delimit different dimensions of the array. 
 $ 1  8   4 99
 $ 5  20  0 0
 $ 78 101 1 8
-⦶⋕¬⊸∊" \n"
+⊜⋕¬⊸∊" \n"
 ```
 
 ## Finding substrings with [`mask`]()
 
 What if we want to split by a non-scalar delimiter? Simply dropping a string delimiter into the code above produces an error.
 ```uiua should fail
-⦶□ ⊸≠" - " "foo - bar - ba-az"
+⊜□ ⊸≠" - " "foo - bar - ba-az"
 ```
 We might try [`find`](). While there may be cases when this output is useful, it is not quite what we want here.
 ```uiua
     ⊸⌕" - " "foo - bar - ba-az"
-⦶□ ¬⊸⌕" - " "foo - bar - ba-az"
+⊜□ ¬⊸⌕" - " "foo - bar - ba-az"
 ```
 This is because [`find`]() only marks the start of each matching substring.
 
@@ -88,7 +88,7 @@ This works great with [`partition`]() to split the string how we want.
 ```uiua
     ⊸⚇" - " "foo - bar - ba-az"
    ¬⊸⚇" - " "foo - bar - ba-az"
-⦶□ ¬⊸⚇" - " "foo - bar - ba-az"
+⊜□ ¬⊸⚇" - " "foo - bar - ba-az"
 ```
 Notice that while [`not`]() leaves parts of the mask negative, [`partition`]() ignores all sections that are not positive.
 
@@ -99,16 +99,16 @@ Because [`under`]() works with [`partition`](), we can use it with [`mask`]() to
 In this example, we replace each row of the [`partition`]()ed array with the string `"orb"`.
 ```uiua
            ⊸⚇ "ab" "abracadabra"
- ⦶∘        ⊸⚇ "ab" "abracadabra"
-⍜⦶∘≡⋅"orb" ⊸⚇ "ab" "abracadabra"
+ ⊜∘        ⊸⚇ "ab" "abracadabra"
+⍜⊜∘≡⋅"orb" ⊸⚇ "ab" "abracadabra"
 ```
 This can even be used to replace the matches with different strings.
 ```uiua
-⍜⦶□◌ ⊸⚇ "ab" "abracadabra" {"[first]" "[second]"}
+⍜⊜□◌ ⊸⚇ "ab" "abracadabra" {"[first]" "[second]"}
 ```
 Here is how you might replace with a variable number of strings.
 ```uiua
-F ← ⍜⦶□(↙⧻) ⊸⚇ "ab" ⊙(°⋕⇡10)
+F ← ⍜⊜□(↙⧻) ⊸⚇ "ab" ⊙(°⋕⇡10)
 F "abracadabra"
 F "abcdefg"
 F "ababab|abababab"

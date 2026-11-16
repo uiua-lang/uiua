@@ -254,7 +254,7 @@ pub fn MainPage() -> impl IntoView {
         rich_prim(
             Partition,
             "for splitting arrays by sequential keys",
-            r#"⬚@ ⦶∘⊸≠@ "Oh boy, neat!""#,
+            r#"⬚@ ⊜∘⊸≠@ "Oh boy, neat!""#,
         ),
         rich_prim(
             Un,
@@ -426,7 +426,7 @@ pub fn MainPage() -> impl IntoView {
 fn NotFound() -> impl IntoView {
     view! {
         <h1>"Page not found"</h1>
-        <Editor example="$ Where could it be?\n×101⧻⦶⧻⊸≠@ "/>
+        <Editor example="$ Where could it be?\n×101⧻⊜⧻⊸≠@ "/>
         <h3><A href="/">"Go home"</A></h3>
         <img src="/assets/kala/confused.png" style="width:20em;display:block;margin:auto"/>
     }

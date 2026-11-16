@@ -223,7 +223,7 @@ primitive!(
     ///   : F 10 [1 27 8 3 14 9]
     /// Here are some more examples of [by] in action.
     /// ex: ⊂⊸↙ 2 [1 2 3 4 5]
-    ///   : ⦶□⊸≠ @  "Hey there buddy"
+    ///   : ⊜□⊸≠ @  "Hey there buddy"
     ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
     /// Subscripted [by] keeps the last N arguments after the outputs.
     /// ex: {⊸₂[⊙⊙∘] 1 2 3}
@@ -1297,7 +1297,7 @@ primitive!(
     /// The more important use case of [box] is for jagged or nested data.
     /// If you want to collect unevenly-sized groups from [partition] or [group], without [fill]ing, you must use [box].
     /// ex: $ Words of different lengths
-    ///   : ⦶□⊸≠@ #
+    ///   : ⊜□⊸≠@ #
     ///
     /// Pervasive functions work through boxes and preserve the maximum [box] depth of their arguments.
     /// ex: ¯ 1
@@ -1321,7 +1321,7 @@ primitive!(
     /// ex: ⊢ °□ □[1 2 3]
     /// [under][un][box] is useful when you want to re-[box] the result.
     /// ex: $ Reverse these words
-    ///   : ⦶□⊸≠@ #
+    ///   : ⊜□⊸≠@ #
     ///   : ⊸≡⍜°□⇌
     /// ex: {"Hey" "there" "world"}
     ///   : ≡⍜°□˙(⊂⊢)
@@ -1330,7 +1330,7 @@ primitive!(
     ///   : ⊸≡⍜°□(⬚0↙3)
     /// However, [rows][under][un][box] is such a common pattern, that this is what the [inventory] modifier does.
     /// ex: PrepLen ← $"_ _"⊸⧻
-    ///   : ⦶□⊸≠@  $ Prepend the word length
+    ///   : ⊜□⊸≠@  $ Prepend the word length
     ///   : ⊸⍚PrepLen
     /// If you do not need to re-[box] the result, you can use [content] instead.
     /// [content] [un][box]es all box elements that are passed to a function before calling it.
@@ -1802,7 +1802,7 @@ primitive!(
     ///
     /// [mask] works well with [partition] in a way that [find] does not.
     /// Here, we [not] the [mask] of a non-scalar delimiter to split a string.
-    /// ex: ⦶∘ ¬⊸⚇ " - " "foo - bar - baz"
+    /// ex: ⊜∘ ¬⊸⚇ " - " "foo - bar - baz"
     (2, Mask, DyadicArray, ("mask", '⚇')),
     /// Check if each row of one array exists in another
     ///
@@ -2304,47 +2304,47 @@ primitive!(
     /// Keys `less or equal``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.
     /// If the function takes 0 or 1 arguments, then [partition] behaves like [rows].
-    /// ex: ⦶∘ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
+    /// ex: ⊜∘ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
     /// If the values returned by the function do not have the same [shape], concatenation will fail unless a [fill] is supplied.
-    /// ex! ⦶∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
-    /// ex: ⬚∞⦶∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    /// ex! ⊜∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    /// ex: ⬚∞⊜∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     /// It is common to use [box] to encapsulate groups of different [shape]s.
-    /// ex: ⦶□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    /// ex: ⊜□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// This can be used to split an array by a delimiter.
-    /// ex: ⦶□ ⊸≠@  $ Hey there friendo
+    /// ex: ⊜□ ⊸≠@  $ Hey there friendo
     /// You can nest [partition]s to split by multiple delimiters and create a multi-dimensional array.
     /// ex: $ 1 1 2 3
     ///   : $ 5 8 13 21
-    ///   : ⦶(⦶⋕⊸≠@ )⊸≠@\n
+    ///   : ⊜(⊜⋕⊸≠@ )⊸≠@\n
     ///
     /// If the function takes more than 1 argument, groups are extracted for each argument.
     /// This example couples each word from a string with its start index.
-    /// ex: ⦶{⊢⊙∘} ≠@  ⟜°⊏ "Hello, how are you?"
+    /// ex: ⊜{⊢⊙∘} ≠@  ⟜°⊏ "Hello, how are you?"
     /// Note that multiple values can be returned in this way instead of combining them inside the function.
-    /// ex: ⦶⊓⊢□ ≠@  ⟜°⊏ "Hello, how are you?"
+    /// ex: ⊜⊓⊢□ ≠@  ⟜°⊏ "Hello, how are you?"
     ///
     /// [partition] also works with multidimensional markers. Groups are formed from markers that are adjacent along any axis.
     /// Each group will be flattened before being passed to the function.
-    /// ex: ⊸˙⦶□ ↯4_4 [0 1 1 2 2]
+    /// ex: ⊸˙⊜□ ↯4_4 [0 1 1 2 2]
     /// If we wanted to group the indices that are adjacent, we could use the array to [partition] its own indices.
-    /// ex: ⦶□⟜°⊡ ↯4_4 [0 1 1 2 2]
+    /// ex: ⊜□⟜°⊡ ↯4_4 [0 1 1 2 2]
     ///
     /// [un][partition] works if [partition]'s function is monadic and [un]-invertible.
     /// A list of markers and a list of unpartitioned values will be returned.
     /// The most common function to use with this is [box].
     /// By default, the markers will be increasing integers starting from `1`.
-    /// ex: °⦶□ {"Hey" "there" "buddy"}
+    /// ex: °⊜□ {"Hey" "there" "buddy"}
     /// If a [fill] value is provided, the markers will all be `1`, and the gaps will be filled with the fill value.
-    /// ex: ⬚@-°⦶□ {"Hey" "there" "buddy"}
+    /// ex: ⬚@-°⊜□ {"Hey" "there" "buddy"}
     ///
     /// [under][partition] works if [partition]'s function is [under]able.
-    /// ex: ⍜⦶□⇌  ⊸≠@  $ These are some words
-    /// ex: ⍜⦶□⍚⇌ ⊸≠@  $ These are some words
-    /// ex: ⍜⦶⊢⌵  ⊸≠@  $ These are some words
+    /// ex: ⍜⊜□⇌  ⊸≠@  $ These are some words
+    /// ex: ⍜⊜□⍚⇌ ⊸≠@  $ These are some words
+    /// ex: ⍜⊜⊢⌵  ⊸≠@  $ These are some words
     ///
     /// [partition] is closely related to [group].
-    ([1], Partition, MappingModifier, ("partition", '⦶')),
+    ([1], Partition, MappingModifier, ("partition", '⊜')),
     /// Call a function with its arguments' axes reversed
     ///
     /// Uiua primitives tend to treat axes near the front of the shape as spanning items in a collection. Axes near the end of the shape are often treated as the items or components of the items.
@@ -2402,21 +2402,21 @@ primitive!(
     /// Call a function skipping the second argument
     ///
     /// ex: # Experimental!
-    ///   : ⦵+ 1 2 3
+    ///   : ⚆+ 1 2 3
     /// ex: # Experimental!
-    ///   : ⦵⊂₃ 1_2 3_4 5_6 7_8
+    ///   : ⚆⊂₃ 1_2 3_4 5_6 7_8
     /// You can chain [reach] to skip more arguments
     /// ex: # Experimental!
-    ///   : ⦵⦵⊟ 1 2 3 4
-    ///   : ⦵⦵⦵⊟ 1 2 3 4 5
+    ///   : ⚆⚆⊟ 1 2 3 4
+    ///   : ⚆⚆⚆⊟ 1 2 3 4 5
     /// Numeric subscripts make [reach] include additional leading arguments.
     /// ex: # Experimental!
-    ///   : ⦵₂⊟₃ 1 2 3 4
+    ///   : ⚆₂⊟₃ 1 2 3 4
     /// Sided subscripts cause [reach] to take 2 functions instead of one. The function on the given side will operate on the skipped arguments.
     /// ex: # Experimental!
-    ///   : ⦵⌞⊟⊟₃ 1 2 3 4 5
-    ///   : ⦵⌟⊟⊟₃ 1 2 3 4 5
-    ([1], Reach, Arguments, ("reach", '⦵'), { experimental: true }),
+    ///   : ⚆⌞⊟⊟₃ 1 2 3 4 5
+    ///   : ⚆⌟⊟⊟₃ 1 2 3 4 5
+    ([1], Reach, Arguments, ("reach", '⚆'), { experimental: true }),
     /// Define the various inverses of a function
     ///
     /// [obverse] defines how a function should interact with [un], [anti], and [under].
@@ -3565,7 +3565,7 @@ primitive!(
     ///
     /// Append commas to whitespace for a more traditional notation:
     /// ex: -5↯2_2_3⇡12
-    ///   : ⍜⦶□⍚(⊂@,)⊸∊" \n" repr # add commas
+    ///   : ⍜⊜□⍚(⊂@,)⊸∊" \n" repr # add commas
     ///   : &p ⍜▽≡⋅@-⊸=@¯        # replace negate glyphs with minus signs
     (1, Repr, Misc, "repr"),
     /// Convert a value to its pretty-printed output representation
@@ -3745,7 +3745,7 @@ primitive!(
     ///   :  {"multiple" "lines"}}
     ///   : layout 30
     /// ex: # Experimental!
-    ///   : layout 15 ⬚""↯∞_12 ⦶□⊸≠@  Lorem
+    ///   : layout 15 ⬚""↯∞_12 ⊜□⊸≠@  Lorem
     ///
     /// 4 optionals arguments are accepted:
     /// - `LineHeight` - The height of a line relative to the font size (default 1)

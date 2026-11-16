@@ -85,7 +85,7 @@ The [`tuples ⧅`](https://uiua.org/docs/tuples) modifier has been stabilized.
 
 ## Notable Breaking Changes
 
-- [`group ⊕`](https://uiua.org/docs/group) and [`partition ⦶`](https://uiua.org/docs/partition) with a dyadic function no longer do reduction.
+- [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with a dyadic function no longer do reduction.
   - They instead group or partition multiple arrays at once.
 - [`un °`](https://uiua.org/docs/un) [`json`](https://uiua.org/docs/json) no longer attempts to form multidimensional arrays
   - This makes deserializing JSON more consistent
@@ -99,7 +99,7 @@ The [`tuples ⧅`](https://uiua.org/docs/tuples) modifier has been stabilized.
 For example, lets say you have a function that splits a string into lines and words.
 
 ```uiua
-F ← ⍚⦶□⊸≠@  ⦶□⊸≠@\n
+F ← ⍚⊜□⊸≠@  ⊜□⊸≠@\n
 F $ These are
   $ some words
 ```
@@ -107,7 +107,7 @@ F $ These are
 Great! Now you want to do this split, reverse each line (keeping letters of words in order), and join everything back together. Seems like a great use of [`under ⍜`](https://uiua.org/docs/under)!
 
 ```uiua should fail
-F ← ⍚⦶□⊸≠@  ⦶□⊸≠@\n
+F ← ⍚⊜□⊸≠@  ⊜□⊸≠@\n
 ⍜F≡⇌ $ These are
      $ some words
 ```
@@ -117,7 +117,7 @@ Alas, this does not work because [`by ⊸`](https://uiua.org/docs/by) [`not equa
 You could previously get around this by using [`obverse ⌅`](https://uiua.org/docs/obverse) with a function pack with an empty second function to nullify the inverse, but it was a bit verbose.
 
 ```uiua
-F ← ⍚⦶□⌅(⊸≠@ |) ⦶□⌅(⊸≠@\n|)
+F ← ⍚⊜□⌅(⊸≠@ |) ⊜□⌅(⊸≠@\n|)
 ⍜F≡⇌ $ These are
      $ some words
 ```
@@ -125,7 +125,7 @@ F ← ⍚⦶□⌅(⊸≠@ |) ⦶□⌅(⊸≠@\n|)
 It turns out this pattern can be very common, so this is now the default, non-pack behavior of [`obverse ⌅`](https://uiua.org/docs/obverse). There is also a new rule about constants in [`under ⍜`](https://uiua.org/docs/under). These come together to make this function much simpler to write!
 
 ```uiua
-F ← ⍚⦶□⌅⊸≠@  ⦶□⌅⊸≠@\n
+F ← ⍚⊜□⌅⊸≠@  ⊜□⌅⊸≠@\n
 ⍜F≡⇌ $ These are
      $ some words
 ```

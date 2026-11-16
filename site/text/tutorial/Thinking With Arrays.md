@@ -114,7 +114,7 @@ Another interesting use is a [fill]()ed [rotate](). Instead of wrapping values a
 [partition]() is a powerful modifier that splits up an array based on a list of consecutive keys. Before explaining it further, let's look at a simple example of a very common use case: splitting a string into words.
 
 ```uiua
-⦶□ ⊸≠@  "Look at that!"
+⊜□ ⊸≠@  "Look at that!"
 ```
 
 First, we create a mask of all the non-space characters. Then, [partition]() calls [box]() on each section of the string that corresponds to a run of `1`s in the mask.
@@ -124,7 +124,7 @@ Here is another example using [partition]()[box]() with the inputs explicitly de
 ```uiua
 [1 2 3 4 5 6 7 8]
 [1 1 0 5 6 6 0 1]
-⦶□
+⊜□
 ```
 
 Notice that `0`s in the keys arrays cause the corresponding sections of the input array to be skipped, so `3` and `7` are omitted from the output.
@@ -134,7 +134,7 @@ We use [box]() here because the resulting sections have different lengths. If we
 ```uiua
 [1 2 3 4 5 6 7 8]
 [1 1 2 2 0 0 3 3]
-⦶∘
+⊜∘
 ```
 
 [partition]() is very useful when working with strings. See the [Strings tutorial](/tutorial/strings) for more.
@@ -241,7 +241,7 @@ given a matrix of `0`s an `1`s, only keeps the `1`s that have even x and y coord
 
 ```challenge
 reverses each word in a string but keeps the words in the same order
-⍜⦶□⍚⇌ ⊸≠@ 
+⍜⊜□⍚⇌ ⊸≠@ 
 
 "get in the racecar"
 "arrays are neat"

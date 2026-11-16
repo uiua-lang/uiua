@@ -1,4 +1,4 @@
-#₁₅ "133:45: Unknown identifier `⦶`"
+#₁₅ "133:45: Unknown identifier `⚆`"
 # Index macros #
 #₁₅
 F! ← ^0 5
@@ -130,7 +130,7 @@ F! ←^ {"+" "1"}◌
 ⍤⤙≍ [2 3 4] ≡F!∘ [1 2 3]
 
 Struct‼ ←^ $"---_\n_\n---" ⊙(
-  /$"_\n_"⊂□$"New ← {_}"≡⋅@⊙⟜⍚$"_ ← °□⊡_"°˜⊏⦶□⊸≠@ °$"[_]"
+  /$"_\n_"⊂□$"New ← {_}"≡⋅@⊙⟜⍚$"_ ← °□⊡_"°˜⊏⚆□⊸≠@ °$"[_]"
 )°{⊙∘}
 
 Struct‼Person[Name Age][] # Ensure that a word on the same line as binding generation works

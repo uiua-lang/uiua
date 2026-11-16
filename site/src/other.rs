@@ -561,7 +561,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(
             Reach,
             "# Experimental!\nInclude first N values",
-            "⦵₂⊟₃ 1 2 3 4",
+            "⚆₂⊟₃ 1 2 3 4",
         ),
         subscript(Rows, "Apply to rank-N subarrays", "≡₁□ °△2_3_4"),
         subscript(Inventory, "Apply to rank-N subarrays", "⍚₁⇡ °△2_3"),
@@ -620,7 +620,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(
             Reach,
             "Call an additional function on the skipped arguments",
-            "# Experimental!\n{⦵⌞¯⊟ 1 2 3}\n{⦵⌟⊟¯ 1 2 3}",
+            "# Experimental!\n{⚆⌞¯⊟ 1 2 3}\n{⚆⌟⊟¯ 1 2 3}",
         ),
         subscript(
             Under,
@@ -655,7 +655,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(
             Reach,
             "Call an additional function on N skipped arguments",
-            "# Experimental!\n{⦵₂⌟⊟₃⊟ 1 2 3 4 5}\n{⦵₂⌞⊟⊟₃ 1 2 3 4 5}",
+            "# Experimental!\n{⚆₂⌟⊟₃⊟ 1 2 3 4 5}\n{⚆₂⌞⊟⊟₃ 1 2 3 4 5}",
         ),
         subscript(
             Rows,

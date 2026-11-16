@@ -351,12 +351,12 @@ X ← ⚂
 ⍤⤙≍ [2 1 0 5 4 3 8 7 6] ⍜◫⌟∘≡⇌3⇡9
 
 # Partition
-⍤⤙≍ "World! Hello" ⍜⦶□⇌ ⊸≠@ "Hello World!"
-⍤⤙≍ "Just A Little Guy" ⍜⦶⊢⌵ ⊸≠@ "Just a little guy"
-⍤⤙≍ {"Hello" "World!"} {⍜∩⦶□∘ ∩(⊸≠@l) "Hello" "World!"}
-⍤⤙≍ ⤙⍜⦶□∘ [1] "a"
-⍤⤙≍ ⤙⍜⦶□∘ [] ""
-⍤⤙≍ {"Hey" @ "buddy"} ⍜⦶⌅□∘⊸≠@ "Hey buddy"
+⍤⤙≍ "World! Hello" ⍜⚆□⇌ ⊸≠@ "Hello World!"
+⍤⤙≍ "Just A Little Guy" ⍜⚆⊢⌵ ⊸≠@ "Just a little guy"
+⍤⤙≍ {"Hello" "World!"} {⍜∩⚆□∘ ∩(⊸≠@l) "Hello" "World!"}
+⍤⤙≍ ⤙⍜⚆□∘ [1] "a"
+⍤⤙≍ ⤙⍜⚆□∘ [] ""
+⍤⤙≍ {"Hey" @ "buddy"} ⍜⚆⌅□∘⊸≠@ "Hey buddy"
 
 # Group
 ⍤⤙≍ "sdrow emo sera esehT" ⍜⊕□≡⍜°□⇌ ⊸≠@ $ These are some words

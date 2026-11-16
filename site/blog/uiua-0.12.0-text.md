@@ -125,7 +125,7 @@ F "beefcake"
 This makes it work nicely with [`by ⊸`](https://uiua.org/docs/by)!
 
 ```uiua
-⦶□¬⊸∊ " ," "To be, or not"
+⊜□¬⊸∊ " ," "To be, or not"
 ```
 
 ## Experimental Features

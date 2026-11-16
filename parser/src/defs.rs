@@ -923,6 +923,12 @@ primitive!(
     /// ex: ↧5 ∞
     /// ex: ↥5 ∞
     (0, Infinity, Constant, ("infinity", '∞')),
+    /// NaN (Not a Number)
+    ///
+    /// In Uiua, [nan] compares equal to itself and [greater than] everything else. This is contrary to the IEEE-754 spec for `NaN`s.
+    /// ex: =nan [∞ 1 nan 2]
+    /// ex: ⍆ [∞ 1 nan 2]
+    (0, NaN, Constant, "nan"),
     /// Debug print all arguments without consuming them
     ///
     /// This is equivalent to [dump][identity], but is easier to type.
@@ -3483,9 +3489,9 @@ primitive!(
     /// This means that you can use single quotes, unquoted keys, trailing commas, and comments.
     /// ex: °json $ {foo: 'bar', /* cool */ baz: [1, 2, 3,],}
     ///
-    /// Note that `NaN` and [infinity] convert to JSON `null`, and JSON `null` converts to `NaN`.
-    /// This means that [infinity] is converted to `NaN` in a round-trip.
-    /// ex: json [1 ¯5 NaN ∞]
+    /// Note that [nan] and [infinity] convert to JSON `null`, and JSON `null` converts to [nan].
+    /// This means that [infinity] is converted to [nan] in a round-trip.
+    /// ex: json [1 ¯5 nan ∞]
     /// ex: °json "[1,null,-3,null]"
     ///
     /// [json]`₅` will serialize to JSON5 rather than just JSON, omitting `"`s and adding trailing `,`s where possible. This is nice if you want the output to be more human-readable.

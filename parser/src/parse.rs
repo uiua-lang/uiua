@@ -1419,7 +1419,7 @@ impl Parser<'_> {
         // Numerator
         let ((numer, mut s), mut span) = self.numer_or_denom()?.into();
         // Denominator
-        if !(s.contains(['.', ',', '∞']) || s.contains(SUBSCRIPT_DIGITS)) {
+        if !(s.contains(['.', ',', '∞']) || s.contains("nan") || s.contains(SUBSCRIPT_DIGITS)) {
             let reset = self.index;
             if self.exact(Primitive::Reduce.into()).is_some() {
                 if let Some(((denom, ds), dspan)) = self
@@ -1513,7 +1513,7 @@ impl Parser<'_> {
     }
     fn num_frag(&mut self, suffix_mode: bool) -> Option<Sp<(NumWord, String)>> {
         let reset = self.index;
-        let mut is_inf = false;
+        let mut is_special = false;
         let (coef, mut s, span) = if suffix_mode {
             (Ok(1.0), String::new(), None)
         } else if let Some((r, span)) = self.real().map(Into::into) {
@@ -1556,8 +1556,8 @@ impl Parser<'_> {
                 s = s.replace(['`', '-'], "¯");
             }
             (r, s, Some(span))
-        } else if let Some(((n, s), span)) = self.infinity().map(Into::into) {
-            is_inf = true;
+        } else if let Some(((n, s), span)) = self.special_number().map(Into::into) {
+            is_special = true;
             (Ok(n), s, Some(span))
         } else if let Some(span) = self.neg() {
             (Ok(-1.0), "¯".into(), Some(span))
@@ -1568,8 +1568,9 @@ impl Parser<'_> {
         let (mut n, mut s, mut span) = if coef == Ok(0.0) {
             // Can't group other stuff with 0
             (coef.into(), s, span.unwrap())
-        } else if let Some((sym, mut is_circle)) =
-            (!is_inf).then(|| self.symbolic_num(true, &[])).flatten()
+        } else if let Some((sym, mut is_circle)) = (!is_special)
+            .then(|| self.symbolic_num(true, &[]))
+            .flatten()
         {
             // Real constants
             let ((mut n, sym_s), sym_span) = sym.into();
@@ -1665,18 +1666,22 @@ impl Parser<'_> {
             None
         }
     }
-    fn infinity(&mut self) -> Option<Sp<(f64, String)>> {
+    fn special_number(&mut self) -> Option<Sp<(f64, String)>> {
         let reset = self.index;
         if let Some(span_a) = self.neg() {
             if let Some(span_b) = self.exact(Primitive::Infinity.into()) {
                 Some((span_a.merge(span_b)).sp((f64::NEG_INFINITY, "¯∞".into())))
+            } else if let Some(span_b) = self.exact(Primitive::NaN.into()) {
+                Some((span_a.merge(span_b)).sp((f64::NAN, "¯nan".into())))
             } else {
                 self.index = reset;
                 None
             }
+        } else if let Some(span) = self.exact(Primitive::Infinity.into()) {
+            Some(span.sp((f64::INFINITY, "∞".into())))
         } else {
-            self.exact(Primitive::Infinity.into())
-                .map(|span| span.sp((f64::INFINITY, "∞".into())))
+            self.exact(Primitive::NaN.into())
+                .map(|span| span.sp((f64::NAN, "nan".into())))
         }
     }
     fn real(&mut self) -> Option<Sp<Result<f64, String>>> {

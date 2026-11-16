@@ -148,7 +148,9 @@ impl GridFmt for f64 {
             "⊥".into()
         } else if f.to_bits() == WILDCARD_NAN.to_bits() {
             "W".into()
-        } else if positive.fract() == 0.0 || positive.is_nan() {
+        } else if positive.is_nan() {
+            format!("{minus}nan")
+        } else if positive.fract() == 0.0 {
             format!("{minus}{positive}")
         } else if (positive - PI).abs() <= f64::EPSILON {
             format!("{minus}π")
@@ -259,7 +261,7 @@ impl GridFmt for f64 {
             return s;
         }
         if elems.iter().all(|&n| n.is_nan()) {
-            return "all NaN".into();
+            return "all nan".into();
         }
         let mut min = f64::NAN;
         let mut max = f64::NAN;
@@ -289,7 +291,7 @@ impl GridFmt for f64 {
                 format!("all {}", min.grid_string(false))
             } else {
                 format!(
-                    "{} {}s and {} NaNs",
+                    "{} {}s and {} nans",
                     elems.len() - nan_count,
                     min.grid_string(false),
                     nan_count
@@ -304,7 +306,7 @@ impl GridFmt for f64 {
             );
             if nan_count > 0 {
                 s.push_str(&format!(
-                    " ({nan_count} NaN{})",
+                    " ({nan_count} nan{})",
                     if nan_count > 1 { "s" } else { "" }
                 ));
             }

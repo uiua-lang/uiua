@@ -594,7 +594,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.13.0).
 - [`under ⍜`](https://uiua.org/docs/under) [`reverse ⇌`](https://uiua.org/docs/reverse), [`transpose ⍉`](https://uiua.org/docs/transpose), and [`rotate ↻`](https://uiua.org/docs/rotate) are now smarter with respect to the signature of [`under ⍜`](https://uiua.org/docs/under)'s second function
   - For example `⍜⇌°⊂` behaves in a more useful way
 - [`under ⍜`](https://uiua.org/docs/under) [`length ⧻`](https://uiua.org/docs/len) now reshapes an array to have the transformed length
-- `NaN` and `∞` indices for [`pick ⊡`](https://uiua.org/docs/pick) and [`select ⊏`](https://uiua.org/docs/select) now get the [`fill ⬚`](https://uiua.org/docs/fill) value
+- `nan` and `∞` indices for [`pick ⊡`](https://uiua.org/docs/pick) and [`select ⊏`](https://uiua.org/docs/select) now get the [`fill ⬚`](https://uiua.org/docs/fill) value
 - [`scan \`](https://uiua.org/docs/scan) now accepts functions that take more than 2 arguments
   - The behavior is similar to the analogous behavior for [`reduce /`](https://uiua.org/docs/reduce)
 - Allow [`on ⟜`](https://uiua.org/docs/on) to use function packs
@@ -1500,7 +1500,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - `\uNNNN` for full Unicode sequences
 ### Interpreter
 - The formatter now aligns consecutive end-of-line comments
-- `NaN`s no longer propagate in [`minimum ⌊`](https://uiua.org/docs/minimum) and [`maximum ⌈`](https://uiua.org/docs/maximum)
+- `nan`s no longer propagate in [`minimum ⌊`](https://uiua.org/docs/minimum) and [`maximum ⌈`](https://uiua.org/docs/maximum)
 - Fix a bug that prevented [`under ⍜`](https://uiua.org/docs/under) multidimensional [`take ↙`](https://uiua.org/docs/take) and [`drop ↘`](https://uiua.org/docs/drop) from working
 - Fix a bug in how [`fold ∧`](https://uiua.org/docs/fold) ordered multiple accumulators
 - Fix a bug that allowed incorrect signatures to be declared for functions

@@ -66,7 +66,7 @@ If the entire array is all one value, it will say so instead.
 ⌊ⁿ2∿⇡5000
 ```
 
-There is also special handling for `NaN`s and infinities in numeric arrays. If they are present, the number of `NaN`s will be shown in parentheses.
+There is also special handling for `nan`s and infinities in numeric arrays. If they are present, the number of `nan`s will be shown in parentheses.
 
 ```uiua
 ÷⟜∿⇡5000

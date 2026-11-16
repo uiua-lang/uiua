@@ -1262,6 +1262,12 @@ impl Compiler {
             Word::Number(NumWord::Infinity(true), _) => {
                 Node::new_push(f64::NEG_INFINITY, self.add_span(word.span.clone()))
             }
+            Word::Number(NumWord::NaN(false), _) => {
+                Node::new_push(f64::NAN, self.add_span(word.span.clone()))
+            }
+            Word::Number(NumWord::NaN(true), _) => {
+                Node::new_push(-f64::NAN, self.add_span(word.span.clone()))
+            }
             Word::Number(NumWord::Complex(c), _) => {
                 Node::new_push(c, self.add_span(word.span.clone()))
             }

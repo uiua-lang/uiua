@@ -31,7 +31,7 @@ pub type Ident = ecow::EcoString;
 //       This is true of all currently supported platforms for rust,
 //       but may not be true in general. Swap out for f64::from_bits when
 //       the MSRV passes 1.83 to ensure correctness on all future platforms.
-/// A NaN value that always compares as equal
+/// A nan value that always compares as equal
 pub const WILDCARD_NAN: f64 = must_cast(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000_0003);
 /// A character value used as a wildcard that will equal any character
 pub const WILDCARD_CHAR: char = '\u{100000}';

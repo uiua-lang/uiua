@@ -2022,7 +2022,7 @@ fn validate_base(base: f64, env: &Uiua) -> UiuaResult {
     } else if base == -1.0 {
         Err(env.error("Base cannot be ¯1"))
     } else if base.is_nan() {
-        Err(env.error("Base cannot be NaN"))
+        Err(env.error("Base cannot be nan"))
     } else if (-1.0..0.0).contains(&base) {
         Err(env.error("Base cannot be between ¯1 and 0"))
     } else {

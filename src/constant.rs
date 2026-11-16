@@ -261,7 +261,7 @@ constant!(
     /// Also works as a tag for complexes for use with `validate`
     ("i", Math, crate::Complex::I),
     /// IEEE 754-2008's `NaN`
-    ("NaN", Math, f64::NAN),
+    ("NaN", Math, f64::NAN, deprecated("Use the nan constant instead")),
     /// The wildcard `NaN` value that equals any other number
     ("W", Math, WILDCARD_NAN),
     /// The maximum integer that can be represented exactly

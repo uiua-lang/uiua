@@ -4,15 +4,8 @@ pub mod utils;
 pub mod worker;
 
 use std::{
-    borrow::Cow,
-    cell::Cell,
-    iter::repeat_n,
-    mem::{swap, take},
-    path::PathBuf,
-    rc::Rc,
-    sync::Arc,
-    sync::OnceLock,
-    time::Duration,
+    borrow::Cow, cell::Cell, iter::repeat_n, mem::take, path::PathBuf, rc::Rc, sync::Arc,
+    sync::OnceLock, time::Duration,
 };
 
 use base64::engine::{Engine, general_purpose::STANDARD};
@@ -20,7 +13,7 @@ use ev::mousemove;
 use js_sys::Date;
 use leptos::{
     ev::{keydown, keyup},
-    leptos_dom::helpers::TimeoutHandle,
+    leptos_dom::helpers::{AnimationFrameRequestHandle, TimeoutHandle},
     prelude::*,
     *,
 };
@@ -460,10 +453,19 @@ pub fn Editor<'a>(
     };
 
     // Run the code
-    let latest_run = StoredValue::new(0u64);
+    let frame_pending = StoredValue::new(None::<AnimationFrameRequestHandle>);
+    let pending_clear = StoredValue::new(None::<TimeoutHandle>);
+    let cancel_output_callbacks = move || {
+        if let Some(frame) = frame_pending.write_value().take() {
+            frame.cancel();
+        }
+        if let Some(timeout) = pending_clear.write_value().take() {
+            timeout.clear();
+        }
+    };
     on_cleanup(move || {
-        latest_run.try_update_value(|run| *run += 1);
-        worker::client::cancel(id);
+        cancel_output_callbacks();
+        worker::client::cancel(id, false);
     });
     let run = move |do_format: bool, set_cursor: bool| {
         // Format code
@@ -471,6 +473,7 @@ pub fn Editor<'a>(
         state.update(|s| s.update_line_number_width());
 
         // Run code
+        cancel_output_callbacks();
         output_data.set(Output::default());
         set_diag_output.set(Vec::new());
         set_output.set(EditorOutput::Running);
@@ -501,13 +504,8 @@ pub fn Editor<'a>(
             });
             set_diag_output.set(diags);
         };
-        latest_run.update_value(|run| *run += 1);
-        let ticket = latest_run.get_value();
         let (hidden, challenge) =
             get_state.with_untracked(|st| (st.hidden.clone(), st.challenge.clone()));
-        let frame_pending = Rc::new(Cell::new(false));
-        let pending_clear = Rc::new(Cell::new(None::<TimeoutHandle>));
-        let output_pending_clear = pending_clear.clone();
         worker::client::run(
             id,
             input,
@@ -515,55 +513,43 @@ pub fn Editor<'a>(
             challenge,
             seed,
             move |update| {
-                if latest_run.try_get_value() == Some(ticket) {
-                    // Handle pending clear
-                    if let Some(timeout) = output_pending_clear.take() {
-                        timeout.clear();
-                        if !update.is_reset() {
-                            output_data.update_untracked(take);
-                        }
+                // Handle pending clear
+                if let Some(timeout) = pending_clear.write_value().take() {
+                    timeout.clear();
+                    if !update.is_reset() {
+                        output_data.update_untracked(take);
                     }
-                    if update.is_reset() {
-                        let pending_clear = output_pending_clear.clone();
-                        output_pending_clear.set(Some(
-                            set_timeout(
-                                move || {
-                                    pending_clear.take();
-                                    if latest_run.try_get_value() == Some(ticket)
-                                        && output.with_untracked(EditorOutput::is_running)
-                                    {
-                                        output_data.set(Output::default());
-                                    }
-                                },
-                                Duration::from_millis(30),
-                            )
-                            .unwrap(),
-                        ));
-                        return;
-                    }
-                    // Update output
-                    output_data.update_untracked(|output| output.update(update));
-                    if !frame_pending.replace(true) {
-                        let frame_pending = frame_pending.clone();
-                        _ = request_animation_frame(move || {
-                            frame_pending.set(false);
-                            if latest_run.try_get_value() == Some(ticket)
-                                && output.with_untracked(EditorOutput::is_running)
-                            {
-                                output_data.notify();
-                            }
-                        });
-                    }
+                }
+                if update.is_reset() {
+                    pending_clear.set_value(Some(
+                        set_timeout(
+                            move || {
+                                pending_clear.set_value(None);
+                                output_data.set(Output::default());
+                            },
+                            Duration::from_millis(30),
+                        )
+                        .unwrap(),
+                    ));
+                    return;
+                }
+                // Update output
+                output_data.update_untracked(|output| output.update(update));
+                if frame_pending.with_value(Option::is_none) {
+                    frame_pending.set_value(Some(
+                        request_animation_frame(move || {
+                            frame_pending.set_value(None);
+                            output_data.notify();
+                        })
+                        .unwrap(),
+                    ));
                 }
             },
             move |result| {
-                if latest_run.try_get_value() != Some(ticket) {
-                    return;
-                }
-                if let Some(timeout) = pending_clear.take() {
-                    timeout.clear();
+                if pending_clear.with_value(Option::is_some) {
                     output_data.update_untracked(take);
                 }
+                cancel_output_callbacks();
                 match result {
                     Ok(result) => {
                         if result.initialized_challenge {
@@ -576,8 +562,7 @@ pub fn Editor<'a>(
                         update_output(result.output);
                     }
                     Err(error) => {
-                        let mut data = Output::default();
-                        output_data.update_untracked(|output| swap(output, &mut data));
+                        let mut data = take(&mut *output_data.write_untracked());
                         data.section().reports.push(OutputItem::String(error));
                         update_output(data);
                     }
@@ -1729,7 +1714,7 @@ pub fn Editor<'a>(
         }
     };
 
-    let listener = window_event_listener(ev::drop, move |event: DragEvent| {
+    let drop_listener = window_event_listener(ev::drop, move |event: DragEvent| {
         let event = event.dyn_into::<web_sys::DragEvent>().unwrap();
         event.prevent_default();
         event.stop_propagation();
@@ -2085,7 +2070,7 @@ pub fn Editor<'a>(
     on_cleanup(move || {
         mouse_move_listener.remove();
         mouse_up_listener.remove();
-        listener.remove();
+        drop_listener.remove();
     });
 
     let (showcase_example_index, set_showcase_example_index) = signal(0usize);
@@ -2607,7 +2592,7 @@ pub fn Editor<'a>(
                             class=move || run_button_class
                             on:click=move |_| {
                                 if output.with(EditorOutput::is_running) {
-                                    worker::client::cancel(id);
+                                    worker::client::cancel(id, true);
                                 } else {
                                     set_show_format_hint.set(false);
                                     run(get_run_on_format(), false);

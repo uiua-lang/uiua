@@ -117,6 +117,10 @@
 ⍤⤙≍ ¯1 ⬚¯1⋕ "Franklin County, Mississippi"
 ⍤⤙≍ map "ab" [123 456] ⋕ map "ab" {"123" "456"}
 ⍤⤙≍ map "ab" {"123" "456"} °⋕ map "ab" [123 456]
+⍤⤙≍ 12 ⋕" 12"
+⍤⤙≍ 12 ⋕"12\n"
+⍤⤙≍ 12 ⋕" 12\n"
+⍤⤙≍ 12 ⋕"\n12 "
 
 # Subscripted parse
 ⍤⤙≍ 3203386110 ⋕₁₆ "beefcafe"

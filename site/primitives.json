@@ -54,6 +54,12 @@
     "class": "Stream",
     "description": "Close a stream by its handle"
   },
+  "&clear": {
+    "args": 0,
+    "outputs": 0,
+    "class": "Env",
+    "description": "Clear the terminal/output/window"
+  },
   "&clip": {
     "args": 0,
     "outputs": 1,

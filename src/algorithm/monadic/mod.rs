@@ -638,7 +638,7 @@ fn parse_uiua_num(s: Cow<str>, env: &Uiua) -> UiuaResult<f64> {
     let mut s = s;
     let mut mul = 1.0;
     let trimmed;
-    if s.starts_with(' ') || s.ends_with(' ') {
+    if s.starts_with(char::is_whitespace) || s.ends_with(char::is_whitespace) {
         s = match s {
             Cow::Owned(s) => {
                 trimmed = s;

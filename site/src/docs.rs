@@ -15,7 +15,7 @@ use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoView
 
 use crate::{
     Hd, Prim, Tour, element, markdown::Markdown, other::*, other_tutorial::OtherTutorialPage,
-    primitive::*, tutorial::TUTORIAL_NAMES, uiuisms::Uiuisms,
+    primitive::*, tutorial::TUTORIAL_NAMES,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -25,7 +25,6 @@ pub enum DocsPage {
     Design,
     Technical,
     Install,
-    Uiuisms,
     Changelog,
     Constants,
     Combinators,
@@ -47,7 +46,6 @@ impl IntoParam for DocsPage {
             "design" => Ok(Self::Design),
             "technical" => Ok(Self::Technical),
             "install" => Ok(Self::Install),
-            "isms" => Ok(Self::Uiuisms),
             "changelog" => Ok(Self::Changelog),
             "constants" => Ok(Self::Constants),
             "combinators" => Ok(Self::Combinators),
@@ -83,7 +81,6 @@ pub fn Docs() -> impl IntoView {
             }
             DocsPage::Technical => Technical().into_view(),
             DocsPage::Install => Install().into_view(),
-            DocsPage::Uiuisms => Uiuisms().into_view(),
             DocsPage::Changelog => Changelog().into_view(),
             DocsPage::Constants => Constants().into_view(),
             DocsPage::Subscripts => Subscripts().into_view(),

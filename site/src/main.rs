@@ -8,7 +8,6 @@ mod other;
 mod other_tutorial;
 mod primitive;
 mod tutorial;
-mod uiuisms;
 
 use std::{cell::Cell, io::Read, sync::OnceLock, time::Duration};
 
@@ -30,7 +29,7 @@ use uiua_editor::{
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlAudioElement};
 
-use crate::{blog::*, docs::*, other::*, tutorial::Tutorial, uiuisms::*};
+use crate::{blog::*, docs::*, other::*, tutorial::Tutorial};
 
 pub fn main() {
     console_error_panic_hook::set_once();
@@ -174,11 +173,9 @@ pub fn Site() -> impl IntoView {
                     <Route path="" view=MainPage/>
                     <Route path="tutorial/:page?" view=Tutorial/>
                     <Route path="docs/:page?" view=Docs/>
-                    <Route path="isms/:search?" view=Uiuisms/>
                     <Route path="pad" view=PadPage/>
                     <Route path="install" view=Install/>
                     <Route path="tour" view=Tour/>
-                    <Route path="isms" view=Uiuisms/>
                     <Route path="blog/:page?" view=Blog/>
                     <Route path="*" view=NotFound/>
                 </Route>

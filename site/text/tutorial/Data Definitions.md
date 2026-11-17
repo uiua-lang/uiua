@@ -116,7 +116,7 @@ Particle 1 3 5
 ⊸°Particle
 ```
 
-The data can be constructred *without* running initializers by using the `NoInit` constructor.
+The data can be constructed *without* running initializers by using the `NoInit` constructor.
 
 ```uiua
 ~Particle {Mass Velocity ← ⊟}
@@ -177,7 +177,7 @@ Variants can have any number of fields, including none. Unlike normal data defin
 ┌─╴Shape
   |Circle {Radius}
   |Rectangle {Width Height}
-  |Point 
+  |Point
 └─╴
 Shape.Circle 4
 Shape.Rectangle 3 5
@@ -210,7 +210,7 @@ We can use [pattern matching](</tutorial/Pattern Matching>) to do something diff
 ┌─╴Shape
   |Circle {Radius}
   |Rectangle {Width Height}
-  |Point 
+  |Point
   Square ← ˙Rectangle
   Area ← ⍣(
     ×π ˙× °Circle
@@ -230,8 +230,8 @@ If you have a lot of variants, you can put more than one on a single line.
 
 ```uiua
 ┌─╴Element
-  |H |He 
-  |Li |Be |B |C |N |O |F |Ne 
+  |H |He
+  |Li |Be |B |C |N |O |F |Ne
   |Na |Mg |Al |Si |P |S |Cl |Ar
   # ...
 └─╴

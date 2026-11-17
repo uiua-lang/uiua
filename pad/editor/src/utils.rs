@@ -773,7 +773,7 @@ pub fn gen_code_view(code: &str, hidden: &str) -> AnyView {
                                 if os_ctrl(&event) {
                                     window()
                                         .open_with_url_and_target(
-                                            "/tutorial/Basic Data Manipulation#on",
+                                            "/tutorial/Basic Data Manipulation and Formatting#on",
                                             "_blank",
                                         )
                                         .unwrap();

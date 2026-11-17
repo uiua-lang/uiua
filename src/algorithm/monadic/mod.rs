@@ -2935,10 +2935,16 @@ fn f64_repr(n: f64) -> String {
         "∞".into()
     } else if n.to_bits() == WILDCARD_NAN.to_bits() {
         "W".into()
+    } else if abs.is_nan() {
+        "nan".into()
     } else {
         abs.to_string()
     };
-    if n < 0.0 { format!("¯{pos}") } else { pos }
+    if n.array_cmp(&0.0) == Ordering::Less {
+        format!("¯{pos}")
+    } else {
+        pos
+    }
 }
 
 impl Value {

@@ -1327,7 +1327,16 @@ impl ArrayCmp for f64 {
             {
                 Ordering::Equal
             } else {
-                self.is_nan().cmp(&other.is_nan())
+                self.is_sign_positive()
+                    .cmp(&other.is_sign_positive())
+                    .then_with(|| {
+                        let ord = self.is_nan().cmp(&other.is_nan());
+                        if self.is_sign_negative() {
+                            ord.reverse()
+                        } else {
+                            ord
+                        }
+                    })
             }
         })
     }

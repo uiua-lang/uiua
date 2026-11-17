@@ -154,4 +154,4 @@ pretty ¤ $label [1]
 ⍤⤙≍
 
 # Experimental!
-⍤⤙≍ ["∅"] pretty⍜(bytes"f64")⍜⊢+₁NaN
+⍤⤙≍ ["∅"] pretty⍜(bytes"f64")⍜⊢+₁nan

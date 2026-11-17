@@ -1050,6 +1050,12 @@
     "description": "Create a multivector",
     "experimental": true
   },
+  "nan": {
+    "args": 0,
+    "outputs": 1,
+    "class": "Constant",
+    "description": "NaN (Not a Number)"
+  },
   "negate": {
     "ascii": "`",
     "glyph": "¯",

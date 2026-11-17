@@ -261,7 +261,7 @@ constant!(
     /// Also works as a tag for complexes for use with `validate`
     ("i", Math, crate::Complex::I),
     /// IEEE 754-2008's `NaN`
-    ("NaN", Math, f64::NAN),
+    ("NaN", Math, f64::NAN, deprecated("Use nan instead.")),
     /// The wildcard `NaN` value that equals any other number
     ("W", Math, WILDCARD_NAN),
     /// The maximum integer that can be represented exactly
@@ -285,32 +285,96 @@ constant!(
     /// 2-dimensional adjacent neighbors offsets
     ("A₂", Spatial, [[0, 1], [1, 0], [0, -1], [-1, 0]]),
     /// 3-dimensional adjacent neighbors offsets
-    ("A₃", Spatial, [[0, 1, 0], [1, 0, 0], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]]),
+    (
+        "A₃",
+        Spatial,
+        [
+            [0, 1, 0],
+            [1, 0, 0],
+            [0, -1, 0],
+            [-1, 0, 0],
+            [0, 0, 1],
+            [0, 0, -1]
+        ]
+    ),
     /// 2-dimensional corner neighbors offsets
     ("C₂", Spatial, [[1, 1], [1, -1], [-1, -1], [-1, 1]]),
     /// 3-dimensional corner neighbors offsets
-    ("C₃", Spatial, [
-        [1, 1, 1], [1, -1, 1], [-1, -1, 1], [-1, 1, 1],
-        [1, 1, -1], [1, -1, -1], [-1, -1, -1], [-1, 1, -1]
-    ]),
+    (
+        "C₃",
+        Spatial,
+        [
+            [1, 1, 1],
+            [1, -1, 1],
+            [-1, -1, 1],
+            [-1, 1, 1],
+            [1, 1, -1],
+            [1, -1, -1],
+            [-1, -1, -1],
+            [-1, 1, -1]
+        ]
+    ),
     /// 3-dimensional edge neighbors offsets
-    ("E₃", Spatial, [
-        [1, 1, 0], [1, -1, 0], [-1, -1, 0], [-1, 1, 0],
-        [0, 1, 1], [1, 0, 1], [0, -1, 1], [-1, 0, 1],
-        [0, 1, -1], [1, 0, -1], [0, -1, -1], [-1, 0, -1]
-    ]),
+    (
+        "E₃",
+        Spatial,
+        [
+            [1, 1, 0],
+            [1, -1, 0],
+            [-1, -1, 0],
+            [-1, 1, 0],
+            [0, 1, 1],
+            [1, 0, 1],
+            [0, -1, 1],
+            [-1, 0, 1],
+            [0, 1, -1],
+            [1, 0, -1],
+            [0, -1, -1],
+            [-1, 0, -1]
+        ]
+    ),
     /// A string identifying the operating system
-    ("Os", System, std::env::consts::OS, deprecated("Use the os function instead")),
+    (
+        "Os",
+        System,
+        std::env::consts::OS,
+        deprecated("Use the os function instead")
+    ),
     /// A string identifying family of the operating system
-    ("Family", System, std::env::consts::FAMILY, deprecated("Use the osfamily function instead")),
+    (
+        "Family",
+        System,
+        std::env::consts::FAMILY,
+        deprecated("Use the osfamily function instead")
+    ),
     /// A string identifying the architecture of the CPU
-    ("Arch", System, std::env::consts::ARCH, deprecated("Use the arch function instead")),
+    (
+        "Arch",
+        System,
+        std::env::consts::ARCH,
+        deprecated("Use the arch function instead")
+    ),
     /// The executable file extension
-    ("ExeExt", System, std::env::consts::EXE_EXTENSION, deprecated("Use the exeext function instead")),
+    (
+        "ExeExt",
+        System,
+        std::env::consts::EXE_EXTENSION,
+        deprecated("Use the exeext function instead")
+    ),
     /// The file extension for shared libraries
-    ("DllExt", System, std::env::consts::DLL_EXTENSION, deprecated("Use the dllext function instead")),
+    (
+        "DllExt",
+        System,
+        std::env::consts::DLL_EXTENSION,
+        deprecated("Use the dllext function instead")
+    ),
     /// The primary path separator character
-    ("Sep", System, std::path::MAIN_SEPARATOR, deprecated("Use the pathsep function instead")),
+    (
+        "Sep",
+        System,
+        std::path::MAIN_SEPARATOR,
+        deprecated("Use the pathsep function instead")
+    ),
     /// The path of the current source file relative to `WorkingDir`
     ("ThisFile", System, ConstantValue::ThisFile),
     /// The name of the current source file
@@ -320,7 +384,12 @@ constant!(
     /// The compile-time working directory
     ("WorkingDir", System, ConstantValue::WorkingDir),
     /// The number of processors available
-    ("NumProcs", System, num_cpus::get() as f64, deprecated("Use the numprocs function instead")),
+    (
+        "NumProcs",
+        System,
+        num_cpus::get() as f64,
+        deprecated("Use the numprocs function instead")
+    ),
     /// A boolean `true` value for use in `json`
     ("True", External, Array::json_bool(true)),
     /// A boolean `false` value for use in `json`
@@ -400,7 +469,10 @@ constant!(
     (
         "Planets",
         Fun,
-        ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"].as_slice()
+        [
+            "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"
+        ]
+        .as_slice()
     ),
     /// Symbols for each of the planets
     (
@@ -432,7 +504,9 @@ constant!(
     (
         "ZodiacSymbols",
         Fun,
-        ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓']
+        [
+            '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'
+        ]
     ),
     /// The suits of a standard deck of playing cards
     ("Suits", Fun, ['♣', '♦', '♥', '♠']),
@@ -440,7 +514,10 @@ constant!(
     (
         "Cards",
         Fun,
-        ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"].as_slice()
+        [
+            "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"
+        ]
+        .as_slice()
     ),
     /// The symbols of the standard chess pieces
     (
@@ -464,50 +541,194 @@ constant!(
         "Elements",
         Fun,
         [
-            "Hydrogen", "Helium", "Lithium", "Beryllium", "Boron", "Carbon", "Nitrogen", "Oxygen", "Fluorine", "Neon", "Sodium", "Magnesium", "Aluminium",
-            "Silicon", "Phosphorus", "Sulfur", "Chlorine", "Argon", "Potassium", "Calcium", "Scandium", "Titanium", "Vanadium", "Chromium", "Manganese",
-            "Iron", "Cobalt", "Nickel", "Copper", "Zinc", "Gallium", "Germanium", "Arsenic", "Selenium", "Bromine", "Krypton", "Rubidium", "Strontium",
-            "Yttrium", "Zirconium", "Niobium", "Molybdenum", "Technetium", "Ruthenium", "Rhodium", "Palladium", "Silver", "Cadmium", "Indium", "Tin",
-            "Antimony", "Tellurium", "Iodine", "Xenon", "Cesium", "Barium", "Lanthanum", "Cerium", "Praseodymium", "Neodymium", "Promethium", "Samarium",
-            "Europium", "Gadolinium", "Terbium", "Dysprosium", "Holmium", "Erbium", "Thulium", "Ytterbium", "Lutetium", "Hafnium", "Tantalum", "Tungsten",
-            "Rhenium", "Osmium", "Iridium", "Platinum", "Gold", "Mercury", "Thallium", "Lead", "Bismuth", "Polonium", "Astatine", "Radon", "Francium",
-            "Radium", "Actinium", "Thorium", "Protactinium", "Uranium", "Neptunium", "Plutonium", "Americium", "Curium", "Berkelium", "Californium",
-            "Einsteinium", "Fermium", "Mendelevium", "Nobelium", "Lawrencium", "Rutherfordium", "Dubnium", "Seaborgium", "Bohrium", "Hassium", "Meitnerium",
-            "Darmstadtium", "Roentgenium", "Copernicium", "Nihonium", "Flerovium", "Moscovium", "Livermorium", "Tennessine", "Oganesson"
-        ].as_slice()
+            "Hydrogen",
+            "Helium",
+            "Lithium",
+            "Beryllium",
+            "Boron",
+            "Carbon",
+            "Nitrogen",
+            "Oxygen",
+            "Fluorine",
+            "Neon",
+            "Sodium",
+            "Magnesium",
+            "Aluminium",
+            "Silicon",
+            "Phosphorus",
+            "Sulfur",
+            "Chlorine",
+            "Argon",
+            "Potassium",
+            "Calcium",
+            "Scandium",
+            "Titanium",
+            "Vanadium",
+            "Chromium",
+            "Manganese",
+            "Iron",
+            "Cobalt",
+            "Nickel",
+            "Copper",
+            "Zinc",
+            "Gallium",
+            "Germanium",
+            "Arsenic",
+            "Selenium",
+            "Bromine",
+            "Krypton",
+            "Rubidium",
+            "Strontium",
+            "Yttrium",
+            "Zirconium",
+            "Niobium",
+            "Molybdenum",
+            "Technetium",
+            "Ruthenium",
+            "Rhodium",
+            "Palladium",
+            "Silver",
+            "Cadmium",
+            "Indium",
+            "Tin",
+            "Antimony",
+            "Tellurium",
+            "Iodine",
+            "Xenon",
+            "Cesium",
+            "Barium",
+            "Lanthanum",
+            "Cerium",
+            "Praseodymium",
+            "Neodymium",
+            "Promethium",
+            "Samarium",
+            "Europium",
+            "Gadolinium",
+            "Terbium",
+            "Dysprosium",
+            "Holmium",
+            "Erbium",
+            "Thulium",
+            "Ytterbium",
+            "Lutetium",
+            "Hafnium",
+            "Tantalum",
+            "Tungsten",
+            "Rhenium",
+            "Osmium",
+            "Iridium",
+            "Platinum",
+            "Gold",
+            "Mercury",
+            "Thallium",
+            "Lead",
+            "Bismuth",
+            "Polonium",
+            "Astatine",
+            "Radon",
+            "Francium",
+            "Radium",
+            "Actinium",
+            "Thorium",
+            "Protactinium",
+            "Uranium",
+            "Neptunium",
+            "Plutonium",
+            "Americium",
+            "Curium",
+            "Berkelium",
+            "Californium",
+            "Einsteinium",
+            "Fermium",
+            "Mendelevium",
+            "Nobelium",
+            "Lawrencium",
+            "Rutherfordium",
+            "Dubnium",
+            "Seaborgium",
+            "Bohrium",
+            "Hassium",
+            "Meitnerium",
+            "Darmstadtium",
+            "Roentgenium",
+            "Copernicium",
+            "Nihonium",
+            "Flerovium",
+            "Moscovium",
+            "Livermorium",
+            "Tennessine",
+            "Oganesson"
+        ]
+        .as_slice()
     ),
     /// Symbols for each of the chemical elements
     (
         "ElementSymbols",
         Fun,
         [
-            "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V",
-            "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",
-            "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho",
-            "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac",
-            "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg",
-            "Cn", "Nh", "Fl", "Mc", "Lv", "Ts", "Og"
-        ].as_slice()
+            "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S",
+            "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga",
+            "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",
+            "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr",
+            "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta",
+            "W", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr",
+            "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md",
+            "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Nh", "Fl", "Mc",
+            "Lv", "Ts", "Og"
+        ]
+        .as_slice()
     ),
     /// The Uiua logo
-    (#[cfg(feature = "image")] "Logo", Media, media::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), false, true).unwrap()),
+    (
+        #[cfg(feature = "image")]
+        "Logo",
+        Media,
+        media::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), false, true)
+            .unwrap()
+    ),
     /// Ethically sourced Lena picture
     /// Morten Rieger Hannemose
     /// 2019
     /// https://mortenhannemose.github.io/lena/
-    (#[cfg(feature = "image")] "Lena", Media, media::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false, false).unwrap()),
+    (
+        #[cfg(feature = "image")]
+        "Lena",
+        Media,
+        media::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false, false).unwrap()
+    ),
     /// Depth map for Lena picture
-    (#[cfg(feature = "image")] "LenaDepth", Media, media::image_bytes_to_array(include_bytes!("assets/lena-depth.png"), true, false).unwrap()),
+    (
+        #[cfg(feature = "image")]
+        "LenaDepth",
+        Media,
+        media::image_bytes_to_array(include_bytes!("assets/lena-depth.png"), true, false).unwrap()
+    ),
     /// A picture of two cats
     ///
     /// Their names are Murphy and Louie
-    (#[cfg(feature = "image")] "Cats", Media, media::image_bytes_to_array(include_bytes!("assets/cats.webp"), false, false).unwrap()),
+    (
+        #[cfg(feature = "image")]
+        "Cats",
+        Media,
+        media::image_bytes_to_array(include_bytes!("assets/cats.webp"), false, false).unwrap()
+    ),
     /// Depth map for the cats
-    (#[cfg(feature = "image")] "CatsDepth", Media, media::image_bytes_to_array(include_bytes!("assets/cats-depth.png"), true, false).unwrap()),
+    (
+        #[cfg(feature = "image")]
+        "CatsDepth",
+        Media,
+        media::image_bytes_to_array(include_bytes!("assets/cats-depth.png"), true, false).unwrap()
+    ),
     /// An elevation map of the world
     ///
     /// Sea level is at 0.562
-    (#[cfg(feature = "image")] "Elevation", Media, ConstantValue::Big(BigConstant::Elevation)),
+    (
+        #[cfg(feature = "image")]
+        "Elevation",
+        Media,
+        ConstantValue::Big(BigConstant::Elevation)
+    ),
     /// Sample music data
     ("Music", Media, ConstantValue::Music),
     /// Amen break
@@ -519,33 +740,158 @@ constant!(
     /// Frames for Bad Apple!! at 24fps
     ("Apple", Media, ConstantValue::Big(BigConstant::BadAppleGif)),
     /// Lorem Ipsum text
-    ("Lorem", Media, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),
+    (
+        "Lorem",
+        Media,
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+    ),
     /// Rainbow flag colors
-    ("Rainbow", Flags, [[0.894, 0.012, 0.012], [1.0, 0.647, 0.173], [1.0, 1.0, 0.255], [0.0, 0.502, 0.094], [0.0, 0.0, 0.976], [0.525, 0.0, 0.49]]),
+    (
+        "Rainbow",
+        Flags,
+        [
+            [0.894, 0.012, 0.012],
+            [1.0, 0.647, 0.173],
+            [1.0, 1.0, 0.255],
+            [0.0, 0.502, 0.094],
+            [0.0, 0.0, 0.976],
+            [0.525, 0.0, 0.49]
+        ]
+    ),
     /// Lesbian flag colors
-    ("Lesbian", Flags, [[0.831, 0.173, 0.0], [0.992, 0.596, 0.333], [1.0, 1.0, 1.0], [0.82, 0.38, 0.635], [0.635, 0.004, 0.38]]),
+    (
+        "Lesbian",
+        Flags,
+        [
+            [0.831, 0.173, 0.0],
+            [0.992, 0.596, 0.333],
+            [1.0, 1.0, 1.0],
+            [0.82, 0.38, 0.635],
+            [0.635, 0.004, 0.38]
+        ]
+    ),
     /// Gay flag colors
-    ("Gay", Flags, [[0.031, 0.55, 0.44], [0.149, 0.808, 0.667], [0.596, 0.91, 0.757], [1.0, 1.0, 1.0], [0.482, 0.678, 0.886], [0.314, 0.286, 0.8], [0.239, 0.102, 0.471]]),
+    (
+        "Gay",
+        Flags,
+        [
+            [0.031, 0.55, 0.44],
+            [0.149, 0.808, 0.667],
+            [0.596, 0.91, 0.757],
+            [1.0, 1.0, 1.0],
+            [0.482, 0.678, 0.886],
+            [0.314, 0.286, 0.8],
+            [0.239, 0.102, 0.471]
+        ]
+    ),
     /// Bi flag colors
-    ("Bi", Flags, [[0.839, 0.008, 0.439], [0.839, 0.008, 0.439], [0.608, 0.31, 0.588], [0.0, 0.22, 0.659], [0.0, 0.22, 0.659]]),
+    (
+        "Bi",
+        Flags,
+        [
+            [0.839, 0.008, 0.439],
+            [0.839, 0.008, 0.439],
+            [0.608, 0.31, 0.588],
+            [0.0, 0.22, 0.659],
+            [0.0, 0.22, 0.659]
+        ]
+    ),
     /// Trans flag colors
-    ("Trans", Flags, [[0.357, 0.808, 0.98], [0.961, 0.663, 0.722], [1.0, 1.0, 1.0], [0.961, 0.663, 0.722], [0.357, 0.808, 0.98]]),
+    (
+        "Trans",
+        Flags,
+        [
+            [0.357, 0.808, 0.98],
+            [0.961, 0.663, 0.722],
+            [1.0, 1.0, 1.0],
+            [0.961, 0.663, 0.722],
+            [0.357, 0.808, 0.98]
+        ]
+    ),
     /// Pan flag colors
-    ("Pan", Flags, [[1.0, 0.129, 0.549], [1.0, 0.847, 0.0], [0.129, 0.694, 1.0]]),
+    (
+        "Pan",
+        Flags,
+        [[1.0, 0.129, 0.549], [1.0, 0.847, 0.0], [0.129, 0.694, 1.0]]
+    ),
     /// Ace flag colors
-    ("Ace", Flags, [[0.0, 0.0, 0.0], [0.639, 0.639, 0.639], [1.0, 1.0, 1.0], [0.502, 0.0, 0.502]]),
+    (
+        "Ace",
+        Flags,
+        [
+            [0.0, 0.0, 0.0],
+            [0.639, 0.639, 0.639],
+            [1.0, 1.0, 1.0],
+            [0.502, 0.0, 0.502]
+        ]
+    ),
     /// Aro flag colors
-    ("Aro", Flags, [[0.239, 0.647, 0.259], [0.655, 0.827, 0.475], [1.0, 1.0, 1.0], [0.663, 0.663, 0.663], [0.0, 0.0, 0.0]]),
+    (
+        "Aro",
+        Flags,
+        [
+            [0.239, 0.647, 0.259],
+            [0.655, 0.827, 0.475],
+            [1.0, 1.0, 1.0],
+            [0.663, 0.663, 0.663],
+            [0.0, 0.0, 0.0]
+        ]
+    ),
     /// Aroace flag colors
-    ("AroAce", Flags, [[0.937, 0.565, 0.027], [0.965, 0.827, 0.09], [1.0, 1.0, 1.0], [0.271, 0.737, 0.933], [0.118, 0.247, 0.329]]),
+    (
+        "AroAce",
+        Flags,
+        [
+            [0.937, 0.565, 0.027],
+            [0.965, 0.827, 0.09],
+            [1.0, 1.0, 1.0],
+            [0.271, 0.737, 0.933],
+            [0.118, 0.247, 0.329]
+        ]
+    ),
     /// Enby flag colors
-    ("Enby", Flags, [[0.988, 0.957, 0.204], [1.0, 1.0, 1.0], [0.612, 0.349, 0.82], [0.173, 0.173, 0.173]]),
+    (
+        "Enby",
+        Flags,
+        [
+            [0.988, 0.957, 0.204],
+            [1.0, 1.0, 1.0],
+            [0.612, 0.349, 0.82],
+            [0.173, 0.173, 0.173]
+        ]
+    ),
     /// Genderfluid flag colors
-    ("Fluid", Flags, [[1.0, 0.463, 0.643], [1.0, 1.0, 1.0], [0.753, 0.067, 0.843], [0.0, 0.0, 0.0], [0.184, 0.235, 0.745]]),
+    (
+        "Fluid",
+        Flags,
+        [
+            [1.0, 0.463, 0.643],
+            [1.0, 1.0, 1.0],
+            [0.753, 0.067, 0.843],
+            [0.0, 0.0, 0.0],
+            [0.184, 0.235, 0.745]
+        ]
+    ),
     /// Genderqueer flag colors
-    ("Queer", Flags, [[0.71, 0.494, 0.863], [1.0, 1.0, 1.0], [0.29, 0.506, 0.137]]),
+    (
+        "Queer",
+        Flags,
+        [[0.71, 0.494, 0.863], [1.0, 1.0, 1.0], [0.29, 0.506, 0.137]]
+    ),
     /// Agender flag colors
-    ("Agender", Flags, [[0.0; 3], [0.74, 0.77, 0.78], [1.0; 3], [0.72, 0.96, 0.52], [1.0; 3], [0.74, 0.77, 0.78], [0.0; 3],]),
+    (
+        "Agender",
+        Flags,
+        [
+            [0.0; 3],
+            [0.74, 0.77, 0.78],
+            [1.0; 3],
+            [0.72, 0.96, 0.52],
+            [1.0; 3],
+            [0.74, 0.77, 0.78],
+            [0.0; 3],
+        ]
+    ),
     /// All pride flags
     ("PrideFlags", Flags, {
         CONSTANTS
@@ -554,9 +900,10 @@ constant!(
             .take_while(|def| def.name != "PrideFlags")
             .map(|def| match &*def.value {
                 ConstantValue::Static(val) => val.clone(),
-                _ => unreachable!()
+                _ => unreachable!(),
             })
-            .map(Boxed).collect::<Array<Boxed>>()
+            .map(Boxed)
+            .collect::<Array<Boxed>>()
     }),
     /// All pride flag names
     ("PrideFlagNames", Flags, {

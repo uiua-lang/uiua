@@ -17,6 +17,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`&faa`](https://uiua.org/docs/&faa) to append to the end of a file, creating it if it doesn't exist
 - Add numeric subscripts for [`switch ⨬`](https://uiua.org/docs/switch), which switch over that many argument
 - Add [`&clear`](https://uiua.org/docs/&clear) system function for clearing terminal/output/window
+- Add [`nan`](https://uiua.org/docs/nan) constant
+  - Unlike the `NaN` constant, this syntactically binds with `¯` and cannot be shadowed
+  - `NaN` has been deprecated
 ### Interpreter
 - Add `uiua new` command for creating a new Uiua project
   - `--lib` option to make a `lib.ua` instead of a `main.ua`
@@ -148,7 +151,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`json`](https://uiua.org/docs/json)`₅` for serializing to pretty JSON5
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
-- Add Capacity optional argument for [`map`](https://uiua.org/docs/map) to preallocate space for n keys 
+- Add Capacity optional argument for [`map`](https://uiua.org/docs/map) to preallocate space for n keys
 - Add modifier version of [`gif`](https://uiua.org/docs/gif), written as `gif!`
   - Operates similar to [`fold ∧`](https://uiua.org/docs/fold)
   - Encodes frames as they are generated

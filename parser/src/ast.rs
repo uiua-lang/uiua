@@ -870,6 +870,7 @@ impl fmt::Debug for Subscripted {
 pub enum NumWord {
     Real(f64),
     Infinity(bool),
+    NaN(bool),
     Complex(Complex),
     Err(String),
     #[cfg(feature = "multivector")]
@@ -964,6 +965,7 @@ impl NumWord {
             (Self::Real(a), Self::Complex(b)) => complex(a.into(), b).into(),
             (Self::Complex(a), Self::Real(b)) => complex(a, b.into()).into(),
             (Self::Err(e), _) | (_, Self::Err(e)) => Self::Err(e),
+            (Self::NaN(a), _) | (_, Self::NaN(a)) => Self::NaN(a),
             #[cfg(feature = "multivector")]
             (Self::Blade(_), _) | (_, Self::Blade(_)) => Self::Err(
                 "Attempted to map multivector token with another. \
@@ -987,6 +989,8 @@ impl fmt::Display for NumWord {
             NumWord::Real(r) => write!(f, "{r}"),
             NumWord::Infinity(false) => write!(f, "∞"),
             NumWord::Infinity(true) => write!(f, "-∞"),
+            NumWord::NaN(false) => write!(f, "nan"),
+            NumWord::NaN(true) => write!(f, "-nan"),
             NumWord::Complex(c) => write!(f, "{c}"),
             #[cfg(feature = "multivector")]
             NumWord::Blade(mv) => write!(f, "{mv}"),

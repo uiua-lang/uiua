@@ -1917,6 +1917,14 @@ primitive!(
     /// If the function takes more than 2 arguments, additional arguments in front of the array will be passed to the function on every iteration. This is useful for things like interspersing one array between the rows of another.
     /// ex: /⊂₃ 0_1 [2 3 4 5]
     /// ex: /◇⊂₃ @, {"cat" "bird" "dog"}
+    ///
+    /// Using [reduce] with a function pack reduces along multiple axes using the different functions.
+    /// ex: /($"_;_"|$"_ _") °△3_3
+    /// A monadic function will be called on each row at that level.
+    /// ex: /($"_ _"|□⇡|+) [2_0_1 4_2_2 1_1_0]
+    /// Use [join] to skip axes.
+    /// ex: /(+|⊂|+) °△3_3_3
+    /// ex: /+≡≡/+ °△3_3_3
     ([1], Reduce, IteratingModifier, ("reduce", '/')),
     /// Apply a function to aggregate arrays
     ///

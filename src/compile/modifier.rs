@@ -320,6 +320,59 @@ impl Compiler {
                 let span = self.add_span(modifier.span.clone());
                 Ok(Node::ImplMod(ImplPrimitive::Astar, args, span))
             }
+            Modifier::Primitive(Primitive::Reduce) => {
+                let mut args = EcoVec::new();
+                for branch in pack.lexical_order().cloned() {
+                    if branch.value.lines.iter().all(|item| {
+                        item.words_or(false, |words| words.iter().all(|w| !w.value.is_code()))
+                    }) {
+                        continue;
+                    }
+                    let span = branch.span.clone();
+                    let f = self.word_sig(branch.map(Word::Func))?;
+                    if f.sig != (2, 1) && f.sig != (1, 1) {
+                        let message = format!(
+                            "{} pack functions must have signature \
+                            |2.1 or |1.1, but this has signature {}",
+                            Primitive::Reduce.format(),
+                            f.sig
+                        );
+                        self.add_error(span.clone(), message);
+                    }
+                    args.push((span, f));
+                }
+                let mut node = Node::empty();
+                for (span, f) in args.into_iter().rev() {
+                    let spandex = self.add_span(span);
+                    if f.sig.args() == 2 {
+                        // Reduce
+                        if !matches!(node, Node::Mod(Primitive::Rows, ..)) {
+                            node = Node::Mod(
+                                Primitive::Rows,
+                                eco_vec![node.sig_node().unwrap()],
+                                spandex,
+                            );
+                        }
+                        node.push(Node::Mod(Primitive::Reduce, eco_vec![f], spandex))
+                    } else {
+                        // Rows
+                        match &mut node {
+                            Node::Mod(Primitive::Rows, args, _) => {
+                                args.make_mut()[0].node.push(f.node)
+                            }
+                            node => {
+                                node.push(f.node);
+                                *node = Node::Mod(
+                                    Primitive::Rows,
+                                    eco_vec![take(node).sig_node().unwrap()],
+                                    spandex,
+                                );
+                            }
+                        }
+                    }
+                }
+                Ok(node)
+            }
             Modifier::Primitive(Primitive::Fold) if pack.branches.len() == 2 => {
                 self.experimental_error_it(&modifier.span, || {
                     format!("{} function pack", Primitive::Fold.format())

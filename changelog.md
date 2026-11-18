@@ -11,6 +11,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Change [`mask ⚇`](https://uiua.org/docs/mask)'s glyph from `⦷` to `⚇`
   - These changes are all backward compatible and will be automatically updated by the formatter.
 - Add [`un °`](https://uiua.org/docs/un)[`validate ⊨`](https://uiua.org/docs/validate) for getting the type spec of an array
+- Add [`reduce /`](https://uiua.org/docs/reduce) function packs, which reduce along multiple axes with different functions
 - The formatter will now format text inside comments and strings that is surrounded with `\\(...)`.
 - Add [`anti ⌝`](https://www.uiua.org/docs/anti)[`&var`](https://www.uiua.org/docs/%26var) for setting environment variables
 - Add [`fill ⬚`](https://uiua.org/docs/fill) support to [`&var`](https://www.uiua.org/docs/%26var)

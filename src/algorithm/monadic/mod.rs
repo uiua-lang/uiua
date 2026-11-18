@@ -1765,34 +1765,38 @@ impl<T: RealArrayValue> Array<T> {
         let val: Value = if any_neg {
             // If any number is negative, make a f64 array
             let mut new_data = eco_vec![0.0; self.data.len() * bit_count];
-            let new_data_slice = new_data.make_mut();
-            // LSB first
-            for (i, (n, is_neg)) in nats.into_iter().zip(negatives).enumerate() {
-                let mut n = n;
-                for j in 0..bit_count.min(127) {
-                    let index = i * bit_count + j;
-                    let bit = u8::from(n & 1 != 0) as f64;
-                    let signed_bit = if is_neg { -bit } else { bit };
-                    unsafe {
-                        *new_data_slice.get_unchecked_mut(index) = signed_bit;
+            if bit_count > 0 {
+                let new_data_slice = new_data.make_mut();
+                let limit = bit_count.min(127);
+                // LSB first
+                for ((mut n, is_neg), row) in nats
+                    .into_iter()
+                    .zip(negatives)
+                    .zip(new_data_slice.chunks_exact_mut(bit_count))
+                {
+                    let sign = if is_neg { -1.0 } else { 1.0 };
+                    for slot in &mut row[..limit] {
+                        *slot = ((n & 1) as u8 as f64) * sign;
+                        n >>= 1;
                     }
-                    n >>= 1;
                 }
             }
             Array::new(shape, new_data).into()
         } else {
             // If all numbers are natural, make a u8 array
             let mut new_data = eco_vec![0; self.data.len() * bit_count];
-            let new_data_slice = new_data.make_mut();
-            // LSB first
-            for (i, n) in nats.into_iter().enumerate() {
-                let mut n = n;
-                for j in 0..bit_count.min(127) {
-                    let index = i * bit_count + j;
-                    unsafe {
-                        *new_data_slice.get_unchecked_mut(index) = u8::from(n & 1 != 0);
+            if bit_count > 0 {
+                let new_data_slice = new_data.make_mut();
+                let limit = bit_count.min(127);
+                // LSB first
+                for (mut n, row) in nats
+                    .into_iter()
+                    .zip(new_data_slice.chunks_exact_mut(bit_count))
+                {
+                    for slot in &mut row[..limit] {
+                        *slot = (n & 1) as u8;
+                        n >>= 1;
                     }
-                    n >>= 1;
                 }
             }
             let mut arr = Array::new(shape, new_data);

@@ -1099,8 +1099,6 @@ impl<'a> Lexer<'a> {
                 }
                 "⧈" => self.end(Primitive::Stencil, start),
                 "⦷" => self.end(Primitive::Mask, start),
-                "∪" => self.end(Primitive::Reach, start),
-                "⊜" => self.end(Primitive::Partition, start),
 
                 "(" => self.end(OpenParen, start),
                 ")" => self.end(CloseParen, start),

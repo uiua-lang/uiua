@@ -1744,7 +1744,7 @@ impl<T: RealArrayValue> Array<T> {
             right_padding + count
         } else {
             let mut max = if let Some(max) = nats.iter().copied().reduce(|acc, n| acc | n) {
-                *max
+                max
             } else {
                 let mut shape = self.shape.clone();
                 shape.push(0);

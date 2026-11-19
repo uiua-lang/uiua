@@ -1743,7 +1743,7 @@ impl<T: RealArrayValue> Array<T> {
         let bit_count = if let Some(count) = count {
             right_padding + count
         } else {
-            let mut max = if let Some(max) = nats.iter().fold(0, |acc, n| acc | n) {
+            let mut max = if let Some(max) = nats.iter().copied().reduce(|acc, n| acc | n) {
                 *max
             } else {
                 let mut shape = self.shape.clone();

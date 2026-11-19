@@ -2,12 +2,17 @@
 
 # 0.20 - 202?-??-??
 
-- `anti` inverse list
 - `fold` subscripts
-- `under` `on` dyadic constant
+  - Controls number of auto-accumulators
 - Sided `reshape`
-- Maps tutorial
-- More Inverses tutorial
+- `reshape` with multiple `infinity`s
+- Maps rework
+  - Array key metadata only
+  - Make existing map functions work on box pairs
+- `under` `on` dyadic constant
+- Docs
+  - `anti` inverse list
+  - "More Inverses" Tutorial
 - Maybe:
   - Special glyph for labels
   - Syntax-aware strings/format strings

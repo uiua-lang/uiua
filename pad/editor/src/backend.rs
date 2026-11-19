@@ -721,6 +721,7 @@ fn load_bytes(url: &str) -> Result<Vec<u8>, String> {
         let bytes = Uint8Array::new(&request.response().unwrap()).to_vec();
         return match status {
             200..300 => Ok(bytes),
+            0 => Err(format!("Browser gave no response for {url}")),
             _ => Err(format!(
                 "HTTP {status} for {url}: {}",
                 String::from_utf8_lossy(&bytes)

@@ -2309,16 +2309,6 @@ pub fn Editor<'a>(
                                         "Autoplay audio"
                                     </label>
                                 </div>
-                                <div title="Limit how long a program can run">
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            prop:checked=move || limit_exec_time.get()
-                                            on:change=toggle_limit_exec_time
-                                        />
-                                        "Limit exec time"
-                                    </label>
-                                </div>
                                 <div title="Allow &fetch requests in this pad (not saved)">
                                     <label>
                                         <input
@@ -2328,6 +2318,16 @@ pub fn Editor<'a>(
                                             prop:checked=false
                                         />
                                         "Fetch Requests"
+                                    </label>
+                                </div>
+                                <div title="Limit how long a program can run">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            prop:checked=move || limit_exec_time.get()
+                                            on:change=toggle_limit_exec_time
+                                        />
+                                        "Limit exec time"
                                     </label>
                                 </div>
                                 <div class="settings-group-grid">

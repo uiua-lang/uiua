@@ -4344,9 +4344,8 @@ sys_op! {
     /// Fetch data from a url
     ///
     /// Takes a url and returns bytes. It is often usful to use [un][utf₈] to decode into a string
-    /// ex: # Experimental!
-    ///   : °utf₈ &fetch "www.uiua.org/test.txt"
-    (1, Fetch, Tcp, "&fetch", "fetch url", Mutating, { experimental: true }),
+    /// ex: °utf₈ &fetch "www.uiua.org/test.txt"
+    (1, Fetch, Tcp, "&fetch", "fetch url", Mutating),
     /// Bind a UDP socket
     ///
     /// Returns a UDP socket handle

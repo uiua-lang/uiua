@@ -35,6 +35,7 @@ pub struct WebBackend {
     streams: Mutex<HashMap<Handle, VirtualStream>>,
     output_enabled: AtomicBool,
     ast_time: Option<f64>,
+    fetch_requests: bool,
 }
 
 struct VirtualStream {
@@ -111,10 +112,15 @@ impl WebBackend {
             streams: HashMap::new().into(),
             output_enabled: AtomicBool::new(true),
             ast_time: None,
+            fetch_requests: false,
         }
     }
     pub fn with_ast_time(mut self, ast_time: f64) -> Self {
         self.ast_time = Some(ast_time);
+        self
+    }
+    pub fn with_fetch_requests(mut self, enabled: bool) -> Self {
+        self.fetch_requests = enabled;
         self
     }
 }
@@ -176,8 +182,9 @@ impl WebBackend {
         })
     }
     fn file_mut<T>(&self, path: &Path, f: impl FnOnce(&mut Vec<u8>) -> T) -> Result<T, String> {
+        let path = normalize_path(path);
         FILES.with(|files| {
-            (files.borrow_mut().get_mut(path).map(f))
+            (files.borrow_mut().get_mut(&path).map(f))
                 .ok_or(format!("File not found: {}", path.display()))
         })
     }
@@ -597,6 +604,26 @@ impl SysBackend for WebBackend {
         }
         Ok(-Date::new_0().get_timezone_offset() / 60.0)
     }
+    fn fetch(&self, url: &str) -> Result<Vec<u8>, String> {
+        if !self.fetch_requests {
+            if worker::is_worker() {
+                worker::request_fetch(url);
+            }
+            return Err("Enable Fetch Requests in the pad settings to use &fetch".into());
+        }
+        let load = || {
+            if url.contains("://") {
+                load_bytes(url)
+            } else {
+                load_bytes(&format!("https://{url}"))
+            }
+        };
+        if worker::is_worker() {
+            worker::fetch(load)
+        } else {
+            load()
+        }
+    }
     fn big_constant(&self, key: BigConstant) -> Result<Cow<'static, [u8]>, String> {
         #[cfg(not(target_arch = "wasm32"))]
         if key == BigConstant::Uiua386 {
@@ -686,7 +713,8 @@ fn load_bytes(url: &str) -> Result<Vec<u8>, String> {
     }
     if worker::is_worker() {
         let request = XmlHttpRequest::new().unwrap();
-        request.open_with_async("GET", url, false).unwrap();
+        (request.open_with_async("GET", url, false))
+            .map_err(|e| format!("Invalid request URL {url}: {e:?}"))?;
         request.set_response_type(XmlHttpRequestResponseType::Arraybuffer);
         (request.send()).map_err(|e| format!("Request failed for {url}: {e:?}"))?;
         let status = request.status().unwrap();

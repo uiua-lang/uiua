@@ -26,8 +26,8 @@ use uiua::{
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;
 use web_sys::{
-    CssStyleDeclaration, DomRect, Event, HtmlDivElement, HtmlElement, HtmlSpanElement,
-    HtmlStyleElement, HtmlTextAreaElement, KeyboardEvent, MouseEvent,
+    CssStyleDeclaration, DomRect, Event, HtmlDivElement, HtmlElement, HtmlInputElement,
+    HtmlSpanElement, HtmlStyleElement, HtmlTextAreaElement, KeyboardEvent, MouseEvent,
 };
 
 use crate::{
@@ -279,6 +279,18 @@ impl State {
             self.past.push(replace(&mut self.curr, next));
             self.set_changed();
         }
+    }
+    pub fn insert_experimental(&mut self, mut cursor: Cursor) {
+        let code = get_code(&self.code_id);
+        if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
+            return;
+        }
+        if matches!(cursor, Cursor::Keep) {
+            cursor = get_code_cursor(&self.code_id)
+                .map(|(start, end)| Cursor::Set(start + 16, end + 16))
+                .unwrap_or(Cursor::Ignore);
+        }
+        self.set_code(&format!("# Experimental!\n{code}"), cursor);
     }
 }
 
@@ -1103,9 +1115,13 @@ pub fn gen_code_view(code: &str, hidden: &str) -> AnyView {
 }
 
 fn init_rt(settings: &worker::Settings) -> Uiua {
-    Uiua::with_backend(WebBackend::new().with_ast_time(settings.ast_time))
-        .maybe_with_execution_limit(settings.execution_limit.map(Duration::from_secs_f64))
-        .with_recursion_limit(50)
+    Uiua::with_backend(
+        WebBackend::new()
+            .with_ast_time(settings.ast_time)
+            .with_fetch_requests(settings.fetch_requests),
+    )
+    .maybe_with_execution_limit(settings.execution_limit.map(Duration::from_secs_f64))
+    .with_recursion_limit(50)
 }
 
 fn just_values(code: &str, settings: &worker::Settings) -> UiuaResult<Vec<Value>> {
@@ -1198,7 +1214,11 @@ fn run_code_single(
     // Run
     let mut rt = init_rt(settings);
     let mut error = None;
-    let mut comp = Compiler::with_backend(WebBackend::new().with_ast_time(settings.ast_time));
+    let mut comp = Compiler::with_backend(
+        WebBackend::new()
+            .with_ast_time(settings.ast_time)
+            .with_fetch_requests(settings.fetch_requests),
+    );
     let comp_backend;
     let res = comp.load_str(code).map(|comp| rt.run_compiler(comp));
     let (mut value_lines, io) = match res {
@@ -1460,14 +1480,7 @@ pub fn report_view(report: &Report, state: WriteSignal<State, LocalStorage>) -> 
                 view! {
                     <span class={classes.clone()}>{before.to_string()}</span>
                     <a class="output-report" href="#" on:click=move |_| {
-                        state.update(|state| {
-                            let code = get_code(&state.code_id);
-                            if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
-                                return;
-                            }
-                            let new_code = format!("# Experimental!\n{code}");
-                            state.set_code(&new_code, Cursor::Ignore);
-                        });
+                        state.update(|state| state.insert_experimental(Cursor::Ignore));
                     }>"# Experimental!"</a>
                     <span class={classes}>{after.to_string()}</span>
                 }
@@ -1612,6 +1625,15 @@ where
         .unwrap()
         .set_item(name, &value.to_string())
         .unwrap();
+}
+
+pub fn get_fetch_requests(editor: u64) -> bool {
+    get_element::<HtmlInputElement>(&format!("fetch-requests-{editor}"))
+        .is_some_and(|input| input.checked())
+}
+
+pub fn set_fetch_requests(editor: u64, enabled: bool) {
+    element::<HtmlInputElement>(&format!("fetch-requests-{editor}")).set_checked(enabled);
 }
 
 pub fn get_limit_exec_time() -> bool {

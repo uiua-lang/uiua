@@ -105,7 +105,7 @@ pub fn Editor<'a>(
 
     let no_run = no_run
         || mode == EditorMode::Pad && !get_autorun()
-        || ["&sl", "&httpsw", "send", "recv", "&ffi", "&clip"]
+        || ["&sl", "&httpsw", "send", "recv", "&ffi", "&clip", "&fetch"]
             .iter()
             .any(|name| example.contains(name));
     let id = ID.with(|id| {
@@ -327,19 +327,7 @@ pub fn Editor<'a>(
 
     // Insert an # Experimental! comment at the top of the code
     let insert_experimental = move || {
-        state.update(|state| {
-            let code = get_code();
-            if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
-                return;
-            }
-            let new_code = format!("# Experimental!\n{code}");
-            let cursor = if let Some((start, end)) = get_code_cursor() {
-                Cursor::Set(start + 16, end + 16)
-            } else {
-                Cursor::Ignore
-            };
-            state.set_code(&new_code, cursor);
-        });
+        state.update(|state| state.insert_experimental(Cursor::Keep));
     };
 
     let (render_output_item, render_output_items) = {
@@ -2329,6 +2317,17 @@ pub fn Editor<'a>(
                                             on:change=toggle_limit_exec_time
                                         />
                                         "Limit exec time"
+                                    </label>
+                                </div>
+                                <div title="Allow &fetch requests in this pad (not saved)">
+                                    <label>
+                                        <input
+                                            id=format!("fetch-requests-{id}")
+                                            type="checkbox"
+                                            autocomplete="off"
+                                            prop:checked=false
+                                        />
+                                        "Fetch Requests"
                                     </label>
                                 </div>
                                 <div class="settings-group-grid">

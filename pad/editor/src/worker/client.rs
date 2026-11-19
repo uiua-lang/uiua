@@ -33,6 +33,7 @@ pub(crate) fn run(
                 seed,
                 settings: Settings {
                     execution_limit: utils::get_limit_exec_time().then(utils::get_execution_limit),
+                    fetch_requests: utils::get_fetch_requests(editor),
                     ast_time: utils::get_ast_time(),
                     top_at_top: utils::get_top_at_top(),
                     animation_format: utils::get_animation_format(),
@@ -130,9 +131,16 @@ fn fail(error: String) {
     }
 }
 
+fn client<T>(f: impl FnOnce(&Client) -> T) -> T {
+    CLIENT.with(|client| f(&client.borrow()))
+}
+
+fn client_mut<T>(f: impl FnOnce(&mut Client) -> T) -> T {
+    CLIENT.with(|client| f(&mut client.borrow_mut()))
+}
+
 fn next_job() {
-    let res = CLIENT.with(|client| {
-        let client = &mut *client.borrow_mut();
+    let res = client_mut(|client| {
         if client.status == WorkerStatus::Running || client.queue.is_empty() {
             return Ok(());
         }
@@ -187,32 +195,45 @@ impl Response {
     fn receive(self) {
         match self {
             Response::Ready => {
-                CLIENT.with(|client| client.borrow_mut().status = WorkerStatus::Idle);
+                client_mut(|client| client.status = WorkerStatus::Idle);
                 next_job();
             }
             Response::Failed(error) => fail(error),
             Response::Input(prompt) => {
                 let answer = window().prompt_with_message(&prompt).unwrap_or(None);
-                let result = CLIENT.with(|client| {
-                    let client = client.borrow();
+                let result = client_mut(|client| {
                     Request::Input(answer).send(&client.worker.as_ref().unwrap().worker)
                 });
                 if let Err(error) = result {
                     fail(error);
                 }
             }
-            Response::Output(update) => {
-                let on_output = CLIENT.with(|client| {
-                    let client = client.borrow();
-                    client.queue.front().map(|job| job.on_output.clone())
+            Response::FetchPermission(url) => {
+                let enabled = window()
+                    .confirm_with_message(&format!(
+                        "Attempting to fetch {url}.\n\n\
+                        Enable fetch requests for this pad?"
+                    ))
+                    .unwrap_or(false);
+                let result = client(|client| {
+                    if enabled {
+                        utils::set_fetch_requests(client.queue.front().unwrap().editor, true);
+                    }
+                    Request::FetchPermission(enabled).send(&client.worker.as_ref().unwrap().worker)
                 });
+                if let Err(error) = result {
+                    fail(error);
+                }
+            }
+            Response::Output(update) => {
+                let on_output =
+                    client(|client| client.queue.front().map(|job| job.on_output.clone()));
                 if let Some(on_output) = on_output {
                     on_output(update);
                 }
             }
             Response::Done(result) => {
-                let job = CLIENT.with(|client| {
-                    let client = &mut client.borrow_mut();
+                let job = client_mut(|client| {
                     client.status = WorkerStatus::Idle;
                     client.queue.pop_front()
                 });

@@ -9,7 +9,7 @@ use std::{
     path::PathBuf,
 };
 
-use futures::channel::oneshot;
+use futures::channel::oneshot::{self, Sender};
 use js_sys::{Array, Object, Uint8Array};
 use serde::*;
 use serde_bytes::ByteBuf;
@@ -88,6 +88,7 @@ impl Output {
 #[derive(Serialize, Deserialize)]
 pub struct Settings {
     pub execution_limit: Option<f64>,
+    pub fetch_requests: bool,
     /// Time to sample `&ast`
     pub ast_time: f64,
     pub top_at_top: bool,
@@ -108,6 +109,7 @@ pub struct RunRequest {
 pub enum Request {
     Run(Box<RunRequest>),
     Input(Option<String>),
+    FetchPermission(bool),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -123,6 +125,7 @@ pub struct RunResult {
 pub enum Response {
     Ready,
     Input(String),
+    FetchPermission(String),
     Output(OutputUpdate),
     Done(RunResult),
     Failed(String),
@@ -173,7 +176,13 @@ struct WorkerState {
     inputs: Vec<Option<String>>,
     next_input: usize,
     input_prompt: Option<String>,
-    input_reply: Option<oneshot::Sender<Option<String>>>,
+    input_reply: Option<Sender<Option<String>>>,
+    /// Fetch results retained across input replays
+    fetches: Vec<Result<Vec<u8>, String>>,
+    next_fetch: usize,
+    fetch_request: Option<String>,
+    fetch_reply: Option<Sender<bool>>,
+    fetch_prompted: bool,
     /// Pending clipboard write
     clipboard: Option<String>,
     /// Whether to play the bell sound
@@ -183,7 +192,9 @@ struct WorkerState {
 impl WorkerState {
     fn reset_attempt(&mut self) {
         self.next_input = 0;
+        self.next_fetch = 0;
         self.input_prompt = None;
+        self.fetch_request = None;
         self.clipboard.take();
         self.bell = false;
     }
@@ -235,6 +246,25 @@ pub fn input(prompt: &str) -> Result<Option<String>, String> {
     })
 }
 
+pub fn fetch(load: impl FnOnce() -> Result<Vec<u8>, String>) -> Result<Vec<u8>, String> {
+    state_mut(|state| {
+        let index = state.next_fetch;
+        state.next_fetch += 1;
+        if index == state.fetches.len() {
+            state.fetches.push(load());
+        }
+        state.fetches[index].clone()
+    })
+}
+
+pub fn request_fetch(url: &str) {
+    state_mut(|state| {
+        if !state.fetch_prompted {
+            state.fetch_request.get_or_insert_with(|| url.into());
+        }
+    })
+}
+
 pub fn set_clipboard(contents: &str) {
     state_mut(|state| state.clipboard = Some(contents.into()));
 }
@@ -268,10 +298,21 @@ impl RunRequest {
             Response::Output(OutputUpdate::Reset).send()?;
             state_mut(WorkerState::reset_attempt);
             uiua::seed_random(self.seed);
-            // Replays use the original files, seed, and challenge state; only recorded answers change.
+            // Replays use the original files, seed, and challenge state.
             let challenge = self.challenge.clone();
             let output =
                 utils::run_code(&self.code, &self.hidden, challenge.as_ref(), &self.settings);
+            if let Some(url) = state_mut(|state| state.fetch_request.take()) {
+                let (send, reply) = oneshot::channel();
+                state_mut(|state| state.fetch_reply = Some(send));
+                Response::FetchPermission(url).send()?;
+                self.settings.fetch_requests =
+                    (reply.await).map_err(|_| "Fetch permission request canceled".to_string())?;
+                state_mut(|state| state.fetch_prompted = true);
+                if self.settings.fetch_requests {
+                    continue;
+                }
+            }
             if let Some(prompt) = state_mut(|state| state.input_prompt.take()) {
                 let (send, reply) = oneshot::channel();
                 state_mut(|state| state.input_reply = Some(send));
@@ -318,6 +359,11 @@ pub fn start() {
             Ok(Request::Input(answer)) => {
                 if let Some(reply) = state_mut(|state| state.input_reply.take()) {
                     _ = reply.send(answer);
+                }
+            }
+            Ok(Request::FetchPermission(enabled)) => {
+                if let Some(reply) = state_mut(|state| state.fetch_reply.take()) {
+                    _ = reply.send(enabled);
                 }
             }
             Err(error) => {

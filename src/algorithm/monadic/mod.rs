@@ -1259,9 +1259,11 @@ impl<T: ArrayValue> Array<T> {
         } else {
             self.shape[depth..].iter().rev().skip(trans_count).product()
         };
+        let chunk_size: usize = self.shape[depth..].iter().product();
+        let mut temp = (!square_matrix).then(|| self.data.clone());
         let data_slice = self.data.as_mut_slice();
         // Divide the array into chunks at the given depth
-        for data in data_slice.chunks_exact_mut(self.shape[depth..].iter().product()) {
+        for (i, data) in data_slice.chunks_exact_mut(chunk_size).enumerate() {
             // Special in-place case for square matrices
             if square_matrix {
                 if subs > 500 {
@@ -1287,18 +1289,22 @@ impl<T: ArrayValue> Array<T> {
             let stride = data.len() / subs;
             // The operation to perform on each subarray
             let op = |(temp_chunk_i, chunk): (usize, &mut [T])| {
-                for (chunk_i, item) in chunk.iter_mut().enumerate() {
-                    *item = data[chunk_i * stride + temp_chunk_i].clone();
+                let src_iter = data[temp_chunk_i..].iter().step_by(stride);
+                for (item, src) in chunk.iter_mut().zip(src_iter) {
+                    *item = src.clone();
                 }
             };
             // Perform the operation on each subarray
-            let mut temp = data.to_vec();
+            let temp_chunk =
+                &mut temp.as_mut().unwrap().as_mut_slice()[i * chunk_size..(i + 1) * chunk_size];
             if subs > 500 {
-                temp.par_chunks_mut(subs).enumerate().for_each(op);
+                temp_chunk.par_chunks_mut(subs).enumerate().for_each(op);
             } else {
-                temp.chunks_mut(subs).enumerate().for_each(op);
+                temp_chunk.chunks_mut(subs).enumerate().for_each(op);
             }
-            data.clone_from_slice(&temp);
+        }
+        if let Some(temp) = temp {
+            self.data = temp;
         }
         if forward {
             self.shape[depth..].rotate_left(trans_count);

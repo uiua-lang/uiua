@@ -1304,7 +1304,7 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         if let Some(temp) = temp {
-            self.data = temp.into();
+            self.data = temp;
         }
         if forward {
             self.shape[depth..].rotate_left(trans_count);

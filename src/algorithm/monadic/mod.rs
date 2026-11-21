@@ -1741,10 +1741,7 @@ impl<T: RealArrayValue> Array<T> {
                     Primitive::Bits.format()
                 )));
             }
-            let mut nat = n.abs().round_ties_even() as u128;
-            if let Some(count) = count {
-                nat &= (1 << count) - 1;
-            }
+            let nat = n.abs().round_ties_even() as u128;
             nats.push(nat);
             negatives.push(n < 0.0);
             any_neg |= n < 0.0;
@@ -1752,8 +1749,8 @@ impl<T: RealArrayValue> Array<T> {
         let bit_count = if let Some(count) = count {
             right_padding + count
         } else {
-            let mut max = if let Some(max) = nats.iter().max() {
-                *max
+            let mut max = if let Some(max) = nats.iter().copied().reduce(|acc, n| acc | n) {
+                max
             } else {
                 let mut shape = self.shape.clone();
                 shape.push(0);

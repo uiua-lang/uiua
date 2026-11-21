@@ -1726,12 +1726,13 @@ pub fn now() -> f64 {
         {
             #[cfg(feature = "non_web")]
             compile_error!("Cannot have both the `web` and `non_web` features enabled");
-            use wasm_bindgen::{JsCast, prelude::*};
-            js_sys::Reflect::get(&js_sys::global(), &JsValue::from_str("performance"))
-                .expect("failed to get performance from global object")
-                .unchecked_into::<web_sys::Performance>()
-                .now()
-                / 1000.0
+            #[wasm_bindgen::prelude::wasm_bindgen]
+            extern "C" {
+                #[wasm_bindgen(js_namespace = performance, js_name = now)]
+                fn perf_now() -> f64;
+            }
+
+            perf_now() / 1000.0
         }
         #[cfg(not(feature = "web"))]
         {

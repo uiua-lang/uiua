@@ -868,10 +868,13 @@ impl SysBackend for NativeSys {
                     eprintln!("Failed to send audio time: {e}");
                 }
                 match (self.f)(&times) {
-                    Ok(samples) => {
+                    Ok(Some(samples)) => {
                         self.samples = samples.into_iter();
+                        // TODO: This doesn't get TCO'd properly,
+                        // so e.g. &ast↙₀ causes a stack overflow.
                         self.next(sample_rate)
                     }
+                    Ok(None) => None,
                     Err(e) => {
                         eprintln!("{e}");
                         None

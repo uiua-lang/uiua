@@ -453,12 +453,13 @@ impl SysBackend for WebBackend {
                 i += 1;
             }
             match f(&times) {
-                Ok(s) => {
+                Ok(Some(s)) => {
                     if s.len() > SAMPLES_PER_FRAME {
                         i += s.len() - SAMPLES_PER_FRAME;
                     }
                     samples.extend(s);
                 }
+                Ok(None) => break,
                 Err(err) => return Err(format!("{err}")),
             }
         }

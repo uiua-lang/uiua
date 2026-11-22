@@ -10,6 +10,7 @@ use crate::{
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::f64::consts::{E, PI, SQRT_2, TAU};
+use std::fmt::Write;
 use std::iter::once;
 
 impl GridFmt for u8 {
@@ -49,118 +50,21 @@ impl GridFmt for u8 {
 
 impl GridFmt for f64 {
     fn fmt_grid(&self, _params: GridFmtParams) -> Grid {
-        let f = *self;
-        let positive = f.abs();
-        let is_neg = f.is_sign_negative();
-        let minus = if is_neg { "¯" } else { "" };
-        let s = if f.to_bits() == EMPTY_NAN.to_bits() {
-            "∅".into()
-        } else if f.to_bits() == TOMBSTONE_NAN.to_bits() {
-            "⊥".into()
-        } else if f.to_bits() == WILDCARD_NAN.to_bits() {
-            "W".into()
+        let positive = self.abs();
+        let minus = if self.is_sign_negative() { "¯" } else { "" };
+        let s = if let Ok(math_const) = MathConstant::try_from(*self) {
+            math_const.to_string()
         } else if positive.is_nan() {
             format!("{minus}nan")
         } else if positive.fract() == 0.0 {
             format!("{minus}{positive}")
-        } else if (positive - PI).abs() <= f64::EPSILON {
-            format!("{minus}π")
-        } else if (positive - TAU).abs() <= f64::EPSILON {
-            format!("{minus}τ")
-        } else if (positive - PI / 2.0).abs() <= f64::EPSILON {
-            format!("{minus}η")
-        } else if (positive - E).abs() <= f64::EPSILON {
-            format!("{minus}e")
-        } else if positive == f64::INFINITY {
-            format!("{minus}∞")
-        } else if positive.fract() != 0.0
-            && let Some((num, denom, approx)) =
-                [1u8, 2, 3, 4, 5, 6, 8, 9, 12].iter().find_map(|&denom| {
-                    let num = (positive * denom as f64) / TAU;
-                    let rounded = num.round();
-                    if rounded <= 100.0
-                        && (num - rounded).abs() <= 8.0 * f64::EPSILON
-                        && rounded != 0.0
-                    {
-                        Some((rounded, denom, num != rounded))
-                    } else {
-                        None
-                    }
-                })
-        {
-            let prefix = if approx { "~" } else { "" };
-            if denom == 1 {
-                format!("{prefix}{minus}{num}τ")
-            } else if denom == 2 {
-                if num == 1.0 {
-                    format!("{prefix}{minus}π")
-                } else {
-                    format!("{prefix}{minus}{num}π")
-                }
-            } else if denom == 4 {
-                if num == 1.0 {
-                    format!("{prefix}{minus}η")
-                } else {
-                    format!("{prefix}{minus}{num}η")
-                }
-            } else if num == 1.0 {
-                format!("{prefix}{minus}τ/{denom}")
-            } else {
-                format!("{prefix}{minus}{num}τ/{denom}")
-            }
-        } else if positive <= 2.5
-            && positive.fract() != 0.0
-            && let Some((.., sqr)) = [
-                (SQRT_2, 2.0, "2"),
-                (SQRT_2 / 2.0, 0.5, "½"),
-                (3f64.sqrt(), 3.0, "3"),
-                (3f64.sqrt() / 2.0, 0.75, "¾"),
-                (3f64.sqrt() / 3.0, 1.0 / 3.0, "⅓"),
-                (5f64.sqrt(), 5.0, "5"),
-                (5f64.sqrt() / 5.0, 0.2, "⅕"),
-            ]
-            .into_iter()
-            .find(|(sqrt, ..)| (sqrt - positive).abs() <= f64::EPSILON)
-        {
-            format!("{minus}√{sqr}")
         } else {
             let mut pos_formatted = positive.to_string();
             if pos_formatted.len() >= 17 {
-                let mut consecutive_start = 0;
-                let mut consecutive_len = 0;
-                let mut hit_decimal = false;
-                for (i, c) in pos_formatted.chars().enumerate() {
-                    if c == '.' {
-                        hit_decimal = true;
-                    } else if !hit_decimal {
-                        continue;
-                    }
-                    let local_len = pos_formatted
-                        .chars()
-                        .skip(i + 1)
-                        .take_while(|&d| d == c)
-                        .count();
-                    if local_len > consecutive_len {
-                        consecutive_start = i;
-                        consecutive_len = local_len;
-                    }
-                }
-                if consecutive_len >= 5 {
-                    if consecutive_start + consecutive_len + 1 == pos_formatted.len() {
-                        pos_formatted.replace_range(consecutive_start + 3.., "…")
-                    } else {
-                        pos_formatted.replace_range(
-                            consecutive_start + 2..consecutive_start + consecutive_len,
-                            "…",
-                        )
-                    }
-                }
+                abbreviate_consecutive_fract_digits(&mut pos_formatted);
             }
-            if is_neg {
-                format!("{minus}{pos_formatted}")
-            } else {
-                pos_formatted
-            }
+            pos_formatted.insert_str(0, minus);
+            pos_formatted
         };
         vec![s.chars().collect()]
     }
@@ -243,6 +147,174 @@ impl GridFmt for f64 {
         } else {
             max_whole_len
         }
+    }
+}
+
+struct MathConstant {
+    glyph: char,
+    negative: bool,
+    approximate: bool,
+    square_root: bool,
+    numerator: u8,
+    denominator: u8,
+}
+
+impl std::fmt::Display for MathConstant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (flag, ch) in [
+            (self.approximate, '~'),
+            (self.negative, '¯'),
+            (self.square_root, '√'),
+        ] {
+            if flag {
+                f.write_char(ch)?;
+            }
+        }
+        if self.numerator >= 2 {
+            assert!(!self.square_root);
+            write!(f, "{}", self.numerator)?;
+        }
+        f.write_char(self.glyph)?;
+        if self.denominator >= 2 {
+            assert!(!self.square_root);
+            write!(f, "/{}", self.denominator)?;
+        }
+        Ok(())
+    }
+}
+
+impl TryFrom<f64> for MathConstant {
+    type Error = ();
+    fn try_from(f: f64) -> Result<Self, Self::Error> {
+        if f.is_finite() && f.fract() == 0.0 {
+            // None of the values being checked for are integers.
+            return Err(());
+        }
+
+        let mut math = Self {
+            glyph: '\0',
+            negative: false,
+            approximate: false,
+            square_root: false,
+            numerator: 1,
+            denominator: 1,
+        };
+
+        let bit_eq = |n: f64| f.to_bits() == n.to_bits();
+
+        // Special NaN values
+        if f.is_nan() {
+            math.glyph = if bit_eq(EMPTY_NAN) {
+                '∅'
+            } else if bit_eq(TOMBSTONE_NAN) {
+                '⊥'
+            } else if bit_eq(WILDCARD_NAN) {
+                'W'
+            } else {
+                // Regular NaN can't be handled as a MathConstant,
+                // because it gets formatted as multiple characters.
+                return Err(());
+            };
+            return Ok(math);
+        }
+
+        let positive = f.abs();
+        math.negative = f.is_sign_negative();
+        let eps_eq = |n: f64| (positive - n).abs() <= f64::EPSILON;
+
+        // Basic constants
+        math.glyph = if eps_eq(PI) {
+            'π'
+        } else if eps_eq(TAU) {
+            'τ'
+        } else if eps_eq(PI / 2.0) {
+            'η'
+        } else if eps_eq(E) {
+            'e'
+        } else if positive.is_infinite() {
+            '∞'
+        } else {
+            '\0'
+        };
+        if math.glyph != '\0' {
+            return Ok(math);
+        }
+
+        // Simple rational multiples of tau
+        for denom in [1u8, 2, 3, 4, 5, 6, 8, 9, 12] {
+            let num = (positive * denom as f64) / TAU;
+            let rounded = num.round();
+            if rounded == 0.0 || rounded > 100.0 || (num - rounded).abs() > 8.0 * f64::EPSILON {
+                continue;
+            }
+
+            math.numerator = rounded as u8;
+            math.approximate = rounded != num;
+            // Should multiples of 4/2 also use η/π?
+            if denom == 4 {
+                math.glyph = 'η';
+            } else if denom == 2 {
+                math.glyph = 'π';
+            } else {
+                math.glyph = 'τ';
+                math.denominator = denom;
+            }
+
+            return Ok(math);
+        }
+
+        // Common square roots
+        let sqrt_3 = 3.0_f64.sqrt();
+        let sqrt_5 = 5.0_f64.sqrt();
+        for (sqrt, sqr) in [
+            (SQRT_2, '2'),
+            (SQRT_2 / 2.0, '½'),
+            (sqrt_3, '3'),
+            (sqrt_3 / 2.0, '¾'),
+            (sqrt_3 / 3.0, '⅓'),
+            (sqrt_5, '5'),
+            (sqrt_5 / 5.0, '⅕'),
+        ] {
+            if eps_eq(sqrt) {
+                math.glyph = sqr;
+                math.square_root = true;
+                return Ok(math);
+            }
+        }
+
+        Err(())
+    }
+}
+
+fn abbreviate_consecutive_fract_digits(s: &mut String) {
+    let Some(decimal_pos) = s.find('.').map(|i| i + 1) else {
+        return;
+    };
+
+    debug_assert!(s.is_ascii());
+
+    let mut consecutive_start = 0;
+    let mut consecutive_len = 0;
+    for (i, c) in s[decimal_pos..].char_indices() {
+        let j = decimal_pos + i;
+        let local_len = s[j..].chars().take_while(|&d| d == c).count();
+        if local_len > consecutive_len {
+            consecutive_start = j;
+            consecutive_len = local_len;
+        }
+    }
+
+    if consecutive_len >= 6 {
+        let start = consecutive_start;
+        let end = start + consecutive_len;
+        let range = if end == s.len() {
+            // Remove digits from the end, keeping 3 before
+            (start + 3)..end
+        } else {
+            // Remove digits from the middle, keeping 2 before and 1 after
+            (start + 2)..(end - 1)
+        };
+        s.replace_range(range, "…");
     }
 }
 

@@ -830,7 +830,7 @@ fn pad_grid_min(width: usize, height: usize, grid: &mut Grid) {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Line {
+enum Line {
     Single,
     Double,
     OpenSingle,
@@ -841,7 +841,7 @@ pub enum Line {
     ForceDouble,
 }
 impl Line {
-    pub fn set(n: usize) -> &'static [Line] {
+    fn set(n: usize) -> &'static [Line] {
         match n {
             0 => &[Line::Single],
             1 => &[Line::Double],
@@ -849,19 +849,19 @@ impl Line {
             _ => &[Line::OpenDouble, Line::CloseDouble],
         }
     }
-    pub fn vert(&self) -> char {
+    fn vert(&self) -> char {
         match self {
             Line::Single | Line::OpenSingle | Line::CloseSingle | Line::ForceSingle => '│',
             Line::Double | Line::OpenDouble | Line::CloseDouble | Line::ForceDouble => '║',
         }
     }
-    pub fn horiz(&self) -> char {
+    fn horiz(&self) -> char {
         match self {
             Line::Single | Line::OpenSingle | Line::CloseSingle | Line::ForceSingle => '─',
             Line::Double | Line::OpenDouble | Line::CloseDouble | Line::ForceDouble => '═',
         }
     }
-    pub fn singleton(&self) -> &Self {
+    fn singleton(&self) -> &Self {
         match self {
             Line::Single => &Line::OpenSingle,
             Line::CloseSingle => &Line::ForceSingle,
@@ -870,7 +870,7 @@ impl Line {
             line => line,
         }
     }
-    pub fn intersect(&self, column: Self) -> char {
+    fn intersect(&self, column: Self) -> char {
         use Line::*;
         match (self, column) {
             (Single, Single) | (ForceSingle, ForceSingle) => '┼',

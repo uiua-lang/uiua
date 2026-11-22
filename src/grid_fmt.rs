@@ -17,9 +17,9 @@ use crate::{
     value::Value,
 };
 
-mod scalar_impls;
+mod scalar;
 
-pub use scalar_impls::{format_char_inner_pretty, format_char_inner_repr};
+pub use scalar::{format_char_inner_pretty, format_char_inner_repr};
 
 type Grid<T = char> = Vec<Vec<T>>;
 type Metagrid = Grid<Grid>;

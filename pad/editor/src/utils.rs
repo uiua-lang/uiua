@@ -53,7 +53,6 @@ pub struct State {
     pub code_id: String,
     pub code_area_id: String,
     pub code_outer_id: String,
-    pub line_numbers_id: String,
     pub editor_wrapper_id: String,
     pub set_overlay: WriteSignal<String>,
     pub set_line_count: WriteSignal<usize>,
@@ -150,23 +149,6 @@ impl State {
         }
         self.set_overlay.set(code.into());
         let area = element::<HtmlTextAreaElement>(&self.code_id);
-        let outer = element::<HtmlDivElement>(&self.code_outer_id);
-
-        let rect = &virtual_rect(&area, code);
-        let width = rect.width();
-        let new_width = format!("max(calc({width}px + 1em),100%)");
-        area.unchecked_ref::<HtmlElement>()
-            .style()
-            .set_property("width", &new_width)
-            .unwrap();
-
-        let outer_new_width = format!("max(calc({width}px + 3.4em),100%)");
-        outer
-            .unchecked_ref::<HtmlElement>()
-            .style()
-            .set_property("width", &outer_new_width)
-            .unwrap();
-
         area.set_value(code);
     }
     pub fn refresh_code(&self) {
@@ -180,6 +162,11 @@ impl State {
         let start = char_offset_to_utf16_offset(&content, start);
         let end = char_offset_to_utf16_offset(&content, end);
         area.set_selection_range(start, end).unwrap();
+
+        // Scrolling the caret into view needs layout, and only matters while typing
+        if document().active_element().as_ref() != Some(area.unchecked_ref()) {
+            return;
+        }
 
         let outer = element::<HtmlDivElement>(&self.code_outer_id);
 
@@ -209,49 +196,9 @@ impl State {
         self.set_copied_link.set(false);
         self.set_line_count();
     }
-    pub fn update_line_number_width(&self) {
-        let line_numbers = element::<HtmlDivElement>(&self.line_numbers_id);
-        let editor = element::<HtmlDivElement>(&self.editor_wrapper_id);
-        let line_numbers_width = line_numbers.get_bounding_client_rect().width();
-        let line_numbers_width_str = format!("{line_numbers_width}px");
-        editor
-            .unchecked_ref::<HtmlElement>()
-            .style()
-            .set_property("--line-numbers-width", &line_numbers_width_str)
-            .unwrap();
-    }
-    pub fn update_rounded_line_height(&self) {
-        let line_numbers = element::<HtmlDivElement>(&self.line_numbers_id);
-        let code_line = line_numbers.first_element_child().unwrap();
-        let height = code_line.get_bounding_client_rect().height();
-        let code_area = element::<HtmlDivElement>(&self.code_area_id);
-        code_area
-            .unchecked_ref::<HtmlElement>()
-            .style()
-            .set_property("--rounded-line-height", &format!("{height}px"))
-            .unwrap();
-        // logging::log!(
-        //     "updated line height to {}px on #{}",
-        //     height,
-        //     self.code_area_id
-        // );
-    }
     pub fn set_line_count(&self) {
         let line_count = get_code(&self.code_id).split('\n').count().max(1);
         self.set_line_count.set(line_count);
-
-        let code_area = element::<HtmlDivElement>(&self.code_area_id);
-        code_area
-            .unchecked_ref::<HtmlElement>()
-            .style()
-            .set_property("--line-count", &line_count.to_string())
-            .unwrap();
-
-        let state = self.clone();
-        _ = set_timeout(
-            move || state.update_line_number_width(),
-            Duration::from_millis(0),
-        );
     }
     pub fn clear_history(&mut self) {
         self.past.clear();
@@ -1687,6 +1634,19 @@ pub fn set_font_size(size: &str) {
     update_style();
 }
 
+thread_local! {
+    static STYLE_INITIALIZED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Set font settings once per page rather than once per editor
+pub fn init_style() {
+    if !STYLE_INITIALIZED.replace(true) {
+        set_local_var("font-name", get_font_name());
+        set_local_var("font-size", get_font_size());
+        update_style();
+    }
+}
+
 pub fn get_autorun() -> bool {
     get_local_var("autorun", || true)
 }
@@ -1847,6 +1807,7 @@ fn update_style() {
     };
     new_style.set_inner_text(&format!(
         "@font-face {{ font-family: 'Code Font'; src: url('{url}') format('truetype'); }}\n\
+        :root {{ --code-font-size: {font_size}; }}\n\
         .sized-code {{ font-size: {font_size}; }}\n\
         .experimental-glyph-buttons {{ display: {show_experimental}; }}\n\
         .format-button {{ display: {run_on_format}; }}",

@@ -1624,29 +1624,21 @@ pub(crate) fn run_sys_op_mod(op: &SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult
                 let samples = samples.as_num_array().ok_or_else(|| {
                     stream_env.error("Audio stream function must return a numeric array")
                 })?;
-                match &*samples.shape {
-                    [_] => Ok(Some(samples.data.iter().map(|&x| [x, x]).collect())),
-                    &[n, 2] => {
-                        let mut samps: Vec<[f64; 2]> = Vec::with_capacity(n);
-                        for samp in samples.data.as_chunks::<2>().0 {
-                            samps.push([samp[0], samp[1]]);
-                        }
-                        Ok(Some(samps))
-                    }
+                let stereo = match &*samples.shape {
+                    [_] | [_, 1] | [1, _] => samples.data.iter().map(|&x| [x, x]).collect(),
+                    &[_, 2] => samples.data.as_chunks::<2>().0.to_vec(),
                     &[2, n] => {
-                        let mut samps: Vec<[f64; 2]> = Vec::with_capacity(n);
-                        for i in 0..n {
-                            samps.push([samples.data[i], samples.data[i + n]]);
-                        }
-                        Ok(Some(samps))
+                        let (left, right) = samples.data.split_at(n);
+                        std::iter::zip(left, right).map(|(&l, &r)| [l, r]).collect()
                     }
-                    _ => Err(stream_env.error(format!(
+                    _ => return Err(stream_env.error(format!(
                         "Audio stream function must return either a \
-                            rank 1 array or a rank 2 array with 2 rows, \
-                            but its shape is {}",
+                                rank 1 array or a rank 2 array with 2 rows, \
+                                but its shape is {}",
                         samples.shape
                     ))),
-                }
+                };
+                Ok(Some(stereo))
             }));
             res.map_err(|e| env.error(e))?;
         }

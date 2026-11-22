@@ -669,7 +669,7 @@ pub fn format_char_inner(c: char, pretty: bool) -> Cow<'static, str> {
 
         _ => "",
     };
-    if special != "" {
+    if !special.is_empty() {
         return Cow::Borrowed(special);
     }
 

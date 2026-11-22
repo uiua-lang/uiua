@@ -868,12 +868,13 @@ impl Uiua {
         Ok(())
     }
     pub(crate) fn span_index(&self) -> usize {
-        self.rt.call_stack.last().map_or(0, |frame| {
-            match self.rt.spans.last() {
+        self.rt
+            .call_stack
+            .last()
+            .map_or(0, |frame| match self.rt.spans.last() {
                 Some((i, _)) if self.rt.spans.len() > frame.spans_start => *i,
                 _ => frame.call_span,
-            }
-        })
+            })
     }
     /// Get the span of the current function call
     #[track_caller]
@@ -1454,8 +1455,9 @@ impl Uiua {
                     spans_start: 0,
                     ..frame.clone()
                 })),
-                spans: (self.rt.call_stack.last())
-                    .map_or_else(Vec::new, |frame| self.rt.spans[frame.spans_start..].to_vec()),
+                spans: (self.rt.call_stack.last()).map_or_else(Vec::new, |frame| {
+                    self.rt.spans[frame.spans_start..].to_vec()
+                }),
                 time_instrs: self.rt.time_instrs,
                 last_time: self.rt.last_time,
                 cli_arguments: self.rt.cli_arguments.clone(),

@@ -692,7 +692,6 @@ fn rows2(
         // Simple path if both are scalars
         env.push(ys.unboxed_if(inv));
         env.push(xs.unboxed_if(inv));
-        let outputs = f.sig.outputs();
         env.exec(f)?;
         if inv {
             for val in env.n_mut(outputs)? {

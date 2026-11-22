@@ -4263,7 +4263,11 @@ sys_op! {
     /// Synthesize and stream audio
     ///
     /// Expects a function that takes a list of sample times and returns a list of samples.
-    /// The samples returned from the function must either be a rank 1 array or a rank 2 array with 2nd axis length 2.
+    ///
+    /// The audio samples must be a rank 1 or 2 numeric array.
+    /// A rank 1 array is a list of mono audio samples.
+    /// For a rank 2 array, each row is a sample with 1 or 2 channels.
+    ///
     /// The function will be called repeatedly to generate the audio.
     /// ex: Sp   ← 1.5
     ///   : Mod  ← ∿×π× # Modulate ? Freq Time
@@ -4281,6 +4285,11 @@ sys_op! {
     ///   : &ast(÷3/+⊃[Hat|Kick|Hit|Bass]×Sp)
     /// On the web, this will simply use the function to generate a fixed amount of audio.
     /// How long the audio is can be configured in the editor settings.
+    ///
+    /// If the function returns one more value than it takes as arguments:
+    /// The first return value will be used as a condition indicating whether playback should continue.
+    /// This can be used to stream a finite amount of audio while still producing it on demand.
+    /// ex: &ast⊃(<3⊢|∿×440τ)
     (0(0)[1], AudioStream, Media, "&ast", "audio - stream", Mutating),
     /// Create a TCP listener and bind it to an address
     ///

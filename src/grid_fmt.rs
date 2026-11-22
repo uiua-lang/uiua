@@ -21,7 +21,7 @@ mod line;
 mod scalar_impls;
 use line::Line;
 
-pub use scalar_impls::{format_char_inner, format_char_inner_repr};
+pub use scalar_impls::{format_char_inner_pretty, format_char_inner_repr};
 
 type Grid<T = char> = Vec<Vec<T>>;
 type Metagrid = Grid<Grid>;
@@ -677,7 +677,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                 .map(|c| c.to_string())
                 .collect::<String>()
                 .chars()
-                .map(format_char_inner)
+                .map(format_char_inner_pretty)
                 .collect();
             row.push(vec![s.chars().collect()]);
         } else {

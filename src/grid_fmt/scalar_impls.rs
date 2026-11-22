@@ -548,7 +548,11 @@ impl GridFmt for crate::Multivector {
 
 impl GridFmt for char {
     fn fmt_grid(&self, _params: GridFmtParams) -> Grid {
-        vec![once('@').chain(format_char_inner(*self).chars()).collect()]
+        vec![
+            once('@')
+                .chain(format_char_inner_pretty(*self).chars())
+                .collect(),
+        ]
     }
     fn format_delims() -> (&'static str, &'static str) {
         ("", "")
@@ -644,38 +648,42 @@ fn round_sig_dec(f: f64, n: i32) -> f64 {
 }
 
 pub fn format_char_inner_repr(c: char) -> Cow<'static, str> {
-    match c {
-        char::MAX => return Cow::Borrowed(r"\_"),
-        WILDCARD_CHAR => return Cow::Borrowed(r"\W"),
-        ' ' => return Cow::Borrowed(r"\s"),
-        _ => {}
-    }
-    let formatted = format!("{c:?}");
-    if c == '\'' {
-        Cow::Borrowed("'")
-    } else {
-        Cow::Owned(if formatted.starts_with("'\\u{") {
-            let n = c as u32;
-            if n < 128 {
-                format!("\\x{n:02x}")
-            } else if n < 16u32.pow(4) {
-                format!("\\u{n:04x}")
-            } else {
-                format!("\\u{{{n:x}}}")
-            }
-        } else {
-            formatted[1..formatted.len() - 1].to_string()
-        })
-    }
+    format_char_inner(c, false)
 }
 
-pub fn format_char_inner(c: char) -> Cow<'static, str> {
-    match c {
-        EMPTY_CHAR => Cow::Borrowed(r"\∅"),
-        TOMBSTONE_CHAR => Cow::Borrowed(r"\⊥"),
-        ' ' => Cow::Borrowed(" "),
-        _ => format_char_inner_repr(c),
+pub fn format_char_inner_pretty(c: char) -> Cow<'static, str> {
+    format_char_inner(c, true)
+}
+
+pub fn format_char_inner(c: char, pretty: bool) -> Cow<'static, str> {
+    let special = match c {
+        char::MAX => r"\_",
+        WILDCARD_CHAR => r"\W",
+        '\'' => "'",
+
+        EMPTY_CHAR if pretty => r"\∅",
+        TOMBSTONE_CHAR if pretty => r"\⊥",
+
+        ' ' if pretty => " ",
+        ' ' if !pretty => r"\s",
+
+        _ => "",
+    };
+    if special != "" {
+        return Cow::Borrowed(special);
     }
+
+    let mut formatted = format!("{c:?}");
+    formatted.pop();
+    formatted.remove(0);
+    if formatted.starts_with(r"\u{") {
+        formatted = match c as u32 {
+            n @ 0x00..=0xFF => format!(r"\x{n:02x}"),
+            n @ 0x0100..=0xFFFF => format!(r"\u{n:04x}"),
+            _ => formatted, // Rust already gives us \u{n}
+        };
+    }
+    Cow::Owned(formatted)
 }
 
 fn multiset_summary<T: ArrayCmp + GridFmt + Clone>(elems: &[T]) -> Option<String> {

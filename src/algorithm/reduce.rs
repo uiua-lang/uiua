@@ -1067,8 +1067,13 @@ fn generic_scan(f: SigNode, xs: Value, env: &mut Uiua) -> UiuaResult {
             }
             let mut scanned = Vec::with_capacity(xs.row_count());
             let mut rows = xs.into_rows();
-            let mut acc = rows.next().unwrap();
-            scanned.push(acc.clone());
+            let mut acc = if let Some(fill) = env.value_fill() {
+                fill.value.clone()
+            } else {
+                let first = rows.next().unwrap();
+                scanned.push(first.clone());
+                first
+            };
             env.without_fill(|env| -> UiuaResult {
                 for row in rows {
                     env.push(row);

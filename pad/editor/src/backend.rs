@@ -495,19 +495,19 @@ impl SysBackend for WebBackend {
         if cfg!(target_arch = "wasm32") {
             mod js {
                 #[wasm_bindgen::prelude::wasm_bindgen(inline_js = "
-            const SAB = new WebAssembly.Memory({ initial: 0, maximum: 0, shared: true }).buffer.constructor;
-            const view = new Int32Array(new SAB(4));
+                    const SAB = new WebAssembly.Memory({ initial: 0, maximum: 0, shared: true }).buffer.constructor;
+                    const view = new Int32Array(new SAB(4));
 
-            export function atomics_wait(ms) {
-                Atomics.wait(view, 0, 0, ms);
-            }
+                    export function atomics_wait(ms) {
+                        Atomics.wait(view, 0, 0, ms);
+                    }
 
-            export function pause_batch(n) {
-                for (let i = 0; i < n; i++) {
-                    Atomics.pause();
-                }
-            }
-        ")]
+                    export function pause_batch(n) {
+                        for (let i = 0; i < n; i++) {
+                            Atomics.pause();
+                        }
+                    }
+                ")]
                 extern "C" {
                     pub fn atomics_wait(ms: f64);
                     pub fn pause_batch(n: u32);

@@ -524,6 +524,7 @@ impl SysBackend for WebBackend {
                 js::pause_batch(1000);
             }
         } else {
+            let start = now();
             while now() - start < seconds {}
         }
         Ok(())

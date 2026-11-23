@@ -492,8 +492,9 @@ impl SysBackend for WebBackend {
         Ok(())
     }
     fn sleep(&self, seconds: f64) -> Result<(), String> {
-        mod js {
-            #[wasm_bindgen::prelude::wasm_bindgen(inline_js = "
+        if cfg!(target_arch = "wasm32") {
+            mod js {
+                #[wasm_bindgen::prelude::wasm_bindgen(inline_js = "
             const SAB = new WebAssembly.Memory({ initial: 0, maximum: 0, shared: true }).buffer.constructor;
             const view = new Int32Array(new SAB(4));
 
@@ -507,20 +508,23 @@ impl SysBackend for WebBackend {
                 }
             }
         ")]
-            extern "C" {
-                pub fn atomics_wait(ms: f64);
-                pub fn pause_batch(n: u32);
+                extern "C" {
+                    pub fn atomics_wait(ms: f64);
+                    pub fn pause_batch(n: u32);
+                }
             }
-        }
-        // performance.now() is only ms precision anyway, so on worker thread sleep that many ms.
-        if worker::is_worker() {
-            js::atomics_wait(seconds * 1000.0);
-            return Ok(());
-        }
-        // On the main thread, Atomics.wait is not allowed, so use Atomics.pause to reduce power.
-        let start = now();
-        while now() - start < seconds {
-            js::pause_batch(1000);
+            // performance.now() is only ms precision anyway, so on worker thread sleep that many ms.
+            if worker::is_worker() {
+                js::atomics_wait(seconds * 1000.0);
+                return Ok(());
+            }
+            // On the main thread, Atomics.wait is not allowed, so use Atomics.pause to reduce power.
+            let start = now();
+            while now() - start < seconds {
+                js::pause_batch(1000);
+            }
+        } else {
+            while now() - start < seconds {}
         }
         Ok(())
     }

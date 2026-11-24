@@ -502,6 +502,8 @@ impl SysBackend for WebBackend {
                         Atomics.wait(view, 0, 0, ms);
                     }
 
+                    Atomics.pause ??= () => {}
+
                     export function pause_batch(n) {
                         for (let i = 0; i < n; i++) {
                             Atomics.pause();

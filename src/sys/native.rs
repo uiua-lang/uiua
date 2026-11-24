@@ -845,9 +845,11 @@ impl SysBackend for NativeSys {
     #[cfg(feature = "audio")]
     fn stream_audio(&self, f: crate::AudioStreamFn) -> Result<(), String> {
         use hodaun::*;
+        use std::sync::OnceLock;
         struct TheSource {
             time: f64,
             samples: std::vec::IntoIter<[f64; 2]>,
+            error: Arc<OnceLock<crate::UiuaError>>,
             f: crate::AudioStreamFn,
         }
         impl TheSource {
@@ -863,8 +865,10 @@ impl SysBackend for NativeSys {
                         eprintln!("Failed to send audio time: {e}");
                     }
                 }
-                let result: Result<Option<Vec<[f64; 2]>>, _> = (self.f)(&times);
-                result.inspect_err(|e| eprintln!("{e}")).unwrap_or(None)
+                (self.f)(&times).unwrap_or_else(|e| {
+                    _ = self.error.set(e);
+                    None
+                })
             }
         }
         impl Source for TheSource {
@@ -878,16 +882,21 @@ impl SysBackend for NativeSys {
                 }
             }
         }
+        let error = Arc::new(OnceLock::new());
         let source = TheSource {
             time: NATIVE_SYS.audio_stream_time.lock().unwrap_or(0.0),
             samples: Vec::new().into_iter(),
+            error: error.clone(),
             f,
         };
         let mut mixer = default_output::<Stereo>()
             .map_err(|e| format!("Failed to initialize audio output stream: {e}"))?;
         mixer.add(source);
         mixer.block();
-        Ok(())
+        match Arc::into_inner(error).unwrap().into_inner() {
+            None => Ok(()),
+            Some(e) => Err(e.to_string()),
+        }
     }
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();

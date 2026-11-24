@@ -850,35 +850,31 @@ impl SysBackend for NativeSys {
             samples: std::vec::IntoIter<[f64; 2]>,
             f: crate::AudioStreamFn,
         }
-        impl Source for TheSource {
-            type Frame = Stereo;
-            fn next(&mut self, sample_rate: f64) -> Option<Self::Frame> {
-                if let Some([left, right]) = self.samples.next() {
-                    return Some(Stereo { left, right });
-                }
+        impl TheSource {
+            fn next_chunk(&mut self, sample_rate: f64) -> Option<Vec<[f64; 2]>> {
                 const LEN: usize = 10000;
                 let mut times = Vec::with_capacity(LEN);
                 for _ in 0..LEN {
                     times.push(self.time);
                     self.time += 1.0 / sample_rate;
                 }
-                if let Some(socket) = NATIVE_SYS.audio_time_socket.lock().as_ref()
-                    && let Err(e) = socket.send(&self.time.to_be_bytes())
-                {
-                    eprintln!("Failed to send audio time: {e}");
+                if let Some(socket) = NATIVE_SYS.audio_time_socket.lock().as_ref() {
+                    if let Err(e) = socket.send(&self.time.to_be_bytes()) {
+                        eprintln!("Failed to send audio time: {e}");
+                    }
                 }
-                match (self.f)(&times) {
-                    Ok(Some(samples)) => {
-                        self.samples = samples.into_iter();
-                        // TODO: This doesn't get TCO'd properly,
-                        // so e.g. &ast↙₀ causes a stack overflow.
-                        self.next(sample_rate)
+                let result: Result<Option<Vec<[f64; 2]>>, _> = (self.f)(&times);
+                result.inspect_err(|e| eprintln!("{e}")).unwrap_or(None)
+            }
+        }
+        impl Source for TheSource {
+            type Frame = Stereo;
+            fn next(&mut self, sample_rate: f64) -> Option<Self::Frame> {
+                loop {
+                    if let Some([left, right]) = self.samples.next() {
+                        break Some(Stereo { left, right });
                     }
-                    Ok(None) => None,
-                    Err(e) => {
-                        eprintln!("{e}");
-                        None
-                    }
+                    self.samples = self.next_chunk(sample_rate)?.into_iter();
                 }
             }
         }
@@ -887,14 +883,11 @@ impl SysBackend for NativeSys {
             samples: Vec::new().into_iter(),
             f,
         };
-        match default_output::<Stereo>() {
-            Ok(mut mixer) => {
-                mixer.add(source);
-                mixer.block();
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to initialize audio output stream: {e}").to_string()),
-        }
+        let mut mixer = default_output::<Stereo>()
+            .map_err(|e| format!("Failed to initialize audio output stream: {e}"))?;
+        mixer.add(source);
+        mixer.block();
+        Ok(())
     }
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();

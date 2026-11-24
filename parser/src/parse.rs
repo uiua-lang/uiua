@@ -1138,17 +1138,26 @@ impl Parser<'_> {
         if self.too_deep() {
             return None;
         }
-        let (modifier, mod_span) = if let Some(prim) = Primitive::all()
-            .filter(|prim| prim.is_modifier())
-            .find_map(|prim| {
-                self.exact(prim.into())
-                    .or_else(|| prim.ascii().and_then(|simple| self.exact(simple.into())))
-                    .map(|span| span.sp(prim))
-            }) {
+        let modifier_prim = self
+            .tokens
+            .get(self.index)
+            .and_then(|token| match &token.value {
+                Glyph(prim) if prim.is_modifier() => Some(*prim),
+                Simple(simple) => Primitive::all()
+                    .find(|prim| prim.is_modifier() && prim.ascii() == Some(*simple)),
+                _ => None,
+            });
+        let prim = modifier_prim.and_then(|prim| self.next_token_map(|_| Some(prim)));
+        let (modifier, mod_span) = if let Some(prim) = prim {
             (Modifier::Primitive(prim.value), prim.span)
-        } else if let Some(prim) = Primitive::all()
-            .filter(|prim| prim.glyph().is_none())
-            .find_map(|prim| self.exact(PrimExclam(prim)).map(|span| span.sp(prim)))
+        } else if let Some(prim) = self
+            .tokens
+            .get(self.index)
+            .and_then(|token| match &token.value {
+                PrimExclam(prim) if prim.glyph().is_none() => Some(*prim),
+                _ => None,
+            })
+            .and_then(|prim| self.next_token_map(|_| Some(prim)))
         {
             (Modifier::Primitive(prim.value), prim.span)
         } else {

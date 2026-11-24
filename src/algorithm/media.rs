@@ -814,36 +814,58 @@ fn nearest_color(image::Rgba([r, g, b, a]): image::Rgba<u8>) -> (u8, [f32; 3]) {
 /// Returns flat dithered color indices and whether there are any transparent pixels
 #[cfg(feature = "gif")]
 fn dither(mut img: image::RgbaImage, width: u32, height: u32) -> (Vec<u8>, bool) {
-    let (width, height) = (width, height);
-    let mut buffer = vec![0; (width * height) as usize];
+    let (w, h) = (width as usize, height as usize);
+    let mut buffer = vec![0; w * h];
     let mut has_transparent = false;
-    for y in 0..height {
-        // TODO: Maybe use a scanline buffer for the adjusted colors on this line
-        for x in 0..width {
-            let (index, err) = nearest_color(img[(x, y)]);
+    if w == 0 || h == 0 {
+        return (buffer, has_transparent);
+    }
+    let pixels: &mut [u8] = &mut img;
+    let add = |c: u8, e: f32, f: f32| (c as f32 + e * f).round() as u8;
+    for y in 0..h {
+        // The current pixel is carried in registers so that the error passed
+        // rightward doesn't go through memory
+        let mut cur = [0u8; 4];
+        cur.copy_from_slice(&pixels[y * w * 4..y * w * 4 + 4]);
+        for x in 0..w {
+            let i = (y * w + x) * 4;
+            let (index, [er, eg, eb]) = nearest_color(image::Rgba(cur));
             has_transparent |= index == 0;
-            buffer[(y * width + x) as usize] = index;
-            if err == [0.0; 3] {
+            buffer[y * w + x] = index;
+            let has_right = x + 1 < w;
+            if has_right {
+                cur.copy_from_slice(&pixels[i + 4..i + 8]);
+            }
+            if [er, eg, eb] == [0.0; 3] {
                 continue;
             }
-            let [er, eg, eb] = err;
-            for (f, dx, dy) in [
-                (7f32 / 16.0, 1i32, 0i32),
-                (3f32 / 16.0, -1, 1),
-                (5f32 / 16.0, 0, 1),
-                (1f32 / 16.0, 1, 1),
-            ] {
-                let Some(image::Rgba([r, g, b, a])) =
-                    img.get_pixel_mut_checked((x as i32 + dx) as u32, (y as i32 + dy) as u32)
-                else {
-                    continue;
+            if has_right && cur[3] != 0 {
+                let f = 7.0 / 16.0;
+                cur = [
+                    add(cur[0], er, f),
+                    add(cur[1], eg, f),
+                    add(cur[2], eb, f),
+                    cur[3],
+                ];
+            }
+            if y + 1 < h {
+                let below = i + w * 4;
+                let mut diffuse = |f: f32, j: usize| {
+                    let px = &mut pixels[j..j + 4];
+                    if px[3] == 0 {
+                        return;
+                    }
+                    for (c, e) in px.iter_mut().zip([er, eg, eb]) {
+                        *c = add(*c, e, f);
+                    }
                 };
-                if *a == 0 {
-                    continue;
+                if x > 0 {
+                    diffuse(3.0 / 16.0, below - 4);
                 }
-                *r = (*r as f32 + er * f).round() as u8;
-                *g = (*g as f32 + eg * f).round() as u8;
-                *b = (*b as f32 + eb * f).round() as u8;
+                diffuse(5.0 / 16.0, below);
+                if has_right {
+                    diffuse(1.0 / 16.0, below + 4);
+                }
             }
         }
     }

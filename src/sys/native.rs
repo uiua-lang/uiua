@@ -860,10 +860,10 @@ impl SysBackend for NativeSys {
                     times.push(self.time);
                     self.time += 1.0 / sample_rate;
                 }
-                if let Some(socket) = NATIVE_SYS.audio_time_socket.lock().as_ref() {
-                    if let Err(e) = socket.send(&self.time.to_be_bytes()) {
-                        eprintln!("Failed to send audio time: {e}");
-                    }
+                if let Some(socket) = NATIVE_SYS.audio_time_socket.lock().as_ref()
+                    && let Err(e) = socket.send(&self.time.to_be_bytes())
+                {
+                    eprintln!("Failed to send audio time: {e}");
                 }
                 (self.f)(&times).unwrap_or_else(|e| {
                     _ = self.error.set(e);

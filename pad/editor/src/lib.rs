@@ -198,7 +198,6 @@ pub fn Editor<'a>(
         code_id: code_id(),
         code_area_id: code_area_id(),
         code_outer_id: code_outer_id(),
-        line_numbers_id: line_numbers_id(),
         editor_wrapper_id: editor_wrapper_id(),
         set_overlay,
         set_line_count,
@@ -458,7 +457,6 @@ pub fn Editor<'a>(
     let run = move |do_format: bool, set_cursor: bool| {
         // Format code
         let (input, seed) = format(do_format, set_cursor);
-        state.update(|s| s.update_line_number_width());
 
         // Run code
         cancel_output_callbacks();
@@ -636,22 +634,6 @@ pub fn Editor<'a>(
             }
         });
     };
-
-    // Update textarea line height
-    let update_rounded_line_height = move || {
-        state.update(|state| state.update_rounded_line_height());
-    };
-    let line_height_sampler_ref = NodeRef::<html::Div>::new();
-    Effect::new(move |_| {
-        let Some(element) = line_height_sampler_ref.get() else {
-            return;
-        };
-        let callback = Closure::<dyn FnMut()>::new(update_rounded_line_height);
-        let observer = web_sys::ResizeObserver::new(callback.as_ref().unchecked_ref()).unwrap();
-        observer.observe(&element);
-        let observer = StoredValue::new_local((observer, callback));
-        on_cleanup(move || observer.with_value(|(observer, _)| observer.disconnect()));
-    });
 
     // Handle key events
     window_event_listener(mousemove, move |event| {
@@ -1597,12 +1579,6 @@ pub fn Editor<'a>(
                     false => "auto",
                 },
             );
-            if !*s {
-                _ = set_timeout(
-                    move || state.update(|state| state.update_line_number_width()),
-                    Duration::ZERO,
-                );
-            }
         })
     };
 
@@ -1855,13 +1831,11 @@ pub fn Editor<'a>(
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         let name = input.value();
         set_font_name(&name);
-        update_rounded_line_height();
     };
     let on_select_font_size = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         let size = input.value();
         set_font_size(&size);
-        update_rounded_line_height();
     };
     let on_select_top_at_top = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
@@ -1885,8 +1859,7 @@ pub fn Editor<'a>(
         );
         set_rgb_bindings(!get_rgb_bindings());
     };
-    set_font_name(&get_font_name());
-    set_font_size(&get_font_size());
+    init_style();
 
     // File upload dialog opening
     let upload_file_dialog = move |_| {
@@ -2030,13 +2003,14 @@ pub fn Editor<'a>(
     };
 
     let editor_style = move || {
+        let line_number_digits = (line_count.get().max(1) + hidden_lines).to_string().len();
         if !fullscreen_enabled.get() {
-            return "".to_string();
+            return format!("--line-number-digits: {line_number_digits}");
         }
 
         let ratio = splitter_ratio.get();
         format!(
-            "grid-template-columns: {}fr 0.25em {}fr",
+            "--line-number-digits: {line_number_digits}; grid-template-columns: {}fr 0.25em {}fr",
             ratio,
             1.0 - ratio
         )
@@ -2488,15 +2462,10 @@ pub fn Editor<'a>(
                         id=code_area_id
                         class="code-area"
                         style=format!("height: {}em;", code_height_em + 1.25 / 2.0)
+                        style:--line-count=move || line_count.get().to_string()
                     >
                         <div id=code_outer_id class="code code-outer sized-code">
                             <div id=line_numbers_id class="line-numbers">
-                                <div
-                                    class="code-line hidden-line-height-sampler"
-                                    node_ref=line_height_sampler_ref
-                                >
-                                    <span class="code-span">"0"</span>
-                                </div>
                                 {line_numbers}
                             </div>
                             <div class="code-and-overlay">

@@ -118,7 +118,6 @@ pub struct RunResult {
     pub initialized_challenge: bool,
     pub files: FileChanges,
     pub clipboard: Option<String>,
-    pub bell: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -126,6 +125,7 @@ pub enum Response {
     Ready,
     Input(String),
     FetchPermission(String),
+    Bell,
     Output(OutputUpdate),
     Done(RunResult),
     Failed(String),
@@ -185,8 +185,6 @@ struct WorkerState {
     fetch_prompted: bool,
     /// Pending clipboard write
     clipboard: Option<String>,
-    /// Whether to play the bell sound
-    bell: bool,
 }
 
 impl WorkerState {
@@ -196,7 +194,6 @@ impl WorkerState {
         self.input_prompt = None;
         self.fetch_request = None;
         self.clipboard.take();
-        self.bell = false;
     }
 }
 
@@ -270,7 +267,9 @@ pub fn set_clipboard(contents: &str) {
 }
 
 pub fn bell() {
-    state_mut(|state| state.bell = true);
+    if !state(|state| state.suppress_streaming) {
+        _ = Response::Bell.send();
+    }
 }
 
 impl Response {
@@ -331,15 +330,13 @@ impl RunRequest {
                 }
             });
             changes.extend(before.into_keys().map(|path| (path, None)));
-            let (clipboard, bell) =
-                state_mut(|state| (take(&mut state.clipboard), replace(&mut state.bell, false)));
+            let clipboard = state_mut(|state| take(&mut state.clipboard));
             return Ok(RunResult {
                 output,
                 initialized_challenge: (challenge.as_ref())
                     .is_some_and(|challenge| challenge.did_init_run.get()),
                 files: changes,
                 clipboard,
-                bell,
             });
         }
     }

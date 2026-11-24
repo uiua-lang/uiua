@@ -199,6 +199,7 @@ impl Response {
                 next_job();
             }
             Response::Failed(error) => fail(error),
+            Response::Bell => backend::weewuh(),
             Response::Input(prompt) => {
                 let answer = window().prompt_with_message(&prompt).unwrap_or(None);
                 let result = client_mut(|client| {
@@ -258,9 +259,6 @@ impl Response {
                 });
                 if let Some(contents) = &result.clipboard {
                     _ = window().navigator().clipboard().write_text(contents);
-                }
-                if result.bell {
-                    backend::weewuh();
                 }
                 (job.on_complete)(Ok(result));
                 next_job();

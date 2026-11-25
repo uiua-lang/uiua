@@ -98,10 +98,6 @@ pub trait GridFmt: Sized {
     fn alignment() -> ElemAlign {
         ElemAlign::Left
     }
-    /// How to determine the maximum width of a formatted column
-    fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]> + Clone) -> usize {
-        max_of_lengths(rows, 0)
-    }
     /// Get SoA rows
     fn soa_rows(_arr: &Array<Self>) -> Option<Vec<(&EcoString, &Value)>> {
         None
@@ -216,23 +212,6 @@ impl GridFmt for Boxed {
     }
     fn alignment() -> ElemAlign {
         ElemAlign::DelimOrLeft(": ")
-    }
-    fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]>) -> usize {
-        let mut max_labelled_len = 0;
-        let mut max_unlabelled_len = 0;
-        let mut max_label_len: Option<usize> = None;
-        for row in rows {
-            if let Some(delim_pos) = (0..row.len()).find(|&i| row[i..].starts_with(&[':', ' '])) {
-                max_labelled_len = max_labelled_len.max(row.len() - delim_pos - 2);
-                max_label_len = max_label_len.max(Some(delim_pos));
-            }
-            max_unlabelled_len = max_unlabelled_len.max(row.len());
-        }
-        if let Some(label_len) = max_label_len {
-            (max_labelled_len + label_len + 2).max(max_unlabelled_len)
-        } else {
-            max_unlabelled_len
-        }
     }
     fn soa_rows(arr: &Array<Self>) -> Option<Vec<(&EcoString, &Value)>> {
         if arr.rank() != 1 {
@@ -357,12 +336,14 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 
             // Default array formatting
             let metagrid = metagrid.unwrap_or_else(|| {
-                let mut metagrid = Metagrid::new();
                 let params = GridFmtParams {
                     parent_rank: self.rank(),
                     ..params
                 };
-                fmt_array(self.rank(), &self.shape, &self.data, params, &mut metagrid);
+                let mut metagrid = fmt_array(&self.data, &self.shape, params);
+                if !T::box_lines() {
+                    add_spacing(&mut metagrid, &self.shape);
+                }
                 metagrid
             });
 
@@ -374,7 +355,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 T::alignment()
             };
 
-            let dimensions = MetagridDimensions::of::<T>(&metagrid, is_summary);
+            let dimensions = MetagridDimensions::of::<T>(&metagrid);
 
             let mut grid = synthesize_grid(
                 metagrid,
@@ -634,99 +615,104 @@ fn value_requires_summary(val: &Value) -> bool {
     }
 }
 
+/// Transform the data and shape of a Uiua array into a 2x2-dimensional Metagrid of text.
+/// For the standard formatting style, this function is responsible for:
+///  - deciding whether to use a summary
+///  - iterating over the array's contents and formatting each scalar into a Grid
+///  - reshaping the N-dimensional collection of formatted values into a 2-dimensional (meta)grid
 fn fmt_array<T: GridFmt + ArrayValue>(
-    max_rank: usize,
-    shape: &[usize],
     data: &[T],
+    shape: &[usize],
     params: GridFmtParams,
-    metagrid: &mut Metagrid,
-) {
+) -> Metagrid {
+    assert_eq!(data.len(), shape.iter().product::<usize>());
+
     if data.is_empty() {
-        metagrid.push(vec![Grid::from_utf32(shape_row(shape, T::SYMBOL))]);
-        return;
+        return Metagrid::from_scalar(Grid::from_utf32(shape_row(shape, T::SYMBOL)));
     }
+
+    let rank = shape.len();
+
     if requires_summary::<T>(shape) {
         let summary = T::summarize(data);
         if !summary.is_empty() {
+            // This is going to need some changes for multiline summaries.
             let mut first_row = shape_row(shape, T::domain_symbol(data));
-            let grid: Grid = if shape.len() == 1 {
+            let grid = if rank == 1 {
                 first_row.extend(": ".chars());
                 first_row.extend(summary.chars());
-                Grid(vec![first_row])
+                Grid::from_row(first_row)
             } else {
                 Grid(vec![first_row, summary.chars().collect()])
             };
-            metagrid.push(vec![grid]);
-            return;
+            return Metagrid::from_scalar(grid);
         }
     }
-    let rank = shape.len();
+
     if rank == 0 {
-        metagrid.push(vec![data[0].fmt_grid(params)]);
-        return;
+        return Metagrid::from_scalar(data[0].fmt_grid(params));
     }
-    let vertical_list = max_rank == 1 && !T::list_same_line();
-    if rank == 1 && !vertical_list {
-        let mut row = Vec::with_capacity(shape[0]);
+
+    if rank == 1 {
         if T::compress_list_grid() {
-            let s: String = data
+            let mut s: String = data
                 .iter()
                 .map(|c| c.to_string())
                 .collect::<String>()
                 .chars()
                 .map(format_char_inner_pretty)
                 .collect();
-            row.push(Grid::from_utf8(&s));
-        } else {
-            for (i, val) in data.iter().enumerate() {
-                let mut grid = val.fmt_grid(params);
-                if i > 0 && !T::box_lines() {
-                    pad_grid_min(grid.len_1() + T::separation(), grid.len_0(), &mut grid);
-                }
-                row.push(grid);
-            }
-        }
-        metagrid.push(row);
-        return;
-    }
-    let cell_count = shape[0];
-    if cell_count == 0 {
-        metagrid.push(vec![Grid::from_scalar(' ')]);
-        return;
-    }
-    let row_shape = &shape[1..];
-    let cell_size = data.len() / cell_count;
-    let start_len = metagrid.len_0();
-    let adjusted_rank = rank + vertical_list as usize;
-    for (i, cell) in data.chunks(cell_size).enumerate() {
-        if i > 0 && adjusted_rank > 2 && !T::box_lines() && adjusted_rank.is_multiple_of(2) {
-            for _ in 0..(adjusted_rank - 2) / 2 {
-                metagrid.push(vec![Grid::from_scalar(' '); metagrid.len_1()]);
-            }
-        }
-        let len_before = metagrid.len_0();
-        fmt_array(max_rank, row_shape, cell, params, metagrid);
-        if T::compress_list_grid() && adjusted_rank == 2 {
+
             let (left, right) = T::grid_fmt_delims();
-            for grid in metagrid.0.last_mut().unwrap() {
-                for row in grid.rows_mut() {
-                    row.insert(0, left);
-                    row.push(right);
-                }
-            }
+            s.insert(0, left);
+            s.push(right);
+
+            return Metagrid::from_scalar(Grid::from_utf8(&s));
         }
-        if i > 0 && (adjusted_rank > 2 || T::box_lines()) && adjusted_rank % 2 == 1 {
-            let elem_rows = metagrid.cells().flat_map(Grid::rows);
-            let max_width = max_of_lengths(elem_rows, 0);
-            let div = if max_width > 10 { 1 } else { 2 };
-            let rows = metagrid.0.split_off(len_before);
-            for (mrow, row) in metagrid.rows_mut().skip(start_len).zip(rows) {
-                if !T::box_lines() {
-                    mrow.push(Grid::from_utf32(vec![' '; adjusted_rank.div_ceil(div)]));
-                }
-                mrow.extend(row);
-            }
+
+        let mut meta_row = vec![];
+        for v in data {
+            meta_row.push(v.fmt_grid(params));
         }
+        return Metagrid::from_row(meta_row);
+    }
+
+    let mut metagrid = Metagrid::new();
+
+    assert!(data.len().is_multiple_of(shape[0]));
+    let chunk_size = data.len() / shape[0];
+
+    for row in data.chunks(chunk_size) {
+        let new_lane = fmt_array(row, &shape[1..], params);
+        if shape.len().is_multiple_of(2) {
+            metagrid.append_0(new_lane);
+        } else {
+            if metagrid.is_empty() {
+                metagrid.0.resize(new_lane.len_0(), vec![]);
+            }
+            metagrid.append_1(new_lane);
+        }
+    }
+
+    metagrid
+}
+
+// TODO: This logic ought to be much closer to the code for adding grid lines to arrays of boxes.
+fn add_spacing(metagrid: &mut Metagrid, shape: &[usize]) {
+    for x in (1..metagrid.len_1()).rev() {
+        let spacing = 1 + count_dividers(x - 1, shape, 1);
+        let g = Grid::from_scalar_shape(' ', (1, spacing));
+        for meta_row in metagrid.rows_mut() {
+            meta_row.insert(x, g.clone());
+        }
+    }
+    for y in (1..metagrid.len_0()).rev() {
+        let spacing = count_dividers(y - 1, shape, 0);
+        if spacing == 0 {
+            continue;
+        }
+        let g = Grid::from_scalar_shape(' ', (spacing, 1));
+        metagrid.0.insert(y, vec![g; metagrid.len_1()]);
     }
 }
 
@@ -737,96 +723,6 @@ pub enum ElemAlign {
     Right,
     DelimOrRight(&'static str),
     DelimOrLeft(&'static str),
-}
-
-fn pad_grid_center(
-    width: usize,
-    height: usize,
-    horiz_align: ElemAlign,
-    center_vert: bool,
-    lr_lens: Option<(usize, usize)>,
-    grid: &mut Vec<Vec<char>>,
-) {
-    grid.truncate(height);
-    if grid.len() < height {
-        let diff = height - grid.len();
-        let post_pad = if center_vert { diff / 2 } else { diff };
-        let pre_pad = diff - post_pad;
-        for _ in 0..pre_pad {
-            grid.insert(0, vec![' '; width]);
-        }
-        for _ in 0..post_pad {
-            grid.push(vec![' '; width]);
-        }
-    }
-    for row in grid.iter_mut() {
-        if row.len() < width {
-            let diff = width - row.len();
-            let (pre, post) = match horiz_align {
-                ElemAlign::Left => (0, diff),
-                ElemAlign::Right => (diff, 0),
-                ElemAlign::None => {
-                    let post = diff.div_ceil(2);
-                    let pre = diff - post;
-                    (pre, post)
-                }
-                ElemAlign::DelimOrRight(s) => {
-                    let (left, right) = lr_lens.unwrap();
-                    if let Some(pos) = (0..row.len())
-                        .find(|i| row[*i..].iter().zip(s.chars()).all(|(&a, b)| a == b))
-                    {
-                        let pre = left - pos;
-                        let post = diff - pre;
-                        (pre, post)
-                    } else if right > 0 {
-                        let pre = left.saturating_sub(row.len());
-                        let post = diff - pre;
-                        (pre, post)
-                    } else {
-                        (diff, 0)
-                    }
-                }
-                ElemAlign::DelimOrLeft(s) => {
-                    let (left, right) = lr_lens.unwrap();
-                    if let Some(pos) = (0..row.len().saturating_sub(s.chars().count()))
-                        .find(|i| row[*i..].iter().zip(s.chars()).all(|(&a, b)| a == b))
-                    {
-                        let pre = left - pos;
-                        let post = diff - pre;
-                        (pre, post)
-                    } else if left > 0 {
-                        let post = right.saturating_sub(row.len());
-                        let pre = diff - post;
-                        (pre, post)
-                    } else {
-                        (0, diff)
-                    }
-                }
-            };
-            for _ in 0..pre {
-                row.insert(0, ' ');
-            }
-            for _ in 0..post {
-                row.push(' ');
-            }
-        } else {
-            row.truncate(width);
-        }
-    }
-}
-
-fn pad_grid_min(width: usize, height: usize, grid: &mut Grid) {
-    let grid = &mut grid.0;
-    grid.truncate(height);
-    while grid.len() < height {
-        grid.insert(0, vec![' '; width]);
-    }
-    for row in grid.iter_mut() {
-        row.truncate(width);
-        while row.len() < width {
-            row.insert(0, ' ');
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -924,19 +820,14 @@ fn max_of_lengths<T>(rows: impl IntoIterator<Item: AsRef<[T]>>, fill: usize) -> 
         .unwrap_or(fill)
 }
 
-fn metacolumn_subrows(metagrid: &Metagrid, meta_x: usize) -> impl Iterator<Item = &[char]> + Clone {
-    metagrid.column(meta_x).flat_map(Grid::rows)
-}
-
 struct MetagridDimensions {
     metagrid_height: usize,
     metagrid_width: usize,
     row_heights: Vec<usize>,
-    column_widths: Vec<usize>,
 }
 
 impl MetagridDimensions {
-    fn of<T: ArrayValue>(metagrid: &Metagrid, is_summary: bool) -> Self {
+    fn of<T: ArrayValue>(metagrid: &Metagrid) -> Self {
         let metagrid_height = metagrid.len_0();
         let metagrid_width = metagrid.len_1();
 
@@ -945,21 +836,10 @@ impl MetagridDimensions {
             .map(|metarow| max_of_lengths(metarow.iter().map(|g| &g.0), 1))
             .collect();
 
-        // A rank-2 iterator over the non-meta rows within each meta-column.
-        let row_iterators =
-            (0..metagrid_width).map(|meta_col_idx| metacolumn_subrows(metagrid, meta_col_idx));
-
-        let column_widths: Vec<usize> = if is_summary {
-            row_iterators.map(|rows| max_of_lengths(rows, 0)).collect()
-        } else {
-            row_iterators.map(T::max_col_width).collect()
-        };
-
         Self {
             metagrid_height,
             metagrid_width,
             row_heights,
-            column_widths,
         }
     }
 }
@@ -982,60 +862,23 @@ fn synthesize_grid(
 ) -> Grid {
     let mut output_grid = Grid::new();
 
+    assert!(metagrid.is_rectangular());
+
     let MetagridDimensions {
         metagrid_height,
         metagrid_width,
         row_heights,
-        column_widths,
     } = dimensions;
 
-    let max_lr_lengths: Vec<(usize, usize)> = (0..metagrid_width)
-        .map(|meta_x| {
-            let alignment = if meta_x == 0 { first_align } else { main_align };
-
-            let (delimiter, is_right_aligned) = match alignment {
-                ElemAlign::DelimOrLeft(delim) => (delim, false),
-                ElemAlign::DelimOrRight(delim) => (delim, true),
-                _ => return (0, 0),
-            };
-
-            let delim_len = delimiter.chars().count();
-            let find_delim = |row: &[char]| {
-                row.windows(delim_len)
-                    .position(|w| w.iter().copied().eq(delimiter.chars()))
-            };
-
-            let left = metacolumn_subrows(&metagrid, meta_x).map(|row| match find_delim(row) {
-                Some(pos) => pos,
-                None if is_right_aligned => row.len(),
-                None => 0,
-            });
-            let right = metacolumn_subrows(&metagrid, meta_x).map(|row| match find_delim(row) {
-                Some(pos) => row.len() - (pos + delim_len),
-                None if is_right_aligned => 0,
-                None => row.len(),
-            });
-            (left.max().unwrap_or(0), right.max().unwrap_or(0))
-        })
-        .collect();
-
     // Pad each metagrid cell to its row's max height and column's max width
-    for (meta_y, metarow) in metagrid.rows_mut().enumerate() {
-        let row_height = row_heights[meta_y];
-
-        for (meta_x, meta_cell) in metarow.iter_mut().enumerate() {
-            let alignment = if meta_x == 0 { first_align } else { main_align };
-
-            pad_grid_center(
-                column_widths[meta_x],
-                row_height,
-                alignment,
-                false,
-                Some(max_lr_lengths[meta_x]),
-                &mut meta_cell.0,
-            );
-        }
+    for y in 0..metagrid.len_0() {
+        metagrid.align_row(y);
     }
+    for x in 0..metagrid.len_1() {
+        let alignment = if x == 0 { first_align } else { main_align };
+        metagrid.align_column(x, alignment);
+    }
+    assert!(metagrid.is_meta_rectangular());
 
     // Actually combine the cells and insert dividers
     for (meta_y, metarow) in metagrid.0.into_iter().enumerate() {
@@ -1137,32 +980,27 @@ fn outline_grid(
     compress_list_grid: bool,
     list_brackets: (char, char),
 ) {
-    let grid = &mut grid.0;
-
     let rank = shape.len();
-    let grid_row_count = grid.len();
+    let grid_row_count = grid.len_0();
 
     let force_multiline = params.multiline && !compress_list_grid;
 
     if grid_row_count == 1 && rank == 1 && !force_multiline {
-        grid[0].insert(0, list_brackets.0);
-        grid[0].push(list_brackets.1);
+        let grid = &mut grid.0;
+        // TODO: this is a hack until responsibility for string quotes is properly figured out
+        if list_brackets != ('"', '"') {
+            grid[0].insert(0, list_brackets.0);
+            grid[0].push(list_brackets.1);
+        }
         if box_lines && shape[0] == 0 && params.parent_rank == 0 {
             grid[0].insert(1, Primitive::Box.glyph().unwrap());
         }
     } else {
         let apparent_rank = if is_summary { 1 } else { rank };
         // Add corners to non-vectors
-        let width = grid[0].len();
-        let height = grid.len();
-        pad_grid_center(
-            width + 4,
-            (height + 2).max(apparent_rank + 1),
-            ElemAlign::None,
-            true,
-            None,
-            grid,
-        );
+        grid.ensure_height((grid.len_0() + 2).max(apparent_rank + 1), true);
+        grid.ensure_width(grid.len_1() + 4, true);
+        let grid = &mut grid.0;
         grid[0][0] = if box_lines { '┌' } else { '╭' };
         grid[0][1] = '─';
         for i in 0..apparent_rank.saturating_sub(1) {

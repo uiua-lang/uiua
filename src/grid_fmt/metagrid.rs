@@ -78,6 +78,7 @@ impl<T> Grid<T> {
     }
     /// ≡⊂
     pub fn append_1(&mut self, rhs: Self) {
+        assert_eq!(self.0.len(), rhs.0.len());
         for (self_row, rhs_row) in self.0.iter_mut().zip(rhs.0) {
             self_row.extend(rhs_row);
         }
@@ -85,6 +86,8 @@ impl<T> Grid<T> {
     pub fn push(&mut self, new_row: Vec<T>) {
         self.0.push(new_row);
     }
+    /// Check whether all rows have consistent width.
+    /// /×◫≍ ≡◇⧻
     pub fn is_rectangular(&self) -> bool {
         all_same(self.rows().map(|row| row.len()))
     }
@@ -106,10 +109,10 @@ impl Grid<char> {
             row.rotate_right(rotation);
         }
     }
-    pub fn align_right(&mut self, width: usize) {
+    pub fn align_left(&mut self, width: usize) {
         self.align(width, |_| 0);
     }
-    pub fn align_left(&mut self, width: usize) {
+    pub fn align_right(&mut self, width: usize) {
         self.align(width, |row| width - row.len());
     }
     pub fn align_center(&mut self, width: usize) {
@@ -167,6 +170,26 @@ impl Grid<char> {
             None => width_before + delim.len(),
         });
     }
+
+    pub fn ensure_height(&mut self, height: usize, center: bool) {
+        assert!(height >= self.len_0());
+        let diff = height - self.len_0();
+
+        let pre_pad = if center { diff.div_ceil(2) } else { 0 };
+        self.0.resize(height, vec![' '; self.len_1()]);
+        self.0.rotate_right(pre_pad);
+    }
+
+    pub fn ensure_width(&mut self, width: usize, center: bool) {
+        assert!(width >= self.len_1());
+        let diff = width - self.len_1();
+
+        let pre_pad = if center { diff.div_ceil(2) } else { 0 };
+        for row in self.rows_mut() {
+            row.resize(width, ' ');
+            row.rotate_right(pre_pad);
+        }
+    }
 }
 
 fn all_same<T: PartialEq>(mut iter: impl Iterator<Item = T>) -> bool {
@@ -177,6 +200,12 @@ fn all_same<T: PartialEq>(mut iter: impl Iterator<Item = T>) -> bool {
 }
 
 impl Metagrid<char> {
+    /// Check whether the metagrid has "consistent" dimensions across the board, or more precisely, that:
+    ///  - all meta-rows contain the same number of sub-grids
+    ///  - each meta-row has only one unique height among its sub-grids
+    ///  - each meta-column has only one unique width among the rows of its sub-grids
+    ///
+    /// It is necessary to establish this condition before "reducing" a Metagrid into a Grid.
     pub fn is_meta_rectangular(&self) -> bool {
         if !self.is_rectangular() {
             return false; // the meta-rows have jagged width
@@ -218,40 +247,43 @@ impl Metagrid<char> {
                 }
             }
             ElemAlign::DelimOrRight(delim) | ElemAlign::DelimOrLeft(delim) => {
-                let is_right = matches!(align, ElemAlign::DelimOrRight(_));
-
                 let mut width_before = 0;
                 let mut width_after = 0;
+                let mut width_no_delim = 0;
 
                 // TODO: change the enum to use a char slice
                 let delim = delim.chars().collect::<Vec<_>>();
                 let delim = &delim;
 
+                let mut delim_found = false;
+
                 for row in rows {
                     if let Some((left, right)) = split_once(row, delim) {
+                        delim_found = true;
                         width_before = width_before.max(left.len());
                         width_after = width_after.max(right.len());
-                    } else if is_right {
-                        width_before = width_before.max(row.len());
                     } else {
-                        width_after = width_after.max(row.len());
+                        width_no_delim = width_no_delim.max(row.len());
                     }
                 }
 
-                debug_assert_eq!(
-                    width_before + delim.len() + width_after,
-                    self.column(i1)
-                        .flat_map(|grid| grid.rows())
-                        .map(|row| row.len())
-                        .max()
-                        .unwrap_or(0)
-                );
+                let is_right = matches!(align, ElemAlign::DelimOrRight(_));
+                if is_right {
+                    width_before = width_before.max(width_no_delim);
+                } else {
+                    width_after = width_after.max(width_no_delim);
+                }
 
                 for grid in self.column_mut(i1) {
-                    if is_right {
-                        grid.align_delimited_or_right(delim, width_before, width_after);
-                    } else {
-                        grid.align_delimited_or_left(delim, width_before, width_after);
+                    match (delim_found, is_right) {
+                        (true, true) => {
+                            grid.align_delimited_or_right(delim, width_before, width_after)
+                        }
+                        (true, false) => {
+                            grid.align_delimited_or_left(delim, width_before, width_after)
+                        }
+                        (false, true) => grid.align_right(width_no_delim),
+                        (false, false) => grid.align_left(width_no_delim),
                     }
                 }
             }

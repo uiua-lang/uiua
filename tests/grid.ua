@@ -61,12 +61,12 @@ Snapshot ← ⊃Diff⋅≍ ⟜⊓prettyLines
 
 # SoA
 
-$ ┌─        
-$      a │  
-$   ─────┤  
-$   □b: 5│  
-$      □6│  
-$          ┘
+$ ┌─
+$       a │
+$   ──────┤
+$   □b: 5 │
+$       □6│
+$           ┘
 ⍤Snapshot {$a {$b 5 6}}
 
 # Boxed fixed arrays

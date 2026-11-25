@@ -1,14 +1,10 @@
+Lines ← ⌅(⬚@\s⊜∘ ⊸≠@\n|◌ ⬚@\n°⊜□)
+
 # Uniqueness
 
-Unique! ←^ (
-  ⧅<2
-  /$"_\n_" ⍚(
-    $"_\n_" ⊃(
-      /$"¬≍ pretty _ pretty _"
-    | /$"⍤$ (_) and (_) give ambiguous output"
-    )
-  )
-)
+# Msg Cond ? ReprA ReprB ExprA ExprB
+Distinct ← ⊓($"(_) and (_) give ambiguous output:\n_"|¬≍) ⊙⊙(⊸°Lines ∩pretty)
+Unique!  ←^ ⍚/($"⍤ Distinct _ _ _ _" ◡∩repr) ⧅<2
 
 Unique!(
   {5} | {□5} | {□□5}
@@ -60,8 +56,7 @@ Unique!(
 | {°△2_2_2 ¤¤¤2}
 )
 
-Lines    ← ⌅(⬚@\s⊜∘ ⊸≠@\n|◌ ⬚@\n°⊜□)
-Diff     ← °Lines ⍚$"_:\n_" {"Input" "Expected" "Got"} □₃ ⊓repr∩(°Lines ≡$"\"_\"")
+Diff     ← °Lines ⍚$"_:\n_" {"Input" "Expected" "Got"} □₃ ⊓repr˜∩(°Lines ≡$"\"_\"")
 Snapshot ← ⊃Diff⋅≍ ⟜⊓prettyLines
 
 # SoA

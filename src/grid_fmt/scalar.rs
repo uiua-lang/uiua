@@ -130,23 +130,6 @@ impl GridFmt for f64 {
     fn alignment() -> ElemAlign {
         ElemAlign::DelimOrRight(".")
     }
-    fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]>) -> usize {
-        let mut max_whole_len = 0;
-        let mut max_dec_len: Option<usize> = None;
-        for row in rows {
-            if let Some(dot_pos) = row.iter().position(|&c| c == '.') {
-                max_whole_len = max_whole_len.max(dot_pos);
-                max_dec_len = max_dec_len.max(Some(row.len() - dot_pos - 1));
-            } else {
-                max_whole_len = max_whole_len.max(row.len());
-            }
-        }
-        if let Some(dec_len) = max_dec_len {
-            max_whole_len + dec_len + 1
-        } else {
-            max_whole_len
-        }
-    }
 }
 
 struct MathConstant {

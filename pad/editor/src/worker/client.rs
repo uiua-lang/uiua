@@ -5,7 +5,7 @@ use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 use leptos::prelude::window;
 use serde_bytes::ByteBuf;
 use wasm_bindgen::{JsCast, closure::Closure};
-use web_sys::{ErrorEvent, MessageEvent, Worker};
+use web_sys::{ErrorEvent, MessageEvent, Worker, WorkerOptions, WorkerType};
 
 use super::*;
 use crate::{
@@ -145,7 +145,9 @@ fn next_job() {
             return Ok(());
         }
         if client.worker.is_none() {
-            let worker = Worker::new("/worker_loader.js")
+            let opts = WorkerOptions::new();
+            opts.set_type(WorkerType::Module);
+            let worker = Worker::new_with_options("/worker_loader.js", &opts)
                 .map_err(|e| format!("Could not start execution worker: {e:?}"))?;
             let on_message = Closure::new(move |event: MessageEvent| {
                 match serde_wasm_bindgen::from_value::<Response>(event.data()) {

@@ -41,6 +41,8 @@ web-sys = { workspace = true, features = [
     "CustomElementRegistry",
     "Window",
     "Worker",
+    "WorkerOptions",
+    "WorkerType",
     "WorkerGlobalScope",
     "DedicatedWorkerGlobalScope",
     "MessageEvent",

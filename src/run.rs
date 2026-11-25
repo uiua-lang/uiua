@@ -46,6 +46,8 @@ pub(crate) struct Runtime {
     pub(crate) under_stack: Vec<Value>,
     /// The call stack
     pub(crate) call_stack: Vec<StackFrame>,
+    /// Additional spans for error reporting, shared by all frames in the call stack
+    spans: Vec<(usize, Option<Primitive>)>,
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
@@ -114,8 +116,8 @@ pub(crate) struct StackFrame {
     track_caller: bool,
     /// The span at which the function was called
     pub(crate) call_span: usize,
-    /// Additional spans for error reporting
-    spans: Vec<(usize, Option<Primitive>)>,
+    /// The length of [`Runtime::spans`] when the frame was pushed
+    spans_start: usize,
     /// The stack height at the start of the function
     pub(crate) start_height: usize,
 }
@@ -193,6 +195,7 @@ impl Default for Runtime {
                 id: Some(FunctionId::Main),
                 ..Default::default()
             }],
+            spans: Vec::new(),
             recur_stack: Vec::new(),
             fill_stack: Vec::new(),
             fill_boundary_stack: Vec::new(),
@@ -761,14 +764,9 @@ impl Uiua {
         prim: Option<Primitive>,
         f: impl FnOnce(&mut Self) -> T,
     ) -> T {
-        self.rt
-            .call_stack
-            .last_mut()
-            .unwrap()
-            .spans
-            .push((span, prim));
+        self.rt.spans.push((span, prim));
         let res = f(self);
-        self.rt.call_stack.last_mut().unwrap().spans.pop();
+        self.rt.spans.pop();
         res
     }
     /// Call a function
@@ -824,9 +822,16 @@ impl Uiua {
     ) -> UiuaResult {
         let start_height = self.rt.stack.len();
         let sig = frame.sig;
+        let frame = StackFrame {
+            spans_start: self.rt.spans.len(),
+            ..frame
+        };
         self.rt.call_stack.push(frame);
-        let res = self.exec(node.clone());
+        #[cfg(debug_assertions)]
+        let node_copy = node.clone();
+        let res = self.exec(node);
         let frame = self.rt.call_stack.pop().unwrap();
+        self.rt.spans.truncate(frame.spans_start);
         if let Err(mut err) = res {
             // Trace errors
             let span = self.asm.spans[frame.call_span].clone();
@@ -846,8 +851,12 @@ impl Uiua {
                     but its signature of {sig} implies a change of {sig_diff}"
                 )
             } else {
+                #[cfg(debug_assertions)]
+                let node_desc = format!(" ({node_copy:?})");
+                #[cfg(not(debug_assertions))]
+                let node_desc = "";
                 format!(
-                    "Function ({node:?}) modified the argument list by {height_diff} values, \
+                    "Function{node_desc} modified the argument list by {height_diff} values, \
                     but its signature of {sig} implies a change of {sig_diff}"
                 )
             };
@@ -859,11 +868,13 @@ impl Uiua {
         Ok(())
     }
     pub(crate) fn span_index(&self) -> usize {
-        self.rt.call_stack.last().map_or(0, |frame| {
-            (frame.spans.last())
-                .map(|(i, _)| *i)
-                .unwrap_or(frame.call_span)
-        })
+        self.rt
+            .call_stack
+            .last()
+            .map_or(0, |frame| match self.rt.spans.last() {
+                Some((i, _)) if self.rt.spans.len() > frame.spans_start => *i,
+                _ => frame.call_span,
+            })
     }
     /// Get the span of the current function call
     #[track_caller]
@@ -1440,7 +1451,13 @@ impl Uiua {
                 fill_boundary_stack: Vec::new(),
                 unfill_stack: Vec::new(),
                 recur_stack: self.rt.recur_stack.clone(),
-                call_stack: Vec::from_iter(self.rt.call_stack.last().cloned()),
+                call_stack: Vec::from_iter(self.rt.call_stack.last().map(|frame| StackFrame {
+                    spans_start: 0,
+                    ..frame.clone()
+                })),
+                spans: (self.rt.call_stack.last()).map_or_else(Vec::new, |frame| {
+                    self.rt.spans[frame.spans_start..].to_vec()
+                }),
                 time_instrs: self.rt.time_instrs,
                 last_time: self.rt.last_time,
                 cli_arguments: self.rt.cli_arguments.clone(),

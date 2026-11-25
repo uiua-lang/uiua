@@ -128,7 +128,7 @@ impl GridFmt for f64 {
         }
     }
     fn alignment() -> ElemAlign {
-        ElemAlign::DelimOrRight(".")
+        ElemAlign::DelimOrRight(&['.'])
     }
 }
 

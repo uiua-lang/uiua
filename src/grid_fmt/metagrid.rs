@@ -236,13 +236,13 @@ impl Metagrid<char> {
     pub fn align_column(&mut self, i1: usize, align: ElemAlign) {
         let rows = self.column(i1).flat_map(|grid| grid.rows());
         match align {
-            ElemAlign::Left | ElemAlign::Right | ElemAlign::None => {
+            ElemAlign::Left | ElemAlign::Right | ElemAlign::Center => {
                 let width = rows.map(|row| row.len()).max().unwrap_or(0);
                 let grids = self.column_mut(i1);
                 match align {
                     ElemAlign::Left => grids.for_each(|grid| grid.align_left(width)),
                     ElemAlign::Right => grids.for_each(|grid| grid.align_right(width)),
-                    ElemAlign::None => grids.for_each(|grid| grid.align_center(width)),
+                    ElemAlign::Center => grids.for_each(|grid| grid.align_center(width)),
                     _ => unreachable!(),
                 }
             }
@@ -250,10 +250,6 @@ impl Metagrid<char> {
                 let mut width_before = 0;
                 let mut width_after = 0;
                 let mut width_no_delim = 0;
-
-                // TODO: change the enum to use a char slice
-                let delim = delim.chars().collect::<Vec<_>>();
-                let delim = &delim;
 
                 let mut delim_found = false;
 

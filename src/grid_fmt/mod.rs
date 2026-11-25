@@ -211,7 +211,7 @@ impl GridFmt for Boxed {
         1000
     }
     fn alignment() -> ElemAlign {
-        ElemAlign::DelimOrLeft(": ")
+        ElemAlign::DelimOrLeft(&[':', ' '])
     }
     fn soa_rows(arr: &Array<Self>) -> Option<Vec<(&EcoString, &Value)>> {
         if arr.rank() != 1 {
@@ -350,7 +350,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             let is_summary = requires_summary::<T>(&self.shape);
 
             let main_align = if is_summary {
-                ElemAlign::None
+                ElemAlign::Center
             } else {
                 T::alignment()
             };
@@ -715,11 +715,11 @@ fn add_spacing(metagrid: &mut Metagrid, shape: &[usize]) {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ElemAlign {
-    None,
+    Center,
     Left,
     Right,
-    DelimOrRight(&'static str),
-    DelimOrLeft(&'static str),
+    DelimOrRight(&'static [char]),
+    DelimOrLeft(&'static [char]),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

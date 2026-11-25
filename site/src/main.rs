@@ -563,6 +563,9 @@ pub fn PadPage() -> impl IntoView {
                 None
             }
         }
+        <a href="https://github.com/uiua-lang/uiua/actions/workflows/build_latest.yml">
+            <img style="vertical-align: middle" src="https://img.shields.io/github/check-runs/uiua-lang/uiua/main?nameFilter=build_site&label=Build%20Site" alt="Build Site"/>
+        </a>
         <br/>
         <p>"You can load files into the pad by dragging and dropping them into the window."</p>
         <p>"Replace "<code>"pad"</code>" in links with "<code>"embed"</code>" or "<code>"embedpad"</code>" to embed the editor."</p>

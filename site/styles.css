@@ -689,16 +689,31 @@ option,
     position: relative;
 }
 
+/* Typed as <length> to get the browser to convert it to px on .code-area */
+@property --rounded-line-height {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+}
+
 .code-area {
-    --rounded-line-height: 0px;
-    --line-count: 0;
+    /* --code-font-size is the user's font size setting, applied on .code-outer */
+    --rounded-line-height: round(
+        down,
+        1.25 * var(--code-font-size, 1em),
+        1px
+    );
     overflow: auto;
+    /* Long lines scroll inside this instead of widening the page */
+    contain: inline-size;
 }
 
 .code-outer {
     text-align: left;
     border-radius: 0.5em 0.5em 0 0;
-    width: 100%;
+    /* Grows with the longest line so .code-area can scroll horizontally */
+    width: max-content;
+    min-width: 100%;
     box-sizing: border-box;
     outline: none;
     border: none;
@@ -713,7 +728,7 @@ option,
 }
 
 .code-and-overlay {
-    width: 100%;
+    flex: 1 0 auto;
     position: relative;
 }
 
@@ -721,6 +736,8 @@ option,
     margin: 0;
     padding: 0;
     position: absolute;
+    inset: 0;
+    width: 100%;
     outline: none;
     border: none;
     box-sizing: border-box;
@@ -745,30 +762,27 @@ option,
 
 .code-overlay {
     margin: 0;
-    padding: 0;
-    position: absolute;
-    width: 100%;
+    /* Room for the caret after the longest line */
+    padding: 0 1em 0 0;
+    position: relative;
     pointer-events: none;
     white-space: pre;
     z-index: 1;
 }
 
 .code-line {
-    /* --rounded-line-height will be set to this */
-    height: round(down, 1.25em, 1px);
+    height: var(--rounded-line-height);
     padding: 0;
     margin: 0;
-}
-
-.hidden-line-height-sampler {
-    position: absolute;
-    inset: 0 auto auto 0;
-    visibility: hidden;
 }
 
 .line-numbers {
     position: relative;
     text-align: right;
+    /* --line-number-digits is the digit count of the largest line number */
+    font-family: "Code Font", monospace;
+    width: calc(var(--line-number-digits, 1) * 1ch);
+    flex: none;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1477,6 +1491,10 @@ input[type="text"] {
 
 .slow-pulse {
     animation: pulseAnimation 2s infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+        animation: none;
+    }
 }
 
 .skeleton {
@@ -2100,8 +2118,6 @@ a.clean {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto 1fr auto;
 
-    --line-numbers-width: 0;
-
     .code-area {
         min-height: calc(
             var(--line-count) * var(--rounded-line-height) + 0.75em
@@ -2111,7 +2127,7 @@ a.clean {
     }
 
     .output {
-        margin-left: max(calc(var(--line-numbers-width) + 0.8em), 1.45em);
+        margin-left: max(calc(var(--line-number-digits, 1) * 1ch + 0.8em), 1.45em);
     }
 }
 

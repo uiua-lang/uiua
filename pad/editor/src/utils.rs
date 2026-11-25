@@ -1,7 +1,3 @@
-use base64::engine::{Engine, general_purpose::URL_SAFE};
-use flate2::{Compression, write::ZlibEncoder};
-use js_sys::Date;
-use leptos::{prelude::*, *};
 use std::{
     borrow::Cow,
     cell::Cell,
@@ -10,14 +6,19 @@ use std::{
     io::Write,
     mem::{replace, take},
     path::Path,
+    slice,
     str::FromStr,
     time::Duration,
 };
-use uiua::{PrimDoc, UiuaErrorKind};
 
+use base64::engine::{Engine, general_purpose::URL_SAFE};
+use flate2::{Compression, write::ZlibEncoder};
+use js_sys::Date;
+use leptos::{prelude::*, *};
+use serde::*;
 use uiua::{
-    Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
-    Spans, Uiua, UiuaError, UiuaResult, Value,
+    Compiler, DiagnosticKind, Inputs, PrimDoc, Primitive, Report, ReportFragment, ReportKind,
+    SpanKind, Spans, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
     ast::Item,
     lsp::{BindingDocsKind, ImportSrc},
     media::SmartOutput,
@@ -25,17 +26,18 @@ use uiua::{
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;
 use web_sys::{
-    CssStyleDeclaration, DomRect, Event, HtmlDivElement, HtmlElement, HtmlSpanElement,
-    HtmlStyleElement, HtmlTextAreaElement, KeyboardEvent, MouseEvent,
+    CssStyleDeclaration, DomRect, Event, HtmlDivElement, HtmlElement, HtmlInputElement,
+    HtmlSpanElement, HtmlStyleElement, HtmlTextAreaElement, KeyboardEvent, MouseEvent,
 };
 
 use crate::{
     backend::{OutputItem, WebBackend},
-    binding_class, code_font, modifier_class, prim_sig_class,
+    binding_class, binding_style, code_font, comment_class, modifier_class, module_class,
+    number_class, prim_sig_class, string_class, worker,
+    worker::{Output, OutputSection, OutputUpdate},
 };
-use crate::{binding_style, comment_class, module_class, number_class, string_class};
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ChallengeDef {
     pub example: String,
     pub intended_answer: String,
@@ -51,7 +53,6 @@ pub struct State {
     pub code_id: String,
     pub code_area_id: String,
     pub code_outer_id: String,
-    pub line_numbers_id: String,
     pub editor_wrapper_id: String,
     pub set_overlay: WriteSignal<String>,
     pub set_line_count: WriteSignal<usize>,
@@ -61,7 +62,6 @@ pub struct State {
     pub hidden: String,
     pub curr: Record,
     pub challenge: Option<ChallengeDef>,
-    pub loading_module: bool,
 }
 
 /// A record of a code change
@@ -149,23 +149,6 @@ impl State {
         }
         self.set_overlay.set(code.into());
         let area = element::<HtmlTextAreaElement>(&self.code_id);
-        let outer = element::<HtmlDivElement>(&self.code_outer_id);
-
-        let rect = &virtual_rect(&area, code);
-        let width = rect.width();
-        let new_width = format!("max(calc({width}px + 1em),100%)");
-        area.unchecked_ref::<HtmlElement>()
-            .style()
-            .set_property("width", &new_width)
-            .unwrap();
-
-        let outer_new_width = format!("max(calc({width}px + 3.4em),100%)");
-        outer
-            .unchecked_ref::<HtmlElement>()
-            .style()
-            .set_property("width", &outer_new_width)
-            .unwrap();
-
         area.set_value(code);
     }
     pub fn refresh_code(&self) {
@@ -179,6 +162,11 @@ impl State {
         let start = char_offset_to_utf16_offset(&content, start);
         let end = char_offset_to_utf16_offset(&content, end);
         area.set_selection_range(start, end).unwrap();
+
+        // Scrolling the caret into view needs layout, and only matters while typing
+        if document().active_element().as_ref() != Some(area.unchecked_ref()) {
+            return;
+        }
 
         let outer = element::<HtmlDivElement>(&self.code_outer_id);
 
@@ -208,49 +196,9 @@ impl State {
         self.set_copied_link.set(false);
         self.set_line_count();
     }
-    pub fn update_line_number_width(&self) {
-        let line_numbers = element::<HtmlDivElement>(&self.line_numbers_id);
-        let editor = element::<HtmlDivElement>(&self.editor_wrapper_id);
-        let line_numbers_width = line_numbers.get_bounding_client_rect().width();
-        let line_numbers_width_str = format!("{line_numbers_width}px");
-        editor
-            .unchecked_ref::<HtmlElement>()
-            .style()
-            .set_property("--line-numbers-width", &line_numbers_width_str)
-            .unwrap();
-    }
-    pub fn update_rounded_line_height(&self) {
-        let line_numbers = element::<HtmlDivElement>(&self.line_numbers_id);
-        let code_line = line_numbers.first_element_child().unwrap();
-        let height = code_line.get_bounding_client_rect().height();
-        let code_area = element::<HtmlDivElement>(&self.code_area_id);
-        code_area
-            .unchecked_ref::<HtmlElement>()
-            .style()
-            .set_property("--rounded-line-height", &format!("{height}px"))
-            .unwrap();
-        // logging::log!(
-        //     "updated line height to {}px on #{}",
-        //     height,
-        //     self.code_area_id
-        // );
-    }
     pub fn set_line_count(&self) {
         let line_count = get_code(&self.code_id).split('\n').count().max(1);
         self.set_line_count.set(line_count);
-
-        let code_area = element::<HtmlDivElement>(&self.code_area_id);
-        code_area
-            .unchecked_ref::<HtmlElement>()
-            .style()
-            .set_property("--line-count", &line_count.to_string())
-            .unwrap();
-
-        let state = self.clone();
-        _ = set_timeout(
-            move || state.update_line_number_width(),
-            Duration::from_millis(0),
-        );
     }
     pub fn clear_history(&mut self) {
         self.past.clear();
@@ -278,6 +226,18 @@ impl State {
             self.past.push(replace(&mut self.curr, next));
             self.set_changed();
         }
+    }
+    pub fn insert_experimental(&mut self, mut cursor: Cursor) {
+        let code = get_code(&self.code_id);
+        if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
+            return;
+        }
+        if matches!(cursor, Cursor::Keep) {
+            cursor = get_code_cursor(&self.code_id)
+                .map(|(start, end)| Cursor::Set(start + 16, end + 16))
+                .unwrap_or(Cursor::Ignore);
+        }
+        self.set_code(&format!("# Experimental!\n{code}"), cursor);
     }
 }
 
@@ -1101,16 +1061,22 @@ pub fn gen_code_view(code: &str, hidden: &str) -> AnyView {
     line_views.into_any()
 }
 
-fn init_rt() -> Uiua {
-    Uiua::with_backend(WebBackend::new())
-        .with_execution_limit(Duration::from_secs_f64(get_execution_limit()))
-        .with_recursion_limit(50)
+fn init_rt(settings: &worker::Settings) -> Uiua {
+    Uiua::with_backend(
+        WebBackend::new()
+            .with_ast_time(settings.ast_time)
+            .with_fetch_requests(settings.fetch_requests),
+    )
+    .maybe_with_execution_limit(settings.execution_limit.map(Duration::from_secs_f64))
+    .with_recursion_limit(50)
 }
 
-fn just_values(code: &str) -> UiuaResult<Vec<Value>> {
-    let mut rt = init_rt();
-    rt.run_str(code)?;
-    Ok(rt.take_stack())
+fn just_values(code: &str, settings: &worker::Settings) -> UiuaResult<Vec<Value>> {
+    worker::without_streaming_output(|| {
+        let mut rt = init_rt(settings);
+        rt.run_str(code)?;
+        Ok(rt.take_stack())
+    })
 }
 
 fn challenge_code(input: &str, test: &str, flip: bool) -> String {
@@ -1121,79 +1087,85 @@ fn challenge_code(input: &str, test: &str, flip: bool) -> String {
     }
 }
 
-impl State {
-    /// Run code and return the output
-    pub fn run_code(&mut self, code: &str) -> Vec<Vec<OutputItem>> {
-        let full_code = if self.hidden.is_empty() {
-            code.into()
-        } else {
-            format!("{}\n{code}", self.hidden)
-        };
-        if let Some(chal) = &self.challenge {
-            let mut example = run_code_single(&challenge_code(
-                &chal.intended_answer,
-                &chal.example,
-                chal.flip,
-            ))
-            .0;
-            example.insert(
-                0,
-                vec![OutputItem::Faint(format!("Example: {}", chal.example))],
-            );
-            let mut output_sections = vec![example];
-            let mut correct = true;
-            for (i, test) in chal.tests.iter().enumerate() {
-                let answer =
-                    || just_values(&challenge_code(&chal.intended_answer, test, chal.flip));
-                let user_input = challenge_code(&full_code, test, chal.flip);
-                let user_output = || just_values(&user_input);
-                correct = correct
-                    && match (answer(), user_output()) {
-                        (Ok(answer), Ok(users)) => answer == users,
-                        (Err(answer), Err(users)) => answer.to_string() == users.to_string(),
-                        _ => false,
-                    };
-                let mut output = run_code_single(&user_input).0;
-                output.insert(
-                    0,
-                    vec![OutputItem::Faint(format!("Test {}: {test}", i + 1))],
-                );
-                output_sections.push(output);
-            }
-            let mut output = if chal.did_init_run.get() {
-                vec![vec![OutputItem::String(if correct {
-                    "✅ Correct!".into()
-                } else {
-                    "❌ Incorrect".into()
-                })]]
-            } else {
-                Vec::new()
+/// Run code and return the output.
+pub(crate) fn run_code(
+    code: &str,
+    hidden: &str,
+    challenge: Option<&ChallengeDef>,
+    settings: &worker::Settings,
+) -> Output {
+    let full_code = if hidden.is_empty() {
+        code.into()
+    } else {
+        format!("{}\n{code}", hidden)
+    };
+    if let Some(chal) = challenge {
+        let example = run_code_single(
+            &challenge_code(&chal.intended_answer, &chal.example, chal.flip),
+            settings,
+            Some(format!("Example: {}", chal.example)),
+        )
+        .0;
+        let mut output_sections = vec![example];
+        let mut correct = true;
+        for (i, test) in chal.tests.iter().enumerate() {
+            let answer = || {
+                just_values(
+                    &challenge_code(&chal.intended_answer, test, chal.flip),
+                    settings,
+                )
             };
-            chal.did_init_run.set(true);
-            for section in output_sections {
-                output.push(vec![OutputItem::Separator]);
-                output.extend(section);
+            let user_input = challenge_code(&full_code, test, chal.flip);
+            let user_output = || just_values(&user_input, settings);
+            correct = correct
+                && match (answer(), user_output()) {
+                    (Ok(answer), Ok(users)) => answer == users,
+                    (Err(answer), Err(users)) => answer.to_string() == users.to_string(),
+                    _ => false,
+                };
+            let output = run_code_single(
+                &user_input,
+                settings,
+                Some(format!("Test {}: {test}", i + 1)),
+            )
+            .0;
+            output_sections.push(output);
+        }
+        let message = chal.did_init_run.get().then(|| {
+            if correct {
+                "✅ Correct!".into()
+            } else {
+                "❌ Incorrect".into()
             }
-            output
-        } else {
-            let (output, error) = run_code_single(&full_code);
-            self.loading_module = false;
-            if let Some(error) = error
-                && error.to_string().contains("Waiting for module")
-            {
-                self.loading_module = true;
-            }
-            output
+        });
+        chal.did_init_run.set(true);
+        Output {
+            sections: output_sections,
+            message,
+        }
+    } else {
+        Output {
+            sections: vec![run_code_single(&full_code, settings, None).0],
+            ..Default::default()
         }
     }
 }
 
 #[allow(clippy::mutable_key_type)]
-fn run_code_single(code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaError>) {
+fn run_code_single(
+    code: &str,
+    settings: &worker::Settings,
+    heading: Option<String>,
+) -> (OutputSection, Option<UiuaError>) {
+    OutputUpdate::Section(heading.clone()).send();
     // Run
-    let mut rt = init_rt();
+    let mut rt = init_rt(settings);
     let mut error = None;
-    let mut comp = Compiler::with_backend(WebBackend::new());
+    let mut comp = Compiler::with_backend(
+        WebBackend::new()
+            .with_ast_time(settings.ast_time)
+            .with_fetch_requests(settings.fetch_requests),
+    );
     let comp_backend;
     let res = comp.load_str(code).map(|comp| rt.run_compiler(comp));
     let (mut value_lines, io) = match res {
@@ -1219,7 +1191,7 @@ fn run_code_single(code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaError>) {
             (Vec::new(), &comp_backend)
         }
     };
-    if get_top_at_top() {
+    if settings.top_at_top {
         value_lines.reverse();
     }
     let diagnostics = comp.take_diagnostics();
@@ -1227,7 +1199,7 @@ fn run_code_single(code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaError>) {
     let stdout = take(&mut *io.stdout.lock().unwrap());
     let mut stack_lines = Vec::new();
     let value_count: usize = value_lines.iter().map(|line| line.len()).sum();
-    let make_smart_output = if get_animation_format() == "APNG" {
+    let make_smart_output = if settings.animation_format == "APNG" {
         SmartOutput::from_value_prefer_apng
     } else {
         SmartOutput::from_value
@@ -1276,7 +1248,7 @@ fn run_code_single(code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaError>) {
                     _ => unreachable!(),
                 }
             };
-            stack_line.push(OutputItem::Classed(class, value));
+            stack_line.push(OutputItem::Classed(class.into(), value));
             i += 1;
         }
         stack_lines.push(stack_line);
@@ -1284,75 +1256,138 @@ fn run_code_single(code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaError>) {
     let stderr = take(&mut *io.stderr.lock().unwrap());
     let trace = take(&mut *io.trace.lock().unwrap());
 
-    // Construct output
-    let label = ((!stack_lines.is_empty()) as u8)
-        + ((!stdout.is_empty()) as u8)
-        + ((!stderr.is_empty()) as u8)
-        + ((!trace.is_empty()) as u8)
-        >= 2;
-    let mut output = Vec::new();
-    if !trace.is_empty() {
-        output.extend((trace.lines()).map(|line| vec![OutputItem::String(line.into())]));
-    }
-    if !stdout.is_empty() {
-        if !output.is_empty() {
-            output.push(vec![OutputItem::String("".into())]);
-        }
-        if label {
-            output.push(vec![OutputItem::String("stdout:".to_string())]);
-        }
-        output.extend(stdout.into_iter().map(|item| vec![item]));
-    }
-    if !stderr.is_empty() {
-        if !output.is_empty() {
-            output.push(vec![OutputItem::String("".into())]);
-        }
-        if label {
-            output.push(vec![OutputItem::String("stderr:".to_string())]);
-        }
-        output.extend((stderr.lines()).map(|line| vec![OutputItem::String(line.into())]));
-    }
-    if !stack_lines.is_empty() {
-        if label {
-            output.push(vec![OutputItem::Separator]);
-        }
-        output.extend(stack_lines);
-    }
+    let mut output = OutputSection {
+        heading,
+        stdout,
+        stderr,
+        trace,
+        stack: stack_lines,
+        ..Default::default()
+    };
     if let Some(error) = &error {
-        if !output.is_empty() {
-            output.push(vec![OutputItem::String("".into())]);
-        }
-        const MAX_OUTPUT_BEFORE_ERROR: usize = 60;
-        if output.len() >= MAX_OUTPUT_BEFORE_ERROR {
-            output = output.split_off(output.len() - MAX_OUTPUT_BEFORE_ERROR);
-            output[0] = vec![OutputItem::String("Previous output truncated...".into())];
-        }
+        output.truncate = true;
         let report = error.report();
         let execution_limit_reached = report.fragments.iter().any(|frag| {
             matches!(frag, ReportFragment::Plain(s)
                 if s.contains("Maximum execution time exceeded"))
         });
-        output.push(vec![OutputItem::Report(report)]);
+        output.reports.push(OutputItem::Report(report));
         if execution_limit_reached {
-            output.push(vec![OutputItem::String(
+            output.reports.push(OutputItem::String(
                 "You can increase the execution time limit in the editor settings".into(),
-            )]);
+            ));
         }
     }
     if !diagnostics.is_empty() {
-        if !output.is_empty() {
-            output.push(vec![OutputItem::String("".into())]);
+        if !output.stdout.is_empty()
+            || !output.stderr.is_empty()
+            || !output.trace.is_empty()
+            || !output.stack.is_empty()
+            || !output.reports.is_empty()
+        {
+            output.reports.push(OutputItem::String("".into()));
         }
         for diag in diagnostics {
-            output.push(vec![OutputItem::Report(diag.report())]);
+            output.reports.push(OutputItem::Report(diag.report()));
         }
     }
-    output.extend(
-        rt.take_reports()
-            .into_iter()
-            .map(|r| vec![OutputItem::Report(r)]),
-    );
+    output
+        .reports
+        .extend(rt.take_reports().into_iter().map(OutputItem::Report));
     (output, error)
+}
+
+impl Output {
+    pub fn lines<T>(&self, render: impl Fn(&[OutputItem]) -> T) -> Vec<T> {
+        let mut lines = Vec::new();
+        if let Some(message) = &self.message {
+            lines.push(render(&[OutputItem::String(message.clone())]));
+        }
+        for section in &self.sections {
+            if let Some(heading) = &section.heading {
+                lines.push(render(&[OutputItem::Separator]));
+                lines.push(render(&[OutputItem::Faint(heading.clone())]));
+            }
+            lines.extend(section.lines().into_iter().map(|items| render(&items)));
+        }
+        lines
+    }
+}
+
+impl OutputSection {
+    fn lines(&self) -> Vec<Cow<'_, [OutputItem]>> {
+        let mut lines = output_lines(
+            (self.stdout.iter()).map(|item| Cow::Borrowed(slice::from_ref(item))),
+            &self.stderr,
+            &self.trace,
+            (self.stack.iter())
+                .map(|items| Cow::Borrowed(items.as_slice()))
+                .collect(),
+            |item| Cow::Owned(vec![item]),
+        );
+        if self.truncate {
+            if !lines.is_empty() {
+                lines.push(Cow::Owned(vec![OutputItem::String("".into())]));
+            }
+            const MAX_OUTPUT_BEFORE_ERROR: usize = 60;
+            if lines.len() >= MAX_OUTPUT_BEFORE_ERROR {
+                lines = lines.split_off(lines.len() - MAX_OUTPUT_BEFORE_ERROR);
+                lines[0] = Cow::Owned(vec![OutputItem::String(
+                    "Previous output truncated...".into(),
+                )]);
+            }
+        }
+        lines.extend((self.reports.iter()).map(|item| Cow::Borrowed(slice::from_ref(item))));
+        lines
+    }
+}
+
+pub(crate) fn output_lines<T>(
+    stdout: impl ExactSizeIterator<Item = T>,
+    stderr: &str,
+    trace: &str,
+    stack_lines: Vec<T>,
+    make_line: impl Fn(OutputItem) -> T,
+) -> Vec<T> {
+    let has_stdout = stdout.len() > 0;
+    let label = ((!stack_lines.is_empty()) as u8)
+        + (has_stdout as u8)
+        + ((!stderr.is_empty()) as u8)
+        + ((!trace.is_empty()) as u8)
+        >= 2;
+    let mut output = Vec::new();
+    if !trace.is_empty() {
+        output.extend(
+            trace
+                .lines()
+                .map(|line| make_line(OutputItem::String(line.into()))),
+        );
+    }
+    if has_stdout {
+        if !output.is_empty() {
+            output.push(make_line(OutputItem::String("".into())));
+        }
+        if label {
+            output.push(make_line(OutputItem::String("stdout:".into())));
+        }
+        output.extend(stdout);
+    }
+    if !stderr.is_empty() {
+        if !output.is_empty() {
+            output.push(make_line(OutputItem::String("".into())));
+        }
+        if label {
+            output.push(make_line(OutputItem::String("stderr:".into())));
+        }
+        output.extend((stderr.lines()).map(|line| make_line(OutputItem::String(line.into()))));
+    }
+    if !stack_lines.is_empty() {
+        if label {
+            output.push(make_line(OutputItem::Separator));
+        }
+        output.extend(stack_lines);
+    }
+    output
 }
 
 pub fn report_view(report: &Report, state: WriteSignal<State, LocalStorage>) -> impl IntoView {
@@ -1392,14 +1427,7 @@ pub fn report_view(report: &Report, state: WriteSignal<State, LocalStorage>) -> 
                 view! {
                     <span class={classes.clone()}>{before.to_string()}</span>
                     <a class="output-report" href="#" on:click=move |_| {
-                        state.update(|state| {
-                            let code = get_code(&state.code_id);
-                            if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
-                                return;
-                            }
-                            let new_code = format!("# Experimental!\n{code}");
-                            state.set_code(&new_code, Cursor::Ignore);
-                        });
+                        state.update(|state| state.insert_experimental(Cursor::Ignore));
                     }>"# Experimental!"</a>
                     <span class={classes}>{after.to_string()}</span>
                 }
@@ -1546,6 +1574,22 @@ where
         .unwrap();
 }
 
+pub fn get_fetch_requests(editor: u64) -> bool {
+    get_element::<HtmlInputElement>(&format!("fetch-requests-{editor}"))
+        .is_some_and(|input| input.checked())
+}
+
+pub fn set_fetch_requests(editor: u64, enabled: bool) {
+    element::<HtmlInputElement>(&format!("fetch-requests-{editor}")).set_checked(enabled);
+}
+
+pub fn get_limit_exec_time() -> bool {
+    get_local_var("limit-exec-time", || false)
+}
+pub fn set_limit_exec_time(limit: bool) {
+    set_local_var("limit-exec-time", limit);
+}
+
 pub fn get_execution_limit() -> f64 {
     get_local_var("execution-limit", || 2.0)
 }
@@ -1588,6 +1632,19 @@ pub fn get_font_size() -> String {
 pub fn set_font_size(size: &str) {
     set_local_var("font-size", size);
     update_style();
+}
+
+thread_local! {
+    static STYLE_INITIALIZED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Set font settings once per page rather than once per editor
+pub fn init_style() {
+    if !STYLE_INITIALIZED.replace(true) {
+        set_local_var("font-name", get_font_name());
+        set_local_var("font-size", get_font_size());
+        update_style();
+    }
 }
 
 pub fn get_autorun() -> bool {
@@ -1750,6 +1807,7 @@ fn update_style() {
     };
     new_style.set_inner_text(&format!(
         "@font-face {{ font-family: 'Code Font'; src: url('{url}') format('truetype'); }}\n\
+        :root {{ --code-font-size: {font_size}; }}\n\
         .sized-code {{ font-size: {font_size}; }}\n\
         .experimental-glyph-buttons {{ display: {show_experimental}; }}\n\
         .format-button {{ display: {run_on_format}; }}",

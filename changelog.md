@@ -21,6 +21,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Output comments now use subscripts instead of extra `#`s. They can still be typed as extra `#`s and will be formatted to use subscripts.
 - Add [`&faa`](https://uiua.org/docs/&faa) to append to the end of a file, creating it if it doesn't exist
 - Add numeric subscripts for [`switch ⨬`](https://uiua.org/docs/switch), which switch over that many argument
+- Stabilize [`&fetch`](https://uiua.org/docs/&fetch)
 - Add [`&clear`](https://uiua.org/docs/&clear) system function for clearing terminal/output/window
 - Add [`nan`](https://uiua.org/docs/nan) constant
   - Unlike the `NaN` constant, this syntactically binds with `¯` and cannot be shadowed
@@ -40,6 +41,9 @@ This version is not yet released. If you are reading this on the website, then t
   - `cot`
   - `avg`
 ### Website
+- Run interpreter in a web worker so it doesn't block the page.
+- Allow [`&fetch`](https://uiua.org/docs/&fetch) to run in the pad.
+  - Every new pad will ask for permission to fetch.
 - Add undo and redo buttons to editors on mobile. Only visible if necessary.
 - Separate [Aliases](https://uiua.org/docs/aliases) page from the [Idioms](https://uiua.org/docs/idioms) page
 - Add [APL387](https://dyalog.github.io/APL387/) font to pad

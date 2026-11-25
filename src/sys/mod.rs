@@ -129,10 +129,10 @@ pub type ReadLinesReturnFn<'a> = Box<dyn FnMut(&mut Uiua, ReadLinesFn) -> UiuaRe
 
 /// The function type passed to `&ast`
 #[cfg(not(target_arch = "wasm32"))]
-pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>> + Send>;
+pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Option<Vec<[f64; 2]>>> + Send>;
 /// The function type passed to `&ast`
 #[cfg(target_arch = "wasm32")]
-pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>>>;
+pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Option<Vec<[f64; 2]>>>>;
 
 /// The kind of a handle
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -1582,17 +1582,22 @@ pub(crate) fn run_sys_op_mod(op: &SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult
         }
         SysOp::AudioStream => {
             let [f] = get_ops(ops, env)?;
-            let push_time = f.sig.args() > 0;
-            if f.sig != (0, 1) && f.sig.args() != f.sig.outputs() {
-                return Err(env.error(format!(
-                    "&ast's function must have the same number \
-                        of inputs and outputs, but its signature is {}",
-                    f.sig
-                )));
-            }
             if f.sig == (0, 0) {
                 return Ok(());
             }
+
+            if !matches!(f.sig.net(), 0 | 1) {
+                return Err(env.error(format!(
+                    "&ast's function must have signature |n.n or |n.n+1, but its signature is {}",
+                    f.sig
+                )));
+            }
+
+            // Provide timestamps only if the function seems to expect them
+            let push_time = f.sig.args() > 0;
+            // If the function returns an extra value, expect a "keep going" boolean in front of the audio data
+            let pop_condition = f.sig.net() > 0;
+
             let mut stream_env = env.clone();
             let res = env.rt.backend.stream_audio(Box::new(move |time_array| {
                 if push_time {
@@ -1600,33 +1605,40 @@ pub(crate) fn run_sys_op_mod(op: &SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult
                     stream_env.push(time_array);
                 }
                 stream_env.exec(f.clone())?;
-                let samples = &stream_env.pop(1)?;
+
+                let keep_going: bool;
+                let samples: Value;
+                if pop_condition {
+                    let condition = stream_env.pop(1)?;
+                    samples = stream_env.pop(2)?;
+                    keep_going = condition.as_bool(&stream_env, "Audio stream function with positive net signature must return a boolean in front of the audio samples")?;
+                } else {
+                    samples = stream_env.pop(1)?;
+                    keep_going = true;
+                }
+
+                if !keep_going {
+                    return Ok(None);
+                }
+
                 let samples = samples.as_num_array().ok_or_else(|| {
                     stream_env.error("Audio stream function must return a numeric array")
                 })?;
-                match &*samples.shape {
-                    [_] => Ok(samples.data.iter().map(|&x| [x, x]).collect()),
-                    &[n, 2] => {
-                        let mut samps: Vec<[f64; 2]> = Vec::with_capacity(n);
-                        for samp in samples.data.as_chunks::<2>().0 {
-                            samps.push([samp[0], samp[1]]);
-                        }
-                        Ok(samps)
-                    }
+                let stereo = match &*samples.shape {
+                    [_] | [_, 1] | [1, _] => samples.data.iter().map(|&x| [x, x]).collect(),
+                    &[_, 2] => samples.data.as_chunks::<2>().0.to_vec(),
                     &[2, n] => {
-                        let mut samps: Vec<[f64; 2]> = Vec::with_capacity(n);
-                        for i in 0..n {
-                            samps.push([samples.data[i], samples.data[i + n]]);
-                        }
-                        Ok(samps)
+                        let (left, right) = samples.data.split_at(n);
+                        std::iter::zip(left, right).map(|(&l, &r)| [l, r]).collect()
                     }
-                    _ => Err(stream_env.error(format!(
+                    _ => return Err(stream_env.error(format!(
                         "Audio stream function must return either a \
-                            rank 1 array or a rank 2 array with 2 rows, \
-                            but its shape is {}",
+                                rank 1 array or a rank 2 array with 2 rows, \
+                                but its shape is {}",
                         samples.shape
                     ))),
-                }
+                };
+                Ok(Some(stereo))
             }));
             res.map_err(|e| env.error(e))?;
         }

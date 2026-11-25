@@ -19,7 +19,10 @@ use crate::{
 
 mod metagrid;
 mod scalar;
+mod summary;
+
 use metagrid::{Grid, Metagrid};
+pub use summary::Summary;
 
 pub use scalar::{format_char_inner_pretty, format_char_inner_repr};
 
@@ -82,13 +85,14 @@ pub trait GridFmt: Sized {
     fn box_lines() -> bool {
         false
     }
+    // TODO: Need unit tests for multivector formatting
     /// Whether to allow list elements to be shown on the same line
     fn list_same_line() -> bool {
         true
     }
     /// Summarize the elements of an array of this type
-    fn summarize(_: &[Self]) -> String {
-        String::new()
+    fn summarize(_: &[Self]) -> Option<Summary> {
+        None
     }
     /// The minimum number of elements that require a summary
     fn summary_min_elems() -> usize {
@@ -183,29 +187,24 @@ impl GridFmt for Boxed {
     fn box_lines() -> bool {
         true
     }
-    fn summarize(elems: &[Self]) -> String {
+    fn summarize(elems: &[Self]) -> Option<Summary> {
         if elems.is_empty() {
-            return String::new();
+            return None;
         }
-        let smallest_rank = elems.iter().map(|e| e.0.rank()).min().unwrap();
-        let largest_rank = elems.iter().map(|e| e.0.rank()).max().unwrap();
-        let smallest_shape = (elems.iter().map(|e| &e.0.shape))
-            .min_by_key(|s| s.elements())
-            .unwrap();
-        let largest_shape = (elems.iter().map(|e| &e.0.shape))
-            .max_by_key(|s| s.elements())
-            .unwrap();
-        let rank_summary = if smallest_rank == largest_rank {
-            format!("all rank {smallest_rank}")
-        } else {
-            format!("ranks {smallest_rank}-{largest_rank}")
-        };
-        let shape_summary = if smallest_shape == largest_shape {
-            format!("all shape {smallest_shape}")
-        } else {
-            format!("shapes {smallest_shape}-{largest_shape}")
-        };
-        format!("{rank_summary}, {shape_summary}")
+
+        let shapes = || elems.iter().map(|e| &e.0.shape);
+
+        let min_rank = shapes().map(|s| s.rank()).min()?;
+        let max_rank = shapes().map(|s| s.rank()).max()?;
+        // if element count is equal, break ties with rank
+        // if rank is also equal, break ties lexicographically
+        let min_shape = shapes().min_by_key(|s| (s.elements(), s.rank(), *s))?;
+        let max_shape = shapes().max_by_key(|s| (s.elements(), s.rank(), *s))?;
+
+        Some(Summary::Boxes {
+            ranks: (min_rank, max_rank),
+            shapes: (min_shape.clone(), max_shape.clone()),
+        })
     }
     fn summary_min_elems() -> usize {
         1000
@@ -630,20 +629,20 @@ fn fmt_array<T: GridFmt + ArrayValue>(
 
     let rank = shape.len();
 
-    if requires_summary::<T>(shape) {
-        let summary = T::summarize(data);
-        if !summary.is_empty() {
-            // This is going to need some changes for multiline summaries.
-            let mut first_row = shape_row(shape, T::domain_symbol(data));
-            let grid = if rank == 1 {
-                first_row.extend(": ".chars());
-                first_row.extend(summary.chars());
-                Grid::from_row(first_row)
-            } else {
-                Grid(vec![first_row, summary.chars().collect()])
-            };
-            return Metagrid::from_scalar(grid);
-        }
+    if requires_summary::<T>(shape)
+        && let Some(summary) = T::summarize(data)
+    {
+        // This is (still) going to need some changes for multiline summaries.
+
+        let mut first_row = shape_row(shape, T::domain_symbol(data));
+        let grid = if rank == 1 {
+            first_row.extend(": ".chars());
+            first_row.extend(summary.format(false).chars());
+            Grid::from_row(first_row)
+        } else {
+            Grid(vec![first_row, summary.format(true).chars().collect()])
+        };
+        return Metagrid::from_scalar(grid);
     }
 
     if rank == 0 {

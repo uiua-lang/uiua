@@ -882,7 +882,7 @@
     "description": "Encode an image into a byte array with the specified format"
   },
   "indexin": {
-    "glyph": "⊗",
+    "glyph": "⨴",
     "args": 2,
     "outputs": 1,
     "class": "DyadicArray",

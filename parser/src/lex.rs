@@ -1092,7 +1092,7 @@ impl<'a> Lexer<'a> {
                 "¨" | "𝄈" => self.end(Primitive::Backward, start),
                 "⍛" => self.end(Primitive::Obverse, start),
                 "∈" => self.end(Primitive::MemberOf, start),
-                "⨂" => self.end(Primitive::IndexIn, start),
+                "⨂" | "⊗" => self.end(Primitive::IndexIn, start),
                 "◰" => {
                     self.end(Primitive::Occurrences, start);
                     self.end(Subscr(Subscript::from(1)), self.loc);

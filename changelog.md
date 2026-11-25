@@ -7,8 +7,9 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - Add based integer literals ([numbers tutorial](https://uiua.org/tutorial/Types#numbers))
 - Change a few glyphs:
-  - Change [`stencil ◫`](https://uiua.org/docs/stencil)'s glyph from `⧈` to `◫`
-  - Change [`mask ⚇`](https://uiua.org/docs/mask)'s glyph from `⦷` to `⚇`
+  - Change [`stencil ◫`](https://uiua.org/docs/stencil)'s glyph from `⧈` to `◫`. It looks more like a window.
+  - Change [`mask ⚇`](https://uiua.org/docs/mask)'s glyph from `⦷` to `⚇`. It looks less related to [`partition ⊜`](https://uiua.org/docs/partition) and more like a mask.
+  - Change [`indexin ⨴`](https://uiua.org/docs/indexin)'s glyphs from `⊗` to `⨴`. It looks more related to [`memberof ∊`](https://uiua.org/docs/memberof) and less related to other circle glyphs.
   - These changes are all backward compatible and will be automatically updated by the formatter.
 - Add [`un °`](https://uiua.org/docs/un)[`validate ⊨`](https://uiua.org/docs/validate) for getting the type spec of an array
 - Add [`reduce /`](https://uiua.org/docs/reduce) function packs, which reduce along multiple axes with different functions
@@ -49,6 +50,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [APL387](https://dyalog.github.io/APL387/) font to pad
 - Remove Pixua font from pad
 - Add [Array Summary Notation](https://uiua.org/docs/array-summary) page
+- Add a site build status indicator to the pad page so you can see if changes are being deplyed
 
 ## 0.19.1 - 2026-09-03
 ### Interpreter
@@ -89,8 +91,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [Type Checking](https://uiua.org/docs/experimental#type-checking)
 - Add experimental [`validate ⊨`](https://uiua.org/docs/validate) function to help with type checking
 - Add experimental [`pattern ⍡`](https://uiua.org/docs/pattern) modifier, which makes big pattern match lists easier to debug and maintain
-- Remove the previously deprecated `indexof ⊗` function
-  - As planned, [`indexin ⊗`](https://uiua.org/docs/indexin)'s glyph has been changed, and the old one will format to `⊗`.
+- Remove the previously deprecated `indexof ⨴` function
+  - As planned, [`indexin ⨴`](https://uiua.org/docs/indexin)'s glyph has been changed, and the old one will format to `⨴`.
 - Remove experimental `&b` (breakpoint)
   - It was half-baked and poorly implemented
 - Remove old version of [`reach ∪`](https://uiua.org/docs/reach) that used the `𝄐` glyph
@@ -253,10 +255,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`occurrences ⧆`](https://uiua.org/docs/occurrences)
 - Add experimental sided subscripts for [`backward ˜`](https://uiua.org/docs/backward)
 - Add numeric subscripts for [`occurrences ⧆`](https://uiua.org/docs/occurrences)
-- Add [`indexin ⊗`](https://uiua.org/docs/indexin) function, which is a flipped version of `indexof ⊗`
+- Add [`indexin ⨴`](https://uiua.org/docs/indexin) function, which is a flipped version of `indexof ⊗`
   - This makes its calling convention match [`memberof ∊`](https://uiua.org/docs/memberof)
   - It also matches the argument order of the more common case
-  - [`indexof ⊗`](https://uiua.org/docs/indexof) has been deprecated
+  - [`indexof ⨴`](https://uiua.org/docs/indexof) has been deprecated
   - The formatter will automatically convert existing code
 - Deprecate experimental [`progressive indexof ⊘`](https://uiua.org/docs/progressiveindexof) in favor of [`occurrences ⧆`](https://uiua.org/docs/occurrences)
 - Add the [`exponential ₑ`](https://uiua.org/docs/exponential) function, which computes the exponential function
@@ -318,7 +320,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - Fix a bug in [`rows ≡`](https://uiua.org/docs/rows) [`rotate ↻`](https://uiua.org/docs/rotate)
 - Fix a bug in [`base ⊥`](https://uiua.org/docs/base)
-- Fix a bug in [`indexof ⊗`](https://uiua.org/docs/indexof)
+- Fix a bug in `indexof ⊗`
 - Fix a bug in subscripted [`inventory ⍚`](https://uiua.org/docs/inventory)
 
 ## 0.16.0 - 2025-05-18
@@ -746,7 +748,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
 - [`under ⍜`](https://uiua.org/docs/under) now works with common [`by ⊸`](https://uiua.org/docs/by) patterns
 - [`join ⊂`](https://uiua.org/docs/join) with rank differences greater than 1 can now extend the smaller array
 - [`couple ⊟`](https://uiua.org/docs/couple) with different ranks can now extend the smaller array
-- [`indexof ⊗`](https://uiua.org/docs/indexof) now works with [`fill ⬚`](https://uiua.org/docs/fill) to set the default for when a value is not found
+- [`indexof ⊗`](https://uiua.org/docs/indexin) now works with [`fill ⬚`](https://uiua.org/docs/fill) to set the default for when a value is not found
 - [`un °`](https://uiua.org/docs/un) [`join ⊂`](https://uiua.org/docs/join) is now easier to combine with other inverses
 - [`repeat ⍥`](https://uiua.org/docs/repeat) can now repeat a negative number of times, which will repeat the inverse
 - [`un °`](https://uiua.org/docs/un) [`repeat ⍥`](https://uiua.org/docs/repeat) now requires the repetition count to be inside the [`un °`](https://uiua.org/docs/un) function
@@ -974,7 +976,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - Add the wildcard constant `W`, which matches any number, and `@\W`, which matches any character
   - These work well with [`match ≍`](https://uiua.org/docs/match), [`find ⌕`](https://uiua.org/docs/find), and [`mask ⚇`](https://uiua.org/docs/mask)
 - Add the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, which searches an array for a value and returns a multidimensional index
-  - [`coordinate ⟔`](https://uiua.org/docs/coordinate) is to [`pick ⊡`](https://uiua.org/docs/pick) as [`indexof ⊗`](https://uiua.org/docs/indexof) is to [`select ⊏`](https://uiua.org/docs/select)
+  - [`coordinate ⟔`](https://uiua.org/docs/coordinate) is to [`pick ⊡`](https://uiua.org/docs/pick) as [`indexof ⊗`](https://uiua.org/docs/indexin) is to [`select ⊏`](https://uiua.org/docs/select)
 - Experimental function strands now use the `‿` character, which formats from `__`
 - Add the experimental [`by ⊸`](https://uiua.org/docs/by) modifier, which duplicates a function's last argument before calling it
 - Add the experimental [`quote`](https://uiua.org/docs/quote) modifier, which converts a string to code at compile time

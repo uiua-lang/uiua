@@ -23,7 +23,7 @@ GetExt ← °□⊣ ⊜□ ⊸≠@.
 ]
 ExtMimeExt  ←
 ExtMimeMime ←
-ExtMime     ← °□⊏⊃(⊗ExtMimeExt□|⊂ExtMimeMime□⊂"text/")
+ExtMime     ← °□⊏⊃(⨴ExtMimeExt□|⊂ExtMimeMime□⊂"text/")
 
 # ? Status Mime Bytes
 Response ← (

@@ -328,6 +328,7 @@ fn aliases() -> HashMap<&'static str, &'static [Primitive]> {
         ("split", &[Partition]),
         ("while", &[Do]),
         ("for", &[Repeat]),
+        ("if", &[Repeat, Switch]),
         ("invert", &[Un]),
         ("encode", &[Bits, Base]),
         ("decode", &[Bits, Base]),
@@ -337,6 +338,8 @@ fn aliases() -> HashMap<&'static str, &'static [Primitive]> {
         ("choose", &[Tuples]),
         ("permute", &[Tuples]),
         ("window", &[Stencil]),
+        ("indexof", &[IndexIn]),
+        ("index", &[Pick, Select]),
     ]
     .into_iter()
     .flat_map(|(alias, prims)| (3..=alias.len()).map(move |len| (&alias[..len], prims)))

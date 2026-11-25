@@ -1821,26 +1821,26 @@ primitive!(
     (2, MemberOf, DyadicArray, ("memberof", '∊')),
     /// Find the first index in an array of each row of another array
     ///
-    /// ex: ⊗ [1 2 3] 2
-    /// ex: ⊗ [1_2_3 4_5_6] [4 5 6]
-    /// ex: ⊗ [1_2_3 4_5_6] 2
+    /// ex: ⨴ [1 2 3] 2
+    /// ex: ⨴ [1_2_3 4_5_6] [4 5 6]
+    /// ex: ⨴ [1_2_3 4_5_6] 2
     /// If the index cannot be found, the [length] of the searched-in array is returned.
-    /// ex: ⊗ [0 3 4 5 1] [1 2 3]
-    /// ex: ⊗ [3 4 5] [1_2_3 4_5_6]
-    /// ex: ⊗ [1 2 3] 5
+    /// ex: ⨴ [0 3 4 5 1] [1 2 3]
+    /// ex: ⨴ [3 4 5] [1_2_3 4_5_6]
+    /// ex: ⨴ [1 2 3] 5
     ///
     /// [fill] can be used to set the value of missing items.
-    /// ex:   ⊗ [1 2 3 4] [4 8 2 9 1]
-    ///   : ⬚∞⊗ [1 2 3 4] [4 8 2 9 1]
+    /// ex:   ⨴ [1 2 3 4] [4 8 2 9 1]
+    ///   : ⬚∞⨴ [1 2 3 4] [4 8 2 9 1]
     ///
     /// You can use the returned indices with [select] to get the rows that were found.
     /// If you expect any of the searched-for rows to be missing, you can use [fill] to set a default value.
     /// ex: [1 2 3 4 5]
     ///   : [2 3 5 7 11 13]
-    ///   : ⬚∞⊏ ⤚⊗
+    ///   : ⬚∞⊏ ⤚⨴
     ///
     /// [indexin] is closely related to [memberof].
-    (2, IndexIn, DyadicArray, ("indexin", '⊗')),
+    (2, IndexIn, DyadicArray, ("indexin", '⨴')),
     /// Get the base digits of a number
     ///
     /// When passed a scalar number, [base] returns the base-N digits of the numbers in an array.

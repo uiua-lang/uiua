@@ -845,17 +845,15 @@ impl SysBackend for NativeSys {
     #[cfg(feature = "audio")]
     fn stream_audio(&self, f: crate::AudioStreamFn) -> Result<(), String> {
         use hodaun::*;
+        use std::sync::OnceLock;
         struct TheSource {
             time: f64,
             samples: std::vec::IntoIter<[f64; 2]>,
+            error: Arc<OnceLock<crate::UiuaError>>,
             f: crate::AudioStreamFn,
         }
-        impl Source for TheSource {
-            type Frame = Stereo;
-            fn next(&mut self, sample_rate: f64) -> Option<Self::Frame> {
-                if let Some([left, right]) = self.samples.next() {
-                    return Some(Stereo { left, right });
-                }
+        impl TheSource {
+            fn next_chunk(&mut self, sample_rate: f64) -> Option<Vec<[f64; 2]>> {
                 const LEN: usize = 10000;
                 let mut times = Vec::with_capacity(LEN);
                 for _ in 0..LEN {
@@ -867,30 +865,37 @@ impl SysBackend for NativeSys {
                 {
                     eprintln!("Failed to send audio time: {e}");
                 }
-                match (self.f)(&times) {
-                    Ok(samples) => {
-                        self.samples = samples.into_iter();
-                        self.next(sample_rate)
+                (self.f)(&times).unwrap_or_else(|e| {
+                    _ = self.error.set(e);
+                    None
+                })
+            }
+        }
+        impl Source for TheSource {
+            type Frame = Stereo;
+            fn next(&mut self, sample_rate: f64) -> Option<Self::Frame> {
+                loop {
+                    if let Some([left, right]) = self.samples.next() {
+                        break Some(Stereo { left, right });
                     }
-                    Err(e) => {
-                        eprintln!("{e}");
-                        None
-                    }
+                    self.samples = self.next_chunk(sample_rate)?.into_iter();
                 }
             }
         }
+        let error = Arc::new(OnceLock::new());
         let source = TheSource {
             time: NATIVE_SYS.audio_stream_time.lock().unwrap_or(0.0),
             samples: Vec::new().into_iter(),
+            error: error.clone(),
             f,
         };
-        match default_output::<Stereo>() {
-            Ok(mut mixer) => {
-                mixer.add(source);
-                mixer.block();
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to initialize audio output stream: {e}").to_string()),
+        let mut mixer = default_output::<Stereo>()
+            .map_err(|e| format!("Failed to initialize audio output stream: {e}"))?;
+        mixer.add(source);
+        mixer.block();
+        match Arc::into_inner(error).unwrap().into_inner() {
+            None => Ok(()),
+            Some(e) => Err(e.to_string()),
         }
     }
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {

@@ -687,6 +687,15 @@ impl Node {
             _ => Box::new([].into_iter()),
         }
     }
+    /// Get this node and all child nodes recursively in DFS order
+    pub fn recursive_sub_nodes(&self) -> Box<dyn Iterator<Item = &Node> + '_> {
+        Box::new(once(self).chain(self.sub_nodes().flat_map(Self::recursive_sub_nodes)))
+    }
+    /// Check if a node recursively contains a [`Node::Push`] with more than 1000 elements
+    pub(crate) fn has_large_literal(&self) -> bool {
+        self.recursive_sub_nodes()
+            .any(|node| matches!(node, Node::Push(value, _) if value.shape.elements() > 1000))
+    }
 }
 
 impl From<&[Node]> for Node {
@@ -906,6 +915,9 @@ impl Node {
             is
         }
 
+        if self.has_large_literal() {
+            return recurse(self, min_purity, asm, &mut IndexSet::new());
+        }
         thread_local! {
             static CACHE: RefCell<HashMap<(u64, Purity), bool>> = RefCell::default();
         }

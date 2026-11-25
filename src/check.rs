@@ -47,6 +47,15 @@ pub fn nodes_clean_sig(nodes: &[Node]) -> Option<Signature> {
 }
 
 fn nodes_all_sigs(nodes: &[Node]) -> Result<Signature, SigCheckError> {
+    let check = || {
+        let env = VirtualEnv::from_nodes(nodes)?;
+        let under_sig = env.under.sig();
+        Ok((env.stack.sig()).with_under(under_sig.args(), under_sig.outputs()))
+    };
+    // Checking a signature is cheaper than hashing a large literal for the cache.
+    if nodes.iter().any(Node::has_large_literal) {
+        return check();
+    }
     type AllSigsCache = HashMap<u64, Signature>;
     thread_local! {
         static CACHE: RefCell<AllSigsCache> = RefCell::new(AllSigsCache::new());
@@ -58,9 +67,7 @@ fn nodes_all_sigs(nodes: &[Node]) -> Result<Signature, SigCheckError> {
         if let Some(sigs) = cache.borrow().get(&hash) {
             return Ok(*sigs);
         }
-        let env = VirtualEnv::from_nodes(nodes)?;
-        let under_sig = env.under.sig();
-        let sig = (env.stack.sig()).with_under(under_sig.args(), under_sig.outputs());
+        let sig = check()?;
         cache.borrow_mut().insert(hash, sig);
         Ok(sig)
     })

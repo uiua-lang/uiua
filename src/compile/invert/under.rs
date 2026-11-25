@@ -36,6 +36,9 @@ fn under_inverse(
     if input.is_empty() {
         return Ok((Node::empty(), Node::empty()));
     }
+    if input.iter().any(Node::has_large_literal) {
+        return under_inverse_impl(input, g_sig, inverse, asm);
+    }
 
     type Key = (u64, Signature, bool);
     thread_local! {

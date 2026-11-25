@@ -33,6 +33,9 @@ pub fn un_inverse(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
     if input.is_empty() {
         return Ok(Node::empty());
     }
+    if input.iter().any(Node::has_large_literal) {
+        return un_inverse_impl(input, asm, false);
+    }
 
     thread_local! {
         static CACHE: RefCell<HashMap<u64, InversionResult<Node>>> = Default::default();
@@ -95,6 +98,9 @@ fn un_inverse_impl(
 fn anti_inverse(input: &[Node], asm: &Assembly, for_un: bool) -> InversionResult<Node> {
     if input.is_empty() {
         return generic();
+    }
+    if input.iter().any(Node::has_large_literal) {
+        return anti_inverse_impl(input, asm, for_un);
     }
     thread_local! {
         static CACHE: RefCell<HashMap<u64, InversionResult<Node>>> = Default::default();

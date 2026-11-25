@@ -119,7 +119,7 @@ impl Grid<char> {
     /// If a row has no delimiter, then its text is RIGHT-aligned on the PRE-delimiter side.
     /// This is used for decimal values.
     /// For example: `⍉¤[1.2345 12.345 123.45 1234.5 12345 1 12]`:
-    /// ```
+    /// ```ignore
     /// ╭─            
     /// ╷     1.2345  
     ///      12.345   
@@ -146,7 +146,7 @@ impl Grid<char> {
     /// If a row has no delimiter, then its text is LEFT-aligned on the POST-delimiter side.
     /// This is used for arrays of boxes, specifically when values have inline labels.
     /// For example: `⍉¤{□$ab 1 □$cdefg 2_3_4 5678}`:
-    /// ```
+    /// ```ignore
     /// ┌─                   
     /// ╷    ∙□ab: 1      │  
     ///   ────────────────┤  

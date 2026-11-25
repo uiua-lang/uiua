@@ -11,11 +11,10 @@ use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::f64::consts::{E, PI, SQRT_2, TAU};
 use std::fmt::Write;
-use std::iter::once;
 
 impl GridFmt for u8 {
     fn fmt_grid(&self, _params: GridFmtParams) -> Grid {
-        vec![self.to_string().chars().collect()]
+        Grid::from_utf8(&self.to_string())
     }
     fn summarize(elems: &[Self]) -> String {
         if elems.is_empty() {
@@ -66,7 +65,7 @@ impl GridFmt for f64 {
             pos_formatted.insert_str(0, minus);
             pos_formatted
         };
-        vec![s.chars().collect()]
+        Grid::from_utf8(&s)
     }
     fn summarize(elems: &[Self]) -> String {
         if elems.is_empty() {
@@ -324,12 +323,12 @@ impl GridFmt for Complex {
             self.re.fmt_grid(params)
         } else if self.re.abs() == 0.0 {
             if self.im == 1.0 {
-                vec![vec!['i']]
+                Grid::from_scalar('i')
             } else if self.im == -1.0 {
-                vec![vec!['¯', 'i']]
+                Grid::from_utf8("¯i")
             } else {
                 let mut grid = self.im.fmt_grid(params);
-                grid[0].push('i');
+                grid.0[0].push('i');
                 grid
             }
         } else {
@@ -340,9 +339,9 @@ impl GridFmt for Complex {
                 self.im.abs().grid_string(params.label)
             };
             let sign = if self.im < 0.0 { '-' } else { '+' };
-            re[0].push(sign);
-            re[0].extend(im.chars());
-            re[0].push('i');
+            re.0[0].push(sign);
+            re.0[0].extend(im.chars());
+            re.0[0].push('i');
             re
         }
     }
@@ -434,7 +433,7 @@ impl GridFmt for crate::Multivector {
             let mask = mask_table[i];
             if n.abs() != 1.0 || mask == 0 {
                 let n_grid = n.abs().fmt_grid(Default::default());
-                s.extend(n_grid.into_iter().next().unwrap());
+                s.extend(n_grid.0.into_iter().next().unwrap());
             }
             if mask == 0 {
                 continue;
@@ -453,7 +452,7 @@ impl GridFmt for crate::Multivector {
         if s.is_empty() {
             s = vec!['0'];
         }
-        vec![s]
+        Grid::from_utf32(s)
     }
     fn list_same_line() -> bool {
         false
@@ -548,11 +547,9 @@ impl GridFmt for crate::Multivector {
 
 impl GridFmt for char {
     fn fmt_grid(&self, _params: GridFmtParams) -> Grid {
-        vec![
-            once('@')
-                .chain(format_char_inner_pretty(*self).chars())
-                .collect(),
-        ]
+        let mut s = format_char_inner_pretty(*self).chars().collect::<Vec<_>>();
+        s.insert(0, '@');
+        Grid::from_utf32(s)
     }
     fn format_delims() -> (&'static str, &'static str) {
         ("", "")

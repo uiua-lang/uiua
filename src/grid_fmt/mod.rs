@@ -355,11 +355,8 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 T::alignment()
             };
 
-            let dimensions = MetagridDimensions::of(&metagrid);
-
             let mut grid = synthesize_grid(
                 metagrid,
-                dimensions,
                 &self.shape,
                 map_key_align.unwrap_or(main_align),
                 main_align,
@@ -813,38 +810,6 @@ impl Line {
     }
 }
 
-fn max_of_lengths<T>(rows: impl IntoIterator<Item: AsRef<[T]>>, fill: usize) -> usize {
-    rows.into_iter()
-        .map(|row| row.as_ref().len())
-        .max()
-        .unwrap_or(fill)
-}
-
-// This entire struct's days are numbered.
-struct MetagridDimensions {
-    metagrid_height: usize,
-    metagrid_width: usize,
-    row_heights: Vec<usize>,
-}
-
-impl MetagridDimensions {
-    fn of(metagrid: &Metagrid) -> Self {
-        let metagrid_height = metagrid.len_0();
-        let metagrid_width = metagrid.len_1();
-
-        let row_heights: Vec<usize> = metagrid
-            .rows()
-            .map(|metarow| max_of_lengths(metarow.iter().map(|g| &g.0), 1))
-            .collect();
-
-        Self {
-            metagrid_height,
-            metagrid_width,
-            row_heights,
-        }
-    }
-}
-
 #[allow(
     clippy::too_many_arguments,
     reason = "this code was extracted from <Array<T> as GridFmt>::grid_fmt largely to avoid monomorphization, \
@@ -852,7 +817,6 @@ impl MetagridDimensions {
 )]
 fn synthesize_grid(
     mut metagrid: Metagrid,
-    dimensions: MetagridDimensions,
     shape: &[usize],
     first_align: ElemAlign,
     main_align: ElemAlign,
@@ -864,18 +828,14 @@ fn synthesize_grid(
     let mut output_grid = Grid::new();
 
     assert!(metagrid.is_rectangular());
-
-    let MetagridDimensions {
-        metagrid_height,
-        metagrid_width,
-        row_heights,
-    } = dimensions;
+    let metagrid_height = metagrid.len_0();
+    let metagrid_width = metagrid.len_1();
 
     // Pad each metagrid cell to its row's max height and column's max width
-    for y in 0..metagrid.len_0() {
+    for y in 0..metagrid_height {
         metagrid.align_row(y);
     }
-    for x in 0..metagrid.len_1() {
+    for x in 0..metagrid_width {
         let alignment = if x == 0 { first_align } else { main_align };
         metagrid.align_column(x, alignment);
     }
@@ -883,7 +843,7 @@ fn synthesize_grid(
 
     // Actually combine the cells and insert dividers
     for (meta_y, metarow) in metagrid.0.into_iter().enumerate() {
-        let row_height = row_heights[meta_y];
+        let row_height = metarow[0].len_0();
         // The rows of the output grid that we're currently working on
         let mut subrows = Grid(vec![vec![]; row_height]);
         // The horizontal positions of vertical gridlines

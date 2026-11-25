@@ -13,6 +13,7 @@ use crate::{
     utils::{self, ChallengeDef},
 };
 
+/// Queue a run, returning whether it was dispatched immediately.
 pub(crate) fn run(
     editor: u64,
     code: String,
@@ -21,7 +22,7 @@ pub(crate) fn run(
     seed: u64,
     on_output: impl Fn(OutputUpdate) + 'static,
     on_complete: impl FnOnce(Result<RunResult, String>) + 'static,
-) {
+) -> bool {
     cancel(editor, false);
     CLIENT.with(|client| {
         client.borrow_mut().queue.push_back(Job {
@@ -45,6 +46,10 @@ pub(crate) fn run(
         });
     });
     next_job();
+    client(|client| {
+        client.status == WorkerStatus::Running
+            && client.queue.front().is_some_and(|job| job.editor == editor)
+    })
 }
 
 /// Cancel the worker for an editor. `notify` determines whether the job's `on_complete` closure should run.

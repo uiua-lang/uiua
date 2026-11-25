@@ -45,6 +45,7 @@ pub enum EditorMode {
 
 enum EditorOutput {
     Empty,
+    Loading,
     Running,
     Ready {
         allow_autoplay: bool,
@@ -462,7 +463,7 @@ pub fn Editor<'a>(
         cancel_output_callbacks();
         output_data.set(Output::default());
         set_diag_output.set(Vec::new());
-        set_output.set(EditorOutput::Running);
+        set_output.set(EditorOutput::Loading);
         let allow_autoplay = !matches!(mode, EditorMode::Example) && get_autoplay();
         let flex_wrap = if get_top_at_top() {
             "flex-wrap: wrap;"
@@ -492,13 +493,16 @@ pub fn Editor<'a>(
         };
         let (hidden, challenge) =
             get_state.with_untracked(|st| (st.hidden.clone(), st.challenge.clone()));
-        worker::client::run(
+        if worker::client::run(
             id,
             input,
             hidden,
             challenge,
             seed,
             move |update| {
+                if output.with_untracked(|output| matches!(output, EditorOutput::Loading)) {
+                    set_output.set(EditorOutput::Running);
+                }
                 // Handle pending clear
                 if let Some(timeout) = pending_clear.write_value().take() {
                     timeout.clear();
@@ -554,7 +558,9 @@ pub fn Editor<'a>(
                     }
                 }
             },
-        );
+        ) {
+            set_output.set(EditorOutput::Running);
+        }
     };
 
     // Replace the selected text in the editor with the given string
@@ -2505,6 +2511,7 @@ pub fn Editor<'a>(
                             <div id=format!("output-{id}") class="output sized-code">
                                 {move || output.with(|output| match output {
                                     EditorOutput::Empty => ().into_any(),
+                                    EditorOutput::Loading => view! { <div class="running-text">"Loading"</div> }.into_any(),
                                     EditorOutput::Running => view! { {render_output(false, "")} <div class="running-text">"Running"</div> }.into_any(),
                                     EditorOutput::Ready { allow_autoplay, flex_wrap } => render_output(*allow_autoplay, *flex_wrap).into_any(),
                                 })}

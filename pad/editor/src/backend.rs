@@ -493,43 +493,26 @@ impl SysBackend for WebBackend {
         Ok(())
     }
     fn sleep(&self, seconds: f64) -> Result<(), String> {
-        if cfg!(target_arch = "wasm32") {
-            mod js {
-                #[wasm_bindgen::prelude::wasm_bindgen(inline_js = "
-                    const SAB = new WebAssembly.Memory({ initial: 0, maximum: 0, shared: true }).buffer.constructor;
-                    const view = new Int32Array(new SAB(4));
-
-                    export function atomics_wait(ms) {
-                        Atomics.wait(view, 0, 0, ms);
-                    }
-
-                    Atomics.pause ??= () => {}
-
-                    export function pause_batch(n) {
-                        for (let i = 0; i < n; i++) {
-                            Atomics.pause();
-                        }
-                    }
-                ")]
-                extern "C" {
-                    pub fn atomics_wait(ms: f64);
-                    pub fn pause_batch(n: u32);
-                }
+        if worker::is_worker() {
+            use js_sys::{Atomics, Int32Array, Object, Reflect, WebAssembly::Memory};
+            thread_local! {
+                static VIEW: Int32Array = {
+                    let descriptor = Object::new();
+                    Reflect::set(&descriptor, &"initial".into(), &1.into()).unwrap();
+                    Reflect::set(&descriptor, &"maximum".into(), &1.into()).unwrap();
+                    Reflect::set(&descriptor, &"shared".into(), &true.into()).unwrap();
+                    Int32Array::new(&Memory::new(&descriptor).unwrap().buffer())
+                };
             }
-            // performance.now() is only ms precision anyway, so on worker thread sleep that many ms.
-            if worker::is_worker() {
-                js::atomics_wait(seconds * 1000.0);
+            if VIEW
+                .with(|view| Atomics::wait_with_timeout(view, 0, 0, seconds * 1000.0))
+                .is_ok()
+            {
                 return Ok(());
             }
-            // On the main thread, Atomics.wait is not allowed, so use Atomics.pause to reduce power.
-            let start = now();
-            while now() - start < seconds {
-                js::pause_batch(1000);
-            }
-        } else {
-            let start = now();
-            while now() - start < seconds {}
         }
+        let start = now();
+        while now() - start < seconds {}
         Ok(())
     }
     fn allow_thread_spawning(&self) -> bool {

@@ -493,7 +493,7 @@ impl SysBackend for WebBackend {
         Ok(())
     }
     fn sleep(&self, seconds: f64) -> Result<(), String> {
-        if cfg!(all(target_arch = "wasm32", feature = "web")) {
+        if cfg!(target_arch = "wasm32") {
             mod js {
                 #[wasm_bindgen::prelude::wasm_bindgen(inline_js = "
                     const SAB = new WebAssembly.Memory({ initial: 0, maximum: 0, shared: true }).buffer.constructor;

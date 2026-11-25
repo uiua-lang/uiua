@@ -355,7 +355,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 T::alignment()
             };
 
-            let dimensions = MetagridDimensions::of::<T>(&metagrid);
+            let dimensions = MetagridDimensions::of(&metagrid);
 
             let mut grid = synthesize_grid(
                 metagrid,
@@ -820,6 +820,7 @@ fn max_of_lengths<T>(rows: impl IntoIterator<Item: AsRef<[T]>>, fill: usize) -> 
         .unwrap_or(fill)
 }
 
+// This entire struct's days are numbered.
 struct MetagridDimensions {
     metagrid_height: usize,
     metagrid_width: usize,
@@ -827,7 +828,7 @@ struct MetagridDimensions {
 }
 
 impl MetagridDimensions {
-    fn of<T: ArrayValue>(metagrid: &Metagrid) -> Self {
+    fn of(metagrid: &Metagrid) -> Self {
         let metagrid_height = metagrid.len_0();
         let metagrid_width = metagrid.len_1();
 

@@ -193,10 +193,10 @@ impl Grid<char> {
 }
 
 fn all_same<T: PartialEq>(mut iter: impl Iterator<Item = T>) -> bool {
-    let Some(first) = iter.next() else {
-        return true;
-    };
-    return iter.all(|val| val == first);
+    match iter.next() {
+        Some(first) => iter.all(|val| val == first),
+        None => true,
+    }
 }
 
 impl Metagrid<char> {

@@ -1147,7 +1147,8 @@ impl Value {
             self.as_shaped_indices(env.ctx().is_scalar_filled(&from), env)?;
         val_as_arr!(from, |a| {
             let mut a = a;
-            a.select(indices_shape, &indices_data, env).map(Into::into)
+            a.select(indices_shape, &indices_data, &[], env)
+                .map(Into::into)
         })
     }
     pub(crate) fn undo_select(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -1277,6 +1278,7 @@ impl<T: ArrayValue> Array<T> {
         &mut self,
         indices_shape: &[usize],
         indices: &[isize],
+        cur_deep_index: &[isize],
         env: &Uiua,
     ) -> UiuaResult<Self> {
         if indices_shape.len() > 1 {
@@ -1297,8 +1299,10 @@ impl<T: ArrayValue> Array<T> {
                 env,
             )?;
             let mut rows = Vec::with_capacity(row_count);
-            for indices_row in indices.chunks_exact(row_len) {
-                rows.push(self.select(&indices_shape[1..], indices_row, env)?);
+            for (i, indices_row) in indices.chunks_exact(row_len).enumerate() {
+                let mut new_deep_index = cur_deep_index.to_owned();
+                new_deep_index.push(i as isize);
+                rows.push(self.select(&indices_shape[1..], indices_row, &new_deep_index, env)?);
             }
             let mut arr = Array::from_row_arrays(rows, env)?;
             if let Some(label) = &self.meta.label {
@@ -1306,7 +1310,8 @@ impl<T: ArrayValue> Array<T> {
             }
             Ok(arr)
         } else {
-            let fill = env.ctx().scalar_fill::<T>().map(|fv| fv.value);
+            let scalar_fill = env.ctx().scalar_fill::<T>().map(|fv| fv.value);
+            let array_fill = env.ctx().array_fill::<T>().map(|fv| fv.value);
             let indices_sorted_up =
                 indices_shape.len() == 1 && indices.is_sorted() && indices.iter().all(|&i| i >= 0);
             let indices_sorted_down = indices_shape.len() == 1
@@ -1328,20 +1333,32 @@ impl<T: ArrayValue> Array<T> {
                     let keys = self.meta.take_map_keys().unwrap().normalized();
                     Some(val_as_arr!(keys, |keys| {
                         let mut keys = keys;
-                        keys.select(indices_shape, indices, env).unwrap().into()
+                        keys.select(indices_shape, indices, cur_deep_index, env)
+                            .unwrap()
+                            .into()
                     }))
                 })
                 .flatten();
-            for &i in indices {
+            for (i_index, &i) in indices.iter().enumerate() {
                 let i = if i >= 0 {
                     let ui = i as usize;
                     if ui >= row_count {
-                        match &fill {
-                            Ok(fill) => {
-                                selected.extend_repeat(fill, row_len);
+                        match (&array_fill, &scalar_fill) {
+                            (Ok(array_fill), _)
+                                if let Some(specific_fill) = {
+                                    let mut multidim_index = cur_deep_index.to_owned();
+                                    multidim_index.push(i_index as isize);
+                                    array_fill.pick_single(&multidim_index, env).ok()
+                                } =>
+                            {
+                                selected.extend(specific_fill.elements().cloned());
                                 continue;
                             }
-                            Err(e) => {
+                            (_, Ok(scalar_fill)) => {
+                                selected.extend_repeat(scalar_fill, row_len);
+                                continue;
+                            }
+                            (_, Err(e)) => {
                                 return Err(env
                                     .error(format!(
                                         "Index {i} is out of bounds of length {row_count}{e}"
@@ -1352,12 +1369,22 @@ impl<T: ArrayValue> Array<T> {
                     }
                     ui
                 } else {
-                    match &fill {
-                        Ok(fill) => {
+                    match (&array_fill, &scalar_fill) {
+                        (Ok(array_fill), _)
+                            if let Some(specific_fill) = {
+                                let mut multidim_index = cur_deep_index.to_owned();
+                                multidim_index.push(i_index as isize);
+                                array_fill.pick_single(&multidim_index, env).ok()
+                            } =>
+                        {
+                            selected.extend(specific_fill.elements().cloned());
+                            continue;
+                        }
+                        (_, Ok(fill)) => {
                             selected.extend_repeat(fill, row_len);
                             continue;
                         }
-                        Err(e) => {
+                        (_, Err(e)) => {
                             let pos_i = (row_count as isize + i) as usize;
                             if pos_i >= row_count {
                                 return Err(env
@@ -1388,12 +1415,12 @@ impl<T: ArrayValue> Array<T> {
                 array.map(map_keys, env.ctx()).unwrap();
             }
             array.meta.mark_sorted_up(
-                fill.is_err()
+                scalar_fill.is_err()
                     && (indices_sorted_up && selected_sorted_up
                         || indices_sorted_down && selected_sorted_down),
             );
             array.meta.mark_sorted_down(
-                fill.is_err()
+                scalar_fill.is_err()
                     && (indices_sorted_up && selected_sorted_down
                         || indices_sorted_down && selected_sorted_up),
             );

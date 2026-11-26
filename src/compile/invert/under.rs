@@ -225,7 +225,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     )),
     &MaybeVal(StencilPat),
     &MaybeVal(SidedStencilPat),
-    // Classify and deduplicate
+    // Classify, deduplicate, and indexin
     &(
         Classify,
         (Dup, Deduplicate, PushUnd(1), Classify),
@@ -236,6 +236,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
         (Dup, Classify, PushUnd(1), Deduplicate),
         (PopUnd(1), Select),
     ),
+    &(IndexIn, (CopyUnd(2), IndexIn), (PopUnd(2), UndoIndexIn)),
     // Where
     &(
         Where,

@@ -85,7 +85,6 @@ pub trait GridFmt: Sized {
     fn box_lines() -> bool {
         false
     }
-    // TODO: Need unit tests for multivector formatting
     /// Whether to allow list elements to be shown on the same line
     fn list_same_line() -> bool {
         true
@@ -339,9 +338,16 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     parent_rank: self.rank(),
                     ..params
                 };
-                let mut metagrid = fmt_array(&self.data, &self.shape, params);
+
+                let mut layout_shape = self.shape.clone();
+                if !T::list_same_line() && layout_shape.rank() == 1 {
+                    // Rank-1 arrays of multivectors are laid out as if they have shape [n 1].
+                    layout_shape.push(1);
+                }
+
+                let mut metagrid = fmt_array(&self.data, &layout_shape, params);
                 if !T::box_lines() {
-                    add_spacing(&mut metagrid, &self.shape);
+                    add_spacing(&mut metagrid, &self.shape, T::separation());
                 }
                 metagrid
             });
@@ -694,10 +700,10 @@ fn fmt_array<T: GridFmt + ArrayValue>(
 }
 
 // TODO: This logic ought to be much closer to the code for adding grid lines to arrays of boxes.
-fn add_spacing(metagrid: &mut Metagrid, shape: &[usize]) {
+fn add_spacing(metagrid: &mut Metagrid, shape: &[usize], separation: usize) {
     for x in (1..metagrid.len_1()).rev() {
         let spacing = 1 + count_dividers(x - 1, shape, 1);
-        let g = Grid::from_scalar_shape(' ', (1, spacing));
+        let g = Grid::from_scalar_shape(' ', (1, spacing * separation));
         for meta_row in metagrid.rows_mut() {
             meta_row.insert(x, g.clone());
         }

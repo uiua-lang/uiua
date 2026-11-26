@@ -505,7 +505,9 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 
             // Handle really big grid
             if shape.len() > 1 {
-                let max_width = terminal_size().map_or(1000, |(w, _)| w.saturating_sub(4).max(4));
+                let max_width = terminal_size()
+                    .filter(|_| !cfg!(test))
+                    .map_or(1000, |(w, _)| w.saturating_sub(4).max(4));
                 for row in grid.iter_mut() {
                     if row.len() > max_width {
                         let diff = row.len() - max_width;

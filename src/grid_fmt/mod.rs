@@ -640,15 +640,19 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     if requires_summary::<T>(shape)
         && let Some(summary) = T::summarize(data)
     {
-        // This is (still) going to need some changes for multiline summaries.
+        let shape_row = shape_row(shape, T::domain_symbol(data));
 
-        let mut first_row = shape_row(shape, T::domain_symbol(data));
+        let mut grid = Grid::from_utf32(shape_row);
         let grid = if rank == 1 {
-            first_row.extend(": ".chars());
-            first_row.extend(summary.format(false).chars());
-            Grid::from_row(first_row)
+            grid.0[0].extend([':', ' ']);
+            let summary = summary.to_grid(false);
+            grid.ensure_height(summary.len_0(), true);
+            grid.join_1(summary)
         } else {
-            Grid(vec![first_row, summary.format(true).chars().collect()])
+            let summary = summary.to_grid(true);
+            grid.append_0(summary);
+            grid.align_center(grid.len_1());
+            grid
         };
         return Metagrid::from_scalar(grid);
     }

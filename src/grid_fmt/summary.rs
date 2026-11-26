@@ -1,8 +1,9 @@
-use super::GridFmt;
+use super::{ElemAlign, Grid, GridFmt, Metagrid};
 use crate::{ArrayCmp, Primitive, Shape};
 use smallvec::SmallVec;
 use std::num::NonZero;
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Summary {
     All(String),
     Multiset(Vec<(String, usize)>),
@@ -85,8 +86,7 @@ impl Summary {
         Some(Self::Multiset(pairs))
     }
 
-    // This will return a Metagrid in the future.
-    pub fn format(&self, _multiline: bool) -> String {
+    pub fn to_grid(&self, multiline: bool) -> Grid {
         fn join<T: ToString>(delim: &str, iter: impl IntoIterator<Item = T>) -> String {
             iter.into_iter()
                 .map(|v| v.to_string())
@@ -105,44 +105,101 @@ impl Summary {
         }
 
         match self {
-            Self::All(value) => format!("all {value}"),
+            Self::All(value) => Grid::from_utf8(&format!("all {value}")),
             Self::Multiset(pairs) => {
-                let (dedup, occ) = (Primitive::Deduplicate, Primitive::Occurrences);
-                let value_summary = join_prefix(dedup, " ", pairs.iter().map(|p| &p.0));
-                let count_summary = join_prefix(occ, " ", pairs.iter().map(|p| &p.1));
-                format!("{value_summary} {count_summary}")
+                let [dedup, occ] = [Primitive::Deduplicate, Primitive::Occurrences]
+                    .map(|p| p.glyph().unwrap())
+                    .map(Grid::from_scalar);
+
+                let mut value_summary = pairs
+                    .iter()
+                    .map(|p| Grid::from_utf8(&p.0))
+                    .collect::<Vec<_>>();
+                let mut count_summary = pairs
+                    .iter()
+                    .map(|p| Grid::from_utf8(&p.1.to_string()))
+                    .collect::<Vec<_>>();
+
+                value_summary.insert(0, dedup);
+                count_summary.insert(0, occ);
+
+                let [a, b] = [value_summary, count_summary].map(Metagrid::from_row);
+                let mut metagrid = if multiline { a.join_0(b) } else { a.join_1(b) };
+
+                assert!(metagrid.is_rectangular());
+                for y in 0..metagrid.len_0() {
+                    metagrid.align_row(y);
+                }
+                for x in 0..metagrid.len_1() {
+                    metagrid.align_column(x, ElemAlign::Center);
+                }
+                assert!(metagrid.is_meta_rectangular());
+
+                for row in metagrid.rows_mut() {
+                    for x in (1..row.len()).rev() {
+                        row.insert(x, Grid::from_scalar(' '));
+                    }
+                }
+
+                metagrid.flatten()
             }
             Self::Boxes {
                 ranks: (min_rank, max_rank),
                 shapes: (min_shape, max_shape),
             } => {
-                if min_shape == max_shape {
-                    format!("all shape {min_shape}") // uniform shape implies uniform rank
+                let rows = if min_shape == max_shape {
+                    vec![format!("all shape {min_shape}")] // uniform shape implies uniform rank
                 } else if min_rank == max_rank {
-                    format!("all rank {min_rank}, shapes {min_shape}-{max_shape}")
+                    vec![
+                        format!("all rank {min_rank}"),
+                        format!("shapes {min_shape}-{max_shape}"),
+                    ]
                 } else {
-                    format!("ranks {min_rank}-{max_rank}, shapes {min_shape}-{max_shape}")
+                    vec![
+                        format!("ranks {min_rank}-{max_rank}"),
+                        format!("shapes {min_shape}-{max_shape}"),
+                    ]
+                };
+
+                if multiline {
+                    let mut grid = Grid::from_utf8_rows(rows);
+                    grid.align_center(grid.len_1());
+                    grid
+                } else {
+                    Grid::from_utf8(&rows.join(", "))
                 }
             }
-            Self::RangeMean { range, mean } => format!("{}-{} μ{}", range.0, range.1, mean),
+            Self::RangeMean { range, mean } => {
+                Grid::from_utf8(&format!("{}-{} μ{}", range.0, range.1, mean))
+            }
             Self::RangeMeanWithNans {
                 range,
                 mean,
                 nan_count,
             } => {
                 let stats = format_args!("{}-{} μ{}", range.0, range.1, mean);
-                if nan_count.get() == 1 {
+                let s = if nan_count.get() == 1 {
                     format!("{stats} (1 nan)")
                 } else {
                     format!("{stats} ({nan_count} nans)")
+                };
+                Grid::from_utf8(&s)
+            }
+            Self::Text(parts) => {
+                if multiline {
+                    let mut grid = Grid::from_utf8_rows(parts);
+                    grid.align_left(grid.len_1());
+                    grid
+                } else {
+                    let s = match parts[..] {
+                        [] => String::new(),
+                        [part] => part.to_owned(),
+                        [a, b] => format!("{a} and {b}"),
+                        _ => parts.join(", "),
+                    };
+                    Grid::from_utf8(&s)
                 }
             }
-            Self::Text(parts) => match parts[..] {
-                [] => String::new(),
-                [part] => part.to_owned(),
-                [a, b] => format!("{a} and {b}"),
-                _ => join(", ", parts),
-            },
             #[cfg(feature = "ga")]
             Self::Multivectors {
                 dims,
@@ -181,7 +238,16 @@ impl Summary {
                     },
                 };
 
-                format!("{dim_sum} {flavor_sum} ({grade_sum}) ⌵{min_mag}-{max_mag}")
+                let rows = [
+                    dim_sum,
+                    flavor_sum,
+                    format!("({grade_sum})"),
+                    format!("⌵{min_mag}-{max_mag}"),
+                ];
+
+                let mut grid = Grid::from_utf8_rows(rows.into_iter().filter(|s| !s.is_empty()));
+                grid.align_center(grid.len_1());
+                grid
             }
         }
     }

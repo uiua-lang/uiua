@@ -76,12 +76,25 @@ impl<T> Grid<T> {
     pub fn append_0(&mut self, rhs: Self) {
         self.0.extend(rhs.0);
     }
+    /// ⊂
+    pub fn join_0(mut self, rhs: Self) -> Self {
+        self.0.extend(rhs.0);
+        self
+    }
     /// ≡⊂
     pub fn append_1(&mut self, rhs: Self) {
         assert_eq!(self.0.len(), rhs.0.len());
         for (self_row, rhs_row) in self.0.iter_mut().zip(rhs.0) {
             self_row.extend(rhs_row);
         }
+    }
+    /// ≡⊂
+    pub fn join_1(mut self, rhs: Self) -> Self {
+        assert_eq!(self.0.len(), rhs.0.len());
+        for (self_row, rhs_row) in self.0.iter_mut().zip(rhs.0) {
+            self_row.extend(rhs_row);
+        }
+        self
     }
     pub fn push(&mut self, new_row: Vec<T>) {
         self.0.push(new_row);
@@ -99,6 +112,13 @@ impl Grid<char> {
     }
     pub fn from_utf8(s: &str) -> Self {
         Self::from_utf32(s.chars().collect())
+    }
+    pub fn from_utf8_rows(iter: impl IntoIterator<Item: AsRef<str>>) -> Self {
+        Self(
+            iter.into_iter()
+                .map(|row| row.as_ref().chars().collect())
+                .collect(),
+        )
     }
 
     fn align<F: Fn(&[char]) -> usize>(&mut self, width: usize, f: F) {
@@ -200,6 +220,20 @@ fn all_same<T: PartialEq>(mut iter: impl Iterator<Item = T>) -> bool {
 }
 
 impl Metagrid<char> {
+    pub fn flatten(self) -> Grid<char> {
+        assert!(self.is_meta_rectangular());
+        self.0
+            .into_iter()
+            .map(|meta_row| {
+                meta_row
+                    .into_iter()
+                    .reduce(Grid::join_1)
+                    .unwrap_or_default()
+            })
+            .reduce(Grid::join_0)
+            .unwrap_or_default()
+    }
+
     /// Check whether the metagrid has "consistent" dimensions across the board, or more precisely, that:
     ///  - all meta-rows contain the same number of sub-grids
     ///  - each meta-row has only one unique height among its sub-grids

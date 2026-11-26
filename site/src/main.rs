@@ -34,6 +34,11 @@ use crate::{blog::*, docs::*, other::*, tutorial::Tutorial};
 pub fn main() {
     console_error_panic_hook::set_once();
 
+    if uiua_editor::worker::is_worker() {
+        uiua_editor::worker::start();
+        return;
+    }
+
     document()
         .body()
         .unwrap()

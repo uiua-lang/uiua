@@ -144,8 +144,17 @@ jobs:
           git reset --hard origin/site
           git rebase main || { echo "Rebase failed, aborting."; git rebase --abort; exit 1; }
           cd site
+          loader="site_wasm_init-${GITHUB_SHA}.js"
+          glue="site-${GITHUB_SHA}.js"
+          wasm="site_bg-${GITHUB_SHA}.wasm"
           cargo test -p site gen_blog_html
           ../target/bin/trunk build --release -d ../docs
+          # Worker assets use stable names, so give each build revision-specific filenames.
+          sed -i "s|./site.js|./${glue}|; s|./site_bg.wasm|./${wasm}|" ../docs/site_wasm_init.js
+          mv ../docs/site_wasm_init.js "../docs/${loader}"
+          mv ../docs/site.js "../docs/${glue}"
+          mv ../docs/site_bg.wasm "../docs/${wasm}"
+          sed -i "s|site_wasm_init.js|${loader}|" ../docs/index.html
           git add --all
           git commit --amend --no-edit
           git push --force

@@ -5,7 +5,7 @@ use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 use leptos::prelude::window;
 use serde_bytes::ByteBuf;
 use wasm_bindgen::{JsCast, closure::Closure};
-use web_sys::{ErrorEvent, MessageEvent, Worker};
+use web_sys::{ErrorEvent, MessageEvent, Worker, WorkerOptions, WorkerType};
 
 use super::*;
 use crate::{
@@ -150,9 +150,29 @@ fn next_job() {
             return Ok(());
         }
         if client.worker.is_none() {
-            let worker = Worker::new("/worker_loader.js")
+            let opts = WorkerOptions::new();
+            opts.set_type(WorkerType::Module);
+            let worker_url = js_sys::Reflect::get(&js_sys::global(), &"uiuaWasmWorkerUrl".into())
+                .map_err(|error| format!("Could not access worker bootstrap URL: {error:?}"))?
+                .as_string()
+                .ok_or_else(|| "Worker bootstrap URL is missing".to_string())?;
+            let module = js_sys::Reflect::get(&js_sys::global(), &"uiuaWasmModule".into())
+                .map_err(|error| format!("Could not access compiled WASM module: {error:?}"))?;
+            if module.is_undefined() || module.is_null() {
+                return Err("Compiled WASM module is missing".into());
+            }
+            let worker = Worker::new_with_options(&worker_url, &opts)
                 .map_err(|e| format!("Could not start execution worker: {e:?}"))?;
+            let worker_for_init = worker.clone();
             let on_message = Closure::new(move |event: MessageEvent| {
+                if event.data().as_string().as_deref() == Some("uiua:request-wasm-module") {
+                    if let Err(error) = worker_for_init.post_message(&module) {
+                        fail(format!(
+                            "Could not send WASM module to execution worker: {error:?}"
+                        ));
+                    }
+                    return;
+                }
                 match serde_wasm_bindgen::from_value::<Response>(event.data()) {
                     Ok(response) => response.receive(),
                     Err(error) => fail(format!("Invalid worker response: {error}")),

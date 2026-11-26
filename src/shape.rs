@@ -89,6 +89,10 @@ impl Shape {
     {
         Shape::from(&self.dims.as_slice()[range])
     }
+    /// Get the rank
+    pub fn rank(&self) -> usize {
+        self.len()
+    }
     /// Get the number of elements
     pub fn elements(&self) -> usize {
         self.iter().product()

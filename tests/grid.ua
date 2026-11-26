@@ -1,14 +1,10 @@
+Lines ← ⌅(⬚@\s⊜∘ ⊸≠@\n|◌ ⬚@\n°⊜□)
+
 # Uniqueness
 
-Unique! ←^ (
-  ⧅<2
-  /$"_\n_" ⍚(
-    $"_\n_" ⊃(
-      /$"¬≍ pretty _ pretty _"
-    | /$"⍤$ (_) and (_) give ambiguous output"
-    )
-  )
-)
+# Msg Cond ? ReprA ReprB ExprA ExprB
+Distinct ← ⊓($"(_) and (_) give ambiguous output:\n_"|¬≍) ⊙⊙(⊸°Lines ∩pretty)
+Unique!  ←^ ⍚/($"⍤ Distinct _ _ _ _" ◡∩repr) ⧅<2
 
 Unique!(
   {5} | {□5} | {□□5}
@@ -60,18 +56,17 @@ Unique!(
 | {°△2_2_2 ¤¤¤2}
 )
 
-Lines    ← ⌅(⬚@\s⊜∘ ⊸≠@\n|◌ ⬚@\n°⊜□)
-Diff     ← °Lines ⍚$"_:\n_" {"Input" "Expected" "Got"} □₃ ⊓repr∩(°Lines ≡$"\"_\"")
+Diff     ← °Lines ⍚$"_:\n_" {"Input" "Expected" "Got"} □₃ ⊓repr˜∩(°Lines ≡$"\"_\"")
 Snapshot ← ⊃Diff⋅≍ ⟜⊓prettyLines
 
 # SoA
 
-$ ┌─        
-$      a │  
-$   ─────┤  
-$   □b: 5│  
-$      □6│  
-$          ┘
+$ ┌─
+$       a │
+$   ──────┤
+$   □b: 5 │
+$       □6│
+$           ┘
 ⍤Snapshot {$a {$b 5 6}}
 
 # Boxed fixed arrays
@@ -237,6 +232,87 @@ $   ∙12│ b │∙14│∙15
 $      │∙13│   │
 $                   ┘
 ⍤Snapshot ⍜⧋⊡₁⍚$b ⍜⊡₂⍚$a ≡₀□ °△ 4_4
+
+# Multivectors
+
+$ e₂ + 2e₃ + 3e₄ + 4e₅ + 5e₆ + 6e₇ + 7e₈
+# Experimental!
+⍤Snapshot 𝕍°△8
+
+$ ╭─
+$   e₂ + 2e₃ + 3e₄
+$   4e₁ + 5e₂ + 6e₃ + 7e₄
+$   8e₁ + 9e₂ + 10e₃ + 11e₄
+$   12e₁ + 13e₂ + 14e₃ + 15e₄
+$                             ╯
+# Experimental!
+⍤Snapshot 𝕍°△4_4
+
+$ ╭─
+$ ╷ e₂ + 2e₃            3e₁ + 4e₂ + 5e₃     6e₁ + 7e₂ + 8e₃
+$   9e₁ + 10e₂ + 11e₃   12e₁ + 13e₂ + 14e₃  15e₁ + 16e₂ + 17e₃
+$   18e₁ + 19e₂ + 20e₃  21e₁ + 22e₂ + 23e₃  24e₁ + 25e₂ + 26e₃
+$                                                              ╯
+# Experimental!
+⍤Snapshot 𝕍°△3_3_3
+
+$ ╭─
+$ ╷ e₂           2e₁ + 3e₂      8e₁ + 9e₂    10e₁ + 11e₂    32e₁ + 33e₂  34e₁ + 35e₂    40e₁ + 41e₂  42e₁ + 43e₂
+$ ╷ 4e₁ + 5e₂    6e₁ + 7e₂      12e₁ + 13e₂  14e₁ + 15e₂    36e₁ + 37e₂  38e₁ + 39e₂    44e₁ + 45e₂  46e₁ + 47e₂
+$ ╷
+$ ╷ 16e₁ + 17e₂  18e₁ + 19e₂    24e₁ + 25e₂  26e₁ + 27e₂    48e₁ + 49e₂  50e₁ + 51e₂    56e₁ + 57e₂  58e₁ + 59e₂
+$   20e₁ + 21e₂  22e₁ + 23e₂    28e₁ + 29e₂  30e₁ + 31e₂    52e₁ + 53e₂  54e₁ + 55e₂    60e₁ + 61e₂  62e₁ + 63e₂
+$                                                                                                                ╯
+# Experimental!
+⍤Snapshot 𝕍°△ ↯6 2
+
+# Summaries
+
+$ ╭─
+$     100×100 ℕ
+$   0-9999 μ4999.5
+$                  ╯
+⍤Snapshot °△100_100
+
+$ [100000 ℤ: ◴ ¯2 ¯1 0 1 2 ⧆ 23000 18955 16089 18954 23002]
+⍤Snapshot ⁅×2∿⇡1e5
+
+$ ╭─
+$      100×100 ℤ
+$   ◴  ¯1   0    1
+$   ⧆ 3324 3351 3325
+$                    ╯
+⍤Snapshot ⁅∿°△100_100
+
+$ ╭─
+$      1×10000 @
+$   ◴  @a   @b   @c
+$   ⧆ 3324 3351 3325
+$                    ╯
+⍤Snapshot ¤+@b⁅∿⇡1e4
+
+$ ╭─
+$   100×140 𝕌
+$   letters
+$   digits
+$   punct
+$   whitespace
+$   control
+$   other
+$              ╯
+⍤Snapshot ˙⊟₁₀₀ &fras "example.ua"
+
+$ ╭─
+$   2×2×2×2×2×2×2×2×2×2 ℕ
+$       0-1023 μ511.5
+$                         ╯
+⍤Snapshot °△ ↯10 2
+
+$ ╭─
+$   2×2×2×2×1×1×1×1×1×1×1×1×1×1×1×1×1×1×1×1× … ×1×1×1×1×1×1×1×1×1×1×1×1×1×1×1×1×2×2×2×2 ℕ
+$                                       0-255 μ127.5
+$                                                                                         ╯
+⍤Snapshot °△ ⍜↙₋₄×₂ ⍜↙₄×₂ ↯60 1
 
 Roundtrip!     ← ⍤⟜≍⊃(|0 pretty^0||0 ¤(repr°□₁)^!^0)
 RoundtripRepr! ← ⍤⟜≍⊃(|0 repr^0||0 (repr°□₁)^!^0)

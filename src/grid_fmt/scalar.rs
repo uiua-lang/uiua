@@ -1,28 +1,26 @@
 //! GridFmt trait implementations for scalar types, *i.e.*, pretty-printing individual values.
 //!
-//! (Code for summaries also lives here, but that still doesn't operate on shaped Uiua arrays.)
+//! (Some code for summaries also lives here, but that still doesn't operate on shaped Uiua arrays.)
 
-use super::{ElemAlign, Grid, GridFmt, GridFmtParams};
+use super::{ElemAlign, Grid, GridFmt, GridFmtParams, Summary};
 use crate::{
-    ArrayCmp, Complex, WILDCARD_CHAR, WILDCARD_NAN,
+    Complex, WILDCARD_CHAR, WILDCARD_NAN,
     algorithm::map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
 };
-use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::f64::consts::{E, PI, SQRT_2, TAU};
 use std::fmt::Write;
-use std::iter::once;
 
 impl GridFmt for u8 {
     fn fmt_grid(&self, _params: GridFmtParams) -> Grid {
-        vec![self.to_string().chars().collect()]
+        Grid::from_utf8(&self.to_string())
     }
-    fn summarize(elems: &[Self]) -> String {
+    fn summarize(elems: &[Self]) -> Option<Summary> {
         if elems.is_empty() {
-            return String::new();
+            return None;
         }
-        if let Some(s) = multiset_summary(elems) {
-            return s;
+        if let Some(s) = Summary::multiset(elems) {
+            return Some(s);
         }
         let mut min = u8::MAX;
         let mut max = 0;
@@ -30,18 +28,10 @@ impl GridFmt for u8 {
             min = min.min(elem);
             max = max.max(elem);
         }
+        assert_ne!(min, max, "Summary::multiset missed a sole unique value");
         let sum: u64 = elems.iter().map(|&e| e as u64).sum();
         let mean = (sum as f64) / (elems.len() as f64);
-        if min == max {
-            format!("all {}", min.grid_string(false))
-        } else {
-            format!(
-                "{}-{} μ{}",
-                min.grid_string(false),
-                max.grid_string(false),
-                round_sig_dec(mean, 4).grid_string(false)
-            )
-        }
+        Some(Summary::range_mean((min, max), round_sig_dec(mean, 4)))
     }
     fn alignment() -> ElemAlign {
         ElemAlign::Right
@@ -66,17 +56,14 @@ impl GridFmt for f64 {
             pos_formatted.insert_str(0, minus);
             pos_formatted
         };
-        vec![s.chars().collect()]
+        Grid::from_utf8(&s)
     }
-    fn summarize(elems: &[Self]) -> String {
+    fn summarize(elems: &[Self]) -> Option<Summary> {
         if elems.is_empty() {
-            return String::new();
+            return None;
         }
-        if let Some(s) = multiset_summary(elems) {
-            return s;
-        }
-        if elems.iter().all(|&n| n.is_nan()) {
-            return "all nan".into();
+        if let Some(s) = Summary::multiset(elems) {
+            return Some(s);
         }
         let mut min = f64::NAN;
         let mut max = f64::NAN;
@@ -101,52 +88,15 @@ impl GridFmt for f64 {
         if inf_balance != 0 {
             mean = inf_balance.signum() as f64 * f64::INFINITY;
         }
-        if min == max {
-            if nan_count == 0 {
-                format!("all {}", min.grid_string(false))
-            } else {
-                format!(
-                    "{} {}s and {} nans",
-                    elems.len() - nan_count,
-                    min.grid_string(false),
-                    nan_count
-                )
-            }
-        } else {
-            let mut s = format!(
-                "{}-{} μ{}",
-                round_sig_dec(min, 4).grid_string(false),
-                round_sig_dec(max, 4).grid_string(false),
-                round_sig_dec(mean, 4).grid_string(false)
-            );
-            if nan_count > 0 {
-                s.push_str(&format!(
-                    " ({nan_count} nan{})",
-                    if nan_count > 1 { "s" } else { "" }
-                ));
-            }
-            s
-        }
+        assert_ne!(min, max, "Summary::multiset missed a sole unique value");
+        Some(Summary::range_mean_with_nans(
+            (round_sig_dec(min, 4), round_sig_dec(max, 4)),
+            round_sig_dec(mean, 4),
+            nan_count,
+        ))
     }
     fn alignment() -> ElemAlign {
-        ElemAlign::DelimOrRight(".")
-    }
-    fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]>) -> usize {
-        let mut max_whole_len = 0;
-        let mut max_dec_len: Option<usize> = None;
-        for row in rows {
-            if let Some(dot_pos) = row.iter().position(|&c| c == '.') {
-                max_whole_len = max_whole_len.max(dot_pos);
-                max_dec_len = max_dec_len.max(Some(row.len() - dot_pos - 1));
-            } else {
-                max_whole_len = max_whole_len.max(row.len());
-            }
-        }
-        if let Some(dec_len) = max_dec_len {
-            max_whole_len + dec_len + 1
-        } else {
-            max_whole_len
-        }
+        ElemAlign::DelimOrRight(&['.'])
     }
 }
 
@@ -324,12 +274,12 @@ impl GridFmt for Complex {
             self.re.fmt_grid(params)
         } else if self.re.abs() == 0.0 {
             if self.im == 1.0 {
-                vec![vec!['i']]
+                Grid::from_scalar('i')
             } else if self.im == -1.0 {
-                vec![vec!['¯', 'i']]
+                Grid::from_utf8("¯i")
             } else {
                 let mut grid = self.im.fmt_grid(params);
-                grid[0].push('i');
+                grid.0[0].push('i');
                 grid
             }
         } else {
@@ -340,21 +290,21 @@ impl GridFmt for Complex {
                 self.im.abs().grid_string(params.label)
             };
             let sign = if self.im < 0.0 { '-' } else { '+' };
-            re[0].push(sign);
-            re[0].extend(im.chars());
-            re[0].push('i');
+            re.0[0].push(sign);
+            re.0[0].extend(im.chars());
+            re.0[0].push('i');
             re
         }
     }
     fn empty_list_inner() -> &'static str {
         "ℂ"
     }
-    fn summarize(elems: &[Self]) -> String {
+    fn summarize(elems: &[Self]) -> Option<Summary> {
         if elems.is_empty() {
-            return String::new();
+            return None;
         }
-        if let Some(s) = multiset_summary(elems) {
-            return s;
+        if let Some(s) = Summary::multiset(elems) {
+            return Some(s);
         }
         let (mut re_min, mut im_min) = (f64::INFINITY, f64::INFINITY);
         let (mut re_max, mut im_max) = (f64::NEG_INFINITY, f64::NEG_INFINITY);
@@ -397,19 +347,17 @@ impl GridFmt for Complex {
                 *mean = inf_balance.signum() as f64 * f64::INFINITY;
             }
         }
-        if re_min == re_max && im_min == im_max {
-            format!("all {}", Complex::new(re_min, im_min).grid_string(false))
-        } else {
-            let min = Complex::new(round_sig_dec(re_min, 3), round_sig_dec(im_min, 3));
-            let max = Complex::new(round_sig_dec(re_max, 3), round_sig_dec(im_max, 3));
-            let mean = Complex::new(round_sig_dec(re_mean, 3), round_sig_dec(im_mean, 3));
-            format!(
-                "{} - {} μ{}",
-                min.grid_string(false),
-                max.grid_string(false),
-                mean.grid_string(false)
-            )
-        }
+        assert_ne!(
+            (re_min, im_min),
+            (re_max, im_max),
+            "Summary::multiset missed a sole unique value"
+        );
+
+        let c = |re, im| Complex::new(round_sig_dec(re, 3), round_sig_dec(im, 3));
+        Some(Summary::range_mean(
+            (c(re_min, im_min), c(re_max, im_max)),
+            c(re_mean, im_mean),
+        ))
     }
 }
 
@@ -434,7 +382,7 @@ impl GridFmt for crate::Multivector {
             let mask = mask_table[i];
             if n.abs() != 1.0 || mask == 0 {
                 let n_grid = n.abs().fmt_grid(Default::default());
-                s.extend(n_grid.into_iter().next().unwrap());
+                s.extend(n_grid.0.into_iter().next().unwrap());
             }
             if mask == 0 {
                 continue;
@@ -453,7 +401,7 @@ impl GridFmt for crate::Multivector {
         if s.is_empty() {
             s = vec!['0'];
         }
-        vec![s]
+        Grid::from_utf32(s)
     }
     fn list_same_line() -> bool {
         false
@@ -464,7 +412,7 @@ impl GridFmt for crate::Multivector {
     fn summary_min_elems() -> usize {
         100
     }
-    fn summarize(mvs: &[Self]) -> String {
+    fn summarize(mvs: &[Self]) -> Option<Summary> {
         let mut dims = Vec::new();
         let mut flavors = Vec::new();
         let mut min_mag = 0f64;
@@ -488,71 +436,21 @@ impl GridFmt for crate::Multivector {
             min_mag = min_mag.min(mag);
             max_mag = max_mag.max(mag);
         }
-        let dims = match dims.len() {
-            1 => {
-                format!("{}D", dims[0])
-            }
-            2.. if dims.windows(2).all(|w| w[1] - w[0] == 1) => {
-                format!("{}-{}D", dims[0], dims.last().unwrap())
-            }
-            _ => {
-                let mut s = String::new();
-                for (i, d) in dims.iter().enumerate() {
-                    if i > 0 {
-                        s.push(' ');
-                    }
-                    s.push_str(&d.to_string());
-                    s.push('D');
-                }
-                s
-            }
-        };
-        let grades = match grades.len() {
-            0 => "no grades".into(),
-            1 => {
-                format!("grade {}", grades[0])
-            }
-            2.. if grades.windows(2).all(|w| w[1] - w[0] == 1) => {
-                format!("grades {}-{}", grades[0], grades.last().unwrap())
-            }
-            _ => {
-                let mut s = "grades".to_string();
-                for g in grades {
-                    s.push(' ');
-                    s.push_str(&g.to_string());
-                }
-                s
-            }
-        };
-        let flavors = match &*flavors {
-            [] => "".into(),
-            [fl] => fl.to_string(),
-            flavors => {
-                let mut s = String::new();
-                for (i, fl) in flavors.iter().enumerate() {
-                    if i > 0 {
-                        s.push('/');
-                    }
-                    s.push_str(&fl.to_string());
-                }
-                s
-            }
-        };
-        format!(
-            "{dims} {flavors} ({grades}) ⌵{}-{}",
-            min_mag.grid_string(false),
-            max_mag.grid_string(false)
-        )
+        let range = (min_mag.grid_string(false), max_mag.grid_string(false));
+        Some(Summary::Multivectors {
+            dims,
+            grades,
+            flavors,
+            range,
+        })
     }
 }
 
 impl GridFmt for char {
     fn fmt_grid(&self, _params: GridFmtParams) -> Grid {
-        vec![
-            once('@')
-                .chain(format_char_inner_pretty(*self).chars())
-                .collect(),
-        ]
+        let mut s = format_char_inner_pretty(*self).chars().collect::<Vec<_>>();
+        s.insert(0, '@');
+        Grid::from_utf32(s)
     }
     fn format_delims() -> (&'static str, &'static str) {
         ("", "")
@@ -566,14 +464,14 @@ impl GridFmt for char {
     fn compress_list_grid() -> bool {
         true
     }
-    fn summarize(elems: &[Self]) -> String {
+    fn summarize(elems: &[Self]) -> Option<Summary> {
         if elems.is_empty() {
-            return String::new();
+            return None;
         }
-        if let Some(s) = multiset_summary(elems) {
-            return s;
+        if let Some(s) = Summary::multiset(elems) {
+            return Some(s);
         }
-        let mut parts = Vec::new();
+        let mut parts = Vec::with_capacity(10);
         let lowercase = elems.iter().any(|c| c.is_lowercase());
         let uppercase = elems.iter().any(|c| c.is_uppercase());
         let writing = elems
@@ -593,48 +491,30 @@ impl GridFmt for char {
                 || c.is_whitespace()
                 || c.is_control())
         });
-        if writing {
-            parts.push("writing");
-        } else if lowercase && uppercase {
-            parts.push("letters");
-        } else if lowercase {
-            parts.push("lower");
-        } else if uppercase {
-            parts.push("upper");
-        }
-        if numeric {
-            parts.push("nums");
-        }
-        if digit {
-            parts.push("digits");
-        }
-        if punct {
-            parts.push("punct");
-        }
-        if whitespace {
-            parts.push("whitespace");
-        }
-        if control {
-            parts.push("control");
-        }
-        if other {
-            parts.push("other");
-        }
-        match parts.len() {
-            0 => String::new(),
-            1 => parts[0].to_string(),
-            2 => format!("{} and {}", parts[0], parts[1]),
-            _ => {
-                let mut s = String::new();
-                for (i, &part) in parts.iter().enumerate() {
-                    if i > 0 {
-                        s.push_str(", ");
-                    }
-                    s.push_str(part);
-                }
-                s
+        for (cond, part) in [
+            (writing, "writing"),
+            (lowercase && uppercase, "letters"),
+            (lowercase, "lower"),
+            (uppercase, "upper"),
+        ] {
+            if cond {
+                parts.push(part);
+                break;
             }
         }
+        for (cond, part) in [
+            (numeric, "nums"),
+            (digit, "digits"),
+            (punct, "punct"),
+            (whitespace, "whitespace"),
+            (control, "control"),
+            (other, "other"),
+        ] {
+            if cond {
+                parts.push(part);
+            }
+        }
+        Some(Summary::Text(parts))
     }
 }
 
@@ -684,47 +564,4 @@ pub fn format_char_inner(c: char, pretty: bool) -> Cow<'static, str> {
         };
     }
     Cow::Owned(formatted)
-}
-
-fn multiset_summary<T: ArrayCmp + GridFmt + Clone>(elems: &[T]) -> Option<String> {
-    if elems.is_empty() {
-        return None;
-    }
-
-    // Typically, one would use a BTreeMap here.
-    // However, this function bails at a size limit that is expected to be very small.
-    // So small, in fact, that a BTreeMap would only have one node anyway. (B = 6 -> node capacity = 11)
-    // In addition, the usage of non-Ord keys (f64, Complex) would require a newtype.
-    // This is plenty doable, but gets more annoying in a generic context.
-    let mut pairs = SmallVec::<[(T, usize);
-    5 // can be replaced with T::SUMMARY_MULTISET_MAX_DISTINCT on nightly compiler
-      // but this is just a lower bound so it's ok
-    ]>::new();
-    for elem in elems.iter().cloned() {
-        match pairs
-            .iter_mut()
-            .position(|p| T::array_cmp(&p.0, &elem).is_eq())
-        {
-            Some(i) => pairs[i].1 += 1,
-            None if pairs.len() >= T::SUMMARY_MULTISET_MAX_DISTINCT => return None,
-            None => pairs.push((elem, 1)),
-        }
-    }
-    pairs.sort_unstable_by(|a, b| T::array_cmp(&a.0, &b.0));
-
-    if let [(val, _)] = &pairs[..] {
-        return Some(format!("all {}", val.grid_string(false)));
-    }
-
-    let mut s = String::from("◴");
-    for (val, _) in &pairs {
-        s += " ";
-        s += &val.grid_string(false);
-    }
-    s += " ⧆";
-    for (_, count) in &pairs {
-        s += " ";
-        s += &count.to_string();
-    }
-    Some(s)
 }

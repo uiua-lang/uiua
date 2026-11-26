@@ -1449,10 +1449,8 @@ fn format_stack_lines(stack_lines: &[Vec<Value>], color: bool) -> Vec<String> {
                 label: true,
                 ..Default::default()
             });
-            for w in grid.windows(2) {
-                assert_eq!(w[0].len(), w[1].len());
-            }
-            let width = grid[0].len();
+            assert!(grid.is_rectangular());
+            let width = grid.len_1();
             if curr_width > 4 && curr_width + 2 + width > max_width {
                 line_grids.push(take(&mut curr_line));
                 curr_width = 4 + width;
@@ -1467,8 +1465,8 @@ fn format_stack_lines(stack_lines: &[Vec<Value>], color: bool) -> Vec<String> {
         let grid_line_count = line_grids.len();
         for (j, mut grids) in line_grids.into_iter().enumerate() {
             grids.reverse();
-            let max_height = grids.iter().map(|grid| grid.len()).max().unwrap_or(0);
-            let widths: Vec<usize> = grids.iter().map(|grid| grid[0].len()).collect();
+            let max_height = grids.iter().map(|grid| grid.len_0()).max().unwrap_or(0);
+            let widths: Vec<usize> = grids.iter().map(|grid| grid.len_1()).collect();
             for k in 0..max_height {
                 let mut full_line = String::new();
                 if grid_line_count > 1 {
@@ -1479,8 +1477,8 @@ fn format_stack_lines(stack_lines: &[Vec<Value>], color: bool) -> Vec<String> {
                     }
                 }
                 for (l, grid) in grids.iter().enumerate() {
-                    let offset = max_height / 2 - grid.len() / 2;
-                    if let Some(line) = grid.get(k.saturating_sub(offset)).filter(|_| k >= offset) {
+                    let offset = max_height / 2 - grid.len_0() / 2;
+                    if let Some(line) = k.checked_sub(offset).and_then(|m| grid.row(m)) {
                         if color {
                             let (w, b) = if is_light { (0, 35) } else { (255, 200) };
                             let (r, g, b) = match (i + l + 3) % 6 {

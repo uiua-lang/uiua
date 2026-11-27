@@ -181,7 +181,7 @@ pub fn ImagesAndGifs() -> impl IntoView {
         <Editor example="˙⊞(˙⊂⊂) ÷⟜⇡100 # RGBA"/>
         <p>"In the examples above, the image array is constructed in such a way that the color channels are already the last axis. To create an image by combining color channels, it may be necessary to use "<Prim prim=Transpose/>"."</p>
         <Editor example="< ⊞⊙∘ ⊃(-0.4|×0.2∿×τ) ÷⟜⇡100\n[⊸⍉⊸⇌]\n⟜△ # Not a valid image shape\n⍉\n⊸△ # Valid image shape"/>
-        <p>"Of course, images need not be sqaure."</p>
+        <p>"Of course, images need not be square."</p>
         <Editor example="⊞< ⊙(+1/2÷3∿×τ) ∩(÷100⇡) 100 300"/>
         <p>"The "<code>"Logo"</code>" constant is a quick way to get the "{lang}" logo as an image."</p>
         <Editor example="Logo"/>

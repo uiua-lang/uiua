@@ -27,12 +27,12 @@ where
 {
     let src = src.into();
     let (src, _) = signal(src);
-    let once =
-        LocalResource::new(move || async move { fetch(&src.get_untracked()).await.unwrap() });
+    let once = LocalResource::new(move || async move { fetch(&src.get_untracked()).await });
     view! {{
         move || match once.get() {
-            Some(text) if text.starts_with("<!DOCTYPE html>") => view!(<NotFound/>).into_any(),
-            Some(text) => view!(<ScrollToHash/>{f(&text)}).into_any(),
+            Some(Ok(text)) if text.starts_with("<!DOCTYPE html>") => view!(<NotFound/>).into_any(),
+            Some(Err(_)) => view!(<NotFound/>).into_any(),
+            Some(Ok(text)) => view!(<ScrollToHash/>{f(&text)}).into_any(),
             None => view! {<h3 class="running-text">"Loading..."</h3>}.into_any(),
         }
     }}

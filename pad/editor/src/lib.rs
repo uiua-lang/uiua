@@ -1408,7 +1408,7 @@ pub fn Editor<'a>(
                     "comment",
                     "comment-span",
                     None,
-                    "tutorial/Basic Argument Manipulation and Formatting#comments",
+                    "tutorial/Basic Data Manipulation and Formatting#comments",
                 ),
             ];
             for (i, (glyph, title, class, surround, doc)) in syntax_buttons.into_iter().enumerate()

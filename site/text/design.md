@@ -92,7 +92,7 @@ Another thing that was largely inspired by BQN is this website! BQN's site is ex
 
 Being the oldest array language, APL has had a lot of time to develop good ideas, particularly for the behavior of primitives.
 
-Uiua's behaviors for [`orient`](/docs/orient), [`windows`](/docs/windows), and [`partition`](/docs/partition) are inspired by APL's.
+Uiua's behaviors for [`orient`](/docs/orient), [`stencil`](/docs/stencil), and [`partition`](/docs/partition) are inspired by APL's.
 
 ### J
 

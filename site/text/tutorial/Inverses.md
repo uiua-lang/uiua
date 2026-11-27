@@ -88,9 +88,7 @@ You can find more uses of [un](/docs/un) in its documentation, including a list 
 
 ## [anti](/docs/anti)
 
-| The [un](/docs/un) inverse of a function must always have the opposite signature of that function. For example, if a function has signature ` | 2.1` (2 arguments, 1 output), then its inverse must have signature ` | 1.2`. This makes them easier to reason about, both for the programmer and for the compiler. |
-| --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-|                                                                                                                                               |                                                                      |                                                                                             |
+The [un](/docs/un) inverse of a function must always have the opposite signature of that function. For example, if a function has signature `|2.1` (2 arguments, 1 output), then its inverse must have signature `|1.2`. This makes them easier to reason about, both for the programmer and for the compiler.
 
 This makes some things that *seem* like they have obvious inverses not actually work. For example, [un](/docs/un)[subtract](/docs/add) is *not* just [add](/docs/sub).
 
@@ -114,9 +112,7 @@ The [anti](/docs/anti) modifier is similar to [un](/docs/un), but it allows the 
 
 For `dyadic` function `F` and values `A` and `B`, `⌝F A B` is equivalent to `°(F A) B`, which is useful because the latter cannot be written if `A` is a dynamic value.
 
-| [anti](/docs/anti) is also equivalent to `popunon`, and so the [anti](/docs/anti) inverse of a function with signature ` | a.b` is ` | (b+1).(a-1)`. |
-| ------------------------------------------------------------------------------------------------------------------------ | --------- | ------------- |
-|                                                                                                                          |           |               |
+[anti](/docs/anti) is also equivalent to `popunon`, and so the [anti](/docs/anti) inverse of a function with signature `|a.b` is `|(b+1).(a-1)`.
 
 [anti](/docs/anti) makes some interesting and useful behaviors available.
 

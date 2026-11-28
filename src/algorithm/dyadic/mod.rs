@@ -2515,10 +2515,12 @@ impl Value {
                 let mut denom_data = eco_vec![1.0; arr.element_count()];
                 for (f, d) in (arr.data.as_mut_slice().iter_mut()).zip(denom_data.make_mut()) {
                     if f.is_finite() {
-                        let gcd = pervade::or::num_num(*f, 1.0);
-                        let num = *f / gcd;
-                        *d = (num / *f).round();
-                        *f = num.round();
+                        if *f != 0.0 {
+                            let gcd = pervade::or::num_num(*f, 1.0);
+                            let num = *f / gcd;
+                            *d = (num / *f).round();
+                            *f = num.round();
+                        }
                     } else if f.is_infinite() {
                         *f = f.signum();
                         *d = 0.0;

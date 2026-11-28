@@ -655,8 +655,9 @@ primitive!(
     /// ex: ÷ [1 2 3] [4 5 6]
     /// ex: ÷ [¯1 0 1] "hey"
     ///
-    /// [un][divide] splits a number into whole number denominator and numerator.
-    /// ex: °÷ [0.75 5/2 0.123 100 ¯0.5]
+    /// [un][divide] splits a number into whole number denominator and numerator. The sign will be
+    /// on the numerator.
+    /// ex: °÷ [0.75 5/2 0.123 100 ¯0.5 ∞]
     (
         2,
         Div,
